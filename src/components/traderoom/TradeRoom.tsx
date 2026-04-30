@@ -1,266 +1,326 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, Terminal, Hash, Zap } from 'lucide-react'
+import { Send, Hash, Zap, Users, Settings } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import type { TradeMessage } from '@/lib/types'
+import { supabase, SUPABASE_ENABLED, type DBMessage, type DBChannel } from '@/lib/supabase'
 
-const BOTS = [
-  { username: 'nexus_bot', avatar: '🤖', type: 'bot' as const },
+const CHANNELS_FALLBACK: DBChannel[] = [
+  { id: '1', name: 'general',     description: 'General discussion',       emoji: '💬' },
+  { id: '2', name: 'stocks',      description: 'Stock trading ideas',       emoji: '📈' },
+  { id: '3', name: 'forex',       description: 'Forex market analysis',     emoji: '💱' },
+  { id: '4', name: 'futures',     description: 'Futures & commodities',     emoji: '⚡' },
+  { id: '5', name: 'crypto',      description: 'Crypto discussion',         emoji: '₿'  },
+  { id: '6', name: 'trade-ideas', description: 'Share your setups',         emoji: '🎯' },
 ]
 
-const INITIAL_MESSAGES: TradeMessage[] = [
-  {
-    id: '1', username: 'TraderAlpha', avatar: 'TA', type: 'user',
-    message: '$NVDA breaking out above the 870 resistance — watching for a continuation to 900. Volume is confirming. 🔥',
-    timestamp: new Date(Date.now() - 300_000), tickers: ['NVDA'],
-  },
-  {
-    id: '2', username: 'nexus_bot', avatar: '🤖', type: 'bot',
-    message: 'ALERT: $NVDA volume 2.3x above 10-day average. Price action: +1.8% from open. Implied move into earnings: ±8.2%',
-    timestamp: new Date(Date.now() - 250_000), tickers: ['NVDA'],
-  },
-  {
-    id: '3', username: 'QuantDave', avatar: 'QD', type: 'user',
-    message: 'Sold $TSLA 250 puts for 3.40 credit, targeting 240 support as floor. Delta-neutral hedge on my calls.',
-    timestamp: new Date(Date.now() - 180_000), tickers: ['TSLA'],
-  },
-  {
-    id: '4', username: 'SentimentSue', avatar: 'SS', type: 'user',
-    message: 'Anyone else watching $AAPL options flow? Seeing some unusual call buying in the 195 strike for July exp.',
-    timestamp: new Date(Date.now() - 120_000), tickers: ['AAPL'],
-  },
-  {
-    id: '5', username: 'nexus_bot', avatar: '🤖', type: 'bot',
-    message: 'MARKET ALERT: VIX spiking +12%. Defensive rotation underway. $SPY approaching 200-day MA. Exercise caution.',
-    timestamp: new Date(Date.now() - 60_000), tickers: ['VIX', 'SPY'],
-  },
-  {
-    id: '6', username: 'MomoMike', avatar: 'MM', type: 'user',
-    message: 'Just loaded $META here at 490. RSI oversold on the 15m, MACD curling up. PT 505 by EOD 🎯',
-    timestamp: new Date(Date.now() - 20_000), tickers: ['META'],
-  },
-]
+const AVATAR_COLORS = ['#00d4aa','#1e90ff','#a855f7','#ffa502','#ff4757','#ff6b81','#2ed573']
 
-const BOT_RESPONSES = [
-  (ticker: string) => `FLOW ALERT: Unusual options activity detected in $${ticker}. Large call sweep at OTM strikes.`,
-  (ticker: string) => `DATA: $${ticker} short interest at 4.2% of float. Borrow rate: 1.2% annualized.`,
-  (ticker: string) => `TECHNICAL: $${ticker} approaching key resistance. RSI: 67.3 | MACD: Bullish crossover | Vol: Above avg`,
-  () => 'MARKET: Broad risk-on sentiment. Growth/Value ratio expanding. Institutional buying detected in tech sector.',
-  (ticker: string) => `NEWS SCAN: 3 positive catalysts found for $${ticker} in last 24h. Analyst upgrades: 2.`,
-]
+const MOCK_USERS = ['ScalpKing','ThetaGang','QuantDave','MomoMike','SentimentSue','IronCondor','DeltaForce','AlphaSeeker']
+const MOCK_MESSAGES: Record<string, string[]> = {
+  '1': ['Anyone watching the fed today?', 'VIX is creeping up...', 'Earnings season looking strong so far.'],
+  '2': ['$NVDA breaking out above 870. Loading more.', '$AAPL 195 calls for July — anyone in?', '$TSLA needs to hold 245 or we see 230.'],
+  '3': ['EUR/USD rejected off 1.09 resistance hard.', 'DXY strengthening → risk-off forex environment.', 'GBP/USD long setup on 4h, targeting 1.28.'],
+  '4': ['ES holding 5240 support. Bulls still in control.', 'GC (Gold) 2400 breakout incoming? IV is low.', 'CL inventory data in 30 min — expect volatility.'],
+  '5': ['BTC forming a bull flag on 1h.', 'ETH gas fees back to normal, on-chain activity up.', 'Altcoin season possible if BTC dominance drops.'],
+  '6': ['$META H&S pattern on daily — short setup.', 'NQ long at support, 3:1 R:R, will update.', 'Sharing my EUR/USD scalp setup — see chart.'],
+}
 
-const MOCK_USERS = [
-  { username: 'ScalpKing', avatar: 'SK' },
-  { username: 'ThetaGang', avatar: 'TG' },
-  { username: 'DeltaForce', avatar: 'DF' },
-  { username: 'IronCondor', avatar: 'IC' },
-]
-
-const MOCK_MSGS = [
-  '$MSFT consolidating beautifully. Waiting for break above 420 to add.',
-  'Who\'s playing $AMD earnings? IV crush gonna be brutal either way.',
-  '$SPY red to green reversal incoming? Watching the 512 level.',
-  'Trimmed half my $AMZN position into strength. Let winners run but protect gains.',
-  'Options flow in $GOOGL going crazy right now. Someone knows something 👀',
-  '$JPM holding up well relative to sector. Financials as a hedge makes sense here.',
-]
-
-function parseMessage(text: string) {
-  return text.split(/(\$[A-Z]+)/g).map((part, i) =>
-    /^\$[A-Z]+$/.test(part)
-      ? <span key={i} className="text-[#00d4aa] font-semibold hover:underline cursor-pointer">{part}</span>
+function parseContent(text: string) {
+  return text.split(/(\$[A-Z\/]+)/g).map((part, i) =>
+    /^\$[A-Z\/]+$/.test(part)
+      ? <span key={i} className="text-[#00d4aa] font-semibold">{part}</span>
       : part
   )
 }
 
-function Message({ msg }: { msg: TradeMessage }) {
-  const isBot = msg.type === 'bot'
-  const isAlert = msg.type === 'alert'
-  const isOwn = msg.type === 'user' && msg.username === 'You'
+interface Msg {
+  id: string
+  username: string
+  content: string
+  avatarColor: string
+  createdAt: Date
+  isBot?: boolean
+}
 
-  return (
-    <div className={`flex gap-2 px-3 py-2 hover:bg-[#0a1628]/50 transition-colors group ${isAlert ? 'bg-[#ffa502]/5 border-l-2 border-[#ffa502]' : ''}`}>
-      {/* Avatar */}
-      <div
-        className={`w-7 h-7 rounded flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 ${
-          isBot ? 'bg-[#1e90ff]/20 text-[#1e90ff]' :
-          isOwn ? 'bg-[#00d4aa]/20 text-[#00d4aa]' :
-          'bg-[#a855f7]/20 text-[#a855f7]'
-        }`}
-      >
-        {isBot ? '⚡' : msg.avatar}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className={`text-xs font-semibold ${
-            isBot ? 'text-[#1e90ff]' : isOwn ? 'text-[#00d4aa]' : 'text-[#cdd6f4]'
-          }`}>
-            {msg.username}
-          </span>
-          {isBot && (
-            <span className="text-[9px] bg-[#1e90ff]/20 text-[#1e90ff] px-1 rounded font-mono">BOT</span>
-          )}
-          <span className="text-[9px] text-[#4a5e7a] mono">
-            {formatDistanceToNow(msg.timestamp, { addSuffix: true })}
-          </span>
-        </div>
-        <p className={`text-[11px] leading-relaxed ${isBot ? 'text-[#7f93b5]' : 'text-[#a0b4d0]'}`}>
-          {parseMessage(msg.message)}
-        </p>
-      </div>
-    </div>
-  )
+function getUsernameFromStorage(): string {
+  if (typeof window === 'undefined') return 'Trader'
+  return localStorage.getItem('nexus_username') || ''
 }
 
 export default function TradeRoom() {
-  const [messages, setMessages] = useState<TradeMessage[]>(INITIAL_MESSAGES)
+  const [channels, setChannels] = useState<DBChannel[]>(CHANNELS_FALLBACK)
+  const [activeChannel, setActiveChannel] = useState<DBChannel>(CHANNELS_FALLBACK[0])
+  const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
+  const [username, setUsername] = useState('')
+  const [showUsernameModal, setShowUsernameModal] = useState(false)
+  const [usernameInput, setUsernameInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
 
-  const scrollToBottom = useCallback(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  // Init username
+  useEffect(() => {
+    const saved = getUsernameFromStorage()
+    if (saved) { setUsername(saved) } else { setShowUsernameModal(true) }
   }, [])
 
-  useEffect(() => { scrollToBottom() }, [messages, scrollToBottom])
+  const saveUsername = () => {
+    const name = usernameInput.trim() || `Trader${Math.floor(Math.random() * 9999)}`
+    localStorage.setItem('nexus_username', name)
+    setUsername(name)
+    setShowUsernameModal(false)
+  }
 
-  // Simulate incoming messages
+  // Load channels from Supabase
   useEffect(() => {
+    if (!SUPABASE_ENABLED || !supabase) return
+    supabase.from('channels').select('*').then(({ data }) => {
+      if (data?.length) setChannels(data)
+    })
+  }, [])
+
+  // Load messages for active channel
+  const loadMessages = useCallback(async (channel: DBChannel) => {
+    if (!SUPABASE_ENABLED || !supabase) {
+      // Generate demo messages
+      const demos = (MOCK_MESSAGES[channel.id] || MOCK_MESSAGES['1']).map((content, i) => ({
+        id: `demo-${i}`,
+        username: MOCK_USERS[i % MOCK_USERS.length],
+        content,
+        avatarColor: AVATAR_COLORS[i % AVATAR_COLORS.length],
+        createdAt: new Date(Date.now() - (MOCK_MESSAGES[channel.id]?.length - i) * 120_000),
+      }))
+      setMessages(demos)
+      return
+    }
+
+    const { data } = await supabase!
+      .from('messages')
+      .select('*')
+      .eq('channel_id', channel.id)
+      .order('created_at', { ascending: true })
+      .limit(100)
+
+    if (data) {
+      setMessages(data.map((m: DBMessage) => ({
+        id: m.id,
+        username: m.username,
+        content: m.content,
+        avatarColor: m.avatar_color,
+        createdAt: new Date(m.created_at),
+      })))
+    }
+  }, [])
+
+  useEffect(() => {
+    setMessages([])
+    loadMessages(activeChannel)
+  }, [activeChannel, loadMessages])
+
+  // Supabase realtime subscription
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !supabase) return
+
+    const sub = supabase
+      .channel(`room-${activeChannel.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `channel_id=eq.${activeChannel.id}`,
+      }, (payload) => {
+        const m = payload.new as DBMessage
+        setMessages(prev => [...prev, {
+          id: m.id,
+          username: m.username,
+          content: m.content,
+          avatarColor: m.avatar_color,
+          createdAt: new Date(m.created_at),
+        }])
+      })
+      .subscribe()
+
+    return () => { supabase?.removeChannel(sub) }
+  }, [activeChannel])
+
+  // Simulate incoming messages in demo mode
+  useEffect(() => {
+    if (SUPABASE_ENABLED) return
+    const msgs = MOCK_MESSAGES[activeChannel.id] || MOCK_MESSAGES['1']
     const interval = setInterval(() => {
       const user = MOCK_USERS[Math.floor(Math.random() * MOCK_USERS.length)]
-      const text = MOCK_MSGS[Math.floor(Math.random() * MOCK_MSGS.length)]
-      const tickers = (text.match(/\$[A-Z]+/g) || []).map(t => t.slice(1))
-
-      const newMsg: TradeMessage = {
+      const content = msgs[Math.floor(Math.random() * msgs.length)]
+      setMessages(prev => [...prev.slice(-100), {
         id: crypto.randomUUID(),
-        username: user.username,
-        avatar: user.avatar,
-        message: text,
-        timestamp: new Date(),
-        tickers,
-        type: 'user',
-      }
-      setMessages(prev => [...prev.slice(-100), newMsg])
-
-      // Bot sometimes responds
-      if (Math.random() > 0.6 && tickers.length > 0) {
-        setTimeout(() => {
-          const responseTemplate = BOT_RESPONSES[Math.floor(Math.random() * BOT_RESPONSES.length)]
-          const botMsg: TradeMessage = {
-            id: crypto.randomUUID(),
-            username: 'nexus_bot',
-            avatar: '⚡',
-            message: responseTemplate(tickers[0]),
-            timestamp: new Date(),
-            tickers,
-            type: 'bot',
-          }
-          setMessages(prev => [...prev.slice(-100), botMsg])
-        }, 1500 + Math.random() * 2000)
-      }
-    }, 8000 + Math.random() * 7000)
-
+        username: user,
+        content,
+        avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
+        createdAt: new Date(),
+      }])
+    }, 10_000 + Math.random() * 15_000)
     return () => clearInterval(interval)
-  }, [])
+  }, [activeChannel])
 
-  const sendMessage = () => {
+  // Auto-scroll
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const sendMessage = async () => {
     const text = input.trim()
-    if (!text) return
-
-    const tickers = (text.match(/\$[A-Z]+/g) || []).map(t => t.slice(1))
-    const msg: TradeMessage = {
-      id: crypto.randomUUID(),
-      username: 'You',
-      avatar: 'ME',
-      message: text,
-      timestamp: new Date(),
-      tickers,
-      type: 'user',
-    }
-    setMessages(prev => [...prev, msg])
+    if (!text || !username) return
     setInput('')
 
-    // Bot responds to user
-    if (tickers.length > 0) {
-      setIsTyping(true)
-      setTimeout(() => {
-        const responseTemplate = BOT_RESPONSES[Math.floor(Math.random() * BOT_RESPONSES.length)]
-        const botMsg: TradeMessage = {
-          id: crypto.randomUUID(),
-          username: 'nexus_bot',
-          avatar: '⚡',
-          message: responseTemplate(tickers[0]),
-          timestamp: new Date(),
-          tickers,
-          type: 'bot',
-        }
-        setMessages(prev => [...prev, botMsg])
-        setIsTyping(false)
-      }, 1200 + Math.random() * 1000)
+    const myColor = AVATAR_COLORS[username.charCodeAt(0) % AVATAR_COLORS.length]
+
+    if (!SUPABASE_ENABLED || !supabase) {
+      // Local only in demo mode
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        username,
+        content: text,
+        avatarColor: myColor,
+        createdAt: new Date(),
+      }])
+      return
     }
+
+    await supabase!.from('messages').insert({
+      channel_id: activeChannel.id,
+      username,
+      content: text,
+      avatar_color: myColor,
+    })
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#071220] border-t border-[#1a2d4a]">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[#1a2d4a] bg-[#0a1628] shrink-0">
-        <Terminal size={12} className="text-[#00d4aa]" />
-        <span className="text-[11px] font-bold text-[#cdd6f4] uppercase tracking-widest">Trade-Room</span>
-        <Hash size={10} className="text-[#4a5e7a]" />
-        <span className="text-[11px] text-[#4a5e7a]">general</span>
-        <div className="flex items-center gap-1 ml-auto">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#00d4aa]" />
-          <span className="text-[10px] text-[#7f93b5]">247 traders online</span>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto">
-        {messages.map(msg => <Message key={msg.id} msg={msg} />)}
-        {isTyping && (
-          <div className="flex items-center gap-2 px-3 py-2">
-            <div className="w-7 h-7 rounded flex items-center justify-center text-[10px] bg-[#1e90ff]/20 text-[#1e90ff]">⚡</div>
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] text-[#4a5e7a]">nexus_bot is analyzing</span>
-              <span className="flex gap-0.5">
-                {[0, 1, 2].map(i => (
-                  <span
-                    key={i}
-                    className="w-1 h-1 rounded-full bg-[#4a5e7a] animate-bounce"
-                    style={{ animationDelay: `${i * 0.15}s` }}
-                  />
-                ))}
-              </span>
+    <div className="flex h-full bg-[#040c14]">
+      {/* Username modal */}
+      {showUsernameModal && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="bg-[#071220] border border-[#1e3a5f] rounded p-6 w-72">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap size={14} className="text-[#00d4aa]" />
+              <span className="font-bold text-[#cdd6f4]">Choose your trader name</span>
             </div>
+            <input
+              autoFocus
+              value={usernameInput}
+              onChange={e => setUsernameInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && saveUsername()}
+              placeholder="e.g. ScalpKing, ThetaGang..."
+              className="w-full bg-[#0f1f38] border border-[#1a2d4a] rounded px-3 py-2 text-sm text-[#cdd6f4] outline-none focus:border-[#00d4aa] mb-3"
+            />
+            <button
+              onClick={saveUsername}
+              className="w-full bg-[#00d4aa] text-[#040c14] font-bold py-2 rounded text-sm hover:bg-[#00ffcc] transition-colors"
+            >
+              Enter Trade-Room
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Channel sidebar */}
+      <div className="w-44 bg-[#071220] border-r border-[#1a2d4a] flex flex-col shrink-0">
+        <div className="px-3 py-2 border-b border-[#1a2d4a]">
+          <span className="text-[10px] font-bold text-[#4a5e7a] uppercase tracking-widest">Channels</span>
+        </div>
+        <div className="flex-1 overflow-y-auto py-1">
+          {channels.map(ch => (
+            <button
+              key={ch.id}
+              onClick={() => setActiveChannel(ch)}
+              className={`w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#0f1f38] transition-colors rounded mx-1 ${
+                activeChannel.id === ch.id ? 'bg-[#0f1f38] text-[#cdd6f4]' : 'text-[#7f93b5]'
+              }`}
+            >
+              <Hash size={11} className={activeChannel.id === ch.id ? 'text-[#00d4aa]' : 'text-[#4a5e7a]'} />
+              <span className="text-[11px] font-medium">{ch.name}</span>
+            </button>
+          ))}
+        </div>
+        <div className="px-3 py-2 border-t border-[#1a2d4a]">
+          <button
+            onClick={() => setShowUsernameModal(true)}
+            className="flex items-center gap-2 w-full hover:bg-[#0f1f38] rounded px-1 py-1 transition-colors"
+          >
+            <div
+              className="w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold"
+              style={{ background: `${AVATAR_COLORS[username.charCodeAt(0) % AVATAR_COLORS.length]}20`, color: AVATAR_COLORS[username.charCodeAt(0) % AVATAR_COLORS.length] }}
+            >
+              {username.slice(0, 2).toUpperCase() || 'ME'}
+            </div>
+            <span className="text-[10px] text-[#7f93b5] truncate">{username || 'Set name'}</span>
+            <Settings size={9} className="text-[#4a5e7a] ml-auto" />
+          </button>
+        </div>
+        {!SUPABASE_ENABLED && (
+          <div className="px-2 py-1.5 bg-[#ffa502]/10 border-t border-[#ffa502]/20]">
+            <p className="text-[9px] text-[#ffa502] leading-tight">Demo mode — add Supabase keys for real-time chat</p>
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="flex items-center gap-2 px-3 py-2 border-t border-[#1a2d4a] bg-[#040c14] shrink-0">
-        <div className="flex items-center gap-2 flex-1 bg-[#0a1628] border border-[#1a2d4a] rounded px-3 py-1.5 focus-within:border-[#1e3a5f]">
-          <Zap size={11} className="text-[#4a5e7a] shrink-0" />
-          <input
-            ref={inputRef}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && sendMessage()}
-            placeholder="Post your trade idea... use $TICKER to tag stocks"
-            className="flex-1 bg-transparent text-[11px] text-[#cdd6f4] placeholder-[#4a5e7a] outline-none font-mono"
-          />
-          <span className="cursor-blink text-[#00d4aa] text-xs">|</span>
+      {/* Messages area */}
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Channel header */}
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-[#1a2d4a] bg-[#071220] shrink-0">
+          <Hash size={12} className="text-[#00d4aa]" />
+          <span className="text-sm font-semibold text-[#cdd6f4]">{activeChannel.name}</span>
+          <span className="text-[11px] text-[#4a5e7a]">— {activeChannel.description}</span>
+          <div className="ml-auto flex items-center gap-1">
+            <Users size={10} className="text-[#4a5e7a]" />
+            <span className="text-[10px] text-[#4a5e7a]">
+              {SUPABASE_ENABLED ? 'Live' : '247 online (demo)'}
+            </span>
+            {SUPABASE_ENABLED && <span className="w-1.5 h-1.5 rounded-full bg-[#00d4aa] animate-pulse" />}
+          </div>
         </div>
-        <button
-          onClick={sendMessage}
-          disabled={!input.trim()}
-          className="p-1.5 rounded bg-[#00d4aa]/20 text-[#00d4aa] hover:bg-[#00d4aa]/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          <Send size={12} />
-        </button>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
+          {messages.map(msg => (
+            <div key={msg.id} className="flex gap-2.5 px-2 py-1.5 hover:bg-[#071220]/60 rounded group">
+              <div
+                className="w-7 h-7 rounded flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5"
+                style={{ background: `${msg.avatarColor}20`, color: msg.avatarColor }}
+              >
+                {msg.username.slice(0, 2).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2 mb-0.5">
+                  <span className="text-xs font-semibold" style={{ color: msg.avatarColor }}>{msg.username}</span>
+                  <span className="text-[9px] text-[#4a5e7a] mono">
+                    {formatDistanceToNow(msg.createdAt, { addSuffix: true })}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#a0b4d0] leading-relaxed">{parseContent(msg.content)}</p>
+              </div>
+            </div>
+          ))}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input */}
+        <div className="px-3 py-2 border-t border-[#1a2d4a] bg-[#040c14] shrink-0">
+          <div className="flex items-center gap-2 bg-[#0a1628] border border-[#1a2d4a] rounded px-3 py-2 focus-within:border-[#1e3a5f]">
+            <input
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+              placeholder={`Message #${activeChannel.name} — use $TICKER to tag`}
+              className="flex-1 bg-transparent text-[11px] text-[#cdd6f4] placeholder-[#4a5e7a] outline-none"
+            />
+            <button
+              onClick={sendMessage}
+              disabled={!input.trim()}
+              className="text-[#00d4aa] hover:text-[#00ffcc] disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Send size={13} />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
