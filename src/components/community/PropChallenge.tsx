@@ -91,7 +91,24 @@ export default function PropChallenge() {
     }
   }, [user, getToken])
 
-  useEffect(() => { fetchChallenge() }, [fetchChallenge])
+  useEffect(() => {
+    fetchChallenge()
+    // Load localStorage challenge if no Supabase
+    if (!SUPABASE_ENABLED) {
+      const saved = localStorage.getItem('yn_challenge')
+      if (saved) { try { setChallenge(JSON.parse(saved)) } catch {} }
+    }
+  }, [fetchChallenge])
+
+  // Fix race condition: when user logs in with a pending tier, auto-start it
+  useEffect(() => {
+    if (user && pendingTier) {
+      const tier = pendingTier
+      setPendingTier(null)
+      startChallenge(tier)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   // Push portfolio metrics to DB every 30s when challenge is active
   useEffect(() => {
@@ -116,13 +133,44 @@ export default function PropChallenge() {
   }, [challenge, pnlPct, getToken])
 
   const startChallenge = async (tierId: string) => {
+    // If not logged in, show auth modal and remember the tier
     if (!user) { setPendingTier(tierId); setShowAuth(true); return }
+
     const tier = TIERS.find(t => t.id === tierId)
     if (!tier) return
 
     setChallengeLoading(true)
     setErrorMsg('')
+
     try {
+      // Demo mode (no Supabase) — save to localStorage so it persists
+      if (!SUPABASE_ENABLED) {
+        const localChallenge = {
+          id: crypto.randomUUID(),
+          user_id: user.id || 'local',
+          email: user.email || '',
+          username: user.email?.split('@')[0] || 'Trader',
+          tier: tier.id,
+          account_size: tier.size,
+          profit_target: tier.profitTarget,
+          max_drawdown: tier.maxDrawdown,
+          daily_loss_limit: tier.dailyLoss,
+          min_trading_days: tier.minTradingDays,
+          max_days: tier.maxDays,
+          status: 'active' as const,
+          started_at: new Date().toISOString(),
+          passed_at: null,
+          payout_requested_at: null,
+          current_pnl_pct: 0,
+          current_drawdown: 0,
+          trading_days: 0,
+        }
+        localStorage.setItem('yn_challenge', JSON.stringify(localChallenge))
+        setChallenge(localChallenge)
+        setSuccessMsg(`✓ ${tier.name} Challenge started! (Demo mode — sign up for Supabase to persist across devices)`)
+        return
+      }
+
       const token = await getToken()
       const res = await fetch('/api/challenge', {
         method: 'POST',
@@ -135,7 +183,10 @@ export default function PropChallenge() {
       const json = await res.json()
       if (json.error) { setErrorMsg(json.error); return }
       setChallenge(json.challenge)
-      setSuccessMsg(`✓ ${tier.name} Challenge started! Confirmation email sent to ${user.email}`)
+      setSuccessMsg(`✓ ${tier.name} Challenge started! Check ${user.email} for confirmation.`)
+    } catch (e) {
+      setErrorMsg('Something went wrong. Try again.')
+      console.error(e)
     } finally {
       setChallengeLoading(false)
     }
