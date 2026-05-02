@@ -22,6 +22,9 @@ export const TV_SYMBOLS: Record<string, string> = {
   // Futures
   ES: 'CME_MINI:ES1!', NQ: 'CME_MINI:NQ1!', YM: 'CBOT_MINI:YM1!',
   GC: 'COMEX:GC1!', CL: 'NYMEX:CL1!', SI: 'COMEX:SI1!',
+  'BTC/USD': 'BINANCE:BTCUSDT', 'ETH/USD': 'BINANCE:ETHUSDT',
+  'SOL/USD': 'BINANCE:SOLUSDT', 'BNB/USD': 'BINANCE:BNBUSDT',
+  'XRP/USD': 'BINANCE:XRPUSDT', 'DOGE/USD': 'BINANCE:DOGEUSDT',
 }
 
 const INTERVALS: Record<string, string> = {

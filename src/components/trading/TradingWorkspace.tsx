@@ -11,6 +11,7 @@ const TYPE_TABS: { id: InstrumentType; label: string }[] = [
   { id: 'stock',   label: 'Stocks'  },
   { id: 'forex',   label: 'Forex'   },
   { id: 'futures', label: 'Futures' },
+  { id: 'crypto',  label: 'Crypto'  },
 ]
 
 const QTY_PRESETS: Record<string, number[]> = {

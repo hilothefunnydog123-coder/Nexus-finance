@@ -7,10 +7,13 @@ import Onboarding from '@/components/ui-overlay/Onboarding'
 import ShareCard from '@/components/ui-overlay/ShareCard'
 import KeyboardShortcuts from '@/components/ui-overlay/KeyboardShortcuts'
 import MorningBriefing from '@/components/ui-overlay/MorningBriefing'
+import Glossary from '@/components/ui-overlay/Glossary'
 import MarketHeatmap from '@/components/dashboard/MarketHeatmap'
 import FearGreed from '@/components/dashboard/FearGreed'
 import OptionsFlow from '@/components/dashboard/OptionsFlow'
 import RiskCalculator from '@/components/trading/RiskCalculator'
+import FundamentalsPanel from '@/components/dashboard/FundamentalsPanel'
+import PortfolioAnalytics from '@/components/trading/PortfolioAnalytics'
 import { useMarketData } from '@/hooks/useMarketData'
 import { usePortfolioStore } from '@/store/portfolioStore'
 import MarketTicker from '@/components/dashboard/MarketTicker'
@@ -74,9 +77,19 @@ export default function NexusDashboard() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: '#040c14' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .yn-app-main { flex-direction: column !important; }
+          .yn-watchlist { display: none !important; }
+          .yn-pulse { display: none !important; }
+          .yn-nav-label { display: none !important; }
+          .yn-account-bar { font-size: 9px !important; gap: 8px !important; }
+        }
+      `}</style>
       <Onboarding onTabChange={(tab) => setActiveTab(tab as Tab)} />
       <KeyboardShortcuts />
       <MorningBriefing />
+      <Glossary />
       {showShare && <ShareCard onClose={() => setShowShare(false)} />}
 
       {/* Nav */}
@@ -130,7 +143,7 @@ export default function NexusDashboard() {
         {activeTab === 'dashboard' && (
           <>
             <WatchlistPanel quotes={quotes} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
-            <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
+            <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden" style={{ minWidth: 0 }}>
               <div className="border-b border-[#1a2d4a] overflow-hidden" style={{ flex: '0 0 62%' }}>
                 <MainChart symbol={selectedSymbol} quote={quotes[selectedSymbol]} />
               </div>
@@ -138,7 +151,14 @@ export default function NexusDashboard() {
                 <TradeRoom />
               </div>
             </div>
-            <PulseFeed />
+            <div className="flex flex-col border-l border-[#1a2d4a]" style={{ width: 288, minWidth: 288 }}>
+              <div className="overflow-hidden" style={{ flex: '0 0 40%', borderBottom: '1px solid #1a2d4a' }}>
+                <FundamentalsPanel symbol={selectedSymbol} />
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <PulseFeed />
+              </div>
+            </div>
           </>
         )}
         {/* Markets overview */}

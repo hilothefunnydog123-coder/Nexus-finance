@@ -1,4 +1,4 @@
-export type InstrumentType = 'stock' | 'forex' | 'futures'
+export type InstrumentType = 'stock' | 'forex' | 'futures' | 'crypto'
 
 export interface Instrument {
   symbol: string
@@ -46,6 +46,14 @@ export const INSTRUMENTS: Instrument[] = [
   { symbol: 'GC',   apiSymbol: 'GC',   name: 'Gold Futures',       type: 'futures', pip: 0.10, leverage: [1], contractSize: 100,   marginRate: 0.1, mockBasePrice: 2389.40, digits: 2 },
   { symbol: 'CL',   apiSymbol: 'CL',   name: 'Crude Oil (WTI)',    type: 'futures', pip: 0.01, leverage: [1], contractSize: 1000,  marginRate: 0.1, mockBasePrice: 82.40,  digits: 2 },
   { symbol: 'SI',   apiSymbol: 'SI',   name: 'Silver Futures',     type: 'futures', pip: 0.005,leverage: [1], contractSize: 5000,  marginRate: 0.1, mockBasePrice: 28.14,  digits: 3 },
+
+  // ── Crypto ──
+  { symbol: 'BTC/USD', apiSymbol: 'BINANCE:BTCUSDT', name: 'Bitcoin',         type: 'crypto', pip: 1,    leverage: [1,2,5,10], contractSize: 1,    marginRate: 0.1, mockBasePrice: 67_240, digits: 0 },
+  { symbol: 'ETH/USD', apiSymbol: 'BINANCE:ETHUSDT', name: 'Ethereum',        type: 'crypto', pip: 0.01, leverage: [1,2,5,10], contractSize: 1,    marginRate: 0.1, mockBasePrice: 3_180,  digits: 2 },
+  { symbol: 'SOL/USD', apiSymbol: 'BINANCE:SOLUSDT', name: 'Solana',          type: 'crypto', pip: 0.01, leverage: [1,2,5],    contractSize: 1,    marginRate: 0.1, mockBasePrice: 148.40, digits: 2 },
+  { symbol: 'BNB/USD', apiSymbol: 'BINANCE:BNBUSDT', name: 'BNB',             type: 'crypto', pip: 0.01, leverage: [1,2,5],    contractSize: 1,    marginRate: 0.1, mockBasePrice: 612.30, digits: 2 },
+  { symbol: 'XRP/USD', apiSymbol: 'BINANCE:XRPUSDT', name: 'XRP',             type: 'crypto', pip: 0.0001,leverage: [1,2,5],   contractSize: 1,    marginRate: 0.1, mockBasePrice: 0.5820, digits: 4 },
+  { symbol: 'DOGE/USD',apiSymbol: 'BINANCE:DOGEUSDT',name: 'Dogecoin',        type: 'crypto', pip: 0.0001,leverage: [1,2],      contractSize: 1,    marginRate: 0.15,mockBasePrice: 0.1640, digits: 4 },
 ]
 
 export const INSTRUMENT_MAP = Object.fromEntries(INSTRUMENTS.map(i => [i.symbol, i]))

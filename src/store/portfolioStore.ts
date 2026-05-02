@@ -7,7 +7,7 @@ import { calcPnL, calcMargin, INSTRUMENT_MAP, type Instrument } from '@/lib/inst
 export interface Position {
   id: string
   symbol: string
-  instrumentType: 'stock' | 'forex' | 'futures'
+  instrumentType: 'stock' | 'forex' | 'futures' | 'crypto'
   side: 'long' | 'short'
   quantity: number
   entryPrice: number
