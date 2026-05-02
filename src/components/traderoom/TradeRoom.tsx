@@ -71,11 +71,14 @@ export default function TradeRoom() {
     setShowUsernameModal(false)
   }
 
-  // Load channels from Supabase
+  // Load channels from Supabase and sync activeChannel to real UUID
   useEffect(() => {
     if (!SUPABASE_ENABLED || !supabase) return
-    supabase.from('channels').select('*').then(({ data }) => {
-      if (data?.length) setChannels(data)
+    supabase.from('channels').select('*').order('name').then(({ data }) => {
+      if (data?.length) {
+        setChannels(data)
+        setActiveChannel(data[0]) // critical: replace fallback id '1' with real UUID
+      }
     })
   }, [])
 
@@ -117,7 +120,7 @@ export default function TradeRoom() {
     loadMessages(activeChannel)
   }, [activeChannel, loadMessages])
 
-  // Supabase realtime subscription
+  // Supabase realtime subscription — deduplicate optimistic messages
   useEffect(() => {
     if (!SUPABASE_ENABLED || !supabase) return
 
@@ -130,13 +133,17 @@ export default function TradeRoom() {
         filter: `channel_id=eq.${activeChannel.id}`,
       }, (payload) => {
         const m = payload.new as DBMessage
-        setMessages(prev => [...prev, {
-          id: m.id,
-          username: m.username,
-          content: m.content,
-          avatarColor: m.avatar_color,
-          createdAt: new Date(m.created_at),
-        }])
+        setMessages(prev => {
+          // Skip if we already added this message optimistically
+          if (prev.some(p => p.id === m.id)) return prev
+          return [...prev, {
+            id: m.id,
+            username: m.username,
+            content: m.content,
+            avatarColor: m.avatar_color,
+            createdAt: new Date(m.created_at),
+          }]
+        })
       })
       .subscribe()
 
@@ -174,7 +181,6 @@ export default function TradeRoom() {
     const myColor = AVATAR_COLORS[username.charCodeAt(0) % AVATAR_COLORS.length]
 
     if (!SUPABASE_ENABLED || !supabase) {
-      // Local only in demo mode
       setMessages(prev => [...prev, {
         id: crypto.randomUUID(),
         username,
@@ -185,12 +191,28 @@ export default function TradeRoom() {
       return
     }
 
-    await supabase!.from('messages').insert({
+    // Optimistic update — show immediately, Realtime deduplicates the echo
+    const optimisticId = crypto.randomUUID()
+    setMessages(prev => [...prev, {
+      id: optimisticId,
+      username,
+      content: text,
+      avatarColor: myColor,
+      createdAt: new Date(),
+    }])
+
+    const { error } = await supabase!.from('messages').insert({
       channel_id: activeChannel.id,
       username,
       content: text,
       avatar_color: myColor,
     })
+
+    if (error) {
+      // Remove optimistic message if insert failed
+      setMessages(prev => prev.filter(m => m.id !== optimisticId))
+      console.error('Message insert failed:', error.message)
+    }
   }
 
   return (
