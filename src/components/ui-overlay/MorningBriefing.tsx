@@ -1,102 +1,98 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Sun, TrendingUp, TrendingDown, Calendar, AlertTriangle } from 'lucide-react'
+import { X, Sun, TrendingUp, TrendingDown, Calendar } from 'lucide-react'
+import type { NewsItem } from '@/lib/types'
 
-const EVENTS_TODAY = [
-  { time: '08:30', name: 'Core PCE Price Index', impact: 'high'   },
-  { time: '10:00', name: 'Fed Chair Powell Speaks', impact: 'high' },
-  { time: '14:30', name: 'Crude Oil Inventories', impact: 'medium' },
-]
-
-const PREMARKET = [
-  { sym: 'NVDA', chg: +2.4, reason: 'Strong earnings guidance reiterated' },
-  { sym: 'AAPL', chg: -0.8, reason: 'iPhone demand concerns from analyst' },
-  { sym: 'META', chg: +1.6, reason: 'AI advertising revenue upgrade' },
-  { sym: 'TSLA', chg: -1.2, reason: 'Delivery miss estimates' },
-]
-
-function getBrief() {
+function getMarketContext(): string {
   const h = new Date().getHours()
-  if (h < 9)  return 'Pre-market session active. ES futures pointing to a gap-up open. Watch the 9:30 open for direction.'
-  if (h < 10) return 'Market just opened. First 30 minutes are typically volatile — wait for the dust to settle before entering.'
-  if (h < 12) return 'Morning session underway. Institutional order flow establishing the day\'s range. Key levels in play.'
-  if (h < 14) return 'Midday lull. Volume typically drops 30-40% from morning. Range trading strategies preferred.'
-  if (h < 16) return 'Power hour approaching. 3-4 PM ET sees highest daily volume. Momentum plays and breakouts likely.'
-  return 'After hours session. Lower liquidity, wider spreads. Earnings often reported now — position sizing critical.'
+  if (h < 9)  return 'Pre-market session active. Watch the 9:30 AM open — gaps often fill in the first 30 minutes.'
+  if (h < 10) return 'Market just opened. First 15 minutes are highest volatility — wait for the dust to settle before entering.'
+  if (h < 12) return 'Morning session. Institutional order flow establishing the day\'s range. Watch for VWAP reclaims.'
+  if (h < 14) return 'Midday lull. Volume drops 30-40% from the open. Range trading and patience preferred here.'
+  if (h < 16) return 'Power hour approaching (3-4 PM ET). Highest daily volume. Momentum plays and breakouts most reliable.'
+  return 'After hours. Earnings often report now — lower liquidity, wider spreads. Size down.'
+}
+
+function getDayOfWeek(): string {
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+  return days[new Date().getDay()]
 }
 
 export default function MorningBriefing() {
   const [visible, setVisible] = useState(false)
+  const [news, setNews] = useState<NewsItem[]>([])
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
     const key = `yn_briefing_${new Date().toDateString()}`
-    if (!localStorage.getItem(key)) {
-      setTimeout(() => setVisible(true), 2000)
-    }
+    if (localStorage.getItem(key)) return
+
+    // Load real news headlines
+    fetch('/api/news').then(r => r.json()).then(json => {
+      if (json.news?.length) setNews(json.news.slice(0, 3))
+    }).catch(() => {})
+
+    setTimeout(() => setVisible(true), 1500)
   }, [])
 
   const dismiss = () => {
-    const key = `yn_briefing_${new Date().toDateString()}`
-    localStorage.setItem(key, '1')
+    localStorage.setItem(`yn_briefing_${new Date().toDateString()}`, '1')
     setDismissed(true)
     setVisible(false)
   }
 
   if (!visible || dismissed) return null
 
-  const day = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  const date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   return (
     <div className="fixed bottom-12 right-4 z-[200] w-80 bg-[#071220] border border-[#1e3a5f] rounded-xl shadow-2xl overflow-hidden"
       style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(30,144,255,0.1)' }}>
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#1a2d4a] bg-[#040c14]">
         <div className="flex items-center gap-2">
           <Sun size={13} className="text-[#ffa502]" />
           <div>
             <div className="text-xs font-bold text-[#cdd6f4]">YN Morning Briefing</div>
-            <div className="text-[9px] text-[#4a5e7a]">{day}</div>
+            <div className="text-[9px] text-[#4a5e7a]">{date}</div>
           </div>
         </div>
         <button onClick={dismiss} className="text-[#4a5e7a] hover:text-[#cdd6f4]"><X size={13} /></button>
       </div>
 
       <div className="p-4 space-y-3">
-        {/* Market context */}
-        <p className="text-[11px] text-[#7f93b5] leading-relaxed italic">&ldquo;{getBrief()}&rdquo;</p>
+        {/* Real market context based on time of day */}
+        <p className="text-[11px] text-[#7f93b5] leading-relaxed italic border-l-2 border-[#1e90ff] pl-2">
+          &ldquo;{getMarketContext()}&rdquo;
+        </p>
 
-        {/* Pre-market movers */}
-        <div>
-          <div className="text-[9px] text-[#4a5e7a] uppercase tracking-wider mb-1.5">Pre-Market Movers</div>
-          <div className="space-y-1">
-            {PREMARKET.map(m => (
-              <div key={m.sym} className="flex items-start gap-2">
-                <span className="text-[10px] font-bold text-[#cdd6f4] w-10 shrink-0">{m.sym}</span>
-                <span className={`mono text-[10px] font-bold shrink-0 ${m.chg >= 0 ? 'text-up' : 'text-down'}`}>
-                  {m.chg >= 0 ? '+' : ''}{m.chg}%
-                </span>
-                <span className="text-[9px] text-[#4a5e7a] leading-snug">{m.reason}</span>
-              </div>
-            ))}
+        {/* Real news headlines */}
+        {news.length > 0 && (
+          <div>
+            <div className="text-[9px] text-[#4a5e7a] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <TrendingUp size={9} /> Top Headlines (Live)
+            </div>
+            <div className="space-y-1.5">
+              {news.map(item => (
+                <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer"
+                  className="block text-[10px] text-[#7f93b5] leading-snug hover:text-[#cdd6f4] transition-colors line-clamp-2">
+                  <span className="text-[#4a5e7a] mr-1">{item.source} ·</span>
+                  {item.headline}
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Events */}
-        <div>
-          <div className="text-[9px] text-[#4a5e7a] uppercase tracking-wider mb-1.5 flex items-center gap-1">
-            <Calendar size={9} /> Events Today
-          </div>
-          <div className="space-y-1">
-            {EVENTS_TODAY.map(e => (
-              <div key={e.name} className="flex items-center gap-2">
-                <span className="text-[8px]">{e.impact === 'high' ? '🔴' : '🟡'}</span>
-                <span className="mono text-[9px] text-[#7f93b5] w-10 shrink-0">{e.time}</span>
-                <span className="text-[9px] text-[#cdd6f4]">{e.name}</span>
-              </div>
-            ))}
-          </div>
+        {/* Day-specific context */}
+        <div className="flex items-center gap-1.5 bg-[#040c14] rounded px-2 py-1.5">
+          <Calendar size={9} className="text-[#1e90ff]" />
+          <span className="text-[10px] text-[#7f93b5]">
+            {getDayOfWeek() === 'Friday' ? '🔴 NFP week ends today — vol expected EOD' :
+             getDayOfWeek() === 'Wednesday' ? '🟡 Fed minutes often Wednesday — check calendar' :
+             getDayOfWeek() === 'Monday' ? '🟢 Fresh week — gaps from Friday often fill' :
+             'Check the Economic Calendar for today\'s events'}
+          </span>
         </div>
 
         <button onClick={dismiss}

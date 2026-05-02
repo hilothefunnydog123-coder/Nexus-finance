@@ -124,7 +124,7 @@ export default function NexusDashboard() {
       </nav>
 
       <MarketTicker quotes={quotes} connected={connected} isDemo={isDemo} />
-      <StatsBar />
+      <StatsBar quotes={quotes} />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {activeTab === 'dashboard' && (
@@ -149,7 +149,7 @@ export default function NexusDashboard() {
             </div>
             <div className="flex flex-col" style={{ width: 280 }}>
               <div className="p-3 border-b border-[#1a2d4a] shrink-0">
-                <FearGreed value={61} />
+                <FearGreed quotes={quotes} />
               </div>
               <div className="overflow-hidden" style={{ flex: '0 0 45%', borderBottom: '1px solid #1a2d4a' }}>
                 <OptionsFlow />

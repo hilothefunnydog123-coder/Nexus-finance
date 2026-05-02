@@ -108,3 +108,28 @@ create policy "Anyone reads channels"  on channels for select using (true);
 
 -- Enable Realtime for messages
 alter publication supabase_realtime add table public.messages;
+
+-- ================================================================
+-- Trade Ideas table (run this in Supabase SQL Editor)
+-- ================================================================
+create table if not exists public.trade_ideas (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete set null,
+  username text not null,
+  ticker text not null,
+  side text not null check (side in ('long','short')),
+  entry numeric not null,
+  sl numeric not null,
+  tp numeric not null,
+  timeframe text not null default '1D',
+  thesis text not null,
+  upvotes integer default 0,
+  tags text[] default '{}',
+  outcome text default 'open' check (outcome in ('open','win','loss')),
+  created_at timestamptz default now()
+);
+
+alter table public.trade_ideas enable row level security;
+create policy "Anyone reads ideas"  on trade_ideas for select using (true);
+create policy "Anyone posts ideas"  on trade_ideas for insert with check (true);
+create policy "Anyone votes ideas"  on trade_ideas for update using (true);
