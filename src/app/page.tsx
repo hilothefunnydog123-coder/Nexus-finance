@@ -2,6 +2,30 @@
 import Link from 'next/link'
 import { ArrowRight, TrendingUp, Users, ShieldCheck, Calendar, BarChart2, Zap, Check, Star, ChevronRight } from 'lucide-react'
 
+const MOBILE_CSS = `
+  @media (max-width: 768px) {
+    .yn-nav-links { display: none !important; }
+    .yn-stats-grid { grid-template-columns: repeat(2,1fr) !important; gap: 16px !important; }
+    .yn-features-grid { grid-template-columns: 1fr !important; }
+    .yn-steps-grid { grid-template-columns: 1fr !important; }
+    .yn-pricing-grid { grid-template-columns: 1fr !important; }
+    .yn-testimonials-grid { grid-template-columns: 1fr !important; }
+    .yn-terminal { display: none !important; }
+    .yn-hero { padding: 40px 20px 32px !important; }
+    .yn-hero h1 { font-size: 36px !important; letter-spacing: -1px !important; }
+    .yn-hero p { font-size: 15px !important; }
+    .yn-cta-row { flex-direction: column !important; align-items: center !important; }
+    .yn-section { padding: 48px 20px !important; }
+    .yn-footer-inner { flex-direction: column !important; gap: 16px !important; text-align: center !important; }
+    .yn-footer-links { flex-wrap: wrap !important; justify-content: center !important; }
+  }
+  @media (max-width: 480px) {
+    .yn-hero h1 { font-size: 28px !important; }
+    .yn-stats-grid { grid-template-columns: repeat(2,1fr) !important; }
+    .yn-pricing-grid { grid-template-columns: 1fr !important; }
+  }
+`
+
 const STATS = [
   { value: '1,247', label: 'Active Traders' },
   { value: '312',   label: 'Challenges Passed' },
@@ -85,10 +109,11 @@ const TESTIMONIALS = [
 export default function LandingPage() {
   return (
     <div className="min-h-screen" style={{ background: '#040c14', color: '#cdd6f4', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <style>{MOBILE_CSS}</style>
 
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid #1a2d4a', background: '#040c14', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', height: 64, gap: 32 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', height: 64, gap: 32 }} className="yn-nav-inner">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Zap size={16} color="#040c14" fill="#040c14" />
@@ -97,7 +122,7 @@ export default function LandingPage() {
             <span style={{ fontSize: 18, fontWeight: 300, color: '#00d4aa', letterSpacing: 4 }}>FINANCE</span>
           </div>
 
-          <div style={{ display: 'flex', gap: 32, fontSize: 13, color: '#7f93b5' }}>
+          <div className="yn-nav-links" style={{ display: 'flex', gap: 32, fontSize: 13, color: '#7f93b5' }}>
             {[['#features','Features'],['#pricing','Pricing'],['#community','Community']].map(([href, label]) => (
               <a key={label} href={href} style={{ color: '#7f93b5', textDecoration: 'none', fontWeight: 500 }}
                 onMouseEnter={e => (e.currentTarget.style.color = '#cdd6f4')}
@@ -123,7 +148,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '80px 24px 60px', textAlign: 'center' }}>
+      <section className="yn-hero" style={{ maxWidth: 1100, margin: '0 auto', padding: '80px 24px 60px', textAlign: 'center' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#00d4aa15', border: '1px solid #00d4aa40', borderRadius: 100, padding: '6px 16px', marginBottom: 24 }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00d4aa' }} />
           <span style={{ fontSize: 11, color: '#00d4aa', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
@@ -143,7 +168,7 @@ export default function LandingPage() {
           Practice the discipline that separates funded traders from the rest.
         </p>
 
-        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div className="yn-cta-row" style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link href="/app" style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
             background: '#00d4aa', color: '#040c14', fontWeight: 800,
@@ -163,7 +188,7 @@ export default function LandingPage() {
         </div>
 
         {/* Terminal mockup */}
-        <div style={{
+        <div className="yn-terminal" style={{
           marginTop: 56, background: '#071220', border: '1px solid #1a2d4a', borderRadius: 12,
           overflow: 'hidden', boxShadow: '0 40px 80px rgba(0,0,0,0.6)',
         }}>
@@ -216,7 +241,7 @@ export default function LandingPage() {
 
       {/* Stats */}
       <section style={{ background: '#071220', borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32, textAlign: 'center' }}>
+        <div className="yn-stats-grid" style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32, textAlign: 'center' }}>
           {STATS.map(({ value, label }) => (
             <div key={label}>
               <div style={{ fontSize: 36, fontWeight: 900, color: '#00d4aa', fontFamily: 'monospace', letterSpacing: -1 }}>{value}</div>
@@ -236,7 +261,7 @@ export default function LandingPage() {
             Stop switching between TradingView, Discord, and FTMO. YN Finance is all three.
           </p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+        <div className="yn-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
           {FEATURES.map(f => (
             <div key={f.title} style={{
               background: '#071220', border: '1px solid #1a2d4a', borderRadius: 12, padding: 28,
@@ -256,7 +281,7 @@ export default function LandingPage() {
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
             <h2 style={{ fontSize: 40, fontWeight: 900, color: '#fff', letterSpacing: -1 }}>How it works</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
+          <div className="yn-steps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
             {STEPS.map(s => (
               <div key={s.step} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 48, fontWeight: 900, color: '#1a2d4a', fontFamily: 'monospace', marginBottom: 16 }}>{s.step}</div>
@@ -274,7 +299,7 @@ export default function LandingPage() {
           <h2 style={{ fontSize: 40, fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>Challenge Pricing</h2>
           <p style={{ fontSize: 14, color: '#7f93b5' }}>Platform access is always free. Pay only when you start a prop firm challenge.</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginTop: 48 }}>
+        <div className="yn-pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginTop: 48 }}>
           {TIERS.map(t => (
             <div key={t.name} style={{
               background: '#071220', border: `1px solid ${t.popular ? t.color : '#1a2d4a'}`, borderRadius: 16, padding: 28,
@@ -334,7 +359,7 @@ export default function LandingPage() {
             </h2>
             <p style={{ fontSize: 14, color: '#7f93b5' }}>Where serious traders share ideas, compete on the leaderboard, and hold each other accountable.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+          <div className="yn-testimonials-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
             {TESTIMONIALS.map(t => (
               <div key={t.name} style={{ background: '#040c14', border: '1px solid #1a2d4a', borderRadius: 12, padding: 24 }}>
                 <div style={{ display: 'flex', marginBottom: 12 }}>

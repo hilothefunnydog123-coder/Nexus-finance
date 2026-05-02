@@ -2,7 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, MessageSquare, Newspaper, ChevronRight, Zap, CandlestickChart, Users, Home } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Newspaper, ChevronRight, Zap, CandlestickChart, Users, Home, Share2 } from 'lucide-react'
+import Onboarding from '@/components/ui-overlay/Onboarding'
+import ShareCard from '@/components/ui-overlay/ShareCard'
+import KeyboardShortcuts from '@/components/ui-overlay/KeyboardShortcuts'
 import { useMarketData } from '@/hooks/useMarketData'
 import { usePortfolioStore } from '@/store/portfolioStore'
 import MarketTicker from '@/components/dashboard/MarketTicker'
@@ -60,10 +63,14 @@ function PortfolioBar({ quotes }: { quotes: Record<string, Quote> }) {
 export default function NexusDashboard() {
   const [selectedSymbol, setSelectedSymbol] = useState('AAPL')
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
+  const [showShare, setShowShare] = useState(false)
   const { quotes, connected, isDemo } = useMarketData(SYMBOLS)
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: '#040c14' }}>
+      <Onboarding onTabChange={(tab) => setActiveTab(tab as Tab)} />
+      <KeyboardShortcuts />
+      {showShare && <ShareCard onClose={() => setShowShare(false)} />}
 
       {/* Nav */}
       <nav className="flex items-center h-10 border-b border-[#1a2d4a] bg-[#040c14] shrink-0">
@@ -100,6 +107,9 @@ export default function NexusDashboard() {
               <span className="text-[10px] text-[#7f93b5]">Add Finnhub key to .env.local for live data</span>
             </div>
           )}
+          <button onClick={() => setShowShare(true)} className="flex items-center gap-1 text-[10px] text-[#4a5e7a] hover:text-[#00d4aa] transition-colors ml-1">
+            <Share2 size={11} /> Share P&L
+          </button>
           <Link href="/" className="flex items-center gap-1 text-[10px] text-[#4a5e7a] hover:text-[#7f93b5] transition-colors ml-1">
             <Home size={11} /> Home
           </Link>

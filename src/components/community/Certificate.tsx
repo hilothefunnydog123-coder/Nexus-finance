@@ -124,6 +124,7 @@ export default function Certificate({ challenge, username, onClose }: Props) {
             <div>
               <div style={{ fontSize: 9, color: '#4a5e7a', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Certificate ID</div>
               <div style={{ fontSize: 11, color: '#7f93b5', fontFamily: 'monospace' }}>{certId}</div>
+            <div style={{ fontSize: 9, color: '#4a5e7a', marginTop: 2 }}>ynfinance.org/verify/{challenge.id.slice(0,8)}</div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ width: 60, height: 60, borderRadius: '50%', background: `linear-gradient(135deg, ${tierColor}30, ${tierColor}10)`, border: `2px solid ${tierColor}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 4px' }}>
