@@ -67,11 +67,11 @@ export default function NexusDashboard() {
       {/* Nav */}
       <nav className="flex items-center h-10 border-b border-[#1a2d4a] bg-[#040c14] shrink-0">
         <div className="flex items-center gap-2 px-4 border-r border-[#1a2d4a] h-full">
-          <div className="w-5 h-5 rounded bg-gradient-to-br from-[#00d4aa] to-[#1e90ff] flex items-center justify-center">
-            <Zap size={11} className="text-[#040c14]" fill="currentColor" />
+          <div className="w-6 h-6 rounded bg-gradient-to-br from-[#00d4aa] to-[#1e90ff] flex items-center justify-center">
+            <Zap size={13} className="text-[#040c14]" fill="currentColor" />
           </div>
-          <span className="text-sm font-black tracking-tight text-white">NEXUS</span>
-          <span className="text-sm font-light text-[#00d4aa] tracking-widest">FINANCE</span>
+          <span className="text-base font-black tracking-tight text-white">YN</span>
+          <span className="text-base font-light text-[#00d4aa] tracking-widest">FINANCE</span>
         </div>
 
         <div className="flex h-full">

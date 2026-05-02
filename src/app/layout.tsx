@@ -6,7 +6,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
 export const metadata: Metadata = {
-  title: 'Nexus Finance — Professional Trading Terminal',
+  title: 'YN Finance — Professional Trading Terminal',
   description: 'Real-time markets, community trade ideas, prop firm simulation, and live economic calendar — the trading hub for serious traders.',
 }
 
