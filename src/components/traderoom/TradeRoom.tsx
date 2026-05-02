@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Send, Hash, Zap, Users, Settings } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { supabase, SUPABASE_ENABLED, type DBMessage, type DBChannel } from '@/lib/supabase'
+import { useAIChat } from '@/hooks/useAIChat'
 
 const CHANNELS_FALLBACK: DBChannel[] = [
   { id: '1', name: 'general',     description: 'General discussion',       emoji: '💬' },
@@ -57,6 +58,19 @@ export default function TradeRoom() {
   const [showUsernameModal, setShowUsernameModal] = useState(false)
   const [usernameInput, setUsernameInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const lastRealMsgAt = useRef<Date | null>(null)
+
+  const handleAiMessage = useCallback((msg: Msg) => {
+    setMessages(prev => [...prev.slice(-150), msg])
+  }, [])
+
+  useAIChat(
+    activeChannel.name,
+    {},
+    lastRealMsgAt.current,
+    handleAiMessage,
+    true
+  )
 
   // Init username
   useEffect(() => {
@@ -191,6 +205,7 @@ export default function TradeRoom() {
       return
     }
 
+    lastRealMsgAt.current = new Date()
     // Optimistic update — show immediately, Realtime deduplicates the echo
     const optimisticId = crypto.randomUUID()
     setMessages(prev => [...prev, {
