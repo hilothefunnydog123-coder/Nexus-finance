@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { usePortfolioStore } from '@/store/portfolioStore'
 import { SUPABASE_ENABLED } from '@/lib/supabase'
 import AuthModal from '@/components/auth/AuthModal'
+import Confetti from '@/components/ui-overlay/Confetti'
 import type { DBChallenge } from '@/lib/supabase'
 
 const TIERS = [
@@ -71,6 +72,7 @@ export default function PropChallenge() {
   const [pendingTier, setPendingTier] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
+  const [showConfetti, setShowConfetti] = useState(false)
 
   const equity = getTotalEquity({})
   const pnlPct = ((equity - 100_000) / 100_000) * 100
@@ -124,7 +126,7 @@ export default function PropChallenge() {
       })
       const json = await res.json()
       if (json.challenge) setChallenge(json.challenge)
-      if (json.passed) setSuccessMsg('🎉 Challenge Passed! Check your email for details.')
+      if (json.passed) { setSuccessMsg('🎉 Challenge Passed! Check your email for details.'); setShowConfetti(true); setTimeout(() => setShowConfetti(false), 5000) }
       if (json.failed) setErrorMsg('Challenge failed — max drawdown exceeded.')
     }
     push()
@@ -233,6 +235,7 @@ export default function PropChallenge() {
 
     return (
       <div className="flex flex-col h-full overflow-y-auto">
+        {showConfetti && <Confetti />}
         {showAuth && <AuthModal onClose={() => setShowAuth(false)} onSuccess={onAuthSuccess} reason="Sign in to manage your challenge" />}
 
         <div className="px-5 py-4 border-b border-[#1a2d4a] bg-[#071220] shrink-0">

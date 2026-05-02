@@ -9,8 +9,9 @@ import TradeIdeas from './TradeIdeas'
 import EconomicCalendar from './EconomicCalendar'
 import DailyTasks from './DailyTasks'
 import FAQ from './FAQ'
+import Achievements from './Achievements'
 
-type Tab = 'dashboard' | 'leaderboard' | 'ideas' | 'challenge' | 'calendar' | 'tasks' | 'faq'
+type Tab = 'dashboard' | 'leaderboard' | 'ideas' | 'challenge' | 'calendar' | 'tasks' | 'achievements' | 'faq'
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'dashboard',  label: 'My Account',    icon: <LayoutDashboard size={12} /> },
@@ -19,7 +20,8 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'challenge',  label: 'YN Capital',    icon: <ShieldCheck size={12} /> },
   { id: 'calendar',   label: 'Calendar',      icon: <Calendar size={12} /> },
   { id: 'tasks',      label: 'Tasks & XP',    icon: <Star size={12} /> },
-  { id: 'faq',        label: 'FAQ',           icon: <HelpCircle size={12} /> },
+  { id: 'achievements',label: 'Achievements', icon: <Star size={12} /> },
+  { id: 'faq',         label: 'FAQ',          icon: <HelpCircle size={12} /> },
 ]
 
 export default function CommunityHub() {
@@ -84,8 +86,9 @@ export default function CommunityHub() {
         {tab === 'ideas'     && <TradeIdeas />}
         {tab === 'challenge' && <PropChallenge />}
         {tab === 'calendar'  && <EconomicCalendar />}
-        {tab === 'tasks'     && <DailyTasks />}
-        {tab === 'faq'       && <FAQ />}
+        {tab === 'tasks'        && <DailyTasks />}
+        {tab === 'achievements' && <Achievements />}
+        {tab === 'faq'          && <FAQ />}
       </div>
     </div>
   )

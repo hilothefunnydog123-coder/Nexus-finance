@@ -2,10 +2,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, MessageSquare, Newspaper, ChevronRight, Zap, CandlestickChart, Users, Home, Share2 } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Newspaper, ChevronRight, Zap, CandlestickChart, Users, Home, Share2, BarChart2 } from 'lucide-react'
 import Onboarding from '@/components/ui-overlay/Onboarding'
 import ShareCard from '@/components/ui-overlay/ShareCard'
 import KeyboardShortcuts from '@/components/ui-overlay/KeyboardShortcuts'
+import MorningBriefing from '@/components/ui-overlay/MorningBriefing'
+import MarketHeatmap from '@/components/dashboard/MarketHeatmap'
+import FearGreed from '@/components/dashboard/FearGreed'
+import OptionsFlow from '@/components/dashboard/OptionsFlow'
+import RiskCalculator from '@/components/trading/RiskCalculator'
 import { useMarketData } from '@/hooks/useMarketData'
 import { usePortfolioStore } from '@/store/portfolioStore'
 import MarketTicker from '@/components/dashboard/MarketTicker'
@@ -20,10 +25,11 @@ import type { Quote } from '@/lib/types'
 
 const SYMBOLS = ['AAPL','NVDA','TSLA','MSFT','GOOGL','AMZN','META','AMD','JPM','SPY','NFLX','QQQ']
 
-type Tab = 'dashboard' | 'trade' | 'community' | 'traderoom' | 'pulse'
+type Tab = 'dashboard' | 'markets' | 'trade' | 'community' | 'traderoom' | 'pulse'
 
 const NAV = [
   { id: 'dashboard' as Tab, label: 'Dashboard',   icon: <LayoutDashboard size={13} /> },
+  { id: 'markets'   as Tab, label: 'Markets',     icon: <BarChart2 size={13} /> },
   { id: 'trade'     as Tab, label: 'Trade',        icon: <CandlestickChart size={13} /> },
   { id: 'community' as Tab, label: 'Community',    icon: <Users size={13} /> },
   { id: 'traderoom' as Tab, label: 'Trade-Room',   icon: <MessageSquare size={13} /> },
@@ -70,6 +76,7 @@ export default function NexusDashboard() {
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: '#040c14' }}>
       <Onboarding onTabChange={(tab) => setActiveTab(tab as Tab)} />
       <KeyboardShortcuts />
+      <MorningBriefing />
       {showShare && <ShareCard onClose={() => setShowShare(false)} />}
 
       {/* Nav */}
@@ -134,6 +141,26 @@ export default function NexusDashboard() {
             <PulseFeed />
           </>
         )}
+        {/* Markets overview */}
+        {activeTab === 'markets' && (
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 border-r border-[#1a2d4a] min-h-0 overflow-hidden">
+              <MarketHeatmap />
+            </div>
+            <div className="flex flex-col" style={{ width: 280 }}>
+              <div className="p-3 border-b border-[#1a2d4a] shrink-0">
+                <FearGreed value={61} />
+              </div>
+              <div className="overflow-hidden" style={{ flex: '0 0 45%', borderBottom: '1px solid #1a2d4a' }}>
+                <OptionsFlow />
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <RiskCalculator />
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'trade' && (
           <div className="flex-1 min-h-0 overflow-hidden"><TradingWorkspace /></div>
         )}
