@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, MessageSquare, Newspaper, ChevronRight, Zap, CandlestickChart, Users, Home, Share2, BarChart2 } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Newspaper, ChevronRight, Zap, CandlestickChart, Users, Home, Share2, BarChart2, ScanLine, BookOpen } from 'lucide-react'
+import PreMarketScanner from '@/components/scanner/PreMarketScanner'
+import TradeJournal from '@/components/journal/TradeJournal'
 import Onboarding from '@/components/ui-overlay/Onboarding'
 import ShareCard from '@/components/ui-overlay/ShareCard'
 import KeyboardShortcuts from '@/components/ui-overlay/KeyboardShortcuts'
@@ -28,15 +30,16 @@ import type { Quote } from '@/lib/types'
 
 const SYMBOLS = ['AAPL','NVDA','TSLA','MSFT','GOOGL','AMZN','META','AMD','JPM','SPY','NFLX','QQQ']
 
-type Tab = 'dashboard' | 'markets' | 'trade' | 'community' | 'traderoom' | 'pulse'
+type Tab = 'dashboard' | 'scanner' | 'trade' | 'journal' | 'community' | 'traderoom' | 'pulse'
 
 const NAV = [
-  { id: 'dashboard' as Tab, label: 'Dashboard',   icon: <LayoutDashboard size={13} /> },
-  { id: 'markets'   as Tab, label: 'Markets',     icon: <BarChart2 size={13} /> },
-  { id: 'trade'     as Tab, label: 'Trade',        icon: <CandlestickChart size={13} /> },
-  { id: 'community' as Tab, label: 'Community',    icon: <Users size={13} /> },
-  { id: 'traderoom' as Tab, label: 'Trade-Room',   icon: <MessageSquare size={13} /> },
-  { id: 'pulse'     as Tab, label: 'Pulse',        icon: <Newspaper size={13} /> },
+  { id: 'dashboard' as Tab, label: 'Dashboard',  icon: <LayoutDashboard size={13} /> },
+  { id: 'scanner'   as Tab, label: 'Scanner',    icon: <ScanLine size={13} />,    hot: true  },
+  { id: 'trade'     as Tab, label: 'Trade',      icon: <CandlestickChart size={13} /> },
+  { id: 'journal'   as Tab, label: 'Journal',    icon: <BookOpen size={13} /> },
+  { id: 'community' as Tab, label: 'Community',  icon: <Users size={13} /> },
+  { id: 'traderoom' as Tab, label: 'Trade-Room', icon: <MessageSquare size={13} /> },
+  { id: 'pulse'     as Tab, label: 'Pulse',      icon: <Newspaper size={13} /> },
 ]
 
 function PortfolioBar({ quotes }: { quotes: Record<string, Quote> }) {
@@ -111,9 +114,10 @@ export default function NexusDashboard() {
                   ? 'text-[#00d4aa] border-b-2 border-b-[#00d4aa] bg-[#071220]'
                   : 'text-[#7f93b5] hover:text-[#cdd6f4] hover:bg-[#071220]'
               }`}>
-              {item.icon} <span className="yn-nav-label">{item.label}</span>
-              {item.id === 'community' && (
-                <span className="ml-1 text-[8px] bg-[#00d4aa]/20 text-[#00d4aa] px-1 rounded font-mono">NEW</span>
+              {item.icon}
+              <span className="yn-nav-label">{item.label}</span>
+              {item.id === 'scanner' && (
+                <span className="ml-1 text-[8px] bg-[#ffa502]/20 text-[#ffa502] px-1 rounded font-mono">EDGE</span>
               )}
             </button>
           ))}
@@ -164,8 +168,8 @@ export default function NexusDashboard() {
             </div>
           </>
         )}
-        {/* Markets overview */}
-        {activeTab === 'markets' && (
+        {/* Markets overview — removed tab, content merged into Scanner */}
+        {(activeTab as string) === 'markets' && (
           <div className="flex flex-1 min-h-0 overflow-hidden">
             <div className="flex-1 border-r border-[#1a2d4a] min-h-0 overflow-hidden">
               <MarketHeatmap />
@@ -184,9 +188,34 @@ export default function NexusDashboard() {
           </div>
         )}
 
+        {/* Scanner */}
+        {activeTab === 'scanner' && (
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 border-r border-[#1a2d4a] overflow-hidden">
+              <PreMarketScanner />
+            </div>
+            <div className="flex flex-col" style={{ width: 280 }}>
+              <div className="overflow-hidden" style={{ flex: '0 0 50%', borderBottom: '1px solid #1a2d4a' }}>
+                <OptionsFlow />
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <FearGreed quotes={quotes} />
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'trade' && (
           <div className="flex-1 min-h-0 overflow-hidden"><TradingWorkspace /></div>
         )}
+
+        {/* Journal */}
+        {activeTab === 'journal' && (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <TradeJournal />
+          </div>
+        )}
+
         {activeTab === 'community' && (
           <div className="flex-1 min-h-0 overflow-hidden"><CommunityHub /></div>
         )}
