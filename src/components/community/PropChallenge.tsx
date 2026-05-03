@@ -9,11 +9,6 @@ import AuthModal from '@/components/auth/AuthModal'
 import Confetti from '@/components/ui-overlay/Confetti'
 import type { DBChallenge } from '@/lib/supabase'
 
-const STRIPE_ENABLED = !!(
-  typeof window !== 'undefined'
-    ? false // client: always use server check
-    : process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== 'sk_test_your_key_here'
-)
 
 const TIERS = [
   {
@@ -86,7 +81,10 @@ export default function PropChallenge() {
 
   // Check if Stripe is configured server-side
   useEffect(() => {
-    fetch('/api/stripe/checkout', { method: 'HEAD' }).then(() => setStripeReady(true)).catch(() => setStripeReady(false))
+    fetch('/api/stripe/checkout')
+      .then(r => r.json())
+      .then(json => setStripeReady(json.configured === true))
+      .catch(() => setStripeReady(false))
   }, [])
 
   const equity = getTotalEquity({})

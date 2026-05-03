@@ -51,7 +51,7 @@ function PortfolioBar({ quotes }: { quotes: Record<string, Quote> }) {
       <div className="flex items-center gap-1.5 px-3 border-r border-[#1a2d4a] h-full">
         <span className="text-[10px] text-[#4a5e7a] uppercase tracking-wider font-semibold">Paper Account</span>
       </div>
-      <div className="flex items-center gap-5 px-4 text-[10px]">
+      <div className="yn-account-bar flex items-center gap-5 px-4 text-[10px] overflow-x-auto">
         {[
           { label: 'Equity', value: `$${equity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: '#cdd6f4' },
           { label: 'Return', value: `${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%`, color: ret >= 0 ? '#00d4aa' : '#ff4757' },
@@ -84,6 +84,7 @@ export default function NexusDashboard() {
           .yn-pulse { display: none !important; }
           .yn-nav-label { display: none !important; }
           .yn-account-bar { font-size: 9px !important; gap: 8px !important; }
+          .yn-nav-btn { padding: 0 10px !important; }
         }
       `}</style>
       <Onboarding onTabChange={(tab) => setActiveTab(tab as Tab)} />
@@ -105,12 +106,12 @@ export default function NexusDashboard() {
         <div className="flex h-full">
           {NAV.map(item => (
             <button key={item.id} onClick={() => setActiveTab(item.id)}
-              className={`flex items-center gap-1.5 px-4 h-full text-[11px] font-semibold uppercase tracking-wider border-r border-[#1a2d4a] transition-colors ${
+              className={`yn-nav-btn flex items-center gap-1.5 px-4 h-full text-[11px] font-semibold uppercase tracking-wider border-r border-[#1a2d4a] transition-colors ${
                 activeTab === item.id
                   ? 'text-[#00d4aa] border-b-2 border-b-[#00d4aa] bg-[#071220]'
                   : 'text-[#7f93b5] hover:text-[#cdd6f4] hover:bg-[#071220]'
               }`}>
-              {item.icon} {item.label}
+              {item.icon} <span className="yn-nav-label">{item.label}</span>
               {item.id === 'community' && (
                 <span className="ml-1 text-[8px] bg-[#00d4aa]/20 text-[#00d4aa] px-1 rounded font-mono">NEW</span>
               )}
@@ -142,7 +143,9 @@ export default function NexusDashboard() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {activeTab === 'dashboard' && (
           <>
-            <WatchlistPanel quotes={quotes} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
+            <div className="yn-watchlist">
+              <WatchlistPanel quotes={quotes} selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
+            </div>
             <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden" style={{ minWidth: 0 }}>
               <div className="border-b border-[#1a2d4a] overflow-hidden" style={{ flex: '0 0 62%' }}>
                 <MainChart symbol={selectedSymbol} quote={quotes[selectedSymbol]} />
@@ -155,7 +158,7 @@ export default function NexusDashboard() {
               <div className="overflow-hidden" style={{ flex: '0 0 40%', borderBottom: '1px solid #1a2d4a' }}>
                 <FundamentalsPanel symbol={selectedSymbol} />
               </div>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden yn-pulse">
                 <PulseFeed />
               </div>
             </div>

@@ -46,6 +46,11 @@ export const HEATMAP_SECTORS = [
 
 const ALL_SYMBOLS = HEATMAP_SECTORS.flatMap(s => s.stocks.map(st => st.sym))
 
+// In-memory cache — persists across requests within the same Node.js process instance
+const CACHE_TTL_MS = 30_000
+let cachedQuotes: Record<string, { sym: string; price: number; pct: number; prev: number }> | null = null
+let cacheTimestamp = 0
+
 // Realistic base prices for demo fallback
 const BASE_PRICES: Record<string, number> = {
   AAPL: 189.50, MSFT: 415.20, NVDA: 875.40, GOOGL: 175.30, META: 492.10,

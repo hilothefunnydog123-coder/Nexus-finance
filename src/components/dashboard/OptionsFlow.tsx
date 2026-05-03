@@ -12,7 +12,7 @@ interface Flow {
   expiry: string
   premium: number
   sentiment: 'bullish' | 'bearish' | 'neutral'
-  size: 'whale' | 'large' | 'medium'
+  size: 'whale' | 'large' | 'medium' | 'vol'
   desc: string
   time: Date
 }
@@ -23,6 +23,8 @@ const SEED_FLOWS: Flow[] = [
   { id: '3', ticker: 'AAPL', type: 'call', strike: 195, expiry: 'Jul 18', premium: 1.9, sentiment: 'bullish', size: 'large', desc: 'Golden sweep — repeat buyer, 3rd time this week', time: new Date(Date.now() - 480_000) },
   { id: '4', ticker: 'TSLA', type: 'put',  strike: 240, expiry: 'May 23', premium: 3.1, sentiment: 'bearish', size: 'large', desc: 'Sweep — 1,800 contracts ITM, aggressive', time: new Date(Date.now() - 720_000) },
   { id: '5', ticker: 'META', type: 'call', strike: 500, expiry: 'Jun 20', premium: 5.6, sentiment: 'bullish', size: 'whale', desc: 'Block — $5.6M premium, rolling up', time: new Date(Date.now() - 900_000) },
+  { id: '6', ticker: 'QQQ', type: 'call', strike: 445, expiry: 'Jun 20', premium: 8.4, sentiment: 'bullish', size: 'whale', desc: 'Sweep — 3,200 contracts at ask, rolling up from 435 strike', time: new Date(Date.now() - 300_000) },
+  { id: '7', ticker: 'AMD', type: 'put', strike: 160, expiry: 'May 16', premium: 0.8, sentiment: 'bearish', size: 'medium', desc: 'Block — protective put bought against long position', time: new Date(Date.now() - 1_200_000) },
 ]
 
 const TEMPLATES = [
@@ -35,10 +37,27 @@ const TEMPLATES = [
 const TICKERS = ['NVDA','AAPL','TSLA','META','MSFT','GOOGL','AMZN','AMD','SPY','QQQ']
 const EXPIRIES = ['May 9','May 16','May 23','Jun 20','Jul 18','Sep 19']
 
+const ETF_TICKERS = new Set(['SPY', 'QQQ'])
+const LARGE_CAP_TICKERS = new Set(['NVDA', 'AAPL', 'MSFT', 'META'])
+// mid-cap tickers (AMD, NFLX, TSLA, GOOGL, AMZN) use the narrowest range
+
+function premiumForTicker(ticker: string): number {
+  if (ETF_TICKERS.has(ticker)) {
+    // $1M–$15M
+    return +(Math.random() * 14 + 1).toFixed(1)
+  }
+  if (LARGE_CAP_TICKERS.has(ticker)) {
+    // $0.5M–$8M
+    return +(Math.random() * 7.5 + 0.5).toFixed(1)
+  }
+  // mid-cap: $0.1M–$2M
+  return +(Math.random() * 1.9 + 0.1).toFixed(1)
+}
+
 function randomFlow(): Flow {
   const type = Math.random() > 0.5 ? 'call' : 'put'
   const ticker = TICKERS[Math.floor(Math.random() * TICKERS.length)]
-  const premium = +(Math.random() * 8 + 0.5).toFixed(1)
+  const premium = premiumForTicker(ticker)
   const tmpl = TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)]
   return {
     id: crypto.randomUUID(),
@@ -58,6 +77,7 @@ const SIZE_STYLE = {
   whale:  { label: '🐋 WHALE', color: '#ffa502' },
   large:  { label: '🦈 LARGE', color: '#1e90ff' },
   medium: { label: '📊 BLOCK', color: '#7f93b5' },
+  vol:    { label: '📊 VOL ALERT', color: '#a855f7' },
 }
 
 export default function OptionsFlow() {

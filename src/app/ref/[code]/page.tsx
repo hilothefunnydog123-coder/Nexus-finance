@@ -11,6 +11,10 @@ export default function ReferralPage() {
   const [referrer, setReferrer] = useState<string | null>(null)
 
   useEffect(() => {
+    document.title = "You've been invited to YN Capital"
+  }, [])
+
+  useEffect(() => {
     if (code) {
       localStorage.setItem('yn_referral_code', code)
       // Decode who referred them (code starts with username_xxxx)

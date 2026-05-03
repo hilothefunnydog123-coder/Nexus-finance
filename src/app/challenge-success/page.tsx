@@ -17,6 +17,10 @@ function SuccessContent() {
   const color = tierColors[tier] || '#00d4aa'
 
   useEffect(() => {
+    document.title = 'Challenge Activated — YN Capital'
+  }, [])
+
+  useEffect(() => {
     const t = setInterval(() => {
       setCountdown(c => {
         if (c <= 1) { clearInterval(t); window.location.href = '/app' }

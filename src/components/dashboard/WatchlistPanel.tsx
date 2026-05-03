@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { TrendingUp, TrendingDown, Star } from 'lucide-react'
 import type { Quote } from '@/lib/types'
 
@@ -29,8 +30,28 @@ function formatVolume(v: number): string {
 }
 
 export default function WatchlistPanel({ quotes, selectedSymbol, onSelect }: Props) {
+  const [hoveredSymbol, setHoveredSymbol] = useState<string | null>(null)
+
   return (
-    <div className="flex flex-col h-full bg-[#071220] border-r border-[#1a2d4a]" style={{ width: 200 }}>
+    <div className="relative flex flex-col h-full bg-[#071220] border-r border-[#1a2d4a]" style={{ width: 200 }}>
+      {/* Hover tooltip */}
+      {hoveredSymbol && quotes[hoveredSymbol] && (
+        <div className="absolute left-full top-0 z-50 ml-2 w-44 bg-[#0a1628] border border-[#1e3a5f] rounded-lg p-3 shadow-xl pointer-events-none" style={{ top: '50%' }}>
+          <div className="text-[10px] font-bold text-[#cdd6f4] mb-2">{hoveredSymbol}</div>
+          {[
+            ['Open',       quotes[hoveredSymbol].open],
+            ['High',       quotes[hoveredSymbol].high],
+            ['Low',        quotes[hoveredSymbol].low],
+            ['Prev Close', quotes[hoveredSymbol].previousClose],
+          ].map(([l, v]) => (
+            <div key={l as string} className="flex justify-between text-[10px] mb-1">
+              <span className="text-[#4a5e7a]">{l}</span>
+              <span className="mono text-[#cdd6f4] font-semibold">${(v as number).toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a2d4a] bg-[#0a1628]">
         <Star size={12} className="text-[#ffa502]" />
@@ -54,6 +75,8 @@ export default function WatchlistPanel({ quotes, selectedSymbol, onSelect }: Pro
             <button
               key={symbol}
               onClick={() => onSelect(symbol)}
+              onMouseEnter={() => setHoveredSymbol(symbol)}
+              onMouseLeave={() => setHoveredSymbol(null)}
               className={`w-full text-left px-3 py-2 border-b border-[#1a2d4a]/50 hover:bg-[#0f1f38] transition-colors ${
                 isSelected ? 'bg-[#0f1f38] border-l-2 border-l-[#00d4aa]' : ''
               }`}

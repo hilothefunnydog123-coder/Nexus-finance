@@ -18,7 +18,7 @@ export default function PortfolioAnalytics() {
       equity_curve.push(runningEquity)
     })
 
-    // CAGR — simplified (assumes trades span ~1 year)
+    // Total return relative to starting equity of $100,000
     const totalReturn = (equity - 100_000) / 100_000
     const cagr = totalReturn * 100
 
@@ -59,7 +59,7 @@ export default function PortfolioAnalytics() {
   )
 
   const metrics = [
-    { label: 'Total Return',   value: `${stats.cagr >= 0 ? '+' : ''}${stats.cagr.toFixed(2)}%`,  color: stats.cagr >= 0 ? '#00d4aa' : '#ff4757', icon: <TrendingUp size={12} /> },
+    { label: 'Total Return %', value: `${stats.cagr >= 0 ? '+' : ''}${stats.cagr.toFixed(2)}%`,  color: stats.cagr >= 0 ? '#00d4aa' : '#ff4757', icon: <TrendingUp size={12} /> },
     { label: 'Sharpe Ratio',   value: stats.sharpe.toFixed(2),  color: stats.sharpe >= 1 ? '#00d4aa' : stats.sharpe >= 0 ? '#ffa502' : '#ff4757', icon: <Activity size={12} /> },
     { label: 'Max Drawdown',   value: `-${stats.maxDD.toFixed(2)}%`, color: stats.maxDD > 10 ? '#ff4757' : '#ffa502', icon: <TrendingDown size={12} /> },
     { label: 'Profit Factor',  value: stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2), color: stats.profitFactor >= 1.5 ? '#00d4aa' : '#ffa502', icon: <Target size={12} /> },

@@ -16,9 +16,12 @@ export async function GET() {
     )
     return NextResponse.json(
       { quotes, demo: DEMO_MODE },
-      { headers: { 'Cache-Control': 'no-store' } }
+      { headers: { 'Cache-Control': 's-maxage=15, stale-while-revalidate=30' } }
     )
   } catch {
-    return NextResponse.json({ quotes: SYMBOLS.map(getMockQuote), demo: true })
+    return NextResponse.json(
+      { quotes: SYMBOLS.map(getMockQuote), demo: true },
+      { headers: { 'Cache-Control': 's-maxage=15, stale-while-revalidate=30' } }
+    )
   }
 }

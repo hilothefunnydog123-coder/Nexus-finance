@@ -10,6 +10,10 @@ const TIER_PRICES: Record<string, { name: string; price: number; accountSize: nu
   elite:   { name: 'YN Capital Elite Challenge',    price: 29900, accountSize: 200_000 },
 }
 
+export async function GET() {
+  return NextResponse.json({ configured: STRIPE_ENABLED })
+}
+
 export async function POST(req: NextRequest) {
   if (!STRIPE_ENABLED) {
     return NextResponse.json({ error: 'Stripe not configured', demo: true }, { status: 503 })

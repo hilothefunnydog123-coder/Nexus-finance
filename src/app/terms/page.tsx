@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Zap } from 'lucide-react'
 
-export const metadata = { title: 'Terms of Service — YN Finance' }
+export const metadata = { title: 'Terms of Service — YN Finance', description: 'Terms governing use of the YN Finance simulated trading platform and YN Capital prop firm challenges.' }
 
 const SECTIONS = [
   { title: '1. Acceptance of Terms', content: 'By accessing or using YN Finance at ynfinance.org, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform. YN Finance is a simulated trading environment — no real financial transactions occur on the platform itself.' },

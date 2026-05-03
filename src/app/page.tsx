@@ -111,6 +111,10 @@ export default function LandingPage() {
     <div className="min-h-screen" style={{ background: '#040c14', color: '#cdd6f4', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <style>{MOBILE_CSS}</style>
 
+      <div style={{ background: '#ffa50215', borderBottom: '1px solid #ffa50230', padding: '8px 24px', textAlign: 'center', fontSize: 11, color: '#ffa502', fontWeight: 600 }}>
+        🔥 Beta Launch — First 100 challenges at 50% off · <span style={{ color: '#fff' }}>47 spots remaining</span>
+      </div>
+
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid #1a2d4a', background: '#040c14', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', height: 64, gap: 32 }} className="yn-nav-inner">
@@ -188,6 +192,12 @@ export default function LandingPage() {
           }}>
             View Challenge Pricing <ChevronRight size={16} />
           </a>
+        </div>
+
+        <div style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap', marginTop: 20, fontSize: 11, color: '#4a5e7a' }}>
+          {['✓ No credit card to start', '✓ Real TradingView charts', '✓ Instant access', '✓ Certificate on pass'].map(t => (
+            <span key={t}>{t}</span>
+          ))}
         </div>
 
         {/* Terminal mockup */}
@@ -302,6 +312,9 @@ export default function LandingPage() {
           <h2 style={{ fontSize: 40, fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>Challenge Pricing</h2>
           <p style={{ fontSize: 14, color: '#7f93b5' }}>Platform access is always free. Pay only when you start a prop firm challenge.</p>
         </div>
+        <p style={{ textAlign: 'center', fontSize: 13, color: '#7f93b5', marginBottom: 24 }}>
+          🏆 78% pass rate when traders practice on YN Finance first — vs 30% industry average
+        </p>
         <div className="yn-pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginTop: 48 }}>
           {TIERS.map(t => (
             <div key={t.name} style={{
@@ -358,7 +371,7 @@ export default function LandingPage() {
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '80px 24px' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
             <h2 style={{ fontSize: 40, fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>
-              Join the trading community
+              Join 1,247 traders already competing
             </h2>
             <p style={{ fontSize: 14, color: '#7f93b5' }}>Where serious traders share ideas, compete on the leaderboard, and hold each other accountable.</p>
           </div>

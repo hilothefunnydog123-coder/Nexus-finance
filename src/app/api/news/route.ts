@@ -50,7 +50,7 @@ const MOCK_NEWS: NewsItem[] = [
 export async function GET() {
   try {
     const news = DEMO_MODE ? MOCK_NEWS : await getMarketNews('general').catch(() => MOCK_NEWS)
-    return NextResponse.json({ news, demo: DEMO_MODE }, { headers: { 'Cache-Control': 's-maxage=60' } })
+    return NextResponse.json({ news, demo: DEMO_MODE }, { headers: { 'Cache-Control': 's-maxage=15, stale-while-revalidate=30' } })
   } catch {
     return NextResponse.json({ news: MOCK_NEWS, demo: true })
   }

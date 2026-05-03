@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Zap } from 'lucide-react'
 
-export const metadata = { title: 'Privacy Policy — YN Finance' }
+export const metadata = { title: 'Privacy Policy — YN Finance', description: 'How YN Finance collects, uses, and protects your data.' }
 
 const SECTIONS = [
   {

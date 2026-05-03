@@ -2,7 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Calendar, Clock, AlertTriangle, RefreshCw } from 'lucide-react'
-import type { CalEvent } from '@/app/api/calendar/route'
+
+interface CalEvent {
+  id: string
+  date: string
+  time: string
+  country: string
+  name: string
+  impact: 'high' | 'medium' | 'low'
+  previous: string
+  forecast: string
+  actual: string | null
+}
 
 const IMPACT_STYLE = {
   high:   { color: '#ff4757', bg: 'rgba(255,71,87,0.15)',  icon: '🔴' },

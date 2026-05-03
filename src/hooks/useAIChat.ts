@@ -204,6 +204,7 @@ export function useAIChat(
   enabled: boolean
 ) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const replyTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
   const pricesRef = useRef(prices)
   pricesRef.current = prices
 
@@ -228,9 +229,11 @@ export function useAIChat(
 
       thread.replies?.forEach(reply => {
         const replyTrader = AI_TRADERS.find(t => t.name === reply.trader) || pick(AI_TRADERS)
-        setTimeout(() => {
+        const replyTimer = setTimeout(() => {
+          replyTimersRef.current.delete(replyTimer)
           onMessage(makeMsg(replyTrader, reply.msg(pricesRef.current)))
         }, (reply.delay + rand(-10, 15)) * 1000)
+        replyTimersRef.current.add(replyTimer)
       })
     } else if (soloMsgs.length) {
       const trader = pick(AI_TRADERS)
@@ -251,6 +254,10 @@ export function useAIChat(
     const initialDelay = timeSinceLast > quietThreshold ? rand(15, 45) * 1000 : rand(90, 180) * 1000
 
     timerRef.current = setTimeout(fireConversation, initialDelay)
-    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      replyTimersRef.current.forEach(t => clearTimeout(t))
+      replyTimersRef.current.clear()
+    }
   }, [channelName, enabled, fireConversation, lastRealMessageAt])
 }
