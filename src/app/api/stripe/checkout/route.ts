@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
       quantity: 1,
     }],
     metadata: { tier, userId, accountSize: String(tierConfig.accountSize) },
-    success_url: `${origin}/?challenge_started=true&tier=${tier}`,
-    cancel_url: `${origin}/?checkout_cancelled=true`,
+    success_url: `${origin}/challenge-success?tier=${tier}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/app?checkout_cancelled=true`,
   })
 
   return NextResponse.json({ url: session.url })

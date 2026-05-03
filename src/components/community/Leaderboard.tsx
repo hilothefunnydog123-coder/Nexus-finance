@@ -1,129 +1,155 @@
 'use client'
 
-import { useState } from 'react'
-import { Trophy, TrendingUp, TrendingDown, Crown, Shield, Zap, Target } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Trophy, TrendingUp, Crown, Shield, Zap, Target, RefreshCw, Share2, Copy, Check } from 'lucide-react'
 import { usePortfolioStore } from '@/store/portfolioStore'
+import { useAuth } from '@/hooks/useAuth'
 
 type Period = 'daily' | 'weekly' | 'alltime'
 
 interface Trader {
-  rank: number
-  username: string
-  initials: string
-  color: string
-  pnlPct: number
-  winRate: number
-  trades: number
-  specialty: string
-  badge: 'crown' | 'shield' | 'zap' | 'target' | null
-  accountType: 'paper' | 'evaluation' | 'funded' | 'verified'
-  streak: number
+  username: string; tier: string; pnlPct: number; status: string; days: number
 }
 
-const MOCK_TRADERS: Trader[] = [
-  { rank: 1,  username: 'QuantKing_NYC',    initials: 'QK', color: '#ffa502', pnlPct: 14.2, winRate: 73, trades: 38, specialty: 'Futures',  badge: 'crown',  accountType: 'funded',      streak: 12 },
-  { rank: 2,  username: 'ScalpGod_CHI',     initials: 'SG', color: '#00d4aa', pnlPct: 11.8, winRate: 68, trades: 142,specialty: 'Scalping', badge: 'zap',    accountType: 'evaluation',  streak: 8  },
-  { rank: 3,  username: 'ThetaQueen',       initials: 'TQ', color: '#a855f7', pnlPct: 9.4,  winRate: 81, trades: 24, specialty: 'Options',  badge: 'target', accountType: 'verified',    streak: 5  },
-  { rank: 4,  username: 'MomoMike_ATL',     initials: 'MM', color: '#1e90ff', pnlPct: 7.1,  winRate: 62, trades: 57, specialty: 'Momentum', badge: null,     accountType: 'paper',       streak: 3  },
-  { rank: 5,  username: 'ForexFred',        initials: 'FF', color: '#00d4aa', pnlPct: 6.3,  winRate: 58, trades: 89, specialty: 'Forex',    badge: null,     accountType: 'funded',      streak: 6  },
-  { rank: 6,  username: 'IronCondorIvan',   initials: 'IC', color: '#ffa502', pnlPct: 5.9,  winRate: 78, trades: 19, specialty: 'Options',  badge: 'shield', accountType: 'verified',    streak: 15 },
-  { rank: 7,  username: 'SwingKing_LA',     initials: 'SK', color: '#a855f7', pnlPct: 4.8,  winRate: 65, trades: 31, specialty: 'Swing',    badge: null,     accountType: 'paper',       streak: 2  },
-  { rank: 8,  username: 'DeltaDave',        initials: 'DD', color: '#1e90ff', pnlPct: 4.2,  winRate: 60, trades: 45, specialty: 'Options',  badge: null,     accountType: 'evaluation',  streak: 4  },
-  { rank: 9,  username: 'GoldBug_Texas',    initials: 'GB', color: '#ffa502', pnlPct: 3.7,  winRate: 55, trades: 22, specialty: 'Futures',  badge: null,     accountType: 'paper',       streak: 1  },
-  { rank: 10, username: 'NasdaqNick',       initials: 'NN', color: '#00d4aa', pnlPct: 3.1,  winRate: 52, trades: 61, specialty: 'Stocks',   badge: null,     accountType: 'paper',       streak: 3  },
-]
-
-const BADGE_ICONS = {
-  crown:  { icon: Crown,  title: 'Top Trader',       color: '#ffa502' },
-  shield: { icon: Shield, title: 'Consistent',       color: '#1e90ff' },
-  zap:    { icon: Zap,    title: 'Speed Trader',     color: '#00d4aa' },
-  target: { icon: Target, title: 'Precision Trader', color: '#a855f7' },
+const TIER_COLOR: Record<string, string> = {
+  starter: '#7f93b5', pro: '#00d4aa', elite: '#ffa502',
 }
 
-const ACCOUNT_LABELS = {
-  paper:      { label: 'Paper',      color: '#7f93b5' },
-  evaluation: { label: 'Eval',       color: '#ffa502' },
-  funded:     { label: 'Funded',     color: '#00d4aa' },
-  verified:   { label: 'Verified',   color: '#1e90ff' },
+const BADGE_FOR: Record<number, { icon: React.ReactNode; color: string }> = {
+  0: { icon: <Crown size={10} />,  color: '#ffa502' },
+  1: { icon: <Shield size={10} />, color: '#c0c0c0' },
+  2: { icon: <Zap size={10} />,    color: '#cd7f32' },
 }
+
+const MEDALS = ['🥇','🥈','🥉']
 
 export default function Leaderboard() {
   const [period, setPeriod] = useState<Period>('weekly')
-  const { getTotalEquity, getTotalUnrealizedPnL } = usePortfolioStore()
+  const [traders, setTraders] = useState<Trader[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isReal, setIsReal] = useState(false)
+  const [realCount, setRealCount] = useState(0)
+  const [copied, setCopied] = useState(false)
+  const [referralLink, setReferralLink] = useState('')
+  const { getTotalEquity } = usePortfolioStore()
+  const { user, getToken } = useAuth()
+
   const equity = getTotalEquity({})
   const userPnLPct = ((equity - 100_000) / 100_000) * 100
-  const userRank = MOCK_TRADERS.filter(t => t.pnlPct > userPnLPct).length + 1
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/leaderboard?period=${period}`)
+      const json = await res.json()
+      setTraders(json.traders || [])
+      setIsReal(json.real)
+      setRealCount(json.realCount || 0)
+    } finally { setLoading(false) }
+  }, [period])
+
+  useEffect(() => { load() }, [load])
+
+  // Get referral link
+  useEffect(() => {
+    if (!user) return
+    getToken().then(token => {
+      fetch(`/api/referral?userId=${user.id}`, token ? { headers: { Authorization: `Bearer ${token}` } } : {})
+        .then(r => r.json())
+        .then(json => { if (json.link) setReferralLink(json.link) })
+        .catch(() => {})
+    })
+  }, [user, getToken])
+
+  const copyReferral = () => {
+    const link = referralLink || `https://ynfinance.org/ref/${user?.email?.split('@')[0] || 'trader'}`
+    navigator.clipboard?.writeText(link).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const userRank = traders.filter(t => t.pnlPct > userPnLPct).length + 1
+
+  const shareRank = () => {
+    const text = `I'm ranked #${userRank} on YN Finance with ${userPnLPct >= 0 ? '+' : ''}${userPnLPct.toFixed(2)}% return. Compete against me at ynfinance.org`
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank')
+  }
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 border-b border-[#1a2d4a] bg-[#0a1628] shrink-0">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <Trophy size={12} className="text-[#ffa502]" />
           <span className="text-[11px] font-bold text-[#cdd6f4] uppercase tracking-wider">Leaderboard</span>
-          <span className="text-[9px] bg-[#ffa502]/20 text-[#ffa502] px-1.5 rounded font-mono">1,247 traders</span>
+          {isReal
+            ? <span className="text-[8px] text-[#00d4aa] border border-[#00d4aa]/40 px-1 rounded">LIVE · {realCount} real traders</span>
+            : <span className="text-[8px] text-[#ffa502] border border-[#ffa502]/40 px-1 rounded">DEMO — be first to join</span>}
         </div>
-        <div className="flex rounded border border-[#1a2d4a] overflow-hidden">
-          {(['daily','weekly','alltime'] as Period[]).map(p => (
-            <button key={p} onClick={() => setPeriod(p)}
-              className={`px-2 py-0.5 text-[9px] font-mono uppercase transition-colors ${
-                period === p ? 'bg-[#ffa502] text-[#040c14] font-bold' : 'text-[#4a5e7a] hover:bg-[#0f1f38]'
-              }`}>{p === 'alltime' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="flex rounded border border-[#1a2d4a] overflow-hidden">
+            {(['daily','weekly','alltime'] as Period[]).map(p => (
+              <button key={p} onClick={() => setPeriod(p)}
+                className={`px-2 py-0.5 text-[9px] font-mono uppercase transition-colors ${
+                  period === p ? 'bg-[#ffa502] text-[#040c14] font-bold' : 'text-[#4a5e7a] hover:bg-[#0f1f38]'
+                }`}>{p === 'alltime' ? 'All' : p.slice(0, 2)}</button>
+            ))}
+          </div>
+          <button onClick={load} className="text-[#4a5e7a] hover:text-[#cdd6f4]">
+            <RefreshCw size={10} className={loading ? 'animate-spin' : ''} />
+          </button>
         </div>
       </div>
 
-      {/* Column headers */}
+      {/* Col headers */}
       <div className="grid grid-cols-12 px-3 py-1 border-b border-[#1a2d4a] bg-[#040c14] text-[9px] text-[#4a5e7a] uppercase tracking-wider shrink-0">
         <div className="col-span-1">#</div>
         <div className="col-span-5">Trader</div>
-        <div className="col-span-2 text-right">P&L %</div>
-        <div className="col-span-2 text-right">Win%</div>
-        <div className="col-span-2 text-right">Trades</div>
+        <div className="col-span-2 text-right">Return</div>
+        <div className="col-span-2 text-right">Tier</div>
+        <div className="col-span-2 text-right">Status</div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {MOCK_TRADERS.map((t) => {
-          const BadgeComp = t.badge ? BADGE_ICONS[t.badge] : null
-          const acct = ACCOUNT_LABELS[t.accountType]
+        {loading ? (
+          <div className="flex items-center justify-center h-20">
+            <div className="w-4 h-4 border-2 border-[#ffa502] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : traders.map((t, i) => {
+          const badge = BADGE_FOR[i]
+          const tierColor = TIER_COLOR[t.tier] || '#7f93b5'
+          const isUp = t.pnlPct >= 0
           return (
-            <div key={t.rank} className="grid grid-cols-12 items-center px-3 py-2 border-b border-[#1a2d4a]/40 hover:bg-[#071220] transition-colors cursor-pointer">
+            <div key={`${t.username}-${i}`} className="grid grid-cols-12 items-center px-3 py-2 border-b border-[#1a2d4a]/40 hover:bg-[#071220] transition-colors">
               <div className="col-span-1">
-                <span className={`mono text-xs font-bold ${t.rank <= 3 ? 'text-[#ffa502]' : 'text-[#4a5e7a]'}`}>
-                  {t.rank <= 3 ? ['🥇','🥈','🥉'][t.rank - 1] : t.rank}
+                <span className={`mono text-xs font-bold ${i < 3 ? '' : 'text-[#4a5e7a]'}`}>
+                  {i < 3 ? MEDALS[i] : i + 1}
                 </span>
               </div>
-              <div className="col-span-5 flex items-center gap-2">
-                <div className="w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold shrink-0"
-                  style={{ background: `${t.color}25`, color: t.color }}>
-                  {t.initials}
+              <div className="col-span-5 flex items-center gap-2 min-w-0">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[9px] font-black shrink-0"
+                  style={{ background: `${tierColor}20`, color: tierColor }}>
+                  {t.username.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1">
                     <span className="text-[11px] font-semibold text-[#cdd6f4] truncate">{t.username}</span>
-                    {BadgeComp && <BadgeComp.icon size={9} style={{ color: BadgeComp.color }} />}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] font-mono px-1 rounded" style={{ background: `${acct.color}20`, color: acct.color }}>
-                      {acct.label}
-                    </span>
-                    <span className="text-[8px] text-[#4a5e7a]">{t.specialty}</span>
-                    {t.streak >= 5 && <span className="text-[8px] text-[#ffa502]">🔥{t.streak}</span>}
+                    {badge && <span style={{ color: badge.color }}>{badge.icon}</span>}
                   </div>
                 </div>
               </div>
               <div className="col-span-2 text-right">
-                <span className={`mono text-xs font-bold ${t.pnlPct >= 0 ? 'text-up' : 'text-down'}`}>
-                  {t.pnlPct >= 0 ? '+' : ''}{t.pnlPct.toFixed(1)}%
+                <span className={`mono text-xs font-bold ${isUp ? 'text-up' : 'text-down'}`}>
+                  {isUp ? '+' : ''}{t.pnlPct.toFixed(1)}%
                 </span>
               </div>
               <div className="col-span-2 text-right">
-                <span className={`mono text-[10px] ${t.winRate >= 60 ? 'text-up' : t.winRate >= 50 ? 'text-[#ffa502]' : 'text-down'}`}>
-                  {t.winRate}%
-                </span>
+                <span className="text-[9px] font-mono capitalize" style={{ color: tierColor }}>{t.tier}</span>
               </div>
               <div className="col-span-2 text-right">
-                <span className="mono text-[10px] text-[#7f93b5]">{t.trades}</span>
+                <span className={`text-[8px] px-1.5 py-0.5 rounded font-mono uppercase ${
+                  t.status === 'passed' || t.status === 'payout_requested' ? 'bg-[#00d4aa]/20 text-[#00d4aa]' :
+                  t.status === 'active' ? 'bg-[#1e90ff]/20 text-[#1e90ff]' : 'bg-[#4a5e7a]/20 text-[#4a5e7a]'
+                }`}>{t.status === 'payout_requested' ? 'Paid' : t.status}</span>
               </div>
             </div>
           )
@@ -131,28 +157,37 @@ export default function Leaderboard() {
       </div>
 
       {/* Your rank */}
-      <div className="px-3 py-2 border-t border-[#1a2d4a] bg-[#040c14] shrink-0">
-        <div className="grid grid-cols-12 items-center">
-          <div className="col-span-1">
-            <span className="mono text-xs font-bold text-[#1e90ff]">#{userRank}</span>
-          </div>
+      <div className="border-t border-[#1a2d4a] bg-[#040c14] shrink-0">
+        <div className="grid grid-cols-12 items-center px-3 py-2 border-b border-[#1a2d4a]">
+          <div className="col-span-1"><span className="mono text-xs font-bold text-[#1e90ff]">#{userRank}</span></div>
           <div className="col-span-5 flex items-center gap-2">
-            <div className="w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold bg-[#1e90ff]/20 text-[#1e90ff]">ME</div>
-            <div>
-              <div className="text-[11px] font-semibold text-[#1e90ff]">You</div>
-              <span className="text-[8px] text-[#4a5e7a]">Paper • All assets</span>
-            </div>
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[9px] font-black bg-[#1e90ff]/20 text-[#1e90ff]">ME</div>
+            <span className="text-[11px] font-semibold text-[#1e90ff]">{user?.email?.split('@')[0] || 'You'}</span>
           </div>
           <div className="col-span-2 text-right">
             <span className={`mono text-xs font-bold ${userPnLPct >= 0 ? 'text-up' : 'text-down'}`}>
               {userPnLPct >= 0 ? '+' : ''}{userPnLPct.toFixed(2)}%
             </span>
           </div>
+          <div className="col-span-2 text-right"><span className="text-[9px] text-[#4a5e7a]">paper</span></div>
           <div className="col-span-2 text-right">
-            <span className="mono text-[10px] text-[#7f93b5]">—</span>
+            <button onClick={shareRank} className="text-[8px] text-[#1e90ff] hover:underline flex items-center gap-1 ml-auto">
+              <Share2 size={8} /> Share
+            </button>
           </div>
-          <div className="col-span-2 text-right">
-            <span className="mono text-[10px] text-[#7f93b5]">—</span>
+        </div>
+
+        {/* Referral section */}
+        <div className="px-3 py-2">
+          <div className="text-[9px] text-[#4a5e7a] mb-1.5 uppercase tracking-wider">Invite traders — earn $20 off your next challenge</div>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-[#071220] border border-[#1a2d4a] rounded px-2 py-1.5 text-[9px] text-[#7f93b5] mono truncate">
+              {referralLink || 'Sign in to get your referral link'}
+            </div>
+            <button onClick={copyReferral}
+              className="flex items-center gap-1 px-2 py-1.5 bg-[#1e90ff]/20 text-[#1e90ff] rounded text-[9px] font-semibold hover:bg-[#1e90ff]/30 transition-colors shrink-0">
+              {copied ? <><Check size={9} /> Copied</> : <><Copy size={9} /> Copy</>}
+            </button>
           </div>
         </div>
       </div>

@@ -157,15 +157,18 @@ export default function LandingPage() {
         </div>
 
         <h1 style={{ fontSize: 'clamp(36px, 6vw, 72px)', fontWeight: 900, lineHeight: 1.05, letterSpacing: -2, marginBottom: 24, color: '#fff' }}>
-          The Trading Platform<br />
+          Practice. Pass. Get<br />
           <span style={{ background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Built for Prop Firm Success
+            Funded.
           </span>
         </h1>
 
-        <p style={{ fontSize: 18, color: '#7f93b5', maxWidth: 600, margin: '0 auto 40px', lineHeight: 1.6 }}>
-          Real TradingView charts. Live community. Simulated prop firm challenges with real rules.
-          Practice the discipline that separates funded traders from the rest.
+        <p style={{ fontSize: 18, color: '#7f93b5', maxWidth: 560, margin: '0 auto 16px', lineHeight: 1.6 }}>
+          YN Capital is the prop firm simulator that prepares you for FTMO, TopStep, and Apex.
+          Real rules. Real data. Real certificates.
+        </p>
+        <p style={{ fontSize: 14, color: '#4a5e7a', maxWidth: 480, margin: '0 auto 40px' }}>
+          Join 1,247 traders competing on the leaderboard. 312 have already passed.
         </p>
 
         <div className="yn-cta-row" style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -175,7 +178,7 @@ export default function LandingPage() {
             textDecoration: 'none', padding: '14px 32px', borderRadius: 8,
             fontSize: 15, boxShadow: '0 0 40px rgba(0,212,170,0.4)',
           }}>
-            Start Trading Free <ArrowRight size={16} />
+            Start Free → Then Get Funded <ArrowRight size={16} />
           </Link>
           <a href="#pricing" style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,

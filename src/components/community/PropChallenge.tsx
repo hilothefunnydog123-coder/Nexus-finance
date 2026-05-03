@@ -9,6 +9,12 @@ import AuthModal from '@/components/auth/AuthModal'
 import Confetti from '@/components/ui-overlay/Confetti'
 import type { DBChallenge } from '@/lib/supabase'
 
+const STRIPE_ENABLED = !!(
+  typeof window !== 'undefined'
+    ? false // client: always use server check
+    : process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== 'sk_test_your_key_here'
+)
+
 const TIERS = [
   {
     id: 'starter', name: 'Starter', price: 49, size: 25_000, profitTarget: 8,
@@ -73,6 +79,15 @@ export default function PropChallenge() {
   const [successMsg, setSuccessMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const [showConfetti, setShowConfetti] = useState(false)
+  const [referralCode] = useState(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('yn_referral_code') : null
+  )
+  const [stripeReady, setStripeReady] = useState(false)
+
+  // Check if Stripe is configured server-side
+  useEffect(() => {
+    fetch('/api/stripe/checkout', { method: 'HEAD' }).then(() => setStripeReady(true)).catch(() => setStripeReady(false))
+  }, [])
 
   const equity = getTotalEquity({})
   const pnlPct = ((equity - 100_000) / 100_000) * 100
@@ -135,7 +150,6 @@ export default function PropChallenge() {
   }, [challenge, pnlPct, getToken])
 
   const startChallenge = async (tierId: string) => {
-    // If not logged in, show auth modal and remember the tier
     if (!user) { setPendingTier(tierId); setShowAuth(true); return }
 
     const tier = TIERS.find(t => t.id === tierId)
@@ -145,7 +159,26 @@ export default function PropChallenge() {
     setErrorMsg('')
 
     try {
-      // Demo mode (no Supabase) — save to localStorage so it persists
+      // Route through Stripe if configured
+      if (stripeReady && SUPABASE_ENABLED) {
+        const res = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tier: tierId,
+            userId: user.id,
+            email: user.email,
+            referralCode: referralCode || undefined,
+          }),
+        })
+        const json = await res.json()
+        if (json.url) {
+          window.location.href = json.url
+          return
+        }
+      }
+
+      // Demo mode (no Supabase/Stripe) — save to localStorage so it persists
       if (!SUPABASE_ENABLED) {
         const localChallenge = {
           id: crypto.randomUUID(),

@@ -133,3 +133,22 @@ alter table public.trade_ideas enable row level security;
 create policy "Anyone reads ideas"  on trade_ideas for select using (true);
 create policy "Anyone posts ideas"  on trade_ideas for insert with check (true);
 create policy "Anyone votes ideas"  on trade_ideas for update using (true);
+
+-- ================================================================
+-- Referral system + referral_code on profiles (run in Supabase)
+-- ================================================================
+alter table public.profiles add column if not exists referral_code text unique;
+
+create table if not exists public.referrals (
+  id uuid primary key default gen_random_uuid(),
+  referrer_id uuid references auth.users on delete cascade,
+  referred_id uuid references auth.users on delete cascade,
+  referred_email text,
+  code text not null,
+  status text default 'pending' check (status in ('pending','rewarded')),
+  created_at timestamptz default now()
+);
+
+alter table public.referrals enable row level security;
+create policy "Users see own referrals" on referrals for select using (auth.uid() = referrer_id);
+create policy "System inserts referrals" on referrals for insert with check (true);
