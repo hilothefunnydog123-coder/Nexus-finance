@@ -98,12 +98,10 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-size: 13px;
     line-height: 1.4;
-    overflow: hidden;
-    height: 100%;
+    /* overflow: hidden REMOVED — only the /app terminal page sets this inline */
     -webkit-font-smoothing: antialiased;
   }
   html {
-    height: 100%;
     background-color: #040c14;
   }
 }
