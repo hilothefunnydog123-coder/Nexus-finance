@@ -152,3 +152,71 @@ create table if not exists public.referrals (
 alter table public.referrals enable row level security;
 create policy "Users see own referrals" on referrals for select using (auth.uid() = referrer_id);
 create policy "System inserts referrals" on referrals for insert with check (true);
+
+-- ================================================================
+-- Courses Platform — run in Supabase SQL Editor
+-- ================================================================
+create table if not exists public.courses (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique not null,
+  title text not null,
+  description text,
+  trader_name text not null,
+  trader_handle text,
+  trader_bio text,
+  trader_avatar_color text default '#00d4aa',
+  strategy_type text not null,
+  difficulty text default 'beginner',
+  price_cents integer default 99,
+  thumbnail_color text default '#00d4aa',
+  trailer_youtube_id text,
+  is_free boolean default false,
+  is_published boolean default true,
+  enrollment_count integer default 0,
+  rating numeric default 4.8,
+  tags text[] default '{}',
+  created_at timestamptz default now()
+);
+
+create table if not exists public.course_sections (
+  id uuid primary key default gen_random_uuid(),
+  course_id uuid references courses(id) on delete cascade,
+  order_index integer not null,
+  title text not null,
+  type text not null,
+  content jsonb default '{}',
+  duration_mins integer default 5,
+  is_free_preview boolean default false,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.course_enrollments (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete cascade,
+  course_id uuid references courses(id) on delete cascade,
+  enrolled_at timestamptz default now(),
+  completed_at timestamptz,
+  progress_percent integer default 0,
+  stripe_session_id text,
+  unique(user_id, course_id)
+);
+
+create table if not exists public.section_completions (
+  user_id uuid references auth.users on delete cascade,
+  section_id uuid references course_sections(id) on delete cascade,
+  completed_at timestamptz default now(),
+  primary key (user_id, section_id)
+);
+
+-- RLS
+alter table courses enable row level security;
+alter table course_sections enable row level security;
+alter table course_enrollments enable row level security;
+alter table section_completions enable row level security;
+
+create policy "Anyone reads courses" on courses for select using (is_published = true);
+create policy "Anyone reads sections" on course_sections for select using (true);
+create policy "Users read own enrollments" on course_enrollments for select using (auth.uid() = user_id);
+create policy "Users insert enrollments" on course_enrollments for insert with check (auth.uid() = user_id);
+create policy "Users update enrollments" on course_enrollments for update using (auth.uid() = user_id);
+create policy "Users complete sections" on section_completions for all using (auth.uid() = user_id);

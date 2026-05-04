@@ -127,7 +127,7 @@ export default function LandingPage() {
           </div>
 
           <div className="yn-nav-links" style={{ display: 'flex', gap: 32, fontSize: 13, color: '#7f93b5' }}>
-            {[['#features','Features'],['#pricing','Pricing'],['#community','Community']].map(([href, label]) => (
+            {[['#features','Features'],['#pricing','Pricing'],['#community','Community'],['/courses','Courses 📚']].map(([href, label]) => (
               <a key={label} href={href} style={{ color: '#7f93b5', textDecoration: 'none', fontWeight: 500 }}
                 onMouseEnter={e => (e.currentTarget.style.color = '#cdd6f4')}
                 onMouseLeave={e => (e.currentTarget.style.color = '#7f93b5')}>
