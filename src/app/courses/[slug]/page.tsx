@@ -2,8 +2,10 @@
 
 import { useState, useEffect, use } from 'react'
 import Link from 'next/link'
-import { Zap, Play, CheckCircle, Lock, ArrowRight, Star, Users, Clock, ChevronLeft, BookOpen, MessageSquare, Target } from 'lucide-react'
+import { Zap, Play, CheckCircle, Lock, ArrowRight, Star, Users, Clock, ChevronLeft, BookOpen, Target, Sparkles } from 'lucide-react'
 import { SEED_COURSES } from '@/app/api/courses/route'
+import InteractiveLecture, { textToSlides } from '@/components/courses/InteractiveLecture'
+import CourseChat from '@/components/courses/CourseChat'
 
 interface Section {
   id?: string; order_index: number; title: string; type: string
@@ -22,7 +24,7 @@ const AdBanner = () => (
   </div>
 )
 
-function SectionContent({ section, onComplete }: { section: Section; onComplete: () => void }) {
+function SectionContent({ section, onComplete, color, instructor }: { section: Section; onComplete: () => void; color: string; instructor: string }) {
   const c = section.content
 
   if (section.type === 'video') return (
@@ -47,23 +49,41 @@ function SectionContent({ section, onComplete }: { section: Section; onComplete:
     </div>
   )
 
-  if (section.type === 'text') return (
-    <div>
-      <div className="prose prose-invert max-w-none">
-        {c.text?.split('\n').map((line, i) => {
-          if (line.startsWith('# ')) return <h1 key={i} className="text-xl font-black text-white mb-4 mt-6">{line.slice(2)}</h1>
-          if (line.startsWith('## ')) return <h2 key={i} className="text-base font-bold text-[#cdd6f4] mb-3 mt-5">{line.slice(3)}</h2>
-          if (line.startsWith('- ')) return <li key={i} className="text-[13px] text-[#7f93b5] mb-1.5 ml-4 list-disc">{line.slice(2)}</li>
-          if (line.startsWith('**') && line.endsWith('**')) return <p key={i} className="font-bold text-[#cdd6f4] text-[13px] my-1">{line.slice(2, -2)}</p>
-          if (line === '') return <div key={i} className="h-3" />
-          return <p key={i} className="text-[13px] text-[#7f93b5] leading-relaxed mb-2">{line}</p>
-        })}
+  if (section.type === 'text') {
+    const slides = textToSlides(c.text || '', color)
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles size={13} className="text-[#a855f7]" />
+          <span className="text-[11px] text-[#a855f7] font-bold uppercase tracking-wider">AI Interactive Lecture</span>
+          <span className="text-[9px] text-[#4a5e7a]">— Click Play for narrated walkthrough, or read below</span>
+        </div>
+        <InteractiveLecture
+          title={section.title}
+          instructor={instructor}
+          color={color}
+          slides={slides}
+          onComplete={onComplete}
+        />
+        {/* Also show readable text below */}
+        <details className="mt-4">
+          <summary className="text-[12px] text-[#4a5e7a] cursor-pointer hover:text-[#7f93b5]">Show full text version ↓</summary>
+          <div className="mt-3 prose prose-invert max-w-none">
+            {c.text?.split('\n').map((line, i) => {
+              if (line.startsWith('# ')) return <h1 key={i} className="text-xl font-black text-white mb-4 mt-6">{line.slice(2)}</h1>
+              if (line.startsWith('## ')) return <h2 key={i} className="text-base font-bold text-[#cdd6f4] mb-3 mt-5">{line.slice(3)}</h2>
+              if (line.startsWith('- ')) return <li key={i} className="text-[13px] text-[#7f93b5] mb-1.5 ml-4 list-disc">{line.slice(2)}</li>
+              if (line === '') return <div key={i} className="h-3" />
+              return <p key={i} className="text-[13px] text-[#7f93b5] leading-relaxed mb-2">{line}</p>
+            })}
+          </div>
+        </details>
+        <button onClick={onComplete} className="mt-4 flex items-center gap-2 px-4 py-2.5 bg-[#00d4aa] text-[#040c14] font-bold text-sm rounded-lg hover:bg-[#00ffcc] transition-colors">
+          <CheckCircle size={14} /> Mark as Complete
+        </button>
       </div>
-      <button onClick={onComplete} className="mt-6 flex items-center gap-2 px-4 py-2.5 bg-[#00d4aa] text-[#040c14] font-bold text-sm rounded-lg hover:bg-[#00ffcc] transition-colors">
-        <CheckCircle size={14} /> Mark as Complete
-      </button>
-    </div>
-  )
+    )
+  }
 
   if (section.type === 'practice') return (
     <div>
@@ -219,7 +239,7 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
               </div>
 
               {canView(curr, activeSection) ? (
-                <SectionContent section={curr} onComplete={() => markComplete(activeSection)} />
+                <SectionContent section={curr} onComplete={() => markComplete(activeSection)} color={color} instructor={course.trader_name} />
               ) : (
                 <div style={{ textAlign: 'center', padding: '40px 0' }}>
                   <Lock size={32} style={{ color: '#1a2d4a', margin: '0 auto 12px' }} />
@@ -232,19 +252,8 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
             </div>
           )}
 
-          {/* Community / chat link */}
-          <div style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 12, padding: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 8 }}>
-              <MessageSquare size={14} color="#a855f7" />
-              <span style={{ fontWeight: 700, color: '#cdd6f4', fontSize: 13, marginLeft: 8 }}>Course Community</span>
-            </div>
-            <p style={{ fontSize: 12, color: '#7f93b5', marginBottom: 12 }}>
-              Discuss this strategy with other students in the Trade-Room. Post your practice trades, ask questions, share setups.
-            </p>
-            <Link href="/app" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#a855f7', textDecoration: 'none', background: '#a855f720', padding: '8px 14px', borderRadius: 8 }}>
-              Open Trade-Room <ArrowRight size={12} />
-            </Link>
-          </div>
+          {/* Real per-course chat */}
+          <CourseChat courseSlug={course.slug} courseName={course.title} color={color} />
         </div>
 
         {/* Sidebar */}
