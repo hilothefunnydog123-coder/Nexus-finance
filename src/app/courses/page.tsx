@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import AdsterraBanner from '@/components/ads/AdsterraBanner'
 import { Zap, Star, Users, Search, BookOpen, Play, ChevronRight, TrendingUp, Shield, ArrowRight } from 'lucide-react'
 import { SEED_COURSES } from '@/app/api/courses/route'
 
@@ -93,11 +94,8 @@ export default function CoursesPage() {
         </div>
       </div>
 
-      {/* Ad slot */}
       <div style={{ maxWidth: 1200, margin: '24px auto 0', padding: '0 24px' }}>
-        <div style={{ height: 60, background: '#071220', border: '1px solid #1a2d4a', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 10, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Advertisement</span>
-        </div>
+        <AdsterraBanner />
       </div>
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
@@ -216,10 +214,7 @@ export default function CoursesPage() {
           </div>
         )}
 
-        {/* Bottom ad */}
-        <div style={{ height: 60, background: '#071220', border: '1px solid #1a2d4a', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 48 }}>
-          <span style={{ fontSize: 10, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Advertisement</span>
-        </div>
+        <AdsterraBanner className="mb-12" />
 
         {/* The unique advantage */}
         <div style={{ background: 'linear-gradient(135deg, #071220, #0a1628)', border: '1px solid #1e3a5f', borderRadius: 20, padding: '48px', marginBottom: 48 }}>

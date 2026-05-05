@@ -7,6 +7,7 @@ import { SEED_COURSES } from '@/app/api/courses/route'
 import InteractiveLecture, { textToSlides } from '@/components/courses/InteractiveLecture'
 import CourseChat from '@/components/courses/CourseChat'
 import QuizBlock from '@/components/courses/QuizBlock'
+import AdsterraBanner from '@/components/ads/AdsterraBanner'
 
 interface Section {
   id?: string; order_index: number; title: string; type: string
@@ -19,11 +20,6 @@ interface Course {
   thumbnail_img?: string; rating: number; enrollment_count: number; tags: string[]; is_free: boolean
 }
 
-const AdBanner = () => (
-  <div className="w-full h-14 bg-[#071220] border border-[#1a2d4a] rounded-lg flex items-center justify-center my-4">
-    <span className="text-[10px] text-[#4a5e7a] uppercase tracking-wider">Advertisement</span>
-  </div>
-)
 
 function SectionContent({ section, onComplete, color, instructor }: { section: Section; onComplete: () => void; color: string; instructor: string }) {
   const c = section.content
@@ -239,7 +235,7 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
             </div>
           </div>
 
-          <AdBanner />
+          <AdsterraBanner className="my-4" />
 
           {/* Section content */}
           {curr && (

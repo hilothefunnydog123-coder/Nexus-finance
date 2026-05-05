@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Star, Play, ChevronRight, TrendingUp, Zap, BookOpen, Users, Award, Sparkles } from 'lucide-react'
+import AdsterraBanner from '@/components/ads/AdsterraBanner'
 
 const INSTRUCTORS = [
   { name: 'Ross Cameron', handle: 'Warrior Trading', color: '#ff4757', initials: 'RC', sub: '1.98M subscribers', tag: 'Day Trading' },
@@ -179,14 +180,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Adsterra Native Banner */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px 40px' }}>
-        <iframe
-          srcDoc={`<!DOCTYPE html><html><head><style>body{margin:0;padding:0;background:transparent;overflow:hidden}</style></head><body><script async="async" data-cfasync="false" src="https://pl28636153.profitablecpmratenetwork.com/d4467fd39cd2555e32e317195a17fa8f/invoke.js"><\/script><div id="container-d4467fd39cd2555e32e317195a17fa8f"></div></body></html>`}
-          style={{ border: 'none', width: '100%', height: '120px', background: 'transparent' }}
-          scrolling="no"
-          title="ad"
-        />
+        <AdsterraBanner />
       </div>
 
       {/* CATEGORIES */}
@@ -289,6 +284,118 @@ export default function HomePage() {
             <Link href="/courses" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#00d4aa', textDecoration: 'none', fontWeight: 700 }}>
               Start your first course for $0.99 <ArrowRight size={14} />
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* MARKET OPPORTUNITY — YC box: market size + why now */}
+      <section style={{ padding: '80px 24px', background: 'rgba(7,18,32,0.6)', borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }} className="cat-grid">
+            <div>
+              <div style={{ fontSize: 11, color: '#00d4aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>The Opportunity</div>
+              <h2 style={{ fontSize: 'clamp(28px,3.5vw,42px)', fontWeight: 900, color: '#fff', letterSpacing: -1, lineHeight: 1.1, marginBottom: 20 }}>
+                A $3.2B market that&apos;s teaching people the wrong way.
+              </h2>
+              <p style={{ fontSize: 14, color: '#7f93b5', lineHeight: 1.8, marginBottom: 28 }}>
+                50M+ retail traders globally. 90% lose money — not from lack of trying, but from bad education that&apos;s theoretical, expensive, and disconnected from real practice. Every existing platform makes you learn in one place and practice somewhere else. We put both in the same room.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                {[
+                  { n: '$3.2B', l: 'Trading education TAM' },
+                  { n: '50M+', l: 'Active retail traders globally' },
+                  { n: '90%', l: 'Lose due to bad education' },
+                  { n: '15%', l: 'YoY market growth' },
+                ].map(({ n, l }) => (
+                  <div key={l} style={{ background: '#0a1628', border: '1px solid #1a2d4a', borderRadius: 12, padding: '16px 20px' }}>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: '#00d4aa', fontFamily: 'monospace', marginBottom: 4 }}>{n}</div>
+                    <div style={{ fontSize: 11, color: '#4a5e7a' }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: '#ffa502', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Why Now</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {[
+                  { icon: '📈', title: 'Retail trading surge', desc: 'Post-2020, 15M new retail traders entered US markets. The audience has never been bigger or more eager.' },
+                  { icon: '🤖', title: 'AI makes personalized education possible', desc: 'Interactive AI lectures, voice narration, and personalized learning paths weren\'t buildable 3 years ago.' },
+                  { icon: '🎓', title: 'Gen Z wants skills, not degrees', desc: '$0.99 micro-courses fit the generation that learns from YouTube but wants structure and accountability.' },
+                  { icon: '💸', title: 'Prop firms are a $5B industry', desc: 'Our prop challenge is the natural next step after education — a built-in upsell with 70%+ fail rates.' },
+                ].map(({ icon, title, desc }) => (
+                  <div key={title} style={{ display: 'flex', gap: 14 }}>
+                    <div style={{ fontSize: 24, flexShrink: 0, marginTop: 2 }}>{icon}</div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#cdd6f4', fontSize: 13, marginBottom: 4 }}>{title}</div>
+                      <div style={{ fontSize: 12, color: '#4a5e7a', lineHeight: 1.6 }}>{desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* COMPETITION — YC box: why better than alternatives */}
+      <section style={{ padding: '80px 24px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <h2 style={{ fontSize: 'clamp(26px,3.5vw,40px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>Why not just use the alternatives?</h2>
+            <p style={{ fontSize: 14, color: '#4a5e7a' }}>Every existing option leaves a critical gap. We close all of them.</p>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #1a2d4a' }}>
+                  {['', 'Udemy / Coursera', 'YouTube', 'Paper Trading Apps', 'Real Prop Firms', 'YN Finance ✦'].map((h, i) => (
+                    <th key={h} style={{ padding: '12px 16px', textAlign: i === 0 ? 'left' : 'center', color: i === 5 ? '#00d4aa' : '#7f93b5', fontWeight: i === 5 ? 800 : 600, fontSize: 12, background: i === 5 ? 'rgba(0,212,170,0.06)' : 'transparent' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ['Expert instructors', '✓', '✓', '✗', '✗', '✓'],
+                  ['$0.99 price point', '✗ ($15–$200)', '✓ free', '✓ free', '✗ ($300–$800)', '✓'],
+                  ['Built-in practice mode', '✗', '✗', '✓', '✓', '✓'],
+                  ['Real market data', '✗', '✗', '✓ some', '✓', '✓'],
+                  ['Structured curriculum', '✓', '✗', '✗', '✗', '✓'],
+                  ['Knowledge quizzes', '✓ some', '✗', '✗', '✗', '✓'],
+                  ['Trading community', '✗', '✗', '✓ some', '✓ some', '✓'],
+                  ['Accountability (prop rules)', '✗', '✗', '✗', '✓', '✓'],
+                ].map(([feature, ...vals]) => (
+                  <tr key={feature as string} style={{ borderBottom: '1px solid #0f1f38' }}>
+                    <td style={{ padding: '10px 16px', color: '#7f93b5', fontWeight: 600 }}>{feature}</td>
+                    {vals.map((v, i) => (
+                      <td key={i} style={{ padding: '10px 16px', textAlign: 'center', color: i === 4 ? '#00d4aa' : v === '✓' ? '#00d4aa' : '#4a5e7a', fontWeight: i === 4 ? 800 : 400, background: i === 4 ? 'rgba(0,212,170,0.04)' : 'transparent', fontSize: i === 4 ? 14 : 13 }}>{v}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* BUSINESS MODEL — YC box: how you make money */}
+      <section style={{ padding: '80px 24px', background: 'rgba(7,18,32,0.6)', borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ fontSize: 11, color: '#a855f7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Business Model</div>
+          <h2 style={{ fontSize: 'clamp(26px,3.5vw,40px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>Three revenue streams. One flywheel.</h2>
+          <p style={{ fontSize: 14, color: '#7f93b5', marginBottom: 48, maxWidth: 600, margin: '0 auto 48px' }}>Courses fund growth. Prop challenges are high-margin. Referrals scale to zero marginal cost.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }} className="cat-grid">
+            {[
+              { icon: '🎓', color: '#00d4aa', revenue: '$0.99/course', title: 'Course Sales', desc: '70% to instructor, 30% platform. Low barrier drives volume. Target: 100K enrollments = $30K MRR platform share.' },
+              { icon: '⚔️', color: '#ff4757', revenue: '$49–$299/challenge', title: 'Prop Challenges', desc: '~70% fail rate. Pure margin on failure fees. Success = certificate + future referral income. Growing $5B industry.' },
+              { icon: '🤝', color: '#1e90ff', revenue: 'Revenue share', title: 'Partner Referrals', desc: 'Refer successful traders to real prop firms (FTMO, Topstep). Earn referral fees per funded account. Zero marginal cost. Q3 2026.' },
+            ].map(({ icon, color, revenue, title, desc }) => (
+              <div key={title} style={{ background: '#071220', border: `1px solid ${color}30`, borderRadius: 16, padding: 28, textAlign: 'left' }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>{icon}</div>
+                <div style={{ fontSize: 11, color, fontWeight: 700, fontFamily: 'monospace', marginBottom: 6 }}>{revenue}</div>
+                <div style={{ fontWeight: 800, color: '#fff', fontSize: 15, marginBottom: 10 }}>{title}</div>
+                <div style={{ fontSize: 12, color: '#4a5e7a', lineHeight: 1.7 }}>{desc}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
