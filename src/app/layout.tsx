@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
       </head>
-      <body className="h-full overflow-hidden">
+      <body className="h-full">
         {children}
         {/* Twitter/X widget — loads the embedded timeline on the Pulse tab */}
         <Script src="https://platform.twitter.com/widgets.js" strategy="afterInteractive" />
