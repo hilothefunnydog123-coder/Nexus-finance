@@ -220,3 +220,79 @@ create policy "Users read own enrollments" on course_enrollments for select usin
 create policy "Users insert enrollments" on course_enrollments for insert with check (auth.uid() = user_id);
 create policy "Users update enrollments" on course_enrollments for update using (auth.uid() = user_id);
 create policy "Users complete sections" on section_completions for all using (auth.uid() = user_id);
+
+-- ================================================================
+-- Course completions + certificates + creator marketplace
+-- ================================================================
+
+-- Course completions (triggers certificate generation)
+create table if not exists public.course_completions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete cascade not null,
+  course_slug text not null,
+  course_title text not null,
+  instructor_name text not null,
+  certificate_id uuid default gen_random_uuid() unique,
+  completed_at timestamptz default now(),
+  unique(user_id, course_slug)
+);
+alter table course_completions enable row level security;
+create policy "Users see own completions" on course_completions for select using (auth.uid() = user_id);
+create policy "Users insert own completions" on course_completions for insert with check (auth.uid() = user_id);
+
+-- Creator profiles
+create table if not exists public.creator_profiles (
+  id uuid references auth.users on delete cascade primary key,
+  display_name text not null,
+  handle text unique not null,
+  bio text,
+  avatar_color text default '#00d4aa',
+  strategy_specialty text,
+  youtube_url text,
+  twitter_url text,
+  commission_rate numeric default 0.70,
+  total_earnings numeric default 0,
+  payout_email text,
+  approved boolean default false,
+  created_at timestamptz default now()
+);
+alter table creator_profiles enable row level security;
+create policy "Anyone reads approved creators" on creator_profiles for select using (approved = true);
+create policy "Creator manages own profile" on creator_profiles for all using (auth.uid() = id);
+
+-- Creator-submitted courses
+create table if not exists public.submitted_courses (
+  id uuid primary key default gen_random_uuid(),
+  creator_id uuid references auth.users on delete cascade not null,
+  creator_name text not null,
+  title text not null,
+  description text,
+  strategy_type text not null,
+  difficulty text default 'beginner',
+  price_cents integer default 99,
+  sections jsonb default '[]',
+  tags text[] default '{}',
+  thumbnail_color text default '#00d4aa',
+  status text default 'draft',
+  total_sales integer default 0,
+  total_earnings numeric default 0,
+  created_at timestamptz default now(),
+  published_at timestamptz
+);
+alter table submitted_courses enable row level security;
+create policy "Anyone reads published courses" on submitted_courses for select using (status = 'published');
+create policy "Creators manage own courses" on submitted_courses for all using (auth.uid() = creator_id);
+
+-- Commission tracking
+create table if not exists public.course_sales (
+  id uuid primary key default gen_random_uuid(),
+  course_slug text not null,
+  buyer_id uuid references auth.users,
+  creator_id uuid references auth.users,
+  amount_cents integer not null,
+  creator_commission_cents integer not null,
+  stripe_session_id text,
+  created_at timestamptz default now()
+);
+alter table course_sales enable row level security;
+create policy "Creators see own sales" on course_sales for select using (auth.uid() = creator_id);
