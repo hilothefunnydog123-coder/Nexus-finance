@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import Script from 'next/script'
 import { ArrowRight, Star, Play, ChevronRight, TrendingUp, Zap, BookOpen, Users, Award, Sparkles } from 'lucide-react'
 
 const INSTRUCTORS = [
@@ -62,6 +61,15 @@ export default function HomePage() {
   useEffect(() => {
     const t = setInterval(() => setWinIndex(i => (i + 1) % WINS.length), 3000)
     return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.async = true
+    script.setAttribute('data-cfasync', 'false')
+    script.src = 'https://pl28636153.profitablecpmratenetwork.com/d4467fd39cd2555e32e317195a17fa8f/invoke.js'
+    document.body.appendChild(script)
+    return () => { document.body.removeChild(script) }
   }, [])
 
   return (
@@ -181,12 +189,6 @@ export default function HomePage() {
 
       {/* Adsterra Native Banner */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px 40px' }}>
-        <Script
-          async
-          data-cfasync="false"
-          src="https://pl28636153.profitablecpmratenetwork.com/d4467fd39cd2555e32e317195a17fa8f/invoke.js"
-          strategy="afterInteractive"
-        />
         <div id="container-d4467fd39cd2555e32e317195a17fa8f" />
       </div>
 
