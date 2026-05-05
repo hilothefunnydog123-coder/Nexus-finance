@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Zap, Gift, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import AdsterraBanner from '@/components/ads/AdsterraBanner'
 
 export default function ReferralPage() {
   const params = useParams()
@@ -90,6 +91,8 @@ export default function ReferralPage() {
         <p style={{ fontSize: 11, color: '#4a5e7a', marginTop: 16 }}>
           Discount applies when you start your first challenge. No expiry.
         </p>
+
+        <AdsterraBanner className="mt-8" />
       </div>
     </div>
   )

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Zap, RotateCcw } from 'lucide-react'
+import AdsterraBanner from '@/components/ads/AdsterraBanner'
 
 const QUESTIONS = [
   {
@@ -237,6 +238,8 @@ export default function QuizPage() {
                   </div>
                 ))}
               </div>
+
+              <AdsterraBanner className="mb-6" />
 
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Link href="/courses" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: r.color, color: '#040c14', fontWeight: 900, textDecoration: 'none', padding: '14px 32px', borderRadius: 12, fontSize: 15 }}>
