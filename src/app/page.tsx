@@ -64,12 +64,14 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
+    const container = document.getElementById('container-d4467fd39cd2555e32e317195a17fa8f')
+    if (!container) return
     const script = document.createElement('script')
     script.async = true
     script.setAttribute('data-cfasync', 'false')
     script.src = 'https://pl28636153.profitablecpmratenetwork.com/d4467fd39cd2555e32e317195a17fa8f/invoke.js'
-    document.body.appendChild(script)
-    return () => { document.body.removeChild(script) }
+    container.parentNode!.insertBefore(script, container)
+    return () => { script.remove() }
   }, [])
 
   return (
