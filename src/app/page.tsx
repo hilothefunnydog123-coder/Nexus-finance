@@ -94,7 +94,71 @@ export default function HomePage() {
         }
       `}</style>
 
-      {/* Sticky Nav */}
+      {/* ── GATEWAY — full-screen entry choice ── */}
+      <section id="gateway" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0,212,170,0.06), transparent)', pointerEvents: 'none' }} />
+
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 48 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 24px rgba(0,212,170,0.5)' }}>
+            <Zap size={22} color="#040c14" fill="#040c14" />
+          </div>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', letterSpacing: -0.5 }}>YN Finance</div>
+            <div style={{ fontSize: 10, color: '#4a5e7a', letterSpacing: 3, textTransform: 'uppercase' }}>Where do you want to go?</div>
+          </div>
+        </div>
+
+        {/* Two cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 860, width: '100%' }} className="cat-grid">
+          {/* Courses card */}
+          <a href="#learn"
+            style={{ textDecoration: 'none', display: 'block', background: '#071220', border: '1px solid #1a2d4a', borderRadius: 24, padding: '40px 36px', cursor: 'pointer', transition: 'all 0.25s', position: 'relative', overflow: 'hidden' }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#00d4aa'; el.style.boxShadow = '0 0 60px rgba(0,212,170,0.2)'; el.style.transform = 'translateY(-4px)' }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#1a2d4a'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}>
+            <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,212,170,0.1), transparent)', pointerEvents: 'none' }} />
+            <div style={{ fontSize: 48, marginBottom: 20 }}>📚</div>
+            <div style={{ fontSize: 11, color: '#00d4aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Education Platform</div>
+            <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: -0.5, marginBottom: 16, lineHeight: 1.15 }}>Learn to Trade</h2>
+            <p style={{ fontSize: 13, color: '#7f93b5', lineHeight: 1.7, marginBottom: 28 }}>9 world-class instructors. $0.99 per course. AI-powered lectures, knowledge quizzes, and built-in practice mode.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 32 }}>
+              {['📈 Ross Cameron · ICT · Rayner Teo + 6 more', '✅ Quiz-gated lessons — actually learn', '🎯 Practice on live charts after every section'].map(f => (
+                <div key={f} style={{ fontSize: 12, color: '#4a5e7a' }}>{f}</div>
+              ))}
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#00d4aa', color: '#040c14', fontWeight: 900, padding: '13px 28px', borderRadius: 12, fontSize: 14 }}>
+              Browse Courses <ChevronRight size={16} />
+            </div>
+          </a>
+
+          {/* Terminal card */}
+          <Link href="/app"
+            style={{ textDecoration: 'none', display: 'block', background: '#071220', border: '1px solid #1a2d4a', borderRadius: 24, padding: '40px 36px', cursor: 'pointer', transition: 'all 0.25s', position: 'relative', overflow: 'hidden' }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#1e90ff'; el.style.boxShadow = '0 0 60px rgba(30,144,255,0.2)'; el.style.transform = 'translateY(-4px)' }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#1a2d4a'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}>
+            <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle, rgba(30,144,255,0.1), transparent)', pointerEvents: 'none' }} />
+            <div style={{ fontSize: 48, marginBottom: 20 }}>📊</div>
+            <div style={{ fontSize: 11, color: '#1e90ff', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Trading Terminal</div>
+            <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: -0.5, marginBottom: 16, lineHeight: 1.15 }}>Open Terminal</h2>
+            <p style={{ fontSize: 13, color: '#7f93b5', lineHeight: 1.7, marginBottom: 28 }}>Real-time charts, live market data, paper trading, prop challenges, trade journal, and a full trading community.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 32 }}>
+              {['⚡ Live charts via TradingView', '🏆 Prop firm simulator ($49–$299 challenges)', '💬 Discord-style trade room + leaderboard'].map(f => (
+                <div key={f} style={{ fontSize: 12, color: '#4a5e7a' }}>{f}</div>
+              ))}
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#1e90ff', color: '#fff', fontWeight: 900, padding: '13px 28px', borderRadius: 12, fontSize: 14 }}>
+              Launch Terminal <ChevronRight size={16} />
+            </div>
+          </Link>
+        </div>
+
+        <div style={{ marginTop: 32, fontSize: 12, color: '#4a5e7a' }}>
+          Scroll down for courses ↓
+        </div>
+      </section>
+
+      {/* ── STICKY NAV (courses section starts here) ── */}
+      <div id="learn" />
       <nav style={{ position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid rgba(26,45,74,0.5)', padding: '0 24px' }} className="glass">
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', height: 64, gap: 24 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
@@ -114,7 +178,10 @@ export default function HomePage() {
           </div>
 
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginLeft: 'auto' }}>
-            <Link href="/courses" style={{ fontSize: 12, color: '#7f93b5', textDecoration: 'none', padding: '8px 16px' }}>Browse Courses</Link>
+            <Link href="/courses" style={{ fontSize: 12, color: '#7f93b5', textDecoration: 'none', padding: '8px 16px' }} className="hide-mobile">Browse Courses</Link>
+            <Link href="/app" style={{ fontSize: 12, fontWeight: 700, color: '#1e90ff', textDecoration: 'none', padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(30,144,255,0.3)', background: 'rgba(30,144,255,0.08)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Zap size={12} /> Terminal
+            </Link>
             <Link href="/quiz" style={{ fontSize: 13, fontWeight: 800, color: '#040c14', background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', textDecoration: 'none', padding: '10px 20px', borderRadius: 10, boxShadow: '0 0 20px rgba(0,212,170,0.4)', whiteSpace: 'nowrap' }}>
               Find My Type →
             </Link>

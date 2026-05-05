@@ -135,8 +135,11 @@ export default function NexusDashboard() {
           <button onClick={() => setShowShare(true)} className="flex items-center gap-1 text-[10px] text-[#4a5e7a] hover:text-[#00d4aa] transition-colors ml-1">
             <Share2 size={11} /> Share P&L
           </button>
+          <Link href="/courses" className="flex items-center gap-1.5 text-[10px] font-bold text-[#00d4aa] border border-[#00d4aa30] bg-[#00d4aa10] hover:bg-[#00d4aa20] rounded px-2.5 py-1 transition-colors ml-1 whitespace-nowrap">
+            <BookOpen size={11} /> Courses
+          </Link>
           <Link href="/" className="flex items-center gap-1 text-[10px] text-[#4a5e7a] hover:text-[#7f93b5] transition-colors ml-1">
-            <Home size={11} /> Home
+            <Home size={11} />
           </Link>
         </div>
       </nav>
