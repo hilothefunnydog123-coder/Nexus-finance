@@ -63,16 +63,6 @@ export default function HomePage() {
     return () => clearInterval(t)
   }, [])
 
-  useEffect(() => {
-    const container = document.getElementById('container-d4467fd39cd2555e32e317195a17fa8f')
-    if (!container) return
-    const script = document.createElement('script')
-    script.async = true
-    script.setAttribute('data-cfasync', 'false')
-    script.src = 'https://pl28636153.profitablecpmratenetwork.com/d4467fd39cd2555e32e317195a17fa8f/invoke.js'
-    container.parentNode!.insertBefore(script, container)
-    return () => { script.remove() }
-  }, [])
 
   return (
     <div style={{ background: '#040c14', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', color: '#cdd6f4', overflowX: 'hidden' }}>
@@ -191,7 +181,12 @@ export default function HomePage() {
 
       {/* Adsterra Native Banner */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px 40px' }}>
-        <div id="container-d4467fd39cd2555e32e317195a17fa8f" />
+        <iframe
+          srcDoc={`<!DOCTYPE html><html><head><style>body{margin:0;padding:0;background:transparent;overflow:hidden}</style></head><body><script async="async" data-cfasync="false" src="https://pl28636153.profitablecpmratenetwork.com/d4467fd39cd2555e32e317195a17fa8f/invoke.js"><\/script><div id="container-d4467fd39cd2555e32e317195a17fa8f"></div></body></html>`}
+          style={{ border: 'none', width: '100%', height: '120px', background: 'transparent' }}
+          scrolling="no"
+          title="ad"
+        />
       </div>
 
       {/* CATEGORIES */}
