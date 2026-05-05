@@ -9,7 +9,7 @@ interface Course {
   id: string; slug: string; title: string; description: string
   trader_name: string; trader_handle: string; trader_avatar_color: string
   strategy_type: string; difficulty: string; price_cents: number
-  thumbnail_color: string; rating: number; enrollment_count: number
+  thumbnail_color: string; thumbnail_img?: string; rating: number; enrollment_count: number
   tags: string[]; is_free: boolean
 }
 
@@ -148,30 +148,34 @@ export default function CoursesPage() {
                     el.style.boxShadow = 'none'
                   }}>
 
-                  {/* Card header */}
-                  <div style={{ height: 130, background: `linear-gradient(135deg, ${course.thumbnail_color}25 0%, ${course.thumbnail_color}08 100%)`, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, position: 'relative', borderBottom: `1px solid ${course.thumbnail_color}20` }}>
-                    {/* Instructor avatar */}
-                    <div style={{ width: 52, height: 52, borderRadius: 14, background: `${course.trader_avatar_color}25`, color: course.trader_avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, border: `1px solid ${course.trader_avatar_color}40`, flexShrink: 0 }}>
-                      {course.trader_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 800, color: '#fff', fontSize: 14, lineHeight: 1.2, marginBottom: 3 }}>{course.trader_name}</div>
-                      <div style={{ fontSize: 11, color: course.thumbnail_color, fontWeight: 600 }}>{course.strategy_type}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 4 }}>
-                        <Star size={11} fill="#ffa502" color="#ffa502" />
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#ffa502', fontFamily: 'monospace' }}>{course.rating}</span>
-                        <span style={{ fontSize: 10, color: '#4a5e7a', marginLeft: 4 }}>{course.enrollment_count.toLocaleString()} students</span>
+                  {/* Card header with image */}
+                  <div style={{ height: 150, position: 'relative', overflow: 'hidden', borderBottom: `1px solid ${course.thumbnail_color}20` }}>
+                    {course.thumbnail_img ? (
+                      <img src={course.thumbnail_img} alt={course.title}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                    ) : null}
+                    <div style={{ position: 'absolute', inset: 0, background: course.thumbnail_img ? `linear-gradient(135deg, rgba(4,12,20,0.7), ${course.thumbnail_color}40)` : `linear-gradient(135deg, ${course.thumbnail_color}25, ${course.thumbnail_color}08)`, display: 'flex', alignItems: 'center', padding: '0 20px', gap: 14 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 12, background: `${course.trader_avatar_color}35`, color: course.trader_avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 900, border: `2px solid ${course.trader_avatar_color}60`, flexShrink: 0, backdropFilter: 'blur(4px)' }}>
+                        {course.trader_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
-                    </div>
-                    <div style={{ position: 'absolute', top: 12, right: 12 }}>
-                      <div style={{ background: course.thumbnail_color, color: '#040c14', fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 8 }}>
-                        {course.is_free ? 'FREE' : `$${(course.price_cents / 100).toFixed(2)}`}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, color: '#fff', fontSize: 14, lineHeight: 1.2, marginBottom: 3, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{course.trader_name}</div>
+                        <div style={{ fontSize: 11, color: course.thumbnail_color, fontWeight: 600 }}>{course.strategy_type}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 4 }}>
+                          <Star size={11} fill="#ffa502" color="#ffa502" />
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#ffa502', fontFamily: 'monospace' }}>{course.rating}</span>
+                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginLeft: 4 }}>{course.enrollment_count.toLocaleString()} students</span>
+                        </div>
                       </div>
-                    </div>
-                    <div style={{ position: 'absolute', bottom: 10, right: 12 }}>
-                      <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 4, background: `${DIFF_COLOR[course.difficulty] || '#7f93b5'}20`, color: DIFF_COLOR[course.difficulty] || '#7f93b5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                        {course.difficulty}
-                      </span>
+                      <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                        <div style={{ background: course.thumbnail_color, color: '#040c14', fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 8 }}>
+                          {course.is_free ? 'FREE' : `$${(course.price_cents / 100).toFixed(2)}`}
+                        </div>
+                        <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 4, background: `${DIFF_COLOR[course.difficulty] || '#7f93b5'}90`, color: '#fff', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', backdropFilter: 'blur(4px)' }}>
+                          {course.difficulty}
+                        </span>
+                      </div>
                     </div>
                   </div>
 

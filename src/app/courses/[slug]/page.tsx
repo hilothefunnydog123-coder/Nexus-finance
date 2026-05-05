@@ -6,6 +6,7 @@ import { Zap, Play, CheckCircle, Lock, ArrowRight, Star, Users, Clock, ChevronLe
 import { SEED_COURSES } from '@/app/api/courses/route'
 import InteractiveLecture, { textToSlides } from '@/components/courses/InteractiveLecture'
 import CourseChat from '@/components/courses/CourseChat'
+import QuizBlock from '@/components/courses/QuizBlock'
 
 interface Section {
   id?: string; order_index: number; title: string; type: string
@@ -15,7 +16,7 @@ interface Course {
   id: string; slug: string; title: string; description: string
   trader_name: string; trader_handle: string; trader_avatar_color: string; trader_bio: string
   strategy_type: string; difficulty: string; price_cents: number; thumbnail_color: string
-  rating: number; enrollment_count: number; tags: string[]; is_free: boolean
+  thumbnail_img?: string; rating: number; enrollment_count: number; tags: string[]; is_free: boolean
 }
 
 const AdBanner = () => (
@@ -26,6 +27,8 @@ const AdBanner = () => (
 
 function SectionContent({ section, onComplete, color, instructor }: { section: Section; onComplete: () => void; color: string; instructor: string }) {
   const c = section.content
+  const quiz = (section as any).quiz as { q: string; options: string[]; answer: number }[] | undefined
+  const [quizPassed, setQuizPassed] = useState(false)
 
   if (section.type === 'video') return (
     <div>
@@ -37,7 +40,7 @@ function SectionContent({ section, onComplete, color, instructor }: { section: S
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <Play size={48} className="text-[#1a2d4a] mx-auto mb-3" />
-              <p className="text-[12px] text-[#4a5e7a]">Video coming soon — add YouTube ID to course content</p>
+              <p className="text-[12px] text-[#4a5e7a]">Video coming soon</p>
             </div>
           </div>
         )}
@@ -63,13 +66,12 @@ function SectionContent({ section, onComplete, color, instructor }: { section: S
           instructor={instructor}
           color={color}
           slides={slides}
-          onComplete={onComplete}
+          onComplete={() => {}}
         />
-        {/* Also show readable text below */}
         <details className="mt-4">
           <summary className="text-[12px] text-[#4a5e7a] cursor-pointer hover:text-[#7f93b5]">Show full text version ↓</summary>
           <div className="mt-3 prose prose-invert max-w-none">
-            {c.text?.split('\n').map((line, i) => {
+            {c.text?.split('\n').map((line: string, i: number) => {
               if (line.startsWith('# ')) return <h1 key={i} className="text-xl font-black text-white mb-4 mt-6">{line.slice(2)}</h1>
               if (line.startsWith('## ')) return <h2 key={i} className="text-base font-bold text-[#cdd6f4] mb-3 mt-5">{line.slice(3)}</h2>
               if (line.startsWith('- ')) return <li key={i} className="text-[13px] text-[#7f93b5] mb-1.5 ml-4 list-disc">{line.slice(2)}</li>
@@ -78,9 +80,13 @@ function SectionContent({ section, onComplete, color, instructor }: { section: S
             })}
           </div>
         </details>
-        <button onClick={onComplete} className="mt-4 flex items-center gap-2 px-4 py-2.5 bg-[#00d4aa] text-[#040c14] font-bold text-sm rounded-lg hover:bg-[#00ffcc] transition-colors">
-          <CheckCircle size={14} /> Mark as Complete
-        </button>
+        {quiz && quiz.length > 0 && !quizPassed ? (
+          <QuizBlock questions={quiz} color={color} onPass={() => setQuizPassed(true)} />
+        ) : (
+          <button onClick={onComplete} className="mt-4 flex items-center gap-2 px-4 py-2.5 bg-[#00d4aa] text-[#040c14] font-bold text-sm rounded-lg hover:bg-[#00ffcc] transition-colors">
+            <CheckCircle size={14} /> Mark as Complete
+          </button>
+        )}
       </div>
     )
   }
@@ -181,6 +187,20 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px', display: 'grid', gridTemplateColumns: '1fr 320px', gap: 32 }}>
         {/* Main content */}
         <div>
+          {/* Course image banner */}
+          {course.thumbnail_img && (
+            <div style={{ height: 200, borderRadius: 16, overflow: 'hidden', marginBottom: 24, position: 'relative' }}>
+              <img src={course.thumbnail_img} alt={course.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={e => { (e.currentTarget as HTMLImageElement).parentElement!.style.display = 'none' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 30%, rgba(4,12,20,0.95) 100%)' }} />
+              <div style={{ position: 'absolute', bottom: 20, left: 24 }}>
+                <span style={{ fontSize: 10, color: color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', background: `${color}20`, padding: '3px 10px', borderRadius: 4, border: `1px solid ${color}40` }}>
+                  {course.strategy_type}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Course header */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>

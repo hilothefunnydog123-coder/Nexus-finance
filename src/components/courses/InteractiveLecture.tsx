@@ -6,7 +6,8 @@ import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, CheckCircle } fro
 interface Slide {
   title: string
   points: string[]
-  visual?: string // emoji or icon
+  visual?: string
+  image?: string
   color?: string
 }
 
@@ -34,13 +35,25 @@ export default function InteractiveLecture({ title, instructor, color, slides, o
     if (muted || !('speechSynthesis' in window)) return
     window.speechSynthesis.cancel()
     const utt = new SpeechSynthesisUtterance(text)
-    utt.rate = 0.95; utt.pitch = 1.0
+    utt.lang = 'en-US'
+    utt.rate = 0.92
+    utt.pitch = 1.0
     const voices = window.speechSynthesis.getVoices()
-    const preferred = voices.find(v => v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Enhanced'))
+    const preferred =
+      voices.find(v => v.lang === 'en-US' && v.name.includes('Google')) ||
+      voices.find(v => v.lang === 'en-US' && (v.name.includes('Premium') || v.name.includes('Enhanced') || v.name.includes('Natural'))) ||
+      voices.find(v => v.lang === 'en-US') ||
+      voices.find(v => v.lang.startsWith('en'))
     if (preferred) utt.voice = preferred
     synthRef.current = utt
     window.speechSynthesis.speak(utt)
   }, [muted])
+
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return
+    window.speechSynthesis.getVoices()
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices()
+  }, [])
 
   const revealNext = useCallback(() => {
     const s = slides[current]
@@ -96,8 +109,16 @@ export default function InteractiveLecture({ title, instructor, color, slides, o
         </div>
       </div>
 
+      {/* Slide image */}
+      {slide.image && (
+        <div style={{ height: 160, overflow: 'hidden', position: 'relative' }}>
+          <img src={slide.image} alt={slide.title} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, #000 100%)' }} />
+        </div>
+      )}
+
       {/* Main slide area */}
-      <div style={{ minHeight: 320, padding: '40px 36px', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
+      <div style={{ minHeight: slide.image ? 260 : 320, padding: '40px 36px', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
         {/* Background subtle grid */}
         <div style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(${color}15 1px, transparent 1px)`, backgroundSize: '32px 32px', opacity: 0.4 }} />
 
