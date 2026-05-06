@@ -28,11 +28,13 @@ import TradingWorkspace from '@/components/trading/TradingWorkspace'
 import CommunityHub from '@/components/community/CommunityHub'
 import AITerminalChat from '@/components/ai/AITerminalChat'
 import AIChartVision from '@/components/ai/AIChartVision'
+import TopStocksWidget from '@/components/ai/TopStocksWidget'
+import AINewspaper from '@/components/ai/AINewspaper'
 import type { Quote } from '@/lib/types'
 
 const SYMBOLS = ['AAPL','NVDA','TSLA','MSFT','GOOGL','AMZN','META','AMD','JPM','SPY','NFLX','QQQ']
 
-type Tab = 'dashboard' | 'scanner' | 'trade' | 'journal' | 'community' | 'traderoom' | 'pulse'
+type Tab = 'dashboard' | 'scanner' | 'trade' | 'journal' | 'community' | 'traderoom' | 'pulse' | 'ai'
 
 const NAV = [
   { id: 'dashboard' as Tab, label: 'Dashboard',  icon: <LayoutDashboard size={13} /> },
@@ -42,6 +44,7 @@ const NAV = [
   { id: 'community' as Tab, label: 'Community',  icon: <Users size={13} /> },
   { id: 'traderoom' as Tab, label: 'Trade-Room', icon: <MessageSquare size={13} /> },
   { id: 'pulse'     as Tab, label: 'Pulse',      icon: <Newspaper size={13} /> },
+  { id: 'ai'        as Tab, label: 'AI Intel',   icon: <BarChart2 size={13} />, hot: true },
 ]
 
 function PortfolioBar({ quotes }: { quotes: Record<string, Quote> }) {
@@ -121,6 +124,9 @@ export default function NexusDashboard() {
               <span className="yn-nav-label">{item.label}</span>
               {item.id === 'scanner' && (
                 <span className="ml-1 text-[8px] bg-[#ffa502]/20 text-[#ffa502] px-1 rounded font-mono">EDGE</span>
+              )}
+              {item.id === 'ai' && (
+                <span className="ml-1 text-[8px] bg-[#a855f7]/20 text-[#a855f7] px-1 rounded font-mono">AI</span>
               )}
             </button>
           ))}
@@ -229,6 +235,19 @@ export default function NexusDashboard() {
         {activeTab === 'traderoom' && (
           <div className="flex-1 min-h-0 overflow-hidden"><TradeRoom /></div>
         )}
+        {activeTab === 'ai' && (
+          <div className="flex-1 min-h-0 overflow-hidden flex">
+            {/* Top 10 Stocks */}
+            <div className="flex flex-col border-r border-[#1a2d4a] overflow-hidden" style={{ width: '38%', minWidth: 320 }}>
+              <TopStocksWidget />
+            </div>
+            {/* AI Newspaper */}
+            <div className="flex-1 overflow-y-auto bg-[#040c14]" style={{ background: 'linear-gradient(180deg, #071220 0%, #040c14 100%)' }}>
+              <AINewspaper />
+            </div>
+          </div>
+        )}
+
         {activeTab === 'pulse' && (
           <div className="flex-1 min-h-0 overflow-hidden flex">
             <div className="flex-1 border-r border-[#1a2d4a] overflow-hidden"><PulseFeed /></div>

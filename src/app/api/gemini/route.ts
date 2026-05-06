@@ -67,6 +67,10 @@ Question: "${data.question}"${data.context ? `\nContext: ${data.context}` : ''}`
       result.analysis = await callGemini(`You are an expert technical analyst. Analyze this trading chart. Identify: (1) The pattern or setup, (2) Key support/resistance levels with approximate prices, (3) Which strategy this matches (ICT/SMC/trend following/wick theory etc.), (4) Your directional bias and why. Be specific and actionable — 5-6 sentences.`, data.imageBase64, 350)
       break
 
+    case 'chart_vision_signal':
+      result.analysis = await callGemini(data.customPrompt || `Analyze this trading chart and return a trade signal as JSON with signal, confidence, entry, sl, tp1, tp2, rr, pattern, strategy, thesis, invalidation, timeframe fields.`, data.imageBase64, 500)
+      break
+
     case 'course_recommend':
       result.recommendation = await callGemini(`You are a trading education advisor. Recommend the best 3 courses for this student from our catalog, in order, with one sentence each explaining why it fits.
 Student: Quiz result: ${data.quizResult} | Style: ${data.style} | Experience: ${data.experience} | Win rate: ${data.winRate || 'no data'}% | Top setup: ${data.topSetup || 'not determined'}
