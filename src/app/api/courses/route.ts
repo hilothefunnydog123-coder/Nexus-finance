@@ -51,6 +51,15 @@ export const SEED_COURSES = [
         ] },
       { order_index: 4, title: 'Practice: Gap & Go on the Simulator', type: 'practice', is_free_preview: false, duration_mins: 30,
         content: { instructions: 'Open the Scanner tab. Find the biggest % gainer on the list with high volume (Vol ratio 2x+). Open that stock in the Trade tab on the 1-min chart. Identify the first pullback after the open. Enter long with a stop below the pullback low. Target: the pre-market high. Journal your reasoning.', symbol: 'NVDA', tab: 'scanner' } },
+      { order_index: 5, title: 'Trader Sim: Think Like Ross Cameron', type: 'trader_sim', is_free_preview: false, duration_mins: 15,
+        content: {},
+        questions: [
+          { trader: 'Ross Cameron', context: 'It is 9:45 AM ET. A small-cap stock gapped up 40% on an FDA approval. Float is 8 million shares. Volume in the first 15 minutes is already 3x its full-day average. Price has pulled back 15% from the gap-up open and is now consolidating on the 1-minute chart just above the prior day close.', question: 'Do you enter now, wait, or skip this trade entirely? Walk through Ross\'s exact decision process.' },
+          { trader: 'Ross Cameron', context: 'You entered a Gap & Go trade at $6.20 with a stop at $5.90. The stock ran to $7.10 quickly but has now started to fade and is back at $6.70. Your 1-minute chart shows a bearish engulfing candle. The broader market (SPY) is also pulling back slightly.', question: 'What do you do with this position right now? Would Ross hold, sell half, or exit fully? Why?' },
+        ] as any },
+      { order_index: 6, title: 'Replay Training: NASDAQ Opening Range', type: 'replay', is_free_preview: false, duration_mins: 20,
+        content: {},
+        scenario: { instrument: 'QQQ / NASDAQ', timeframe: '1M', context: 'Look at QQQ on the 1-minute chart. It is 9:30-10:00 AM session. Price gapped up at open, ran for 8 minutes, then began pulling back. Volume on the pullback is noticeably lighter than the initial run. The pre-market high is 5 ticks above the current price.', replaySymbol: 'QQQ' } as any },
     ],
   },
 
@@ -91,6 +100,15 @@ export const SEED_COURSES = [
         content: { youtube_id: 'vLvHXhz8xBs', description: 'Why price always seems to take out your stop before going the direction you predicted. ICT explains liquidity engineering and how to use it to your advantage.' } },
       { order_index: 4, title: 'Practice: Identify SMC Concepts on a Chart', type: 'practice', is_free_preview: false, duration_mins: 30,
         content: { instructions: 'Open the Trade tab. Select EUR/USD on the 1H chart. Identify: (1) The most recent Order Block, (2) Any visible Fair Value Gaps, (3) Where retail stops are likely clustered (above recent highs or below recent lows). Mark these on the chart. Do NOT enter a trade yet — just observe. Journal what you see.', symbol: 'EUR/USD', tab: 'trade' } },
+      { order_index: 5, title: 'Trader Sim: Think Like ICT', type: 'trader_sim', is_free_preview: false, duration_mins: 15,
+        content: {},
+        questions: [
+          { trader: 'ICT (Michael Huddleston)', context: 'EUR/USD is in a clear downtrend on the daily chart. On the 4-hour chart, price just swept equal lows at 1.0720, wicking 8 pips below before snapping back. There is a bullish Fair Value Gap between 1.0735 and 1.0748 left by the snap-back candle. The NY session opens in 45 minutes.', question: 'Is this a valid ICT long setup? Would you trade it, fade it, or wait? What specific confirmation would you need before entering?' },
+          { trader: 'ICT (Michael Huddleston)', context: 'Price is approaching the "kill zone" (10:00 AM–11:00 AM ET New York session). You have identified an Order Block at 1.0760 from 3 days ago that has never been mitigated. The daily bias is bearish. Price is currently at 1.0740 and rallying toward the OB.', question: 'How do you use this Order Block? What is your entry, stop, and target? What would invalidate the setup entirely?' },
+        ] as any },
+      { order_index: 6, title: 'Replay Training: EUR/USD Liquidity Sweep', type: 'replay', is_free_preview: false, duration_mins: 20,
+        content: {},
+        scenario: { instrument: 'EUR/USD', timeframe: '1H', context: 'On the 1H EUR/USD chart, price has been in a short-term uptrend, making higher highs and higher lows. You can see a cluster of equal highs at a round number level. Price is approaching those highs. Replay from just before the equal highs are reached. Predict: will price sweep the highs and reverse (ICT pattern), or break out and continue higher?', replaySymbol: 'FX:EURUSD' } as any },
     ],
   },
 
@@ -171,6 +189,14 @@ export const SEED_COURSES = [
         content: { youtube_id: 'gd4IFPFDhOQ', description: 'How Shay builds her pre-market watchlist every morning — the exact criteria she uses to select 3-5 stocks from hundreds of candidates.' } },
       { order_index: 4, title: 'Practice: Trade With a Rule Set', type: 'practice', is_free_preview: false, duration_mins: 30,
         content: { instructions: 'Before opening the Trade tab, write down these 3 rules in your Journal: (1) Max loss today: $200, (2) Max 3 trades, (3) No entries after 11:30 AM ET. Now trade. Did you follow all 3 rules? Journal whether you broke any and why.', symbol: 'NVDA', tab: 'journal' } },
+      { order_index: 5, title: 'Trader Sim: Think Like Humbled Trader (Shay)', type: 'trader_sim', is_free_preview: false, duration_mins: 15,
+        content: {},
+        questions: [
+          { trader: 'Humbled Trader (Shay)', context: 'It is 10:15 AM ET. You are down $340 on two losing trades this morning — both stopped out cleanly. You have one more trade on your watchlist that is setting up nicely: a small-cap stock that was a runner last week is showing a sympathy play to today\'s hot sector. The setup looks similar to ones you have won on before.', question: 'Do you take the third trade? How does Shay think about this decision given the morning\'s losses? What are the psychological traps here?' },
+        ] as any },
+      { order_index: 6, title: 'Replay Training: Sympathy Play Setup', type: 'replay', is_free_preview: false, duration_mins: 20,
+        content: {},
+        scenario: { instrument: 'Small-Cap Stock (NVDA as proxy)', timeframe: '5M', context: 'NVDA has just broken out to all-time highs on heavy volume. AMD (sympathetic name in the same sector) is lagging but starting to move. On the 5-minute chart, AMD has held its opening range low and is curling up with increasing volume. Replay from the moment AMD begins to move. Does it run with NVDA, or fail and give back the move?', replaySymbol: 'AMD' } as any },
     ],
   },
 
@@ -415,6 +441,15 @@ export const SEED_COURSES = [
         ] },
       { order_index: 4, title: 'Practice: Execute a Wick Theory Setup on NQ', type: 'practice', is_free_preview: false, duration_mins: 30,
         content: { instructions: 'Open the Trade tab. Select NQ or QQQ on the 5-minute chart. Wait until after 10 AM. Identify: (1) Did price sweep the pre-market high or low? (2) Is there a long wick at a significant level? (3) Is there a fair value gap nearby? If yes to all three, enter at the tip of the wick with a stop 5 ticks beyond. Journal your AMD cycle read and why you took or skipped the trade.', symbol: 'QQQ', tab: 'trade' } },
+      { order_index: 5, title: 'Trader Sim: Think Like Powell Trades', type: 'trader_sim', is_free_preview: false, duration_mins: 15,
+        content: {},
+        questions: [
+          { trader: 'Powell Trades', context: 'It is 10:05 AM ET on NASDAQ. The pre-market high was 18,450. At 9:38 AM, price spiked to 18,465, wicked hard, and closed back at 18,430 — a 35-point wick above the PM high. Price is now at 18,390 and there is a fair value gap between 18,380 and 18,360 from the aggressive drop after the wick rejection.', question: 'Walk through the AMD cycle for this setup. Is this a short entry? Where exactly do you enter, where is your stop, and what is your target? What RR does this give you?' },
+          { trader: 'Powell Trades', context: 'You entered short at 18,462 (wick tip) with a stop at 18,475 (13 ticks above). Price dropped to 18,390 quickly (your first target: FVG fill). You took partial profits. Remaining position is at breakeven stop. Price is now consolidating at 18,390 — neither breaking down nor recovering. It\'s 10:35 AM.', question: 'Do you hold the runner, exit the full position, or tighten the stop? How does Powell think about runners after 10:30 AM?' },
+        ] as any },
+      { order_index: 6, title: 'Replay Training: NASDAQ Wick Rejection at Key Level', type: 'replay', is_free_preview: false, duration_mins: 20,
+        content: {},
+        scenario: { instrument: 'QQQ (NASDAQ Proxy)', timeframe: '5M', context: 'QQQ on the 5-minute chart. There is a clear pre-market high visible on the chart. At market open, price ran up aggressively toward that level. Replay from 5 minutes before the PM high is tested. Predict: does price break through the PM high and continue, or wick reject and reverse? Watch for the AMD pattern.', replaySymbol: 'QQQ' } as any },
     ],
   },
 

@@ -7,6 +7,9 @@ import { SEED_COURSES } from '@/app/api/courses/route'
 import InteractiveLecture, { textToSlides } from '@/components/courses/InteractiveLecture'
 import CourseChat from '@/components/courses/CourseChat'
 import QuizBlock from '@/components/courses/QuizBlock'
+import TradeLogBlock from '@/components/courses/TradeLogBlock'
+import TraderSimBlock from '@/components/courses/TraderSimBlock'
+import ReplayBlock from '@/components/courses/ReplayBlock'
 import AdsterraBanner from '@/components/ads/AdsterraBanner'
 
 interface Section {
@@ -100,12 +103,19 @@ function SectionContent({ section, onComplete, color, instructor }: { section: S
           Open Trading Terminal <ArrowRight size={13} />
         </Link>
       </div>
-      <p className="text-[11px] text-[#4a5e7a] mb-4">Complete the exercise in the terminal, journal it, then come back and mark complete.</p>
-      <button onClick={onComplete} className="flex items-center gap-2 px-4 py-2.5 bg-[#00d4aa] text-[#040c14] font-bold text-sm rounded-lg hover:bg-[#00ffcc] transition-colors">
-        <CheckCircle size={14} /> I Completed the Practice
-      </button>
+      <TradeLogBlock strategy={instructor} color={color} minTrades={2} onComplete={onComplete} />
     </div>
   )
+
+  if (section.type === 'trader_sim') {
+    const questions = (section as any).questions as { question: string; context: string; trader: string }[]
+    return <TraderSimBlock questions={questions} color={color} onComplete={onComplete} />
+  }
+
+  if (section.type === 'replay') {
+    const scenario = (section as any).scenario as { instrument: string; timeframe: string; context: string; replaySymbol: string }
+    return <ReplayBlock scenario={scenario} color={color} onComplete={onComplete} />
+  }
 
   return null
 }
