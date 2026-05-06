@@ -26,6 +26,8 @@ import PulseFeed from '@/components/pulse/PulseFeed'
 import TradeRoom from '@/components/traderoom/TradeRoom'
 import TradingWorkspace from '@/components/trading/TradingWorkspace'
 import CommunityHub from '@/components/community/CommunityHub'
+import AITerminalChat from '@/components/ai/AITerminalChat'
+import AIChartVision from '@/components/ai/AIChartVision'
 import type { Quote } from '@/lib/types'
 
 const SYMBOLS = ['AAPL','NVDA','TSLA','MSFT','GOOGL','AMZN','META','AMD','JPM','SPY','NFLX','QQQ']
@@ -92,6 +94,7 @@ export default function NexusDashboard() {
       `}</style>
       <Onboarding onTabChange={(tab) => setActiveTab(tab as Tab)} />
       <KeyboardShortcuts />
+      <AITerminalChat activeTab={activeTab} />
       <MorningBriefing />
       <Glossary />
       {showShare && <ShareCard onClose={() => setShowShare(false)} />}
@@ -132,6 +135,7 @@ export default function NexusDashboard() {
               <span className="text-[10px] text-[#7f93b5]">Add Finnhub key to .env.local for live data</span>
             </div>
           )}
+          <AIChartVision />
           <button onClick={() => setShowShare(true)} className="flex items-center gap-1 text-[10px] text-[#4a5e7a] hover:text-[#00d4aa] transition-colors ml-1">
             <Share2 size={11} /> Share P&L
           </button>

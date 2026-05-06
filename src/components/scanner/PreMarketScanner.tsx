@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { TrendingUp, TrendingDown, RefreshCw, Zap, Clock, AlertTriangle } from 'lucide-react'
+import { TrendingUp, TrendingDown, RefreshCw, Zap, Clock, AlertTriangle, Bot } from 'lucide-react'
 
 interface Mover {
   symbol: string
@@ -76,13 +76,22 @@ export default function PreMarketScanner() {
   const [filter, setFilter] = useState<'all' | 'gainers' | 'losers' | 'volume'>('all')
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [isDemo, setIsDemo] = useState(true)
+  const [aiPick, setAiPick] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
 
   const scan = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/market')
-      const json = await res.json()
+      const [mktRes, newsRes] = await Promise.all([fetch('/api/market'), fetch('/api/news')])
+      const json = await mktRes.json()
+      const newsJson = await newsRes.json()
       setIsDemo(json.demo)
+
+      // Build a map of real news catalysts from Finnhub headlines
+      const newsMap: Record<string, string> = {}
+      ;(newsJson.news || []).slice(0, 30).forEach((n: { related?: string; headline: string }) => {
+        if (n.related) newsMap[n.related] = n.headline.slice(0, 70) + (n.headline.length > 70 ? '...' : '')
+      })
 
       const raw = json.quotes || []
       const enriched = SCAN_UNIVERSE.map(stock => {
@@ -90,17 +99,11 @@ export default function PreMarketScanner() {
         if (!quote) return generateMover(stock, true)
         const volRatio = quote.volume > 0 ? +(quote.volume / stock.avgVol).toFixed(1) : 1
         return {
-          symbol: stock.symbol,
-          name: stock.name,
-          price: quote.price,
-          change: quote.change,
-          changePct: quote.changePercent,
-          volume: quote.volume,
-          avgVolume: stock.avgVol,
-          volRatio,
-          catalyst: CATALYSTS[Math.floor(Math.random() * CATALYSTS.length)],
-          sector: stock.sector,
-          float: stock.float,
+          symbol: stock.symbol, name: stock.name,
+          price: quote.price, change: quote.change, changePct: quote.changePercent,
+          volume: quote.volume, avgVolume: stock.avgVol, volRatio,
+          catalyst: newsMap[stock.symbol] || CATALYSTS[Math.floor(Math.random() * CATALYSTS.length)],
+          sector: stock.sector, float: stock.float,
           isPreMarket: new Date().getHours() < 9 || new Date().getHours() >= 16,
         }
       })
@@ -108,12 +111,20 @@ export default function PreMarketScanner() {
       const sorted = enriched.sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
       setMovers(sorted)
       setLastUpdate(new Date())
+
+      // AI best setup pick
+      const top6 = sorted.slice(0, 6).filter(m => Math.abs(m.changePct) > 0.3)
+      if (top6.length > 1) {
+        setAiLoading(true)
+        fetch('/api/gemini', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'scanner_ai', data: { movers: top6 } }),
+        }).then(r => r.json()).then(j => { setAiPick(j.analysis || ''); setAiLoading(false) }).catch(() => setAiLoading(false))
+      }
     } catch {
       setMovers(SCAN_UNIVERSE.map(s => generateMover(s, true)))
       setLastUpdate(new Date())
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
@@ -157,6 +168,18 @@ export default function PreMarketScanner() {
           </button>
         </div>
       </div>
+
+      {/* AI Best Setup */}
+      {(aiPick || aiLoading) && (
+        <div className="px-3 py-2 border-b border-[#1a2d4a] bg-[#a855f708] shrink-0">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Bot size={10} className="text-[#a855f7]" />
+            <span className="text-[9px] font-bold text-[#a855f7] uppercase tracking-wider">AI Best Setup</span>
+          </div>
+          {aiLoading ? <div className="text-[10px] text-[#4a5e7a]">Gemini analyzing movers...</div> :
+            <p className="text-[10px] text-[#cdd6f4] leading-relaxed">{aiPick}</p>}
+        </div>
+      )}
 
       {/* Filter tabs */}
       <div className="flex border-b border-[#1a2d4a] shrink-0">

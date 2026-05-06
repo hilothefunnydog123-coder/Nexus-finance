@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { ThumbsUp, TrendingUp, TrendingDown, Plus, X, CheckCircle, XCircle, RefreshCw } from 'lucide-react'
+import { ThumbsUp, TrendingUp, TrendingDown, Plus, X, CheckCircle, XCircle, RefreshCw, Bot } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { SUPABASE_ENABLED } from '@/lib/supabase'
 
@@ -21,6 +21,8 @@ interface TradeIdea {
   outcome: 'win' | 'loss' | 'open'
   currentPnLPct?: number
   tags: string[]
+  aiGenerated?: boolean
+  aiScore?: number
 }
 
 // Seed ideas shown when Supabase has no data yet
@@ -48,6 +50,7 @@ function IdeaCard({ idea, onVote }: { idea: TradeIdea; onVote: (id: string, curr
             {idea.author.slice(0,2).toUpperCase()}
           </div>
           <span className="text-xs font-semibold text-[#cdd6f4]">{idea.author}</span>
+          {idea.aiGenerated && <span className="flex items-center gap-0.5 text-[8px] font-bold text-[#a855f7] bg-[#a855f715] border border-[#a855f730] px-1.5 py-0.5 rounded"><Bot size={8} /> AI · Live Data</span>}
           <span className="text-[9px] text-[#4a5e7a]">{formatDistanceToNow(idea.postedAt, { addSuffix: true })}</span>
         </div>
         {idea.outcome !== 'open' ? (
@@ -113,12 +116,10 @@ export default function TradeIdeas() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
+      // Try Supabase user ideas first
       const res = await fetch('/api/tradeideas')
       const json = await res.json()
-      if (json.demo || !json.ideas?.length) {
-        setIdeas(SEED_IDEAS)
-        setIsDemo(true)
-      } else {
+      if (!json.demo && json.ideas?.length) {
         setIdeas(json.ideas.map((i: {
           id: string; username: string; ticker: string; side: string
           entry: number; sl: number; tp: number; timeframe: string
@@ -132,6 +133,19 @@ export default function TradeIdeas() {
           tags: i.tags || [],
         })))
         setIsDemo(false)
+        return
+      }
+      // Fallback: AI-generated ideas with real Finnhub data
+      const aiRes = await fetch('/api/ai-trade-ideas')
+      const aiJson = await aiRes.json()
+      if (!aiJson.demo && aiJson.ideas?.length) {
+        setIdeas(aiJson.ideas.map((i: TradeIdea & { postedAt: string }) => ({
+          ...i, postedAt: new Date(i.postedAt),
+        })))
+        setIsDemo(false)
+      } else {
+        setIdeas(SEED_IDEAS)
+        setIsDemo(true)
       }
     } finally { setLoading(false) }
   }, [])

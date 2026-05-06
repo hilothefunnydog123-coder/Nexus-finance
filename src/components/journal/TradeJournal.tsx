@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { BookOpen, TrendingUp, TrendingDown, Brain, Target, Clock, BarChart2, Star, AlertCircle } from 'lucide-react'
+import { BookOpen, TrendingUp, TrendingDown, Brain, Target, Clock, BarChart2, Star, AlertCircle, Bot } from 'lucide-react'
 import { usePortfolioStore } from '@/store/portfolioStore'
 import { format, getDay } from 'date-fns'
 import type { ClosedTrade } from '@/store/portfolioStore'
@@ -41,7 +41,7 @@ function Insight({ label, value, detail, color }: { label: string; value: string
   )
 }
 
-type JournalTab = 'log' | 'insights' | 'patterns'
+type JournalTab = 'log' | 'insights' | 'patterns' | 'ai-coach'
 
 export default function TradeJournal() {
   const { closedTrades } = usePortfolioStore()
@@ -49,6 +49,8 @@ export default function TradeJournal() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<Partial<JournalEntry>>({})
   const [tab, setTab] = useState<JournalTab>('log')
+  const [aiCoach, setAiCoach] = useState('')
+  const [aiCoachLoading, setAiCoachLoading] = useState(false)
 
   useEffect(() => { setJournal(loadJournal()) }, [])
 
@@ -167,7 +169,7 @@ export default function TradeJournal() {
 
       {/* Tabs */}
       <div className="flex border-b border-[#1a2d4a] shrink-0">
-        {[['log','Trade Log'],['insights','Insights'],['patterns','Patterns']].map(([id, label]) => (
+        {[['log','Trade Log'],['insights','Insights'],['patterns','Patterns'],['ai-coach','🤖 AI Coach']].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id as JournalTab)}
             className={`flex-1 py-2 text-[10px] font-semibold uppercase tracking-wider transition-colors border-b-2 ${
               tab === id ? 'text-[#cdd6f4] border-[#a855f7]' : 'text-[#4a5e7a] border-transparent hover:text-[#7f93b5]'
@@ -466,6 +468,69 @@ export default function TradeJournal() {
             )}
           </div>
         )}
+      {/* AI Coach tab */}
+      {tab === 'ai-coach' && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="bg-[#a855f710] border border-[#a855f730] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Bot size={14} className="text-[#a855f7]" />
+              <span className="text-[11px] font-bold text-[#a855f7] uppercase tracking-wider">Gemini AI Coach</span>
+            </div>
+            <p className="text-[11px] text-[#7f93b5] leading-relaxed mb-3">
+              Your AI coach analyzes all your journal data — setups, emotions, grades, timing — and finds patterns you can&apos;t see yourself. Needs at least 5 journaled trades.
+            </p>
+            {Object.keys(journal).length < 5 ? (
+              <p className="text-[11px] text-[#4a5e7a]">Log {5 - Object.keys(journal).length} more trades to unlock AI coaching.</p>
+            ) : (
+              <button
+                disabled={aiCoachLoading}
+                onClick={async () => {
+                  if (!analytics) return
+                  setAiCoachLoading(true)
+                  setAiCoach('')
+                  const totalTrades = Object.keys(journal).length
+                  const winRate = Math.round((Object.values(journal).filter((_, idx) => {
+                    const t = closedTrades[idx]; return t && t.pnl > 0
+                  }).length / totalTrades) * 100)
+                  const mistakes = Object.values(journal).map(j => j.notes).filter(Boolean).slice(0, 5)
+                  try {
+                    const res = await fetch('/api/gemini', {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ type: 'journal_coach', data: {
+                        totalTrades,
+                        winRate: isNaN(winRate) ? 'N/A' : winRate,
+                        bestSetup: analytics?.bestSetup?.[0] ?? 'N/A',
+                        bestSetupWinRate: analytics?.bestSetup ? Math.round(analytics.bestSetup[1].wins / analytics.bestSetup[1].total * 100) : 'N/A',
+                        worstSetup: analytics?.worstSetup?.[0] ?? 'N/A',
+                        worstSetupWinRate: analytics?.worstSetup ? Math.round(analytics.worstSetup[1].wins / analytics.worstSetup[1].total * 100) : 'N/A',
+                        bestEmotion: analytics?.calmWR !== undefined ? `Calm & Focused (${analytics.calmWR}% WR)` : 'N/A',
+                        worstEmotion: analytics?.fomoWR !== undefined ? `FOMO (${analytics.fomoWR}% WR)` : 'N/A',
+                        bestTime: analytics?.bestDay ? `${DAYS[parseInt(analytics.bestDay[0])]}` : 'N/A',
+                        avgGrade: 'B',
+                        commonMistakes: mistakes,
+                      }}})
+                    )
+                    const json = await res.json()
+                    setAiCoach(json.analysis || 'Could not generate analysis.')
+                  } catch { setAiCoach('Connection error — try again.') }
+                  setAiCoachLoading(false)
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-[#a855f7] text-white text-[11px] font-bold rounded-lg hover:bg-[#b970f7] transition-colors disabled:opacity-60">
+                <Bot size={12} /> {aiCoachLoading ? 'Analyzing your data...' : 'Run AI Coach Analysis'}
+              </button>
+            )}
+          </div>
+          {aiCoach && (
+            <div className="bg-[#040c14] border border-[#1a2d4a] rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Bot size={13} className="text-[#a855f7]" />
+                <span className="text-[10px] font-bold text-[#a855f7] uppercase tracking-wider">Your Personalized Analysis</span>
+              </div>
+              <p className="text-[12px] text-[#cdd6f4] leading-relaxed whitespace-pre-line">{aiCoach}</p>
+            </div>
+          )}
+        </div>
+      )}
       </div>
     </div>
   )
