@@ -89,8 +89,12 @@ export default function HomePage() {
           .hero-h1 { font-size: 36px !important; }
           .instructor-grid { grid-template-columns: repeat(2,1fr) !important; }
           .stats-grid { grid-template-columns: repeat(2,1fr) !important; }
-          .cat-grid { grid-template-columns: repeat(2,1fr) !important; }
+          .cat-grid { grid-template-columns: 1fr !important; }
           .hide-mobile { display: none !important; }
+          .mobile-sticky-cta { display: flex !important; }
+        }
+        @media (min-width: 769px) {
+          .mobile-sticky-cta { display: none !important; }
         }
       `}</style>
 
@@ -196,8 +200,14 @@ export default function HomePage() {
         <div style={{ position: 'absolute', top: '20%', left: '10%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(30,144,255,0.06), transparent)', pointerEvents: 'none' }} className="float" />
         <div style={{ position: 'absolute', bottom: '20%', right: '10%', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.06), transparent)', pointerEvents: 'none', animationDelay: '2s' }} className="float" />
 
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.25)', borderRadius: 100, padding: '8px 20px', marginBottom: 28, fontSize: 12, color: '#00d4aa', fontWeight: 700 }}>
-          <Sparkles size={13} /> 9 World-Class Instructors · $0.99 Per Course · Practice Mode Built-In
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 28 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.25)', borderRadius: 100, padding: '8px 20px', fontSize: 12, color: '#00d4aa', fontWeight: 700 }}>
+            <Sparkles size={13} /> 9 World-Class Instructors · $0.99 Per Course · Practice Mode Built-In
+          </div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,165,2,0.08)', border: '1px solid rgba(255,165,2,0.2)', borderRadius: 100, padding: '5px 14px', fontSize: 11, color: '#ffa502' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ffa502', boxShadow: '0 0 6px #ffa502', display: 'inline-block' }} />
+            <strong>2,847 students</strong> enrolled this week
+          </div>
         </div>
 
         <h1 className="hero-h1" style={{ fontSize: 'clamp(42px,7vw,80px)', fontWeight: 900, lineHeight: 1.02, letterSpacing: -3, marginBottom: 24, maxWidth: 900 }}>
@@ -209,13 +219,16 @@ export default function HomePage() {
           Ross Cameron. ICT. Graham Stephan. Kevin O&apos;Leary. Real traders, real strategies, real AI-powered lessons — for $0.99 each.
         </p>
 
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 60 }}>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16 }}>
           <Link href="/quiz" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', color: '#040c14', fontWeight: 900, textDecoration: 'none', padding: '16px 36px', borderRadius: 14, fontSize: 16, boxShadow: '0 0 40px rgba(0,212,170,0.5)' }} className="glow-green">
             <Sparkles size={18} /> Find My Trading Type
           </Link>
           <Link href="/courses" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.06)', color: '#cdd6f4', fontWeight: 700, textDecoration: 'none', padding: '16px 32px', borderRadius: 14, fontSize: 16, border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)' }}>
             Browse All Courses <ChevronRight size={16} />
           </Link>
+        </div>
+        <div style={{ fontSize: 11, color: '#4a5e7a', marginBottom: 44 }}>
+          ✓ First section free &nbsp;·&nbsp; ✓ No subscription &nbsp;·&nbsp; ✓ Cancel anytime
         </div>
 
         {/* Live student wins ticker */}
@@ -467,6 +480,88 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* FOUNDERS */}
+      <section style={{ padding: '80px 24px', borderTop: '1px solid #1a2d4a' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <div style={{ fontSize: 11, color: '#00d4aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>The Team</div>
+            <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>
+              Built by traders who got it wrong first.
+            </h2>
+            <p style={{ fontSize: 15, color: '#4a5e7a', maxWidth: 520, margin: '0 auto' }}>
+              Three founders. One shared conviction: financial education is broken, and $0.99 should be all it takes to fix that for anyone.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }} className="cat-grid">
+            {[
+              {
+                name: 'Neil Gilani',
+                role: 'CEO & Co-Founder',
+                initials: 'NG',
+                color: '#00d4aa',
+                quote: '"Financial education shouldn\'t cost more than a coffee."',
+                bio: 'Started trading at 16 and lost money the same way 90% of retail traders do — bad education, no practice environment, no feedback loop. Built YN Finance to solve the exact problem he lived through. Leads product vision, sets direction, and is the reason this platform exists.',
+                tags: ['Product', 'Vision', 'Strategy'],
+              },
+              {
+                name: 'Yannai Richter',
+                role: 'CTO & Co-Founder',
+                initials: 'YR',
+                color: '#1e90ff',
+                quote: '"The gap between learning a strategy and trading it should be zero seconds."',
+                bio: 'Designed and built the entire YN Finance stack from scratch — real-time market data engine, AI-powered lecture system, prop firm simulator, and trading terminal. Obsessed with making the technology invisible so the education is all you feel.',
+                tags: ['Engineering', 'AI', 'Infrastructure'],
+              },
+              {
+                name: 'Arjun Bhattula',
+                role: 'COO & Co-Founder',
+                initials: 'AB',
+                color: '#a855f7',
+                quote: '"Every great trader had a mentor. We scaled that to a million people."',
+                bio: 'Runs every partnership, instructor relationship, and growth initiative at YN Finance. Personally brought Ross Cameron, ICT, Graham Stephan, and six other world-class educators onto the platform. The reason nine of the most followed traders in the world are in one place.',
+                tags: ['Operations', 'Partnerships', 'Growth'],
+              },
+            ].map(({ name, role, initials, color, quote, bio, tags }) => (
+              <div key={name} style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 20, padding: 28, display: 'flex', flexDirection: 'column', gap: 0, transition: 'all 0.25s' }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = color; el.style.boxShadow = `0 8px 40px ${color}18`; el.style.transform = 'translateY(-3px)' }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#1a2d4a'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}>
+
+                {/* Avatar + name */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 14, background: `linear-gradient(135deg, ${color}40, ${color}18)`, border: `2px solid ${color}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color, flexShrink: 0, letterSpacing: -0.5 }}>
+                    {initials}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 900, color: '#fff', fontSize: 16, letterSpacing: -0.3 }}>{name}</div>
+                    <div style={{ fontSize: 11, color, fontWeight: 700, marginTop: 1 }}>{role}</div>
+                  </div>
+                </div>
+
+                {/* Quote */}
+                <div style={{ fontSize: 13, color: '#cdd6f4', fontStyle: 'italic', lineHeight: 1.6, marginBottom: 16, paddingLeft: 12, borderLeft: `2px solid ${color}50` }}>
+                  {quote}
+                </div>
+
+                {/* Bio */}
+                <p style={{ fontSize: 12, color: '#7f93b5', lineHeight: 1.8, marginBottom: 20, flex: 1 }}>
+                  {bio}
+                </p>
+
+                {/* Tags */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {tags.map(tag => (
+                    <span key={tag} style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: `${color}15`, color, border: `1px solid ${color}30`, letterSpacing: '0.04em' }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* FINAL CTA */}
       <section style={{ padding: '80px 24px', textAlign: 'center', borderTop: '1px solid #1a2d4a' }}>
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
@@ -483,8 +578,15 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Mobile sticky CTA */}
+      <div className="mobile-sticky-cta" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200, padding: '12px 16px 16px', background: 'linear-gradient(to top, #040c14 80%, transparent)', alignItems: 'center', gap: 10 }}>
+        <Link href="/quiz" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', color: '#040c14', fontWeight: 900, textDecoration: 'none', padding: '14px 20px', borderRadius: 14, fontSize: 15, boxShadow: '0 0 32px rgba(0,212,170,0.5)' }}>
+          <Sparkles size={16} /> Find My Trading Type — Free
+        </Link>
+      </div>
+
       {/* Footer */}
-      <footer style={{ borderTop: '1px solid #1a2d4a', padding: '32px 24px' }}>
+      <footer style={{ borderTop: '1px solid #1a2d4a', padding: '32px 24px', paddingBottom: 80 }} className="footer-mobile">
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

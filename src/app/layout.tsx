@@ -15,6 +15,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${inter.variable} h-full`} style={{ background: '#040c14' }}>
       <head>
         <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+        <link rel="preconnect" href="https://s3.tradingview.com" />
+        <link rel="dns-prefetch" href="https://s3.tradingview.com" />
       </head>
       <body className="h-full">
         {children}

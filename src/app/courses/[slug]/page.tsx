@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect, use, useRef } from 'react'
 import Link from 'next/link'
-import { Zap, Play, CheckCircle, Lock, ArrowRight, Star, Users, Clock, ChevronLeft, BookOpen, Target, Sparkles } from 'lucide-react'
+import { Zap, Play, CheckCircle, Lock, ArrowRight, Star, Users, Clock, ChevronLeft, BookOpen, Target, Sparkles, Trophy, BarChart2, Bot, Share2 } from 'lucide-react'
 import { SEED_COURSES } from '@/app/api/courses/route'
 import InteractiveLecture, { textToSlides } from '@/components/courses/InteractiveLecture'
 import CourseChat from '@/components/courses/CourseChat'
@@ -11,6 +11,15 @@ import TradeLogBlock from '@/components/courses/TradeLogBlock'
 import TraderSimBlock from '@/components/courses/TraderSimBlock'
 import ReplayBlock from '@/components/courses/ReplayBlock'
 import AdsterraBanner from '@/components/ads/AdsterraBanner'
+import Confetti from '@/components/ui-overlay/Confetti'
+
+const SECTION_ICONS: Record<string, React.ReactNode> = {
+  video:      <Play size={9} />,
+  text:       <BookOpen size={9} />,
+  practice:   <Target size={9} />,
+  trader_sim: <Bot size={9} />,
+  replay:     <BarChart2 size={9} />,
+}
 
 interface Section {
   id?: string; order_index: number; title: string; type: string
@@ -80,8 +89,8 @@ function SectionContent({ section, onComplete, color, instructor }: { section: S
           </div>
         </details>
         {quiz && quiz.length > 0 && !quizPassed ? (
-          <QuizBlock questions={quiz} color={color} onPass={() => setQuizPassed(true)} />
-        ) : (
+          <QuizBlock questions={quiz} color={color} onPass={() => { setQuizPassed(true); setTimeout(onComplete, 700) }} />
+        ) : quizPassed ? null : (
           <button onClick={onComplete} className="mt-4 flex items-center gap-2 px-4 py-2.5 bg-[#00d4aa] text-[#040c14] font-bold text-sm rounded-lg hover:bg-[#00ffcc] transition-colors">
             <CheckCircle size={14} /> Mark as Complete
           </button>
@@ -128,6 +137,13 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
   const [completed, setCompleted] = useState<Set<number>>(new Set())
   const [enrolled, setEnrolled] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [showCelebration, setShowCelebration] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  const goToSection = (i: number) => {
+    setActiveSection(i)
+    setTimeout(() => contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
 
   useEffect(() => {
     fetch(`/api/courses?slug=${slug}`).then(r => r.json()).then(json => {
@@ -152,11 +168,15 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
     const next = new Set(completed).add(idx)
     setCompleted(next)
     save(enrolled, next)
-    if (idx < sections.length - 1) setActiveSection(idx + 1)
+    if (next.size === sections.length) setShowCelebration(true)
+    // Don't auto-advance — show the "Continue" CTA so the user consciously moves forward
   }
 
   const progress = sections.length > 0 ? Math.round((completed.size / sections.length) * 100) : 0
   const canView = (s: Section, i: number) => enrolled || s.is_free_preview || i === 0
+  const totalMins = sections.reduce((s, sec) => s + (sec.duration_mins || 5), 0)
+  const doneMins = sections.filter((_, i) => completed.has(i)).reduce((s, sec) => s + (sec.duration_mins || 5), 0)
+  const remainingMins = totalMins - doneMins
 
   if (loading || !course) return (
     <div style={{ background: '#040c14', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -170,29 +190,77 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
 
   return (
     <div style={{ background: '#040c14', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', color: '#cdd6f4' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .course-layout { grid-template-columns: 1fr !important; }
+          .course-sidebar { position: static !important; }
+          .course-title-truncate { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        }
+      `}</style>
+
+      {showCelebration && <Confetti />}
+
+      {/* Completion celebration modal */}
+      {showCelebration && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(4,12,20,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ background: '#071220', border: `1px solid ${color}50`, borderRadius: 24, padding: '48px 40px', maxWidth: 480, width: '100%', textAlign: 'center' }}>
+            <div style={{ fontSize: 64, marginBottom: 16 }}>🏆</div>
+            <div style={{ fontSize: 11, color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>Course Complete</div>
+            <h2 style={{ fontSize: 26, fontWeight: 900, color: '#fff', letterSpacing: -0.5, marginBottom: 8 }}>{course.title}</h2>
+            <p style={{ fontSize: 13, color: '#7f93b5', marginBottom: 24 }}>
+              You completed all {sections.length} sections ({totalMins} min) taught by {course.trader_name}.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
+              {[
+                { label: 'Sections', value: String(sections.length) },
+                { label: 'Time invested', value: `${totalMins} min` },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ background: '#0a1628', border: '1px solid #1a2d4a', borderRadius: 12, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, color, fontFamily: 'monospace' }}>{value}</div>
+                  <div style={{ fontSize: 10, color: '#4a5e7a', marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Link href="/courses" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: color, color: '#040c14', fontWeight: 800, textDecoration: 'none', padding: '14px', borderRadius: 12, fontSize: 14 }}>
+                <BookOpen size={15} /> Browse Next Course
+              </Link>
+              <Link href="/app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#1e90ff20', color: '#1e90ff', fontWeight: 700, textDecoration: 'none', padding: '13px', borderRadius: 12, fontSize: 13, border: '1px solid #1e90ff30' }}>
+                Practice in Terminal →
+              </Link>
+              <button onClick={() => setShowCelebration(false)} style={{ fontSize: 12, color: '#4a5e7a', background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }}>
+                Review course ↓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid #1a2d4a', background: '#040c14', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', height: 56, gap: 16 }}>
-          <Link href="/courses" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: '#7f93b5', fontSize: 12 }}>
-            <ChevronLeft size={14} /> All Courses
+          <Link href="/courses" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: '#7f93b5', fontSize: 12, flexShrink: 0 }}>
+            <ChevronLeft size={14} /> Courses
           </Link>
           <span style={{ color: '#1a2d4a' }}>/</span>
-          <span style={{ color: '#cdd6f4', fontSize: 12, fontWeight: 600 }}>{course.title}</span>
+          <span className="course-title-truncate" style={{ color: '#cdd6f4', fontSize: 12, fontWeight: 600 }}>{course.title}</span>
           <div style={{ flex: 1 }} />
           {enrolled && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 120, height: 4, background: '#0f1f38', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ width: `${progress}%`, height: '100%', background: color, borderRadius: 4 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <div style={{ width: 100, height: 4, background: '#0f1f38', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ width: `${progress}%`, height: '100%', background: color, borderRadius: 4, transition: 'width 0.5s ease' }} />
               </div>
-              <span style={{ fontSize: 11, color: '#7f93b5', fontFamily: 'monospace' }}>{progress}%</span>
+              <span style={{ fontSize: 11, color: '#7f93b5', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                {progress}% {remainingMins > 0 ? `· ~${remainingMins}m left` : '· Done!'}
+              </span>
             </div>
           )}
         </div>
       </nav>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px', display: 'grid', gridTemplateColumns: '1fr 320px', gap: 32 }}>
+      <div className="course-layout" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px', display: 'grid', gridTemplateColumns: '1fr 320px', gap: 32 }}>
         {/* Main content */}
-        <div>
+        <div ref={contentRef}>
           {/* Course image banner */}
           {course.thumbnail_img && (
             <div style={{ height: 200, borderRadius: 16, overflow: 'hidden', marginBottom: 24, position: 'relative' }}>
@@ -210,12 +278,10 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
           {/* Course header */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span style={{ fontSize: 10, color: color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', background: `${color}20`, padding: '3px 10px', borderRadius: 4 }}>
-                {course.strategy_type}
-              </span>
               <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: `${DIFF_COLOR[course.difficulty] || '#7f93b5'}20`, color: DIFF_COLOR[course.difficulty] || '#7f93b5' }}>
                 {course.difficulty}
               </span>
+              <span style={{ fontSize: 10, color: '#4a5e7a', fontFamily: 'monospace' }}>{sections.length} sections · {totalMins} min</span>
             </div>
             <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: -0.5, marginBottom: 8 }}>{course.title}</h1>
             <p style={{ fontSize: 13, color: '#7f93b5', lineHeight: 1.6, marginBottom: 16 }}>{course.description}</p>
@@ -245,11 +311,9 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
             </div>
           </div>
 
-          <AdsterraBanner className="my-4" />
-
           {/* Section content */}
           {curr && (
-            <div style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 16, padding: 24, marginBottom: 24 }}>
+            <div style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 16, padding: 24, marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <div>
                   <div style={{ fontSize: 10, color: '#4a5e7a', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
@@ -259,7 +323,7 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
                 </div>
                 {completed.has(activeSection) && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#00d4aa', fontSize: 11, fontWeight: 700 }}>
-                    <CheckCircle size={14} /> Completed
+                    <CheckCircle size={14} /> Done
                   </div>
                 )}
               </div>
@@ -267,23 +331,43 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
               {canView(curr, activeSection) ? (
                 <SectionContent section={curr} onComplete={() => markComplete(activeSection)} color={color} instructor={course.trader_name} />
               ) : (
-                <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                  <Lock size={32} style={{ color: '#1a2d4a', margin: '0 auto 12px' }} />
-                  <p style={{ fontSize: 14, color: '#4a5e7a', marginBottom: 16 }}>Enroll to unlock this section</p>
-                  <button onClick={enroll} style={{ background: color, color: '#040c14', border: 'none', fontWeight: 800, padding: '12px 24px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }}>
-                    Enroll for ${(course.price_cents / 100).toFixed(2)}
+                <div style={{ background: `${color}08`, border: `1px solid ${color}25`, borderRadius: 14, padding: '32px 24px', textAlign: 'center' }}>
+                  <Lock size={28} style={{ color, margin: '0 auto 12px', opacity: 0.6 }} />
+                  <p style={{ fontSize: 15, fontWeight: 700, color: '#cdd6f4', marginBottom: 6 }}>Unlock the full course</p>
+                  <p style={{ fontSize: 12, color: '#7f93b5', marginBottom: 20, maxWidth: 320, margin: '0 auto 20px' }}>
+                    {sections.length - sections.filter(s => s.is_free_preview).length} locked sections · AI lectures · knowledge quizzes · practice mode
+                  </p>
+                  <button onClick={enroll} style={{ background: color, color: '#040c14', border: 'none', fontWeight: 900, padding: '13px 28px', borderRadius: 10, fontSize: 15, cursor: 'pointer', boxShadow: `0 0 20px ${color}40` }}>
+                    Enroll for ${(course.price_cents / 100).toFixed(2)} →
                   </button>
+                  <p style={{ fontSize: 10, color: '#4a5e7a', marginTop: 10 }}>One-time · Lifetime access · 30-day refund</p>
                 </div>
               )}
             </div>
           )}
+
+          {/* Continue CTA — shown when section is complete and there's a next one */}
+          {completed.has(activeSection) && activeSection < sections.length - 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: `${color}12`, border: `1px solid ${color}35`, borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <CheckCircle size={18} color={color} />
+                <span style={{ fontSize: 13, fontWeight: 700, color }}>Section complete!</span>
+              </div>
+              <button onClick={() => goToSection(activeSection + 1)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: color, color: '#040c14', border: 'none', fontWeight: 800, padding: '10px 18px', borderRadius: 8, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {sections[activeSection + 1].title.slice(0, 28)}{sections[activeSection + 1].title.length > 28 ? '…' : ''} <ArrowRight size={13} />
+              </button>
+            </div>
+          )}
+
+          <AdsterraBanner className="my-4" />
 
           {/* Real per-course chat */}
           <CourseChat courseSlug={course.slug} courseName={course.title} color={color} />
         </div>
 
         {/* Sidebar */}
-        <div>
+        <div className="course-sidebar">
           {/* Enroll CTA */}
           {!enrolled ? (
             <div style={{ background: '#071220', border: `1px solid ${color}40`, borderRadius: 16, padding: 20, marginBottom: 16, position: 'sticky', top: 72 }}>
@@ -313,31 +397,38 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
 
           {/* Section list */}
           <div style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid #1a2d4a', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <BookOpen size={12} color="#7f93b5" />
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#7f93b5', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                {sections.length} Sections
-              </span>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #1a2d4a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <BookOpen size={12} color="#7f93b5" />
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#7f93b5', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  {sections.length} Sections
+                </span>
+              </div>
+              <span style={{ fontSize: 10, color: '#4a5e7a', fontFamily: 'monospace' }}>{completed.size}/{sections.length} done</span>
             </div>
             {sections.map((sec, i) => {
               const isActive = i === activeSection
               const isDone = completed.has(i)
               const locked = !canView(sec, i)
+              const typeLabel: Record<string, string> = { video: 'Video', text: 'Lesson', practice: 'Practice', trader_sim: 'Sim', replay: 'Replay' }
+              const typeColor: Record<string, string> = { practice: '#ffa502', trader_sim: '#a855f7', replay: '#1e90ff', video: '#ff4757', text: color }
+              const tc = typeColor[sec.type] || '#4a5e7a'
               return (
-                <button key={i} onClick={() => !locked && setActiveSection(i)} disabled={locked}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid #1a2d4a', borderTop: 'none', borderLeft: 'none', borderRight: 'none', cursor: locked ? 'not-allowed' : 'pointer', background: isActive ? `${color}15` : 'transparent', textAlign: 'left' }}>
-                  <div style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: isDone ? '#00d4aa20' : isActive ? `${color}20` : '#0f1f38' }}>
-                    {isDone ? <CheckCircle size={11} color="#00d4aa" /> : locked ? <Lock size={10} color="#4a5e7a" /> : <Play size={9} color={isActive ? color : '#4a5e7a'} />}
+                <button key={i} onClick={() => !locked && goToSection(i)} disabled={locked}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderBottom: '1px solid #1a2d4a', borderTop: 'none', borderLeft: `3px solid ${isActive ? color : 'transparent'}`, borderRight: 'none', cursor: locked ? 'not-allowed' : 'pointer', background: isActive ? `${color}10` : 'transparent', textAlign: 'left', transition: 'all 0.15s' }}>
+                  <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: isDone ? '#00d4aa15' : isActive ? `${color}20` : '#0f1f38',
+                    border: `1px solid ${isDone ? '#00d4aa40' : isActive ? `${color}40` : '#1a2d4a'}` }}>
+                    {isDone ? <CheckCircle size={11} color="#00d4aa" /> : locked ? <Lock size={10} color="#4a5e7a" /> : (SECTION_ICONS[sec.type] || <Play size={9} />)}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 11, fontWeight: isActive ? 700 : 500, color: isActive ? '#cdd6f4' : locked ? '#4a5e7a' : '#7f93b5', lineHeight: 1.3 }}>
+                    <div style={{ fontSize: 11, fontWeight: isActive ? 700 : 500, color: isActive ? '#cdd6f4' : locked ? '#2a4060' : '#7f93b5', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {sec.title}
                     </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
-                      <span style={{ fontSize: 9, color: '#4a5e7a' }}>{sec.duration_mins} min</span>
-                      {sec.is_free_preview && <span style={{ fontSize: 9, color: color }}>Free preview</span>}
-                      {sec.type === 'practice' && <span style={{ fontSize: 9, color: '#ffa502' }}>Practice</span>}
+                    <div style={{ display: 'flex', gap: 6, marginTop: 2, alignItems: 'center' }}>
+                      <span style={{ fontSize: 8, fontWeight: 700, color: tc, background: `${tc}15`, padding: '1px 5px', borderRadius: 3 }}>{typeLabel[sec.type] || sec.type}</span>
+                      <span style={{ fontSize: 9, color: '#2a4060' }}>{sec.duration_mins}m</span>
+                      {sec.is_free_preview && <span style={{ fontSize: 9, color: '#00d4aa' }}>Free</span>}
                     </div>
                   </div>
                 </button>

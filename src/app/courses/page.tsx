@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AdsterraBanner from '@/components/ads/AdsterraBanner'
-import { Zap, Star, Users, Search, BookOpen, Play, ChevronRight, TrendingUp, Shield, ArrowRight } from 'lucide-react'
+import { Zap, Star, Users, Search, BookOpen, Play, ChevronRight, TrendingUp, Shield, ArrowRight, CheckCircle } from 'lucide-react'
 import { SEED_COURSES } from '@/app/api/courses/route'
 
 interface Course {
@@ -23,6 +23,25 @@ export default function CoursesPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState('All')
+  const [sortBy, setSortBy] = useState<'popular' | 'rating' | 'beginner'>('popular')
+  const [courseProgress, setCourseProgress] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    // Read per-course progress from localStorage
+    const progress: Record<string, number> = {}
+    for (const c of SEED_COURSES) {
+      try {
+        const saved = localStorage.getItem(`yn_course_${c.slug}`)
+        if (saved) {
+          const d = JSON.parse(saved)
+          if (d.enrolled && Array.isArray(d.completed)) {
+            progress[c.slug] = Math.round((d.completed.length / c.sections.length) * 100)
+          }
+        }
+      } catch {}
+    }
+    setCourseProgress(progress)
+  }, [])
 
   useEffect(() => {
     fetch('/api/courses').then(r => r.json()).then(json => {
@@ -31,11 +50,21 @@ export default function CoursesPage() {
     }).catch(() => { setCourses(SEED_COURSES as unknown as Course[]); setLoading(false) })
   }, [])
 
-  const filtered = courses.filter(c => {
-    const matchSearch = !search || c.title.toLowerCase().includes(search.toLowerCase()) || c.trader_name.toLowerCase().includes(search.toLowerCase())
-    const matchFilter = activeFilter === 'All' || c.strategy_type === activeFilter
-    return matchSearch && matchFilter
-  })
+  const filtered = courses
+    .filter(c => {
+      const matchSearch = !search || c.title.toLowerCase().includes(search.toLowerCase()) || c.trader_name.toLowerCase().includes(search.toLowerCase())
+      const matchFilter = activeFilter === 'All' || c.strategy_type === activeFilter
+      return matchSearch && matchFilter
+    })
+    .sort((a, b) => {
+      if (sortBy === 'popular') return b.enrollment_count - a.enrollment_count
+      if (sortBy === 'rating') return b.rating - a.rating
+      if (sortBy === 'beginner') {
+        const order: Record<string, number> = { Beginner: 0, Intermediate: 1, Advanced: 2 }
+        return (order[a.difficulty] ?? 1) - (order[b.difficulty] ?? 1)
+      }
+      return 0
+    })
 
   return (
     <div style={{ background: '#040c14', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', color: '#cdd6f4' }}>
@@ -86,7 +115,7 @@ export default function CoursesPage() {
 
           {/* Stats */}
           <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap' }}>
-            {[['6', 'Expert Instructors'], ['24+', 'Hours of Content'], ['$0.99', 'Per Course'], ['Built-in', 'Practice Mode']].map(([v, l]) => (
+            {[['9', 'Expert Instructors'], ['40+', 'Hours of Content'], ['$0.99', 'Per Course'], ['Built-in', 'Practice Mode']].map(([v, l]) => (
               <div key={l}>
                 <div style={{ fontSize: 24, fontWeight: 900, color: '#00d4aa', fontFamily: 'monospace' }}>{v}</div>
                 <div style={{ fontSize: 11, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{l}</div>
@@ -103,36 +132,71 @@ export default function CoursesPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
 
         {/* Search + filters */}
-        <div style={{ display: 'flex', gap: 16, marginBottom: 32, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#071220', border: '1px solid #1a2d4a', borderRadius: 10, padding: '10px 16px', flex: '1', minWidth: 240 }}>
             <Search size={14} color="#4a5e7a" />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search by strategy or instructor name..."
               style={{ background: 'none', border: 'none', outline: 'none', color: '#cdd6f4', fontSize: 13, flex: 1 }} />
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {FILTERS.map(f => (
-              <button key={f} onClick={() => setActiveFilter(f)}
-                style={{ padding: '8px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                  background: activeFilter === f ? '#00d4aa' : '#071220',
-                  color: activeFilter === f ? '#040c14' : '#7f93b5',
-                  border: activeFilter === f ? 'none' : '1px solid #1a2d4a' }}>
-                {f}
-              </button>
-            ))}
-          </div>
+          <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
+            style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 8, color: '#7f93b5', fontSize: 12, padding: '10px 12px', cursor: 'pointer', outline: 'none' }}>
+            <option value="popular">Most Popular</option>
+            <option value="rating">Top Rated</option>
+            <option value="beginner">Beginner First</option>
+          </select>
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 28 }}>
+          {FILTERS.map(f => (
+            <button key={f} onClick={() => setActiveFilter(f)}
+              style={{ padding: '7px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                background: activeFilter === f ? '#00d4aa' : '#071220',
+                color: activeFilter === f ? '#040c14' : '#7f93b5',
+                border: activeFilter === f ? 'none' : '1px solid #1a2d4a' }}>
+              {f}
+            </button>
+          ))}
         </div>
 
+        {/* In-progress courses — shown if user has started any */}
+        {!loading && Object.keys(courseProgress).filter(slug => courseProgress[slug] > 0 && courseProgress[slug] < 100).length > 0 && (
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ fontSize: 11, color: '#ffa502', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
+              ▶ Continue where you left off
+            </div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {courses.filter(c => courseProgress[c.slug] > 0 && courseProgress[c.slug] < 100).map(c => (
+                <Link key={c.slug} href={`/courses/${c.slug}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, background: '#071220', border: `1px solid ${c.thumbnail_color}40`, borderRadius: 12, padding: '12px 16px', minWidth: 240 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: `${c.trader_avatar_color}20`, color: c.trader_avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, flexShrink: 0 }}>
+                    {c.trader_name.slice(0,2).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#cdd6f4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                      <div style={{ flex: 1, height: 3, background: '#0f1f38', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ width: `${courseProgress[c.slug]}%`, height: '100%', background: c.thumbnail_color }} />
+                      </div>
+                      <span style={{ fontSize: 9, color: c.thumbnail_color, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{courseProgress[c.slug]}%</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Course grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 24, marginBottom: 48 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 24, marginBottom: 48 }}>
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} style={{ height: 320, background: '#071220', borderRadius: 16, border: '1px solid #1a2d4a', opacity: 0.5 }} />
               ))
-            : filtered.map(course => (
+            : filtered.map(course => {
+              const pct = courseProgress[course.slug] ?? 0
+              return (
               <Link key={course.id} href={`/courses/${course.slug}`} style={{ textDecoration: 'none' }}>
                 <div className="course-card" style={{
-                  background: '#071220', border: '1px solid #1a2d4a', borderRadius: 16, overflow: 'hidden',
+                  background: '#071220', border: `1px solid ${pct > 0 ? course.thumbnail_color + '50' : '#1a2d4a'}`, borderRadius: 16, overflow: 'hidden',
                   transition: 'all 0.2s', cursor: 'pointer',
                 }}
                   onMouseEnter={e => {
@@ -200,13 +264,27 @@ export default function CoursesPage() {
                         <span>Includes practice mode</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: course.thumbnail_color, fontWeight: 700, fontSize: 12 }}>
-                        Start Learning <ChevronRight size={13} />
+                        {pct > 0 ? 'Continue' : 'Start Learning'} <ChevronRight size={13} />
                       </div>
                     </div>
+
+                    {/* Progress bar for in-progress courses */}
+                    {pct > 0 && (
+                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #1a2d4a' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontSize: 9, color: '#4a5e7a' }}>{pct === 100 ? '✓ Completed' : 'In progress'}</span>
+                          <span style={{ fontSize: 9, color: course.thumbnail_color, fontFamily: 'monospace' }}>{pct}%</span>
+                        </div>
+                        <div style={{ height: 3, background: '#0f1f38', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: pct === 100 ? '#00d4aa' : course.thumbnail_color }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Link>
-            ))}
+            )})}
+
         </div>
 
         {filtered.length === 0 && !loading && (

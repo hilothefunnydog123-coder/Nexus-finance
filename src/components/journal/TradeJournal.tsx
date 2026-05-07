@@ -503,13 +503,13 @@ export default function TradeJournal() {
                         bestSetupWinRate: analytics?.bestSetup ? Math.round(analytics.bestSetup[1].wins / analytics.bestSetup[1].total * 100) : 'N/A',
                         worstSetup: analytics?.worstSetup?.[0] ?? 'N/A',
                         worstSetupWinRate: analytics?.worstSetup ? Math.round(analytics.worstSetup[1].wins / analytics.worstSetup[1].total * 100) : 'N/A',
-                        bestEmotion: analytics?.calmWR !== undefined ? `Calm & Focused (${analytics.calmWR}% WR)` : 'N/A',
-                        worstEmotion: analytics?.fomoWR !== undefined ? `FOMO (${analytics.fomoWR}% WR)` : 'N/A',
+                        bestEmotion: analytics?.calmWinRate !== undefined ? `Calm & Focused (${analytics.calmWinRate}% WR)` : 'N/A',
+                        worstEmotion: analytics?.fomoWinRate !== undefined ? `FOMO (${analytics.fomoWinRate}% WR)` : 'N/A',
                         bestTime: analytics?.bestDay ? `${DAYS[parseInt(analytics.bestDay[0])]}` : 'N/A',
                         avgGrade: 'B',
                         commonMistakes: mistakes,
-                      }}})
-                    )
+                      }})
+                    })
                     const json = await res.json()
                     setAiCoach(json.analysis || 'Could not generate analysis.')
                   } catch { setAiCoach('Connection error — try again.') }

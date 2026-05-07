@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Zap, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, Sparkles } from 'lucide-react'
 import { supabase, SUPABASE_ENABLED } from '@/lib/supabase'
 
@@ -23,6 +23,13 @@ export default function AuthModal({ onClose, onSuccess, reason, redirectTo }: Pr
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [resendCooldown, setResendCooldown] = useState(0)
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const t = setInterval(() => setResendCooldown(c => Math.max(0, c - 1)), 1000)
+    return () => clearInterval(t)
+  }, [resendCooldown])
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,6 +50,7 @@ export default function AuthModal({ onClose, onSuccess, reason, redirectTo }: Pr
         })
         if (err) { setError(err.message); return }
         setSuccess(`Magic link sent to ${email} — check your inbox and spam folder. Click the link to sign in.`)
+        setResendCooldown(60)
       } else {
         if (!password) { setError('Please enter your password'); return }
         if (password.length < 6) { setError('Password must be at least 6 characters'); return }
@@ -158,11 +166,29 @@ export default function AuthModal({ onClose, onSuccess, reason, redirectTo }: Pr
             </button>
           </form>
 
-          {mode === 'magic' && (
+          {mode === 'magic' && success && (
+            <div className="mt-3 flex items-center justify-center gap-2">
+              <span className="text-[10px] text-[#4a5e7a]">Didn&apos;t receive it?</span>
+              <button type="button" disabled={resendCooldown > 0}
+                onClick={() => submit({ preventDefault: () => {} } as React.FormEvent)}
+                className="text-[10px] font-bold disabled:text-[#2a4060] text-[#1e90ff] hover:underline disabled:cursor-not-allowed transition-colors">
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend magic link'}
+              </button>
+            </div>
+          )}
+          {mode === 'magic' && !success && (
             <div className="mt-4 p-3 bg-[#0f1f38] rounded-lg text-center">
               <p className="text-[10px] text-[#4a5e7a] leading-relaxed">
                 We&apos;ll send you a secure one-click sign-in link via <strong className="text-[#7f93b5]">Resend</strong>. No password needed. Works for both new and existing accounts.
               </p>
+            </div>
+          )}
+          {mode === 'password' && tab === 'signin' && (
+            <div className="mt-3 text-center">
+              <button type="button" onClick={() => { setMode('magic'); setError(''); setSuccess(''); setTab('signin') }}
+                className="text-[10px] text-[#4a5e7a] hover:text-[#1e90ff] transition-colors">
+                Forgot password? Use magic link instead →
+              </button>
             </div>
           )}
         </div>

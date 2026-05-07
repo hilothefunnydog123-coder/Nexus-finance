@@ -93,6 +93,13 @@ export default function NexusDashboard() {
           .yn-nav-label { display: none !important; }
           .yn-account-bar { font-size: 9px !important; gap: 8px !important; }
           .yn-nav-btn { padding: 0 10px !important; }
+          .yn-nav-tabs { overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+          .yn-nav-tabs::-webkit-scrollbar { display: none; }
+          .yn-nav-right { gap: 8px !important; padding: 0 8px !important; }
+          .yn-nav-right .yn-hide-mobile { display: none !important; }
+          .yn-logo-subtitle { display: none !important; }
+          .yn-ai-panel { flex-direction: column !important; }
+          .yn-ai-panel > * { width: 100% !important; min-width: unset !important; }
         }
       `}</style>
       <Onboarding onTabChange={(tab) => setActiveTab(tab as Tab)} />
@@ -103,19 +110,19 @@ export default function NexusDashboard() {
       {showShare && <ShareCard onClose={() => setShowShare(false)} />}
 
       {/* Nav */}
-      <nav className="flex items-center h-10 border-b border-[#1a2d4a] bg-[#040c14] shrink-0">
-        <div className="flex items-center gap-2 px-4 border-r border-[#1a2d4a] h-full">
+      <nav className="flex items-center h-10 border-b border-[#1a2d4a] bg-[#040c14] shrink-0 overflow-hidden">
+        <div className="flex items-center gap-2 px-3 border-r border-[#1a2d4a] h-full shrink-0">
           <div className="w-6 h-6 rounded bg-gradient-to-br from-[#00d4aa] to-[#1e90ff] flex items-center justify-center">
             <Zap size={13} className="text-[#040c14]" fill="currentColor" />
           </div>
           <span className="text-base font-black tracking-tight text-white">YN</span>
-          <span className="text-base font-light text-[#00d4aa] tracking-widest">FINANCE</span>
+          <span className="text-base font-light text-[#00d4aa] tracking-widest yn-logo-subtitle">FINANCE</span>
         </div>
 
-        <div className="flex h-full">
+        <div className="yn-nav-tabs flex h-full flex-1 min-w-0">
           {NAV.map(item => (
             <button key={item.id} onClick={() => setActiveTab(item.id)}
-              className={`yn-nav-btn flex items-center gap-1.5 px-4 h-full text-[11px] font-semibold uppercase tracking-wider border-r border-[#1a2d4a] transition-colors ${
+              className={`yn-nav-btn flex items-center gap-1.5 px-4 h-full text-[11px] font-semibold uppercase tracking-wider border-r border-[#1a2d4a] transition-colors shrink-0 ${
                 activeTab === item.id
                   ? 'text-[#00d4aa] border-b-2 border-b-[#00d4aa] bg-[#071220]'
                   : 'text-[#7f93b5] hover:text-[#cdd6f4] hover:bg-[#071220]'
@@ -132,23 +139,23 @@ export default function NexusDashboard() {
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-3 px-4 border-l border-[#1a2d4a] h-full">
+        <div className="yn-nav-right ml-auto flex items-center gap-3 px-4 border-l border-[#1a2d4a] h-full shrink-0">
           {isDemo && (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#ffa502]/10 border border-[#ffa502]/30 rounded">
+            <div className="yn-hide-mobile flex items-center gap-1.5 px-2 py-0.5 bg-[#ffa502]/10 border border-[#ffa502]/30 rounded">
               <span className="w-1.5 h-1.5 rounded-full bg-[#ffa502] animate-pulse" />
               <span className="text-[10px] text-[#ffa502] font-mono uppercase">Demo</span>
               <ChevronRight size={9} className="text-[#ffa502]" />
-              <span className="text-[10px] text-[#7f93b5]">Add Finnhub key to .env.local for live data</span>
+              <span className="text-[10px] text-[#7f93b5]">Add Finnhub key for live data</span>
             </div>
           )}
           <AIChartVision />
-          <button onClick={() => setShowShare(true)} className="flex items-center gap-1 text-[10px] text-[#4a5e7a] hover:text-[#00d4aa] transition-colors ml-1">
+          <button onClick={() => setShowShare(true)} className="yn-hide-mobile flex items-center gap-1 text-[10px] text-[#4a5e7a] hover:text-[#00d4aa] transition-colors">
             <Share2 size={11} /> Share P&L
           </button>
-          <Link href="/courses" className="flex items-center gap-1.5 text-[10px] font-bold text-[#00d4aa] border border-[#00d4aa30] bg-[#00d4aa10] hover:bg-[#00d4aa20] rounded px-2.5 py-1 transition-colors ml-1 whitespace-nowrap">
-            <BookOpen size={11} /> Courses
+          <Link href="/courses" className="flex items-center gap-1.5 text-[10px] font-bold text-[#00d4aa] border border-[#00d4aa30] bg-[#00d4aa10] hover:bg-[#00d4aa20] rounded px-2.5 py-1 transition-colors whitespace-nowrap">
+            <BookOpen size={11} /> <span className="yn-hide-mobile">Courses</span>
           </Link>
-          <Link href="/" className="flex items-center gap-1 text-[10px] text-[#4a5e7a] hover:text-[#7f93b5] transition-colors ml-1">
+          <Link href="/" className="flex items-center gap-1 text-[10px] text-[#4a5e7a] hover:text-[#7f93b5] transition-colors">
             <Home size={11} />
           </Link>
         </div>
@@ -236,7 +243,7 @@ export default function NexusDashboard() {
           <div className="flex-1 min-h-0 overflow-hidden"><TradeRoom /></div>
         )}
         {activeTab === 'ai' && (
-          <div className="flex-1 min-h-0 overflow-hidden flex">
+          <div className="yn-ai-panel flex-1 min-h-0 overflow-hidden flex">
             {/* Top 10 Stocks */}
             <div className="flex flex-col border-r border-[#1a2d4a] overflow-hidden" style={{ width: '38%', minWidth: 320 }}>
               <TopStocksWidget />

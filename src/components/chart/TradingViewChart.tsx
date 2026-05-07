@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 declare global {
   interface Window {
@@ -61,10 +61,12 @@ export default function TradingViewChart({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const idRef = useRef(`tv_${Math.random().toString(36).slice(2, 9)}`)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const containerId = `tv_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`
     idRef.current = containerId
+    setLoading(true)
 
     if (!containerRef.current) return
     containerRef.current.innerHTML = ''
@@ -77,7 +79,6 @@ export default function TradingViewChart({
 
     loadTV().then(() => {
       if (!window.TradingView || !containerRef.current) return
-      // Make sure the container element still exists
       if (!document.getElementById(containerId)) return
 
       new window.TradingView.widget({
@@ -103,7 +104,10 @@ export default function TradingViewChart({
         hide_legend: false,
         custom_css_url: '',
         loading_screen: { backgroundColor: '#040c14', foregroundColor: '#00d4aa' },
+        onChartReady: () => setLoading(false),
       })
+      // Fallback: hide skeleton after 4s even if onChartReady doesn't fire
+      setTimeout(() => setLoading(false), 4000)
     })
 
     return () => {
@@ -113,6 +117,23 @@ export default function TradingViewChart({
   }, [symbol, interval])
 
   return (
-    <div ref={containerRef} className="w-full h-full" style={{ background: '#040c14' }} />
+    <div className="relative w-full h-full" style={{ background: '#040c14' }}>
+      {loading && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3" style={{ background: '#040c14' }}>
+          <div className="flex gap-1.5">
+            {[0, 1, 2, 3, 4].map(i => (
+              <div key={i} className="w-1 rounded-full bg-[#00d4aa]"
+                style={{ height: 24 + i * 8, opacity: 0.3 + i * 0.15, animation: `pulse 1s ease-in-out ${i * 0.1}s infinite alternate` }} />
+            ))}
+            {[3, 2, 1].map(i => (
+              <div key={`r${i}`} className="w-1 rounded-full bg-[#00d4aa]"
+                style={{ height: 24 + i * 8, opacity: 0.3 + i * 0.15, animation: `pulse 1s ease-in-out ${(5 + (3 - i)) * 0.1}s infinite alternate` }} />
+            ))}
+          </div>
+          <span className="text-[11px] text-[#4a5e7a] font-mono">{symbol} · Loading chart...</span>
+        </div>
+      )}
+      <div ref={containerRef} className="w-full h-full" />
+    </div>
   )
 }

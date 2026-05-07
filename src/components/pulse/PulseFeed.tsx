@@ -72,7 +72,19 @@ function NewsCard({ item }: { item: NewsItem }) {
             <p className="text-[10px] text-[#4a5e7a] leading-snug line-clamp-1 mt-1">{item.summary}</p>
           )}
         </div>
-        <ExternalLink size={10} className="text-[#2a4060] shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+        {item.image ? (
+          <img
+            src={item.image}
+            alt=""
+            className="w-14 h-10 rounded object-cover shrink-0 opacity-80 group-hover:opacity-100 transition-opacity"
+            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+          />
+        ) : (
+          <div className="w-14 h-10 rounded shrink-0 flex items-center justify-center text-[10px] font-bold"
+            style={{ background: `${srcColor}15`, color: srcColor }}>
+            {(item.source || 'N').slice(0, 2).toUpperCase()}
+          </div>
+        )}
       </div>
     </a>
   )
