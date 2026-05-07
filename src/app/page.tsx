@@ -314,6 +314,80 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* FOUNDERS */}
+      <section style={{ padding: '80px 24px', background: 'rgba(7,18,32,0.5)', borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <div style={{ fontSize: 11, color: '#00d4aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>The Team</div>
+            <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>
+              Built by traders who got it wrong first.
+            </h2>
+            <p style={{ fontSize: 15, color: '#4a5e7a', maxWidth: 520, margin: '0 auto' }}>
+              Three founders. One shared conviction: financial education is broken, and $0.99 should be all it takes to fix that for anyone.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }} className="cat-grid">
+            {[
+              {
+                name: 'Neil Gilani',
+                role: 'CEO & Co-Founder',
+                initials: 'NG',
+                color: '#00d4aa',
+                quote: '"Financial education shouldn\'t cost more than a coffee."',
+                bio: 'Started trading at 16 and lost money the same way 90% of retail traders do — bad education, no practice environment, no feedback loop. Built YN Finance to solve the exact problem he lived through. Leads product vision, sets direction, and is the reason this platform exists.',
+                tags: ['Product', 'Vision', 'Strategy'],
+              },
+              {
+                name: 'Yannai Richter',
+                role: 'CTO & Co-Founder',
+                initials: 'YR',
+                color: '#1e90ff',
+                quote: '"The gap between learning a strategy and trading it should be zero seconds."',
+                bio: 'Designed and built the entire YN Finance stack from scratch — real-time market data engine, AI-powered lecture system, prop firm simulator, and trading terminal. Obsessed with making the technology invisible so the education is all you feel.',
+                tags: ['Engineering', 'AI', 'Infrastructure'],
+              },
+              {
+                name: 'Arjun Bhattula',
+                role: 'COO & Co-Founder',
+                initials: 'AB',
+                color: '#a855f7',
+                quote: '"Every great trader had a mentor. We scaled that to a million people."',
+                bio: 'Runs every partnership, instructor relationship, and growth initiative at YN Finance. Personally brought Ross Cameron, ICT, Graham Stephan, and six other world-class educators onto the platform. The reason nine of the most followed traders in the world are in one place.',
+                tags: ['Operations', 'Partnerships', 'Growth'],
+              },
+            ].map(({ name, role, initials, color, quote, bio, tags }) => (
+              <div key={name} style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 20, padding: 28, display: 'flex', flexDirection: 'column', transition: 'all 0.25s' }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = color; el.style.boxShadow = `0 8px 40px ${color}18`; el.style.transform = 'translateY(-3px)' }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#1a2d4a'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 14, background: `linear-gradient(135deg, ${color}40, ${color}18)`, border: `2px solid ${color}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color, flexShrink: 0, letterSpacing: -0.5 }}>
+                    {initials}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 900, color: '#fff', fontSize: 16, letterSpacing: -0.3 }}>{name}</div>
+                    <div style={{ fontSize: 11, color, fontWeight: 700, marginTop: 1 }}>{role}</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, color: '#cdd6f4', fontStyle: 'italic', lineHeight: 1.6, marginBottom: 16, paddingLeft: 12, borderLeft: `2px solid ${color}50` }}>
+                  {quote}
+                </div>
+                <p style={{ fontSize: 12, color: '#7f93b5', lineHeight: 1.8, marginBottom: 20, flex: 1 }}>
+                  {bio}
+                </p>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {tags.map(tag => (
+                    <span key={tag} style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: `${color}15`, color, border: `1px solid ${color}30`, letterSpacing: '0.04em' }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* HOW IT WORKS */}
       <section style={{ padding: '80px 24px', background: 'rgba(7,18,32,0.5)', borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a' }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
@@ -474,88 +548,6 @@ export default function HomePage() {
                 <div style={{ fontSize: 11, color, fontWeight: 700, fontFamily: 'monospace', marginBottom: 6 }}>{revenue}</div>
                 <div style={{ fontWeight: 800, color: '#fff', fontSize: 15, marginBottom: 10 }}>{title}</div>
                 <div style={{ fontSize: 12, color: '#4a5e7a', lineHeight: 1.7 }}>{desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FOUNDERS */}
-      <section style={{ padding: '80px 24px', borderTop: '1px solid #1a2d4a' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <div style={{ fontSize: 11, color: '#00d4aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>The Team</div>
-            <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>
-              Built by traders who got it wrong first.
-            </h2>
-            <p style={{ fontSize: 15, color: '#4a5e7a', maxWidth: 520, margin: '0 auto' }}>
-              Three founders. One shared conviction: financial education is broken, and $0.99 should be all it takes to fix that for anyone.
-            </p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }} className="cat-grid">
-            {[
-              {
-                name: 'Neil Gilani',
-                role: 'CEO & Co-Founder',
-                initials: 'NG',
-                color: '#00d4aa',
-                quote: '"Financial education shouldn\'t cost more than a coffee."',
-                bio: 'Started trading at 16 and lost money the same way 90% of retail traders do — bad education, no practice environment, no feedback loop. Built YN Finance to solve the exact problem he lived through. Leads product vision, sets direction, and is the reason this platform exists.',
-                tags: ['Product', 'Vision', 'Strategy'],
-              },
-              {
-                name: 'Yannai Richter',
-                role: 'CTO & Co-Founder',
-                initials: 'YR',
-                color: '#1e90ff',
-                quote: '"The gap between learning a strategy and trading it should be zero seconds."',
-                bio: 'Designed and built the entire YN Finance stack from scratch — real-time market data engine, AI-powered lecture system, prop firm simulator, and trading terminal. Obsessed with making the technology invisible so the education is all you feel.',
-                tags: ['Engineering', 'AI', 'Infrastructure'],
-              },
-              {
-                name: 'Arjun Bhattula',
-                role: 'COO & Co-Founder',
-                initials: 'AB',
-                color: '#a855f7',
-                quote: '"Every great trader had a mentor. We scaled that to a million people."',
-                bio: 'Runs every partnership, instructor relationship, and growth initiative at YN Finance. Personally brought Ross Cameron, ICT, Graham Stephan, and six other world-class educators onto the platform. The reason nine of the most followed traders in the world are in one place.',
-                tags: ['Operations', 'Partnerships', 'Growth'],
-              },
-            ].map(({ name, role, initials, color, quote, bio, tags }) => (
-              <div key={name} style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 20, padding: 28, display: 'flex', flexDirection: 'column', gap: 0, transition: 'all 0.25s' }}
-                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = color; el.style.boxShadow = `0 8px 40px ${color}18`; el.style.transform = 'translateY(-3px)' }}
-                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#1a2d4a'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}>
-
-                {/* Avatar + name */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 14, background: `linear-gradient(135deg, ${color}40, ${color}18)`, border: `2px solid ${color}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color, flexShrink: 0, letterSpacing: -0.5 }}>
-                    {initials}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 900, color: '#fff', fontSize: 16, letterSpacing: -0.3 }}>{name}</div>
-                    <div style={{ fontSize: 11, color, fontWeight: 700, marginTop: 1 }}>{role}</div>
-                  </div>
-                </div>
-
-                {/* Quote */}
-                <div style={{ fontSize: 13, color: '#cdd6f4', fontStyle: 'italic', lineHeight: 1.6, marginBottom: 16, paddingLeft: 12, borderLeft: `2px solid ${color}50` }}>
-                  {quote}
-                </div>
-
-                {/* Bio */}
-                <p style={{ fontSize: 12, color: '#7f93b5', lineHeight: 1.8, marginBottom: 20, flex: 1 }}>
-                  {bio}
-                </p>
-
-                {/* Tags */}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {tags.map(tag => (
-                    <span key={tag} style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: `${color}15`, color, border: `1px solid ${color}30`, letterSpacing: '0.04em' }}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
               </div>
             ))}
           </div>
