@@ -335,8 +335,8 @@ export default function HomePage() {
                 initials: 'NG',
                 color: '#00d4aa',
                 quote: '"Financial education shouldn\'t cost more than a coffee."',
-                bio: 'Started trading at 16 and lost money the same way 90% of retail traders do — bad education, no practice environment, no feedback loop. Built YN Finance to solve the exact problem he lived through. Leads product vision, sets direction, and is the reason this platform exists.',
-                tags: ['Product', 'Vision', 'Strategy'],
+                bio: 'The technical backbone and the original vision behind YN Finance. Neil built the core of the platform — the trading terminal, market data pipeline, course infrastructure, and AI systems — while simultaneously driving the product direction from day one. If it runs and it matters, Neil built it or designed it.',
+                tags: ['Vision', 'Engineering', 'Product'],
               },
               {
                 name: 'Yannai Richter',
@@ -344,8 +344,8 @@ export default function HomePage() {
                 initials: 'YR',
                 color: '#1e90ff',
                 quote: '"The gap between learning a strategy and trading it should be zero seconds."',
-                bio: 'Designed and built the entire YN Finance stack from scratch — real-time market data engine, AI-powered lecture system, prop firm simulator, and trading terminal. Obsessed with making the technology invisible so the education is all you feel.',
-                tags: ['Engineering', 'AI', 'Infrastructure'],
+                bio: 'Built significant parts of the YN Finance stack alongside Neil and owns the growth side of the business — from ad strategy and creator outreach to getting the platform in front of the right audiences. Equal parts engineer and marketer, which is a rare combination.',
+                tags: ['Engineering', 'Marketing', 'Growth'],
               },
               {
                 name: 'Arjun Bhattula',
