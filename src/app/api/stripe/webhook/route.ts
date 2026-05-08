@@ -24,7 +24,8 @@ export async function POST(req: NextRequest) {
   try {
     const stripe = new Stripe(STRIPE_KEY)
     event = stripe.webhooks.constructEvent(body, sig, WEBHOOK_SECRET)
-  } catch {
+  } catch (err) {
+    console.error('[webhook] Signature verification failed:', err)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
@@ -34,14 +35,24 @@ export async function POST(req: NextRequest) {
     const { tier, userId, accountSize } = session.metadata || {}
     const email = session.customer_email
 
-    if (tier && userId && email) {
-      const tierConf = TIER_CONFIG[tier]
+    if (!tier || !userId || !email) {
+      console.error('[webhook] Missing metadata:', { tier, userId, email, sessionId: session.id })
+      return NextResponse.json({ error: 'Missing metadata' }, { status: 400 })
+    }
+
+    const tierConf = TIER_CONFIG[tier]
+    if (!tierConf) {
+      console.error('[webhook] Unknown tier:', tier, '— session:', session.id)
+      return NextResponse.json({ error: `Unknown tier: ${tier}` }, { status: 400 })
+    }
+
+    try {
       const sb = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       )
 
-      await sb.from('challenges').insert({
+      const { error: dbError } = await sb.from('challenges').insert({
         user_id: userId,
         email,
         tier,
@@ -54,6 +65,16 @@ export async function POST(req: NextRequest) {
         status: 'active',
         stripe_session_id: session.id,
       })
+
+      if (dbError) {
+        console.error('[webhook] DB insert failed:', dbError, { userId, tier, sessionId: session.id })
+        return NextResponse.json({ error: 'Failed to activate challenge' }, { status: 500 })
+      }
+
+      console.log('[webhook] Challenge activated:', { userId, tier, sessionId: session.id })
+    } catch (err) {
+      console.error('[webhook] Unexpected error:', err, { userId, tier, sessionId: session.id })
+      return NextResponse.json({ error: 'Server error' }, { status: 500 })
     }
   }
 

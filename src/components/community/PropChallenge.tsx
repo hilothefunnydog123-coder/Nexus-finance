@@ -200,7 +200,7 @@ export default function PropChallenge() {
         }
         localStorage.setItem('yn_challenge', JSON.stringify(localChallenge))
         setChallenge(localChallenge)
-        setSuccessMsg(`✓ ${tier.name} Challenge started! (Demo mode — sign up for Supabase to persist across devices)`)
+        setSuccessMsg(`✓ ${tier.name} Challenge started! Sign in to save your progress across devices.`)
         return
       }
 
@@ -424,7 +424,7 @@ export default function PropChallenge() {
 
         <div className="text-center mb-6">
           <h2 className="text-base font-bold text-[#cdd6f4] mb-1">Choose Your Challenge</h2>
-          <p className="text-[11px] text-[#4a5e7a]">All challenges are free in demo mode — your performance is tracked in real-time</p>
+          <p className="text-[11px] text-[#4a5e7a]">Real prop firm rules · Certificate on pass · Referral to funded firms</p>
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-8">
