@@ -2,7 +2,9 @@
 
 import { useState, useEffect, use, useRef } from 'react'
 import Link from 'next/link'
-import { Zap, Play, CheckCircle, Lock, ArrowRight, Star, Users, Clock, ChevronLeft, BookOpen, Target, Sparkles, Trophy, BarChart2, Bot, Share2 } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
+import { Zap, Play, CheckCircle, Lock, ArrowRight, Star, Users, Clock, ChevronLeft, BookOpen, Target, Sparkles, Trophy, BarChart2, Bot, AlertCircle } from 'lucide-react'
 import { SEED_COURSES } from '@/app/api/courses/route'
 import InteractiveLecture, { textToSlides } from '@/components/courses/InteractiveLecture'
 import CourseChat from '@/components/courses/CourseChat'
@@ -129,8 +131,10 @@ function SectionContent({ section, onComplete, color, instructor }: { section: S
   return null
 }
 
-export default function CoursePage({ params }: { params: Promise<{ slug: string }> }) {
+function CoursePageInner({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params)
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [course, setCourse] = useState<Course | null>(null)
   const [sections, setSections] = useState<Section[]>([])
   const [activeSection, setActiveSection] = useState(0)
@@ -138,6 +142,8 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
   const [enrolled, setEnrolled] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showCelebration, setShowCelebration] = useState(false)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [verifying, setVerifying] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
 
   const goToSection = (i: number) => {
@@ -159,11 +165,54 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
     if (saved) { try { const d = JSON.parse(saved); setEnrolled(d.enrolled); setCompleted(new Set(d.completed)) } catch {} }
   }, [slug])
 
+  // Verify Stripe session on return from checkout
+  useEffect(() => {
+    const sessionId = searchParams.get('session_id')
+    if (!sessionId || enrolled) return
+    setVerifying(true)
+    fetch(`/api/stripe/courses/verify?session_id=${sessionId}&slug=${slug}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.paid) {
+          setEnrolled(true)
+          localStorage.setItem(`yn_course_${slug}`, JSON.stringify({ enrolled: true, completed: [] }))
+        }
+      })
+      .finally(() => {
+        setVerifying(false)
+        // Remove session_id from URL without triggering navigation
+        const url = new URL(window.location.href)
+        url.searchParams.delete('session_id')
+        router.replace(url.pathname + (url.search || ''), { scroll: false })
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  const startCheckout = async () => {
+    if (!course) return
+    setCheckoutLoading(true)
+    try {
+      const res = await fetch('/api/stripe/courses/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, title: course.title, traderName: course.trader_name }),
+      })
+      const data = await res.json()
+      if (data.demo) {
+        // Stripe not configured — allow free access in dev
+        setEnrolled(true)
+        localStorage.setItem(`yn_course_${slug}`, JSON.stringify({ enrolled: true, completed: [] }))
+      } else if (data.url) {
+        window.location.href = data.url
+      }
+    } catch {
+      setCheckoutLoading(false)
+    }
+  }
+
   const save = (en: boolean, comp: Set<number>) => {
     localStorage.setItem(`yn_course_${slug}`, JSON.stringify({ enrolled: en, completed: [...comp] }))
   }
-
-  const enroll = () => { setEnrolled(true); save(true, completed) }
   const markComplete = (idx: number) => {
     const next = new Set(completed).add(idx)
     setCompleted(next)
@@ -258,6 +307,16 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
         </div>
       </nav>
 
+      {/* Legal disclaimer */}
+      <div style={{ background: '#0a1628', borderBottom: '1px solid #1a2d4a', padding: '10px 24px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <AlertCircle size={13} style={{ color: '#4a5e7a', flexShrink: 0, marginTop: 1 }} />
+          <p style={{ fontSize: 11, color: '#4a5e7a', lineHeight: 1.5, margin: 0 }}>
+            YN Finance is an independent educational platform not affiliated with, endorsed by, or partnered with any featured traders. Courses are structured curricula referencing publicly available trading strategies and educational content. Embedded YouTube videos are the educators&apos; own free public content. The course fee covers YN Finance&apos;s curriculum, AI features, quizzes, and practice tools — not the educators&apos; content. <strong style={{ color: '#2a4060' }}>Not financial advice. Trading involves significant risk of loss.</strong>
+          </p>
+        </div>
+      </div>
+
       <div className="course-layout" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px', display: 'grid', gridTemplateColumns: '1fr 320px', gap: 32 }}>
         {/* Main content */}
         <div ref={contentRef}>
@@ -337,10 +396,11 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
                   <p style={{ fontSize: 12, color: '#7f93b5', marginBottom: 20, maxWidth: 320, margin: '0 auto 20px' }}>
                     {sections.length - sections.filter(s => s.is_free_preview).length} locked sections · AI lectures · knowledge quizzes · practice mode
                   </p>
-                  <button onClick={enroll} style={{ background: color, color: '#040c14', border: 'none', fontWeight: 900, padding: '13px 28px', borderRadius: 10, fontSize: 15, cursor: 'pointer', boxShadow: `0 0 20px ${color}40` }}>
-                    Enroll for ${(course.price_cents / 100).toFixed(2)} →
+                  <button onClick={startCheckout} disabled={checkoutLoading}
+                    style={{ background: color, color: '#040c14', border: 'none', fontWeight: 900, padding: '13px 28px', borderRadius: 10, fontSize: 15, cursor: checkoutLoading ? 'wait' : 'pointer', boxShadow: `0 0 20px ${color}40`, opacity: checkoutLoading ? 0.7 : 1 }}>
+                    {checkoutLoading ? 'Redirecting to checkout...' : `Unlock for $${(course.price_cents / 100).toFixed(2)} →`}
                   </button>
-                  <p style={{ fontSize: 10, color: '#4a5e7a', marginTop: 10 }}>One-time · Lifetime access · 30-day refund</p>
+                  <p style={{ fontSize: 10, color: '#4a5e7a', marginTop: 10 }}>One-time · Lifetime access · Secure checkout via Stripe</p>
                 </div>
               )}
             </div>
@@ -369,16 +429,22 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
         {/* Sidebar */}
         <div className="course-sidebar">
           {/* Enroll CTA */}
-          {!enrolled ? (
+          {verifying ? (
+            <div style={{ background: '#071220', border: `1px solid ${color}40`, borderRadius: 16, padding: 20, marginBottom: 16, textAlign: 'center' }}>
+              <div className="w-5 h-5 border-2 border-[#00d4aa] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+              <p style={{ fontSize: 12, color: '#7f93b5' }}>Verifying payment...</p>
+            </div>
+          ) : !enrolled ? (
             <div style={{ background: '#071220', border: `1px solid ${color}40`, borderRadius: 16, padding: 20, marginBottom: 16, position: 'sticky', top: 72 }}>
               <div style={{ fontSize: 28, fontWeight: 900, color: '#fff', marginBottom: 4 }}>
                 {course.is_free ? 'Free' : `$${(course.price_cents / 100).toFixed(2)}`}
               </div>
               <div style={{ fontSize: 11, color: '#4a5e7a', marginBottom: 16 }}>One-time · Lifetime access · {sections.filter(s => s.is_free_preview).length} free previews</div>
-              <button onClick={enroll} style={{ width: '100%', background: color, color: '#040c14', border: 'none', fontWeight: 800, padding: '14px', borderRadius: 10, fontSize: 15, cursor: 'pointer', marginBottom: 8, boxShadow: `0 0 20px ${color}40` }}>
-                Enroll Now
+              <button onClick={startCheckout} disabled={checkoutLoading}
+                style={{ width: '100%', background: color, color: '#040c14', border: 'none', fontWeight: 800, padding: '14px', borderRadius: 10, fontSize: 15, cursor: checkoutLoading ? 'wait' : 'pointer', marginBottom: 8, boxShadow: `0 0 20px ${color}40`, opacity: checkoutLoading ? 0.7 : 1 }}>
+                {checkoutLoading ? 'Loading checkout...' : 'Unlock Full Course'}
               </button>
-              <p style={{ fontSize: 10, color: '#4a5e7a', textAlign: 'center' }}>30-day refund if you haven&apos;t completed 50%</p>
+              <p style={{ fontSize: 10, color: '#4a5e7a', textAlign: 'center' }}>Secure checkout via Stripe · 30-day refund</p>
             </div>
           ) : (
             <div style={{ background: '#00d4aa10', border: '1px solid #00d4aa30', borderRadius: 12, padding: 16, marginBottom: 16 }}>
@@ -438,5 +504,17 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CoursePage({ params }: { params: Promise<{ slug: string }> }) {
+  return (
+    <Suspense fallback={
+      <div style={{ background: '#040c14', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="w-6 h-6 border-2 border-[#00d4aa] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <CoursePageInner params={params} />
+    </Suspense>
   )
 }

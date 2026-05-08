@@ -92,6 +92,18 @@ export default function CoursesPage() {
         </div>
       </nav>
 
+      {/* Legal disclaimer bar */}
+      <div style={{ background: '#071220', borderBottom: '1px solid #1a2d4a', padding: '10px 24px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 10, color: '#2a4060', flexShrink: 0 }}>⚖️</span>
+          <p style={{ fontSize: 11, color: '#4a5e7a', margin: 0, lineHeight: 1.4 }}>
+            YN Finance is an independent educational platform. We are not affiliated with, endorsed by, or in partnership with any featured traders. Courses are curated curricula referencing publicly available strategies. Not financial advice. Trading involves risk.
+            <a href="/terms" style={{ color: '#1a2d4a', marginLeft: 8, textDecoration: 'underline' }}>Terms</a>
+            <a href="/privacy" style={{ color: '#1a2d4a', marginLeft: 8, textDecoration: 'underline' }}>Privacy</a>
+          </p>
+        </div>
+      </div>
+
       {/* Hero */}
       <div style={{ borderBottom: '1px solid #1a2d4a', background: 'linear-gradient(180deg, #071220 0%, #040c14 100%)', padding: '56px 24px 48px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>

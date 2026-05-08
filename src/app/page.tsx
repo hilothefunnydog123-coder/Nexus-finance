@@ -216,7 +216,7 @@ export default function HomePage() {
         </h1>
 
         <p style={{ fontSize: 'clamp(16px,2vw,20px)', color: '#7f93b5', maxWidth: 580, lineHeight: 1.7, marginBottom: 40 }}>
-          Ross Cameron. ICT. Graham Stephan. Kevin O&apos;Leary. Real traders, real strategies, real AI-powered lessons — for $0.99 each.
+          Structured curricula built around strategies from Ross Cameron, ICT, Graham Stephan, Kevin O&apos;Leary &amp; more — with AI-powered lessons and built-in practice for $0.99 each.
         </p>
 
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16 }}>
@@ -293,7 +293,7 @@ export default function HomePage() {
             <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>
               Learn from the <span className="gradient-text">best in the world</span>
             </h2>
-            <p style={{ fontSize: 15, color: '#4a5e7a' }}>Every instructor is a verified profitable trader or financial expert with millions of followers</p>
+            <p style={{ fontSize: 15, color: '#4a5e7a' }}>Courses built around strategies popularized by the world&apos;s most-followed traders — using their free public content</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }} className="instructor-grid">
             {INSTRUCTORS.map(inst => (
@@ -591,7 +591,9 @@ export default function HomePage() {
               <Link key={l} href={h} style={{ color: '#4a5e7a', textDecoration: 'none' }}>{l}</Link>
             ))}
           </div>
-          <div style={{ fontSize: 11, color: '#4a5e7a' }}>© 2026 YN Finance · Educational platform · Not financial advice</div>
+          <div style={{ fontSize: 11, color: '#4a5e7a', maxWidth: 480, textAlign: 'right' }}>
+            © 2026 YN Finance · Independent educational platform · Not affiliated with featured traders · Not financial advice
+          </div>
         </div>
       </footer>
     </div>
