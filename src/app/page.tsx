@@ -144,9 +144,9 @@ export default function HomePage() {
             <div style={{ fontSize: 48, marginBottom: 20 }}>📊</div>
             <div style={{ fontSize: 11, color: '#1e90ff', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Trading Terminal</div>
             <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: -0.5, marginBottom: 16, lineHeight: 1.15 }}>Open Terminal</h2>
-            <p style={{ fontSize: 13, color: '#7f93b5', lineHeight: 1.7, marginBottom: 28 }}>Real-time charts, live market data, paper trading, prop challenges, trade journal, and a full trading community.</p>
+            <p style={{ fontSize: 13, color: '#7f93b5', lineHeight: 1.7, marginBottom: 28 }}>Real-time charts, live market data, $100K paper trading account, trade journal, AI Intel, and a full trading community.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 32 }}>
-              {['⚡ Live charts via TradingView', '🏆 Prop firm simulator ($49–$299 challenges)', '💬 Discord-style trade room + leaderboard'].map(f => (
+              {['⚡ Live charts via TradingView', '📊 $100K paper trading account — stocks, forex, crypto', '💬 Discord-style trade room + leaderboard'].map(f => (
                 <div key={f} style={{ fontSize: 12, color: '#4a5e7a' }}>{f}</div>
               ))}
             </div>
@@ -475,7 +475,7 @@ export default function HomePage() {
                   { icon: '📈', title: 'Retail trading surge', desc: 'Post-2020, 15M new retail traders entered US markets. The audience has never been bigger or more eager.' },
                   { icon: '🤖', title: 'AI makes personalized education possible', desc: 'Interactive AI lectures, voice narration, and personalized learning paths weren\'t buildable 3 years ago.' },
                   { icon: '🎓', title: 'Gen Z wants skills, not degrees', desc: '$0.99 micro-courses fit the generation that learns from YouTube but wants structure and accountability.' },
-                  { icon: '💸', title: 'Prop firms are a $5B industry', desc: 'Our prop challenge is the natural next step after education — a built-in upsell with 70%+ fail rates.' },
+                  { icon: '💸', title: 'Paper trading closes the loop', desc: 'Every course links directly to the paper trading terminal. Students practice the exact strategy the moment they finish a lesson — no context switching.' },
                 ].map(({ icon, title, desc }) => (
                   <div key={title} style={{ display: 'flex', gap: 14 }}>
                     <div style={{ fontSize: 24, flexShrink: 0, marginTop: 2 }}>{icon}</div>
@@ -516,7 +516,7 @@ export default function HomePage() {
                   ['Structured curriculum', '✓', '✗', '✗', '✗', '✓'],
                   ['Knowledge quizzes', '✓ some', '✗', '✗', '✗', '✓'],
                   ['Trading community', '✗', '✗', '✓ some', '✓ some', '✓'],
-                  ['Accountability (prop rules)', '✗', '✗', '✗', '✓', '✓'],
+                  ['Paper trading built-in', '✗', '✗', '✓', '✓', '✓'],
                 ].map(([feature, ...vals]) => (
                   <tr key={feature as string} style={{ borderBottom: '1px solid #0f1f38' }}>
                     <td style={{ padding: '10px 16px', color: '#7f93b5', fontWeight: 600 }}>{feature}</td>
@@ -536,12 +536,12 @@ export default function HomePage() {
         <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ fontSize: 11, color: '#a855f7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Business Model</div>
           <h2 style={{ fontSize: 'clamp(26px,3.5vw,40px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>Three revenue streams. One flywheel.</h2>
-          <p style={{ fontSize: 14, color: '#7f93b5', marginBottom: 48, maxWidth: 600, margin: '0 auto 48px' }}>Courses fund growth. Prop challenges are high-margin. Referrals scale to zero marginal cost.</p>
+          <p style={{ fontSize: 14, color: '#7f93b5', marginBottom: 48, maxWidth: 600, margin: '0 auto 48px' }}>Courses drive volume. Ads monetize at scale. Referrals are pure margin with zero extra work.</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }} className="cat-grid">
             {[
               { icon: '🎓', color: '#00d4aa', revenue: '$0.99/course', title: 'Course Sales', desc: '70% to instructor, 30% platform. Low barrier drives volume. Target: 100K enrollments = $30K MRR platform share.' },
-              { icon: '⚔️', color: '#ff4757', revenue: '$49–$299/challenge', title: 'Prop Challenges', desc: '~70% fail rate. Pure margin on failure fees. Success = certificate + future referral income. Growing $5B industry.' },
-              { icon: '🤝', color: '#1e90ff', revenue: 'Revenue share', title: 'Partner Referrals', desc: 'Refer successful traders to real prop firms (FTMO, Topstep). Earn referral fees per funded account. Zero marginal cost. Q3 2026.' },
+              { icon: '📢', color: '#ffa502', revenue: 'CPM / native ads', title: 'Ad Revenue', desc: 'Adsterra native ads on the terminal and course pages. High-intent finance audience = premium CPM rates. Scales linearly with traffic.' },
+              { icon: '🤝', color: '#1e90ff', revenue: 'Revenue share', title: 'Partner Referrals', desc: 'Refer successful traders to real prop firms (FTMO, Topstep, Rise). Earn commission per funded account. Zero marginal cost. Q3 2026.' },
             ].map(({ icon, color, revenue, title, desc }) => (
               <div key={title} style={{ background: '#071220', border: `1px solid ${color}30`, borderRadius: 16, padding: 28, textAlign: 'left' }}>
                 <div style={{ fontSize: 32, marginBottom: 12 }}>{icon}</div>

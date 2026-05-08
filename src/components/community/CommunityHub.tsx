@@ -1,31 +1,27 @@
 'use client'
 
 import { useState } from 'react'
-import { Users, Trophy, ShieldCheck, TrendingUp, Calendar, Star, Activity, HelpCircle, LayoutDashboard } from 'lucide-react'
+import { Users, Trophy, TrendingUp, Calendar, Star, Activity, HelpCircle } from 'lucide-react'
 import Leaderboard from './Leaderboard'
-import PropChallenge from './PropChallenge'
-import PropDashboard from './PropDashboard'
 import TradeIdeas from './TradeIdeas'
 import EconomicCalendar from './EconomicCalendar'
 import DailyTasks from './DailyTasks'
 import FAQ from './FAQ'
 import Achievements from './Achievements'
 
-type Tab = 'dashboard' | 'leaderboard' | 'ideas' | 'challenge' | 'calendar' | 'tasks' | 'achievements' | 'faq'
+type Tab = 'leaderboard' | 'ideas' | 'calendar' | 'tasks' | 'achievements' | 'faq'
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'dashboard',  label: 'My Account',    icon: <LayoutDashboard size={12} /> },
-  { id: 'leaderboard',label: 'Leaderboard',   icon: <Trophy size={12} /> },
-  { id: 'ideas',      label: 'Trade Ideas',   icon: <TrendingUp size={12} /> },
-  { id: 'challenge',  label: 'YN Capital',    icon: <ShieldCheck size={12} /> },
-  { id: 'calendar',   label: 'Calendar',      icon: <Calendar size={12} /> },
-  { id: 'tasks',      label: 'Tasks & XP',    icon: <Star size={12} /> },
+  { id: 'leaderboard', label: 'Leaderboard',  icon: <Trophy size={12} /> },
+  { id: 'ideas',       label: 'Trade Ideas',  icon: <TrendingUp size={12} /> },
+  { id: 'calendar',    label: 'Calendar',     icon: <Calendar size={12} /> },
+  { id: 'tasks',       label: 'Tasks & XP',   icon: <Star size={12} /> },
   { id: 'achievements',label: 'Achievements', icon: <Star size={12} /> },
   { id: 'faq',         label: 'FAQ',          icon: <HelpCircle size={12} /> },
 ]
 
 export default function CommunityHub() {
-  const [tab, setTab] = useState<Tab>('dashboard')
+  const [tab, setTab] = useState<Tab>('leaderboard')
 
   return (
     <div className="flex flex-col h-full bg-[#040c14]">
@@ -44,9 +40,8 @@ export default function CommunityHub() {
 
           <div className="flex items-center gap-4">
             {[
-              { label: 'Online',       value: '1,247', color: '#00d4aa', icon: <Activity size={9} /> },
+              { label: 'Online',       value: '1,247',  color: '#00d4aa', icon: <Activity size={9} /> },
               { label: 'Trades Today', value: '18,432', color: '#1e90ff', icon: <TrendingUp size={9} /> },
-              { label: 'Challenges',   value: '94',    color: '#ffa502', icon: <ShieldCheck size={9} /> },
             ].map(({ label, value, color, icon }) => (
               <div key={label} className="text-center hidden md:block">
                 <div className="flex items-center gap-1 justify-center mb-0.5" style={{ color }}>
@@ -76,16 +71,14 @@ export default function CommunityHub() {
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {tab === 'dashboard'   && <PropDashboard />}
         {tab === 'leaderboard' && (
           <div className="flex h-full">
             <div className="flex-1 border-r border-[#1a2d4a] overflow-hidden"><Leaderboard /></div>
             <div className="w-72 overflow-hidden"><DailyTasks /></div>
           </div>
         )}
-        {tab === 'ideas'     && <TradeIdeas />}
-        {tab === 'challenge' && <PropChallenge />}
-        {tab === 'calendar'  && <EconomicCalendar />}
+        {tab === 'ideas'        && <TradeIdeas />}
+        {tab === 'calendar'     && <EconomicCalendar />}
         {tab === 'tasks'        && <DailyTasks />}
         {tab === 'achievements' && <Achievements />}
         {tab === 'faq'          && <FAQ />}
