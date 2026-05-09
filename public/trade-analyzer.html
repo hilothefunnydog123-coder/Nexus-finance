@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --border: #1e1e2e;
+    --accent: #00ff88;
+    --accent2: #ff3366;
+    --accent3: #ffcc00;
+    --text: #e8e8f0;
+    --muted: #555570;
+    --bull: #00ff88;
+    --bear: #ff3366;
+    --neutral: #ffcc00;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 2rem;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(0,255,136,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(255,51,102,0.04) 0%, transparent 60%);
+  }
+
+  .container { max-width: 960px; margin: 0 auto; }
+
+  .header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+  }
+
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--text);
+  }
+
+  .header span {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 2px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  input, select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.75rem 1rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  input:focus, select:focus { border-color: var(--accent); }
+
+  select option { background: var(--surface); }
+
+  .direction-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .direction-btn {
+    padding: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border: none;
+    background: var(--surface);
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .direction-btn.long.active { background: rgba(0,255,136,0.15); color: var(--bull); }
+  .direction-btn.short.active { background: rgba(255,51,102,0.15); color: var(--bear); }
+
+  .analyze-btn {
+    width: 100%;
+    padding: 1rem;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .analyze-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,255,136,0.3); }
+  .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .results { margin-top: 2rem; display: none; }
+  .results.visible { display: block; }
+
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .verdict-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .verdict-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .verdict-card.bull::before { background: var(--bull); }
+  .verdict-card.bear::before { background: var(--bear); }
+  .verdict-card.neutral::before { background: var(--neutral); }
+
+  .verdict-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .verdict-label {
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  .sentiment-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 2px;
+    letter-spacing: 2px;
+  }
+
+  .sentiment-badge.bull { background: rgba(0,255,136,0.15); color: var(--bull); }
+  .sentiment-badge.bear { background: rgba(255,51,102,0.15); color: var(--bear); }
+  .sentiment-badge.neutral { background: rgba(255,204,0,0.15); color: var(--neutral); }
+
+  .verdict-text {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.25rem;
+  }
+
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .stat-value.positive { color: var(--bull); }
+  .stat-value.negative { color: var(--bear); }
+  .stat-value.warning { color: var(--neutral); }
+
+  .news-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
+
+  .news-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .news-sentiment {
+    width: 6px;
+    min-width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-top: 6px;
+  }
+
+  .news-sentiment.bull { background: var(--bull); }
+  .news-sentiment.bear { background: var(--bear); }
+  .news-sentiment.neutral { background: var(--neutral); }
+
+  .news-content { flex: 1; }
+
+  .news-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    line-height: 1.4;
+  }
+
+  .news-meta {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    display: flex;
+    gap: 1rem;
+  }
+
+  .news-source { color: var(--accent); }
+
+  .analysis-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .analysis-block h3 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  .analysis-block p, .analysis-block li {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .analysis-block ul { padding-left: 1.25rem; }
+
+  .levels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .level-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .level-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .level-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 3rem;
+  }
+
+  .loading.visible { display: block; }
+
+  .loading-bars {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 1rem;
+  }
+
+  .loading-bar {
+    width: 3px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: bar 1s ease-in-out infinite;
+  }
+
+  .loading-bar:nth-child(2) { animation-delay: 0.1s; }
+  .loading-bar:nth-child(3) { animation-delay: 0.2s; }
+  .loading-bar:nth-child(4) { animation-delay: 0.3s; }
+  .loading-bar:nth-child(5) { animation-delay: 0.4s; }
+
+  @keyframes bar {
+    0%, 100% { transform: scaleY(0.3); opacity: 0.3; }
+    50% { transform: scaleY(1); opacity: 1; }
+  }
+
+  .loading-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+  .error-msg {
+    background: rgba(255,51,102,0.1);
+    border: 1px solid var(--bear);
+    color: var(--bear);
+    padding: 1rem;
+    border-radius: 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    display: none;
+    margin-top: 1rem;
+  }
+
+  .error-msg.visible { display: block; }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .levels-grid { grid-template-columns: 1fr; }
+    body { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Trade Analyzer</h1>
+    <span>AI POWERED</span>
+  </div>
+
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Ticker / Pair</label>
+      <input type="text" id="ticker" placeholder="e.g. XAU/USD, BTC/USD, AAPL" />
+    </div>
+    <div class="form-group">
+      <label>Direction</label>
+      <div class="direction-toggle">
+        <button class="direction-btn long active" onclick="setDirection('long')">▲ LONG</button>
+        <button class="direction-btn short" onclick="setDirection('short')">▼ SHORT</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Entry Price</label>
+      <input type="number" id="entry" placeholder="0.00" step="any" />
+    </div>
+    <div class="form-group">
+      <label>Position Size</label>
+      <input type="text" id="size" placeholder="e.g. 1.5 lots, 100 shares" />
+    </div>
+    <div class="form-group">
+      <label>Stop Loss</label>
+      <input type="number" id="sl" placeholder="0.00" step="any" />
+    </div>
+    <div class="form-group">
+      <label>Take Profit</label>
+      <input type="number" id="tp" placeholder="0.00" step="any" />
+    </div>
+    <div class="form-group full">
+      <label>Additional Context (optional)</label>
+      <input type="text" id="context" placeholder="e.g. Holding overnight, news event tomorrow, key level bounce..." />
+    </div>
+  </div>
+
+  <button class="analyze-btn" onclick="analyze()">ANALYZE TRADE</button>
+  <div class="error-msg" id="error"></div>
+
+  <div class="loading" id="loading">
+    <div class="loading-bars">
+      <div class="loading-bar"></div>
+      <div class="loading-bar"></div>
+      <div class="loading-bar"></div>
+      <div class="loading-bar"></div>
+      <div class="loading-bar"></div>
+    </div>
+    <div class="loading-text" id="loading-text">FETCHING LIVE NEWS...</div>
+  </div>
+
+  <div class="results" id="results"></div>
+</div>
+
+<script>
+  const API_KEY = 'AIzaSyACZjdcSbccKMVF-aYhW-XN5C_w-_gSrj8';
+  let direction = 'long';
+
+  function setDirection(d) {
+    direction = d;
+    document.querySelectorAll('.direction-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.direction-btn.${d}`).classList.add('active');
+  }
+
+  function calcRR(entry, sl, tp, dir) {
+    if (!entry || !sl || !tp) return null;
+    const risk = dir === 'long' ? entry - sl : sl - entry;
+    const reward = dir === 'long' ? tp - entry : entry - tp;
+    if (risk <= 0 || reward <= 0) return null;
+    return (reward / risk).toFixed(2);
+  }
+
+  function setLoading(text) {
+    document.getElementById('loading-text').textContent = text;
+  }
+
+  async function analyze() {
+    const ticker = document.getElementById('ticker').value.trim();
+    const entry = parseFloat(document.getElementById('entry').value);
+    const sl = parseFloat(document.getElementById('sl').value);
+    const tp = parseFloat(document.getElementById('tp').value);
+    const size = document.getElementById('size').value.trim();
+    const context = document.getElementById('context').value.trim();
+    const errEl = document.getElementById('error');
+
+    errEl.classList.remove('visible');
+
+    if (!ticker) { errEl.textContent = 'Please enter a ticker.'; errEl.classList.add('visible'); return; }
+    if (!entry || !sl || !tp) { errEl.textContent = 'Please enter entry, SL, and TP.'; errEl.classList.add('visible'); return; }
+
+    document.querySelector('.analyze-btn').disabled = true;
+    document.getElementById('loading').classList.add('visible');
+    document.getElementById('results').classList.remove('visible');
+    document.getElementById('results').innerHTML = '';
+
+    const rr = calcRR(entry, sl, tp, direction);
+
+    try {
+      setLoading('FETCHING LIVE NEWS...');
+
+      // Use Gemini with grounding to get real news
+      const prompt = `You are a professional forex and financial markets analyst with access to real-time news.
+
+Analyze this trade setup and provide a comprehensive analysis:
+
+TRADE DETAILS:
+- Ticker: ${ticker}
+- Direction: ${direction.toUpperCase()}
+- Entry: ${entry}
+- Stop Loss: ${sl}
+- Take Profit: ${tp}
+- Position Size: ${size || 'Not specified'}
+- Risk/Reward Ratio: ${rr ? rr + ':1' : 'Unable to calculate'}
+- Additional Context: ${context || 'None'}
+
+Please provide a complete analysis in this EXACT JSON format (no markdown, just raw JSON):
+{
+  "overall_sentiment": "BULLISH" or "BEARISH" or "NEUTRAL",
+  "sentiment_score": number from -100 (very bearish) to 100 (very bullish),
+  "verdict": "STRONG BUY" or "BUY" or "HOLD" or "SELL" or "STRONG SELL" or "AVOID",
+  "summary": "2-3 sentence overall market summary for ${ticker}",
+  "news": [
+    {
+      "title": "Real recent news headline about ${ticker}",
+      "source": "Source name (Reuters/Bloomberg/FT/WSJ/MarketWatch/etc)",
+      "sentiment": "BULLISH" or "BEARISH" or "NEUTRAL",
+      "impact": "HIGH" or "MEDIUM" or "LOW",
+      "date": "Approximate date or 'Recent'"
+    }
+  ],
+  "trade_analysis": {
+    "position_assessment": "Detailed assessment of the specific trade setup",
+    "risk_assessment": "Analysis of the risk on this trade",
+    "market_conditions": "Current market conditions for ${ticker}",
+    "confluence_factors": ["factor1", "factor2", "factor3"],
+    "risk_factors": ["risk1", "risk2", "risk3"]
+  },
+  "key_levels": {
+    "strong_support": number,
+    "support": number,
+    "resistance": number,
+    "strong_resistance": number
+  },
+  "recommendation": "Detailed final recommendation paragraph including whether to take the trade, adjust SL/TP, or avoid",
+  "confidence": number from 0 to 100
+}
+
+Include at least 4-6 real recent news items. Be specific with prices and levels for ${ticker}.`;
+
+      setLoading('ANALYZING WITH AI...');
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            tools: [{ google_search: {} }],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 4096
+            }
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!data.candidates || !data.candidates[0]) {
+        throw new Error('No response from AI');
+      }
+
+      const rawText = data.candidates[0].content.parts[0].text;
+
+      // Extract JSON from response
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Could not parse AI response');
+
+      const analysis = JSON.parse(jsonMatch[0]);
+
+      setLoading('RENDERING RESULTS...');
+      renderResults(analysis, { ticker, direction, entry, sl, tp, size, rr });
+
+    } catch (e) {
+      console.error(e);
+      errEl.textContent = 'Analysis failed: ' + e.message + '. Please try again.';
+      errEl.classList.add('visible');
+    } finally {
+      document.querySelector('.analyze-btn').disabled = false;
+      document.getElementById('loading').classList.remove('visible');
+    }
+  }
+
+  function sentimentClass(s) {
+    if (!s) return 'neutral';
+    const upper = s.toUpperCase();
+    if (upper.includes('BULL') || upper.includes('BUY')) return 'bull';
+    if (upper.includes('BEAR') || upper.includes('SELL')) return 'bear';
+    return 'neutral';
+  }
+
+  function renderResults(a, trade) {
+    const sc = sentimentClass(a.overall_sentiment);
+    const verdictClass = sentimentClass(a.verdict);
+
+    const rrColor = parseFloat(trade.rr) >= 2 ? 'positive' : parseFloat(trade.rr) >= 1 ? 'warning' : 'negative';
+    const confColor = a.confidence >= 70 ? 'positive' : a.confidence >= 40 ? 'warning' : 'negative';
+    const sentScore = a.sentiment_score || 0;
+    const sentColor = sentScore > 20 ? 'positive' : sentScore < -20 ? 'negative' : 'warning';
+
+    const newsHTML = (a.news || []).map(n => `
+      <div class="news-item">
+        <div class="news-sentiment ${sentimentClass(n.sentiment)}"></div>
+        <div class="news-content">
+          <div class="news-title">${n.title}</div>
+          <div class="news-meta">
+            <span class="news-source">${n.source}</span>
+            <span>${n.date || 'Recent'}</span>
+            <span>${n.impact || 'MEDIUM'} IMPACT</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    const confluenceHTML = (a.trade_analysis?.confluence_factors || []).map(f => `<li>${f}</li>`).join('');
+    const riskHTML = (a.trade_analysis?.risk_factors || []).map(f => `<li>${f}</li>`).join('');
+
+    const levels = a.key_levels || {};
+
+    const html = `
+      <div class="section-title">VERDICT</div>
+      <div class="verdict-card ${verdictClass}">
+        <div class="verdict-header">
+          <span class="verdict-label">${trade.ticker.toUpperCase()} · ${trade.direction.toUpperCase()} @ ${trade.entry}</span>
+          <span class="sentiment-badge ${verdictClass}">${a.verdict || a.overall_sentiment}</span>
+        </div>
+        <div class="verdict-text">${a.summary}</div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">RISK/REWARD</div>
+          <div class="stat-value ${rrColor}">${trade.rr ? trade.rr + ':1' : 'N/A'}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">AI CONFIDENCE</div>
+          <div class="stat-value ${confColor}">${a.confidence || 0}%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">SENTIMENT SCORE</div>
+          <div class="stat-value ${sentColor}">${sentScore > 0 ? '+' : ''}${sentScore}</div>
+        </div>
+      </div>
+
+      <div class="section-title">LIVE NEWS & SENTIMENT</div>
+      <div class="news-list">${newsHTML || '<div class="news-item"><div class="news-content"><div class="news-title">No news data available</div></div></div>'}</div>
+
+      <div class="section-title">TRADE ANALYSIS</div>
+      <div class="analysis-block">
+        <h3>POSITION ASSESSMENT</h3>
+        <p>${a.trade_analysis?.position_assessment || 'N/A'}</p>
+      </div>
+      <div class="analysis-block">
+        <h3>MARKET CONDITIONS</h3>
+        <p>${a.trade_analysis?.market_conditions || 'N/A'}</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+        <div class="analysis-block" style="margin:0">
+          <h3>CONFLUENCE FACTORS</h3>
+          <ul>${confluenceHTML || '<li>N/A</li>'}</ul>
+        </div>
+        <div class="analysis-block" style="margin:0">
+          <h3>RISK FACTORS</h3>
+          <ul>${riskHTML || '<li>N/A</li>'}</ul>
+        </div>
+      </div>
+
+      <div class="section-title">KEY LEVELS</div>
+      <div class="analysis-block">
+        <div class="levels-grid">
+          <div>
+            <div class="level-item">
+              <span class="level-name">STRONG SUPPORT</span>
+              <span class="level-value" style="color:var(--bull)">${levels.strong_support || 'N/A'}</span>
+            </div>
+            <div class="level-item">
+              <span class="level-name">SUPPORT</span>
+              <span class="level-value" style="color:var(--bull)">${levels.support || 'N/A'}</span>
+            </div>
+          </div>
+          <div>
+            <div class="level-item">
+              <span class="level-name">RESISTANCE</span>
+              <span class="level-value" style="color:var(--bear)">${levels.resistance || 'N/A'}</span>
+            </div>
+            <div class="level-item">
+              <span class="level-name">STRONG RESISTANCE</span>
+              <span class="level-value" style="color:var(--bear)">${levels.strong_resistance || 'N/A'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">FINAL RECOMMENDATION</div>
+      <div class="verdict-card ${verdictClass}">
+        <div class="verdict-text">${a.recommendation || 'No recommendation available.'}</div>
+      </div>
+    `;
+
+    const resultsEl = document.getElementById('results');
+    resultsEl.innerHTML = html;
+    resultsEl.classList.add('visible');
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+</script>
+</body>
+</html>
+"Add trade"
