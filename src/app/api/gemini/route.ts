@@ -1,6 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+const GEMINI_SEARCH_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+
+async function callGeminiSearch(prompt: string, imageBase64?: string, tokens = 4096): Promise<string> {
+  const key = process.env.GEMINI_API_KEY
+  if (!key) return JSON.stringify({ error: 'AI unavailable — add GEMINI_API_KEY to environment variables.' })
+  const parts: object[] = imageBase64
+    ? [{ inline_data: { mime_type: 'image/png', data: imageBase64 } }, { text: prompt }]
+    : [{ text: prompt }]
+  const res = await fetch(`${GEMINI_SEARCH_URL}?key=${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts }],
+      tools: [{ google_search: {} }],
+      generationConfig: { maxOutputTokens: tokens, temperature: 0.3 },
+    }),
+  })
+  if (!res.ok) return JSON.stringify({ error: 'Could not reach AI — try again.' })
+  const json = await res.json()
+  return json.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? '{}'
+}
 
 async function callGemini(prompt: string, imageBase64?: string, tokens = 350): Promise<string> {
   const key = process.env.GEMINI_API_KEY
@@ -87,6 +108,51 @@ Challenge: $${data.accountSize} account | P&L: ${data.pnl > 0 ? '+' : ''}$${data
 {"title":"...","slides":[{"title":"...","points":["...","...","..."],"visual":"<emoji>"},{"title":"...","points":["...","...","..."],"visual":"<emoji>"},{"title":"...","points":["...","...","..."],"visual":"<emoji>"},{"title":"...","points":["...","...","..."],"visual":"<emoji>"}]}
 Exactly 4 slides, 3 bullet points each. Make it practical and actionable.`, undefined, 600)
       break
+
+    case 'trade_analyze': {
+      const { ticker, direction, entry, sl, tp, size, context, rr, imageBase64: chartImg } = data
+      const prompt = `You are a professional trading analyst with access to real-time market data. Search for the latest news and conditions for ${ticker}, then analyze this trade setup comprehensively.
+
+TRADE SETUP:
+- Asset: ${ticker}
+- Direction: ${String(direction).toUpperCase()}
+- Entry: ${entry}
+- Stop Loss: ${sl}
+- Take Profit: ${tp}
+- Position Size: ${size || 'Not specified'}
+- Risk/Reward: ${rr ? rr + ':1' : 'N/A'}
+- Additional Context: ${context || 'None'}
+${chartImg ? '- Chart image attached — incorporate visual analysis into your assessment.' : ''}
+
+Search for the latest news, analyst sentiment, and market conditions for ${ticker}. Then return ONLY valid raw JSON (no markdown, no backticks):
+{
+  "overall_sentiment": "BULLISH" | "BEARISH" | "NEUTRAL",
+  "sentiment_score": <integer -100 to 100>,
+  "verdict": "STRONG BUY" | "BUY" | "HOLD" | "SELL" | "STRONG SELL" | "AVOID",
+  "summary": "<2-3 sentence market summary for ${ticker}>",
+  "news": [
+    { "title": "<real recent headline>", "source": "<Reuters/Bloomberg/FT/WSJ/etc>", "sentiment": "BULLISH"|"BEARISH"|"NEUTRAL", "impact": "HIGH"|"MEDIUM"|"LOW", "date": "<date or Recent>" }
+  ],
+  "trade_analysis": {
+    "position_assessment": "<specific assessment of this trade setup>",
+    "risk_assessment": "<risk analysis>",
+    "market_conditions": "<current conditions for ${ticker}>",
+    "confluence_factors": ["<factor1>", "<factor2>", "<factor3>"],
+    "risk_factors": ["<risk1>", "<risk2>", "<risk3>"]
+  },
+  "key_levels": {
+    "strong_support": <number>,
+    "support": <number>,
+    "resistance": <number>,
+    "strong_resistance": <number>
+  },
+  "recommendation": "<detailed final recommendation — take, adjust, or avoid>",
+  "confidence": <0-100>
+}
+Include 4-6 real recent news items. Be specific with price levels.`
+      result.raw = await callGeminiSearch(prompt, chartImg || undefined, 4096)
+      break
+    }
   }
 
   return NextResponse.json(result)

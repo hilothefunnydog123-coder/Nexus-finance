@@ -30,6 +30,7 @@ import AITerminalChat from '@/components/ai/AITerminalChat'
 import AIChartVision from '@/components/ai/AIChartVision'
 import TopStocksWidget from '@/components/ai/TopStocksWidget'
 import AINewspaper from '@/components/ai/AINewspaper'
+import TradeAnalyzer from '@/components/ai/TradeAnalyzer'
 import type { Quote } from '@/lib/types'
 
 const SYMBOLS = ['AAPL','NVDA','TSLA','MSFT','GOOGL','AMZN','META','AMD','JPM','SPY','NFLX','QQQ']
@@ -226,7 +227,10 @@ export default function NexusDashboard() {
         )}
 
         {activeTab === 'trade' && (
-          <div className="flex-1 min-h-0 overflow-hidden"><TradingWorkspace /></div>
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden"><TradingWorkspace /></div>
+            <TradeAnalyzer />
+          </div>
         )}
 
         {/* Journal */}
