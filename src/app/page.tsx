@@ -115,7 +115,7 @@ export default function HomePage() {
 
           <div style={{ display: 'flex', gap: 10, marginLeft: 'auto', alignItems: 'center' }}>
             <Link href="/courses" className="hide-mob" style={{ fontSize: 12, color: '#7f93b5', textDecoration: 'none', padding: '8px 16px' }}>Courses</Link>
-            <Link href="/app" style={{ fontSize: 12, fontWeight: 700, color: '#ffa502', textDecoration: 'none', padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(255,165,2,0.3)', background: 'rgba(255,165,2,0.08)', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+            <Link href="/arena" style={{ fontSize: 12, fontWeight: 700, color: '#ffa502', textDecoration: 'none', padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(255,165,2,0.3)', background: 'rgba(255,165,2,0.08)', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
               <Trophy size={12} /> Open Arena
             </Link>
             <Link href="/app" style={{ fontSize: 13, fontWeight: 800, color: '#040c14', background: 'linear-gradient(135deg, #ffa502, #ff4757)', textDecoration: 'none', padding: '10px 20px', borderRadius: 10, boxShadow: '0 0 20px rgba(255,165,2,0.4)', whiteSpace: 'nowrap' }}>
@@ -150,10 +150,10 @@ export default function HomePage() {
             </p>
 
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 20 }}>
-              <Link href="/app" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg, #ffa502, #ff4757)', color: '#fff', fontWeight: 900, textDecoration: 'none', padding: '16px 36px', borderRadius: 14, fontSize: 16, boxShadow: '0 0 40px rgba(255,165,2,0.4)', whiteSpace: 'nowrap' }}>
+              <Link href="/arena" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg, #ffa502, #ff4757)', color: '#fff', fontWeight: 900, textDecoration: 'none', padding: '16px 36px', borderRadius: 14, fontSize: 16, boxShadow: '0 0 40px rgba(255,165,2,0.4)', whiteSpace: 'nowrap' }}>
                 <Trophy size={18} /> Enter Today&apos;s Tournament — $1
               </Link>
-              <Link href="/app" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.05)', color: '#cdd6f4', fontWeight: 700, textDecoration: 'none', padding: '16px 28px', borderRadius: 14, fontSize: 15, border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Link href="/arena" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.05)', color: '#cdd6f4', fontWeight: 700, textDecoration: 'none', padding: '16px 28px', borderRadius: 14, fontSize: 15, border: '1px solid rgba(255,255,255,0.1)' }}>
                 <Play size={15} /> Watch Live Free
               </Link>
             </div>
@@ -287,7 +287,7 @@ export default function HomePage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }} className="two-col">
             {[
-              { href: '/app', emoji: '🏆', color: '#ffa502', tag: 'NEW', tagBg: '#ffa50220', title: 'YN Arena', subtitle: 'Compete in daily tournaments', points: ['$1 entry fee', 'Live leaderboard', 'Top 20% wins real money', 'Spectator mode'], cta: 'Enter the Arena →', ctaBg: 'linear-gradient(135deg, #ffa502, #ff4757)' },
+              { href: '/arena', emoji: '🏆', color: '#ffa502', tag: 'NEW', tagBg: '#ffa50220', title: 'YN Arena', subtitle: 'Compete in daily tournaments', points: ['$1 entry fee', 'Live leaderboard', 'Top 20% wins real money', 'Spectator mode'], cta: 'Enter the Arena →', ctaBg: 'linear-gradient(135deg, #ffa502, #ff4757)' },
               { href: '/courses', emoji: '📚', color: '#00d4aa', tag: '$0.99', tagBg: '#00d4aa15', title: 'Courses', subtitle: 'Learn from the best traders', points: ['9 expert instructors', 'AI-narrated lessons', 'Built-in practice mode', 'Knowledge quizzes'], cta: 'Browse Courses →', ctaBg: '#00d4aa' },
               { href: '/app', emoji: '📊', color: '#1e90ff', tag: 'FREE', tagBg: '#1e90ff15', title: 'Trading Terminal', subtitle: 'Professional paper trading', points: ['$100K paper account', 'Real-time market data', 'AI chart analyzer', 'Trade community'], cta: 'Launch Terminal →', ctaBg: '#1e90ff' },
             ].map(({ href, emoji, color, tag, tagBg, title, subtitle, points, cta, ctaBg }) => (
@@ -391,16 +391,16 @@ export default function HomePage() {
           <p style={{ fontSize: 16, color: '#7f93b5', marginBottom: 36, lineHeight: 1.7 }}>
             390 traders are already registered for today&apos;s Daily Blitz. $312 in the prize pool. One dollar gets you in.
           </p>
-          <Link href="/app" style={{ display: 'inline-flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #ffa502, #ff4757)', color: '#fff', fontWeight: 900, textDecoration: 'none', padding: '18px 44px', borderRadius: 16, fontSize: 18, boxShadow: '0 0 60px rgba(255,165,2,0.4)' }}>
+          <Link href="/arena" style={{ display: 'inline-flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #ffa502, #ff4757)', color: '#fff', fontWeight: 900, textDecoration: 'none', padding: '18px 44px', borderRadius: 16, fontSize: 18, boxShadow: '0 0 60px rgba(255,165,2,0.4)' }}>
             <Trophy size={20} /> Compete Now — $1 Entry
           </Link>
-          <div style={{ marginTop: 16, fontSize: 12, color: '#4a5e7a' }}>Or <Link href="/app" style={{ color: '#4a5e7a', textDecoration: 'underline' }}>watch free as a spectator</Link> · No account required to observe</div>
+          <div style={{ marginTop: 16, fontSize: 12, color: '#4a5e7a' }}>Or <Link href="/arena" style={{ color: '#4a5e7a', textDecoration: 'underline' }}>watch free as a spectator</Link> · No account required to observe</div>
         </div>
       </section>
 
       {/* Mobile sticky CTA */}
       <div className="mob-sticky" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200, padding: '12px 16px 16px', background: 'linear-gradient(to top, #040c14 80%, transparent)', alignItems: 'center' }}>
-        <Link href="/app" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg, #ffa502, #ff4757)', color: '#fff', fontWeight: 900, textDecoration: 'none', padding: '14px 20px', borderRadius: 14, fontSize: 15, boxShadow: '0 0 32px rgba(255,165,2,0.5)' }}>
+        <Link href="/arena" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg, #ffa502, #ff4757)', color: '#fff', fontWeight: 900, textDecoration: 'none', padding: '14px 20px', borderRadius: 14, fontSize: 15, boxShadow: '0 0 32px rgba(255,165,2,0.5)' }}>
           <Trophy size={16} /> Enter Today&apos;s Tournament — $1
         </Link>
       </div>
