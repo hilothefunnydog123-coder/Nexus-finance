@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Star, Play, ChevronRight, TrendingUp, Zap, BookOpen, Users, Award, Sparkles } from 'lucide-react'
+import { ArrowRight, ChevronRight, TrendingUp, TrendingDown, Zap, BookOpen, Users, Sparkles, Trophy, Play } from 'lucide-react'
 import AdsterraBanner from '@/components/ads/AdsterraBanner'
 
 const INSTRUCTORS = [
@@ -16,25 +16,8 @@ const INSTRUCTORS = [
   { name: 'Anton Kreil', handle: 'ITPM', color: '#a855f7', initials: 'AK', sub: 'Ex Goldman Sachs', tag: 'Institutional' },
 ]
 
-const WINS = [
-  { user: 'Marcus T.', gain: '+$2,840', course: 'Gap & Go', time: '3 weeks' },
-  { user: 'Sarah K.', gain: '+47%', course: 'ICT Smart Money', time: '6 weeks' },
-  { user: 'Dev P.', gain: '+$1,200', course: 'Options Income', time: '2 weeks' },
-  { user: 'Jordan M.', gain: '+32%', course: 'Trend Following', time: '1 month' },
-  { user: 'Aisha B.', gain: '+$890', course: 'VWAP Day Trading', time: '10 days' },
-  { user: 'Chris L.', gain: '+$4,100', course: 'Gap & Go', time: '5 weeks' },
-  { user: 'Nina R.', gain: '+28%', course: "Kevin O'Leary Portfolio", time: '2 months' },
-  { user: 'Tyler W.', gain: '+$650', course: 'Covered Calls', time: '3 weeks' },
-]
-
-const CATEGORIES = [
-  { name: 'Day Trading',        color: '#ff4757', count: 2, icon: '⚡' },
-  { name: 'Swing Trading',      color: '#00d4aa', count: 2, icon: '📈' },
-  { name: 'Options',            color: '#a855f7', count: 1, icon: '🎯' },
-  { name: 'Long-Term Investing',color: '#1e90ff', count: 2, icon: '🏆' },
-  { name: 'Financial Literacy', color: '#ffa502', count: 1, icon: '📚' },
-  { name: 'Institutional',      color: '#a855f7', count: 1, icon: '🏦' },
-]
+const NAMES = ['Marcus T.','Sarah K.','Devon P.','Jordan M.','Aisha B.','Chris L.','Nina R.','Tyler W.','Priya S.','Alex M.']
+const COLORS = ['#00d4aa','#1e90ff','#a855f7','#ffa502','#ff4757','#00d4aa','#1e90ff','#a855f7','#ffa502','#ff4757']
 
 function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0)
@@ -42,13 +25,8 @@ function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: str
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return
-      let start = 0
-      const step = target / 60
-      const timer = setInterval(() => {
-        start += step
-        if (start >= target) { setCount(target); clearInterval(timer) }
-        else setCount(Math.floor(start))
-      }, 16)
+      let start = 0; const step = target / 60
+      const timer = setInterval(() => { start += step; if (start >= target) { setCount(target); clearInterval(timer) } else setCount(Math.floor(start)) }, 16)
     }, { threshold: 0.5 })
     if (ref.current) observer.observe(ref.current)
     return () => observer.disconnect()
@@ -56,203 +34,165 @@ function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: str
   return <span ref={ref}>{count.toLocaleString()}{suffix}</span>
 }
 
+function LiveLeaderboardPreview() {
+  const [tick, setTick] = useState(0)
+  useEffect(() => { const t = setInterval(() => setTick(n => n + 1), 1800); return () => clearInterval(t) }, [])
+  const traders = NAMES.slice(0, 8).map((name, i) => {
+    const seed = (i * 2654435761 + tick * 31337) >>> 0
+    const pct = ((seed % 3200) - 1200) / 100
+    return { name, pct, color: COLORS[i] }
+  }).sort((a, b) => b.pct - a.pct)
+
+  return (
+    <div style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 16, overflow: 'hidden', width: '100%', maxWidth: 420 }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid #1a2d4a', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#00d4aa', boxShadow: '0 0 6px #00d4aa', display: 'inline-block', animation: 'yn-pulse 1.5s ease-in-out infinite' }} />
+        <span style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>Daily Blitz — LIVE</span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 900, color: '#ffa502', fontFamily: 'monospace' }}>$312 pool</span>
+      </div>
+      {traders.map((t, i) => (
+        <div key={t.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderBottom: '1px solid #0a1628', transition: 'all 0.4s ease', background: i < 2 ? `${t.color}08` : 'transparent' }}>
+          <div style={{ width: 20, fontSize: 11, fontWeight: 800, color: i === 0 ? '#ffa502' : '#4a5e7a', fontFamily: 'monospace' }}>{i === 0 ? '👑' : `#${i + 1}`}</div>
+          <div style={{ width: 28, height: 28, borderRadius: 7, background: `${t.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: t.color }}>{t.name.slice(0, 2).toUpperCase()}</div>
+          <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#cdd6f4' }}>{t.name}</div>
+          <div style={{ fontSize: 13, fontWeight: 900, color: t.pct >= 0 ? '#00d4aa' : '#ff4757', fontFamily: 'monospace' }}>{t.pct >= 0 ? '+' : ''}{t.pct.toFixed(1)}%</div>
+          {i < 2 && <div style={{ fontSize: 8, color: t.color, background: `${t.color}18`, padding: '2px 5px', borderRadius: 3, fontWeight: 700 }}>WIN</div>}
+        </div>
+      ))}
+      <div style={{ padding: '10px 16px', fontSize: 10, color: '#4a5e7a', textAlign: 'center' }}>390 traders competing · Updates every 2 seconds</div>
+    </div>
+  )
+}
+
 export default function HomePage() {
   const [winIndex, setWinIndex] = useState(0)
-
-  useEffect(() => {
-    const t = setInterval(() => setWinIndex(i => (i + 1) % WINS.length), 3000)
-    return () => clearInterval(t)
-  }, [])
-
+  const WINS = [
+    { user: 'Marcus T.', gain: '+$2,840', note: 'Daily Blitz winner', time: 'Today' },
+    { user: 'Sarah K.', gain: '+47%', note: 'Crypto Night Session', time: 'Yesterday' },
+    { user: 'Dev P.', gain: '+$1,200', note: 'Weekend Forex Cup', time: '2 days ago' },
+    { user: 'Jordan M.', gain: '+$890', note: 'Daily Blitz', time: 'Today' },
+  ]
+  useEffect(() => { const t = setInterval(() => setWinIndex(i => (i + 1) % WINS.length), 2800); return () => clearInterval(t) }, [])
 
   return (
     <div style={{ background: '#040c14', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', color: '#cdd6f4', overflowX: 'hidden' }}>
       <style>{`
-        @keyframes float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
-        @keyframes shimmer { 0% { background-position: -200% center } 100% { background-position: 200% center } }
-        @keyframes slideUp { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }
-        @keyframes spin-slow { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
-        .float { animation: float 4s ease-in-out infinite }
-        .slide-up { animation: slideUp 0.6s ease forwards }
-        .gradient-text {
-          background: linear-gradient(135deg, #00d4aa, #1e90ff, #a855f7);
-          background-size: 200% auto;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          animation: shimmer 4s linear infinite;
-        }
-        .glass { background: rgba(7,18,32,0.8); backdrop-filter: blur(12px); }
-        .card-hover { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
-        .card-hover:hover { transform: translateY(-4px); }
-        .glow-green { box-shadow: 0 0 40px rgba(0,212,170,0.3); }
+        @keyframes yn-float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+        @keyframes yn-shimmer { 0% { background-position: -200% center } 100% { background-position: 200% center } }
+        @keyframes yn-pulse { 0%,100% { opacity:1; transform:scale(1) } 50% { opacity:0.5; transform:scale(0.85) } }
+        @keyframes yn-slide { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
+        .yn-gradient { background: linear-gradient(135deg, #ffa502, #ff4757, #a855f7); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: yn-shimmer 4s linear infinite; }
+        .yn-teal { background: linear-gradient(135deg, #00d4aa, #1e90ff); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: yn-shimmer 4s linear infinite; }
+        .glass { background: rgba(7,18,32,0.85); backdrop-filter: blur(12px); }
         @media (max-width: 768px) {
-          .hero-h1 { font-size: 36px !important; }
-          .instructor-grid { grid-template-columns: repeat(2,1fr) !important; }
-          .stats-grid { grid-template-columns: repeat(2,1fr) !important; }
-          .cat-grid { grid-template-columns: 1fr !important; }
-          .hide-mobile { display: none !important; }
-          .mobile-sticky-cta { display: flex !important; }
+          .hero-h1 { font-size: 38px !important; }
+          .two-col { grid-template-columns: 1fr !important; }
+          .four-col { grid-template-columns: repeat(2,1fr) !important; }
+          .hide-mob { display: none !important; }
+          .mob-sticky { display: flex !important; }
         }
-        @media (min-width: 769px) {
-          .mobile-sticky-cta { display: none !important; }
-        }
+        @media (min-width: 769px) { .mob-sticky { display: none !important; } }
       `}</style>
 
-      {/* ── GATEWAY — full-screen entry choice ── */}
-      <section id="gateway" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0,212,170,0.06), transparent)', pointerEvents: 'none' }} />
-
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 48 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 24px rgba(0,212,170,0.5)' }}>
-            <Zap size={22} color="#040c14" fill="#040c14" />
-          </div>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', letterSpacing: -0.5 }}>YN Finance</div>
-            <div style={{ fontSize: 10, color: '#4a5e7a', letterSpacing: 3, textTransform: 'uppercase' }}>Where do you want to go?</div>
-          </div>
-        </div>
-
-        {/* Two cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 860, width: '100%' }} className="cat-grid">
-          {/* Courses card */}
-          <a href="#learn"
-            style={{ textDecoration: 'none', display: 'block', background: '#071220', border: '1px solid #1a2d4a', borderRadius: 24, padding: '40px 36px', cursor: 'pointer', transition: 'all 0.25s', position: 'relative', overflow: 'hidden' }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#00d4aa'; el.style.boxShadow = '0 0 60px rgba(0,212,170,0.2)'; el.style.transform = 'translateY(-4px)' }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#1a2d4a'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}>
-            <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,212,170,0.1), transparent)', pointerEvents: 'none' }} />
-            <div style={{ fontSize: 48, marginBottom: 20 }}>📚</div>
-            <div style={{ fontSize: 11, color: '#00d4aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Education Platform</div>
-            <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: -0.5, marginBottom: 16, lineHeight: 1.15 }}>Learn to Trade</h2>
-            <p style={{ fontSize: 13, color: '#7f93b5', lineHeight: 1.7, marginBottom: 28 }}>9 world-class instructors. $0.99 per course. AI-powered lectures, knowledge quizzes, and built-in practice mode.</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 32 }}>
-              {['📈 Ross Cameron · ICT · Rayner Teo + 6 more', '✅ Quiz-gated lessons — actually learn', '🎯 Practice on live charts after every section'].map(f => (
-                <div key={f} style={{ fontSize: 12, color: '#4a5e7a' }}>{f}</div>
-              ))}
-            </div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#00d4aa', color: '#040c14', fontWeight: 900, padding: '13px 28px', borderRadius: 12, fontSize: 14 }}>
-              Browse Courses <ChevronRight size={16} />
-            </div>
-          </a>
-
-          {/* Terminal card */}
-          <Link href="/app"
-            style={{ textDecoration: 'none', display: 'block', background: '#071220', border: '1px solid #1a2d4a', borderRadius: 24, padding: '40px 36px', cursor: 'pointer', transition: 'all 0.25s', position: 'relative', overflow: 'hidden' }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#1e90ff'; el.style.boxShadow = '0 0 60px rgba(30,144,255,0.2)'; el.style.transform = 'translateY(-4px)' }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#1a2d4a'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}>
-            <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle, rgba(30,144,255,0.1), transparent)', pointerEvents: 'none' }} />
-            <div style={{ fontSize: 48, marginBottom: 20 }}>📊</div>
-            <div style={{ fontSize: 11, color: '#1e90ff', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Trading Terminal</div>
-            <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: -0.5, marginBottom: 16, lineHeight: 1.15 }}>Open Terminal</h2>
-            <p style={{ fontSize: 13, color: '#7f93b5', lineHeight: 1.7, marginBottom: 28 }}>Real-time charts, live market data, $100K paper trading account, trade journal, AI Intel, and a full trading community.</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 32 }}>
-              {['⚡ Live charts via TradingView', '📊 $100K paper trading account — stocks, forex, crypto', '💬 Discord-style trade room + leaderboard'].map(f => (
-                <div key={f} style={{ fontSize: 12, color: '#4a5e7a' }}>{f}</div>
-              ))}
-            </div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#1e90ff', color: '#fff', fontWeight: 900, padding: '13px 28px', borderRadius: 12, fontSize: 14 }}>
-              Launch Terminal <ChevronRight size={16} />
-            </div>
-          </Link>
-        </div>
-
-        <div style={{ marginTop: 32, fontSize: 12, color: '#4a5e7a' }}>
-          Scroll down for courses ↓
-        </div>
-      </section>
-
-      {/* ── STICKY NAV (courses section starts here) ── */}
-      <div id="learn" />
-      <nav style={{ position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid rgba(26,45,74,0.5)', padding: '0 24px' }} className="glass">
+      {/* ── NAV ── */}
+      <nav style={{ position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid rgba(26,45,74,0.6)', padding: '0 24px' }} className="glass">
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', height: 64, gap: 24 }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 16px rgba(0,212,170,0.4)' }}>
-              <Zap size={16} color="#040c14" fill="#040c14" />
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', flexShrink: 0 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg, #ffa502, #ff4757)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 16px rgba(255,165,2,0.5)' }}>
+              <Trophy size={16} color="#fff" />
             </div>
             <div>
               <span style={{ fontWeight: 900, color: '#fff', fontSize: 17, letterSpacing: -0.5 }}>YN Finance</span>
-              <span style={{ fontSize: 10, color: '#00d4aa', display: 'block', letterSpacing: 2, marginTop: -2 }}>LEARN TO TRADE</span>
+              <span style={{ fontSize: 9, color: '#ffa502', display: 'block', letterSpacing: 3, marginTop: -2 }}>ARENA</span>
             </div>
           </Link>
 
-          <div style={{ display: 'flex', gap: 28, fontSize: 13, flex: 1 }} className="hide-mobile">
-            {[['#categories','Courses'],['#instructors','Instructors'],['#results','Student Wins'],['/quiz','Take the Quiz ✨']].map(([href, label]) => (
-              <Link key={label} href={href} style={{ color: label.includes('Quiz') ? '#00d4aa' : '#7f93b5', textDecoration: 'none', fontWeight: label.includes('Quiz') ? 700 : 500 }}>{label}</Link>
+          <div style={{ display: 'flex', gap: 24, fontSize: 13, flex: 1 }} className="hide-mob">
+            {[['#how','How It Works'],['#prizes','Prizes'],['#courses','Courses']].map(([h, l]) => (
+              <a key={l} href={h} style={{ color: '#7f93b5', textDecoration: 'none' }}>{l}</a>
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginLeft: 'auto' }}>
-            <Link href="/courses" style={{ fontSize: 12, color: '#7f93b5', textDecoration: 'none', padding: '8px 16px' }} className="hide-mobile">Browse Courses</Link>
-            <Link href="/app" style={{ fontSize: 12, fontWeight: 700, color: '#1e90ff', textDecoration: 'none', padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(30,144,255,0.3)', background: 'rgba(30,144,255,0.08)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Zap size={12} /> Terminal
+          <div style={{ display: 'flex', gap: 10, marginLeft: 'auto', alignItems: 'center' }}>
+            <Link href="/courses" className="hide-mob" style={{ fontSize: 12, color: '#7f93b5', textDecoration: 'none', padding: '8px 16px' }}>Courses</Link>
+            <Link href="/app" style={{ fontSize: 12, fontWeight: 700, color: '#ffa502', textDecoration: 'none', padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(255,165,2,0.3)', background: 'rgba(255,165,2,0.08)', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+              <Trophy size={12} /> Open Arena
             </Link>
-            <Link href="/quiz" style={{ fontSize: 13, fontWeight: 800, color: '#040c14', background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', textDecoration: 'none', padding: '10px 20px', borderRadius: 10, boxShadow: '0 0 20px rgba(0,212,170,0.4)', whiteSpace: 'nowrap' }}>
-              Find My Type →
+            <Link href="/app" style={{ fontSize: 13, fontWeight: 800, color: '#040c14', background: 'linear-gradient(135deg, #ffa502, #ff4757)', textDecoration: 'none', padding: '10px 20px', borderRadius: 10, boxShadow: '0 0 20px rgba(255,165,2,0.4)', whiteSpace: 'nowrap' }}>
+              Compete Now →
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* HERO */}
-      <section style={{ minHeight: '92vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-        {/* Background decoration */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,212,170,0.12), transparent)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: '20%', left: '10%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(30,144,255,0.06), transparent)', pointerEvents: 'none' }} className="float" />
-        <div style={{ position: 'absolute', bottom: '20%', right: '10%', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.06), transparent)', pointerEvents: 'none', animationDelay: '2s' }} className="float" />
+      {/* ── HERO ── */}
+      <section style={{ minHeight: '95vh', display: 'flex', alignItems: 'center', padding: '60px 24px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 70% 60% at 30% 50%, rgba(255,165,2,0.07), transparent)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 50% 50% at 80% 50%, rgba(168,85,247,0.05), transparent)', pointerEvents: 'none' }} />
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.25)', borderRadius: 100, padding: '8px 20px', fontSize: 12, color: '#00d4aa', fontWeight: 700 }}>
-            <Sparkles size={13} /> 9 World-Class Instructors · $0.99 Per Course · Practice Mode Built-In
+        <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 420px', gap: 64, alignItems: 'center' }} className="two-col">
+          <div>
+            {/* Live badge */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,165,2,0.1)', border: '1px solid rgba(255,165,2,0.25)', borderRadius: 100, padding: '8px 18px', fontSize: 12, color: '#ffa502', fontWeight: 700, marginBottom: 28 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ffa502', boxShadow: '0 0 6px #ffa502', display: 'inline-block', animation: 'yn-pulse 1.5s ease-in-out infinite' }} />
+              390 traders competing right now · $312 live prize pool
+            </div>
+
+            <h1 className="hero-h1" style={{ fontSize: 'clamp(44px,6vw,78px)', fontWeight: 900, lineHeight: 1.0, letterSpacing: -3, marginBottom: 24 }}>
+              <span style={{ color: '#fff' }}>Trading</span><br />
+              <span className="yn-gradient">is a Sport.</span><br />
+              <span style={{ color: '#fff' }}>Compete Live.</span>
+            </h1>
+
+            <p style={{ fontSize: 'clamp(15px,1.8vw,19px)', color: '#7f93b5', maxWidth: 540, lineHeight: 1.75, marginBottom: 36 }}>
+              Enter a daily tournament for $1. Get a $10K simulated account. Trade for 6.5 hours.
+              Top 20% split the prize pool. Spectators watch every trade live — like Twitch, but for markets.
+            </p>
+
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 20 }}>
+              <Link href="/app" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg, #ffa502, #ff4757)', color: '#fff', fontWeight: 900, textDecoration: 'none', padding: '16px 36px', borderRadius: 14, fontSize: 16, boxShadow: '0 0 40px rgba(255,165,2,0.4)', whiteSpace: 'nowrap' }}>
+                <Trophy size={18} /> Enter Today&apos;s Tournament — $1
+              </Link>
+              <Link href="/app" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.05)', color: '#cdd6f4', fontWeight: 700, textDecoration: 'none', padding: '16px 28px', borderRadius: 14, fontSize: 15, border: '1px solid rgba(255,255,255,0.1)' }}>
+                <Play size={15} /> Watch Live Free
+              </Link>
+            </div>
+
+            <div style={{ display: 'flex', gap: 24, fontSize: 12, color: '#4a5e7a', flexWrap: 'wrap' }}>
+              {['✓ $1 entry · no subscription', '✓ Top 20% always paid out', '✓ Watch anyone\'s trades live'].map(t => (
+                <span key={t}>{t}</span>
+              ))}
+            </div>
+
+            {/* Live win ticker */}
+            <div style={{ marginTop: 28, display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 100, padding: '9px 18px', fontSize: 12 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00d4aa', display: 'inline-block', animation: 'yn-pulse 1.5s ease-in-out infinite' }} />
+              <span style={{ color: '#4a5e7a' }}>Latest win:</span>
+              <span style={{ color: '#fff', fontWeight: 700 }}>{WINS[winIndex].user}</span>
+              <span style={{ color: '#00d4aa', fontWeight: 900, fontFamily: 'monospace' }}>{WINS[winIndex].gain}</span>
+              <span style={{ color: '#4a5e7a' }}>{WINS[winIndex].note} · {WINS[winIndex].time}</span>
+            </div>
           </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,165,2,0.08)', border: '1px solid rgba(255,165,2,0.2)', borderRadius: 100, padding: '5px 14px', fontSize: 11, color: '#ffa502' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ffa502', boxShadow: '0 0 6px #ffa502', display: 'inline-block' }} />
-            <strong>2,847 students</strong> enrolled this week
+
+          {/* Live leaderboard preview */}
+          <div style={{ animation: 'yn-float 5s ease-in-out infinite' }} className="hide-mob">
+            <LiveLeaderboardPreview />
           </div>
-        </div>
-
-        <h1 className="hero-h1" style={{ fontSize: 'clamp(42px,7vw,80px)', fontWeight: 900, lineHeight: 1.02, letterSpacing: -3, marginBottom: 24, maxWidth: 900 }}>
-          <span style={{ color: '#fff' }}>Learn to trade from the</span><br />
-          <span className="gradient-text">best in the world.</span>
-        </h1>
-
-        <p style={{ fontSize: 'clamp(16px,2vw,20px)', color: '#7f93b5', maxWidth: 580, lineHeight: 1.7, marginBottom: 40 }}>
-          Structured curricula built around strategies from Ross Cameron, ICT, Graham Stephan, Kevin O&apos;Leary &amp; more — with AI-powered lessons and built-in practice for $0.99 each.
-        </p>
-
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16 }}>
-          <Link href="/quiz" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', color: '#040c14', fontWeight: 900, textDecoration: 'none', padding: '16px 36px', borderRadius: 14, fontSize: 16, boxShadow: '0 0 40px rgba(0,212,170,0.5)' }} className="glow-green">
-            <Sparkles size={18} /> Find My Trading Type
-          </Link>
-          <Link href="/courses" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.06)', color: '#cdd6f4', fontWeight: 700, textDecoration: 'none', padding: '16px 32px', borderRadius: 14, fontSize: 16, border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)' }}>
-            Browse All Courses <ChevronRight size={16} />
-          </Link>
-        </div>
-        <div style={{ fontSize: 11, color: '#4a5e7a', marginBottom: 44 }}>
-          ✓ First section free &nbsp;·&nbsp; ✓ No subscription &nbsp;·&nbsp; ✓ Cancel anytime
-        </div>
-
-        {/* Live student wins ticker */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 100, padding: '10px 20px', fontSize: 13 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#00d4aa', boxShadow: '0 0 8px #00d4aa', animation: 'spin-slow 2s linear infinite' }} />
-          <span style={{ color: '#4a5e7a' }}>Recent win:</span>
-          <span style={{ color: '#fff', fontWeight: 700 }}>{WINS[winIndex].user}</span>
-          <span style={{ color: '#00d4aa', fontWeight: 900, fontFamily: 'monospace' }}>{WINS[winIndex].gain}</span>
-          <span style={{ color: '#4a5e7a' }}>after {WINS[winIndex].course} · {WINS[winIndex].time}</span>
         </div>
       </section>
 
-      {/* STATS */}
-      <section style={{ borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a', background: 'rgba(7,18,32,0.5)', padding: '48px 24px' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 32, textAlign: 'center' }} className="stats-grid">
+      {/* ── STATS ── */}
+      <section style={{ borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a', background: 'rgba(7,18,32,0.6)', padding: '44px 24px' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 32, textAlign: 'center' }} className="four-col">
           {[
-            { value: 9, suffix: '', label: 'Expert Instructors' },
-            { value: 180000, suffix: '+', label: 'Students Enrolled' },
-            { value: 99, suffix: '¢', label: 'Per Course' },
-            { value: 92, suffix: '%', label: 'Satisfaction Rate' },
-          ].map(({ value, suffix, label }) => (
+            { value: 1, suffix: '', label: '$1 entry fee', prefix: '$' },
+            { value: 390, suffix: '+', label: 'Traders per tournament' },
+            { value: 20, suffix: '%', label: 'Win rate (top traders paid)' },
+            { value: 312, suffix: '+', label: 'Today\'s live prize pool', prefix: '$' },
+          ].map(({ value, suffix, label, prefix }) => (
             <div key={label}>
-              <div style={{ fontSize: 'clamp(32px,4vw,48px)', fontWeight: 900, background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontFamily: 'monospace' }}>
-                <AnimatedCounter target={value} suffix={suffix} />
+              <div style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 900, background: 'linear-gradient(135deg, #ffa502, #ff4757)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontFamily: 'monospace' }}>
+                {prefix}<AnimatedCounter target={value} suffix={suffix} />
               </div>
               <div style={{ fontSize: 12, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>{label}</div>
             </div>
@@ -260,149 +200,25 @@ export default function HomePage() {
         </div>
       </section>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px 40px' }}>
-        <AdsterraBanner />
-      </div>
-
-      {/* CATEGORIES */}
-      <section id="categories" style={{ padding: '80px 24px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>Every trading style. One platform.</h2>
-            <p style={{ fontSize: 15, color: '#4a5e7a' }}>Not sure which is right for you? <Link href="/quiz" style={{ color: '#00d4aa', textDecoration: 'none', fontWeight: 700 }}>Take the 2-minute quiz →</Link></p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }} className="cat-grid">
-            {CATEGORIES.map(cat => (
-              <Link key={cat.name} href={`/courses?filter=${encodeURIComponent(cat.name)}`} style={{ textDecoration: 'none' }}>
-                <div className="card-hover" style={{ background: '#071220', border: `1px solid ${cat.color}30`, borderRadius: 16, padding: '28px 24px', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: `${cat.color}15` }} />
-                  <div style={{ fontSize: 32, marginBottom: 12 }}>{cat.icon}</div>
-                  <div style={{ fontWeight: 800, color: '#fff', fontSize: 16, marginBottom: 4 }}>{cat.name}</div>
-                  <div style={{ fontSize: 12, color: cat.color, fontWeight: 600 }}>{cat.count} course{cat.count > 1 ? 's' : ''}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* INSTRUCTORS */}
-      <section id="instructors" style={{ padding: '0 24px 80px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>
-              Learn from the <span className="gradient-text">best in the world</span>
-            </h2>
-            <p style={{ fontSize: 15, color: '#4a5e7a' }}>Courses built around strategies popularized by the world&apos;s most-followed traders — using their free public content</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }} className="instructor-grid">
-            {INSTRUCTORS.map(inst => (
-              <Link key={inst.name} href="/courses" style={{ textDecoration: 'none' }}>
-                <div className="card-hover" style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 16, padding: 20, cursor: 'pointer', textAlign: 'center' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = inst.color; (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 32px ${inst.color}20` }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#1a2d4a'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}>
-                  <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${inst.color}40, ${inst.color}20)`, border: `2px solid ${inst.color}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: 18, fontWeight: 900, color: inst.color }}>
-                    {inst.initials}
-                  </div>
-                  <div style={{ fontWeight: 800, color: '#fff', fontSize: 13, marginBottom: 2 }}>{inst.name}</div>
-                  <div style={{ fontSize: 10, color: '#4a5e7a', marginBottom: 8 }}>{inst.sub}</div>
-                  <div style={{ display: 'inline-block', fontSize: 9, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: `${inst.color}20`, color: inst.color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{inst.tag}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FOUNDERS */}
-      <section style={{ padding: '80px 24px', background: 'rgba(7,18,32,0.5)', borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a' }}>
+      {/* ── HOW IT WORKS ── */}
+      <section id="how" style={{ padding: '88px 24px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <div style={{ fontSize: 11, color: '#00d4aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>The Team</div>
-            <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>
-              Built by traders who got it wrong first.
-            </h2>
-            <p style={{ fontSize: 15, color: '#4a5e7a', maxWidth: 520, margin: '0 auto' }}>
-              Three founders. One shared conviction: financial education is broken, and $0.99 should be all it takes to fix that for anyone.
-            </p>
+            <div style={{ fontSize: 11, color: '#ffa502', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>How It Works</div>
+            <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>Four steps. Real money.</h2>
+            <p style={{ color: '#4a5e7a', fontSize: 15 }}>Simple enough to start in 60 seconds. Competitive enough to last a lifetime.</p>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }} className="cat-grid">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 20 }} className="four-col">
             {[
-              {
-                name: 'Neil Gilani',
-                role: 'CEO & Co-Founder',
-                initials: 'NG',
-                color: '#00d4aa',
-                quote: '"Financial education shouldn\'t cost more than a coffee."',
-                bio: 'The technical backbone and the original vision behind YN Finance. Neil built the core of the platform — the trading terminal, market data pipeline, course infrastructure, and AI systems — while simultaneously driving the product direction from day one. If it runs and it matters, Neil built it or designed it.',
-                tags: ['Vision', 'Engineering', 'Product'],
-              },
-              {
-                name: 'Yannai Richter',
-                role: 'CTO & Co-Founder',
-                initials: 'YR',
-                color: '#1e90ff',
-                quote: '"The gap between learning a strategy and trading it should be zero seconds."',
-                bio: 'Built significant parts of the YN Finance stack alongside Neil and owns the growth side of the business — from ad strategy and creator outreach to getting the platform in front of the right audiences. Equal parts engineer and marketer, which is a rare combination.',
-                tags: ['Engineering', 'Marketing', 'Growth'],
-              },
-              {
-                name: 'Arjun Bhattula',
-                role: 'COO & Co-Founder',
-                initials: 'AB',
-                color: '#a855f7',
-                quote: '"Every great trader had a mentor. We scaled that to a million people."',
-                bio: 'Runs every partnership, instructor relationship, and growth initiative at YN Finance. Personally brought Ross Cameron, ICT, Graham Stephan, and six other world-class educators onto the platform. The reason nine of the most followed traders in the world are in one place.',
-                tags: ['Operations', 'Partnerships', 'Growth'],
-              },
-            ].map(({ name, role, initials, color, quote, bio, tags }) => (
-              <div key={name} style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 20, padding: 28, display: 'flex', flexDirection: 'column', transition: 'all 0.25s' }}
-                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = color; el.style.boxShadow = `0 8px 40px ${color}18`; el.style.transform = 'translateY(-3px)' }}
-                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#1a2d4a'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 14, background: `linear-gradient(135deg, ${color}40, ${color}18)`, border: `2px solid ${color}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color, flexShrink: 0, letterSpacing: -0.5 }}>
-                    {initials}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 900, color: '#fff', fontSize: 16, letterSpacing: -0.3 }}>{name}</div>
-                    <div style={{ fontSize: 11, color, fontWeight: 700, marginTop: 1 }}>{role}</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: 13, color: '#cdd6f4', fontStyle: 'italic', lineHeight: 1.6, marginBottom: 16, paddingLeft: 12, borderLeft: `2px solid ${color}50` }}>
-                  {quote}
-                </div>
-                <p style={{ fontSize: 12, color: '#7f93b5', lineHeight: 1.8, marginBottom: 20, flex: 1 }}>
-                  {bio}
-                </p>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {tags.map(tag => (
-                    <span key={tag} style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: `${color}15`, color, border: `1px solid ${color}30`, letterSpacing: '0.04em' }}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section style={{ padding: '80px 24px', background: 'rgba(7,18,32,0.5)', borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>How it works</h2>
-          <p style={{ color: '#4a5e7a', marginBottom: 56 }}>The only platform where learning and practice happen in the same place</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 32 }} className="cat-grid">
-            {[
-              { step: '01', icon: <Sparkles size={24} color="#ffa502" />, title: 'Take the Quiz', desc: 'Answer 5 questions. Get your trading type. See courses made for you.' },
-              { step: '02', icon: <Play size={24} color="#00d4aa" />, title: 'Watch AI Lectures', desc: 'Interactive AI-narrated lessons. Slides. Voice. Quiz yourself after each section.' },
-              { step: '03', icon: <TrendingUp size={24} color="#1e90ff" />, title: 'Practice & Share', desc: 'Apply the strategy live. Post your results. Earn rewards from the community.' },
-            ].map(({ step, icon, title, desc }) => (
-              <div key={step} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 72, fontWeight: 900, color: '#0f1f38', fontFamily: 'monospace', marginBottom: -16, lineHeight: 1 }}>{step}</div>
-                <div style={{ width: 56, height: 56, borderRadius: 16, background: '#0f1f38', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>{icon}</div>
-                <div style={{ fontWeight: 800, color: '#fff', fontSize: 16, marginBottom: 8 }}>{title}</div>
+              { step: '01', icon: '💵', color: '#00d4aa', title: 'Pay $1 Entry', desc: 'Pick a tournament. Pay $1–$10 entry fee. You\'re in the game instantly.' },
+              { step: '02', icon: '📊', color: '#1e90ff', title: 'Trade Live', desc: 'You get a $10K simulated account. Trade stocks, forex, crypto — whatever the tournament allows.' },
+              { step: '03', icon: '👁️', color: '#a855f7', title: 'Spectators Watch', desc: 'Anyone can watch the live leaderboard. Every trade, every position — streamed in real-time like ESPN.' },
+              { step: '04', icon: '🏆', color: '#ffa502', title: 'Top 20% Wins', desc: 'Tournament ends at market close. Top 20% splits the prize pool. Payouts within 24 hours.' },
+            ].map(({ step, icon, color, title, desc }) => (
+              <div key={step} style={{ background: '#071220', border: `1px solid ${color}25`, borderRadius: 16, padding: '28px 22px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ fontSize: 64, fontWeight: 900, color: '#0f1f38', fontFamily: 'monospace', position: 'absolute', top: 0, right: 12, lineHeight: 1 }}>{step}</div>
+                <div style={{ fontSize: 36, marginBottom: 16 }}>{icon}</div>
+                <div style={{ fontWeight: 800, color: '#fff', fontSize: 15, marginBottom: 10 }}>{title}</div>
                 <div style={{ fontSize: 13, color: '#4a5e7a', lineHeight: 1.7 }}>{desc}</div>
               </div>
             ))}
@@ -410,189 +226,201 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* STUDENT WINS */}
-      <section id="results" style={{ padding: '80px 24px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      {/* ── PRIZE STRUCTURE ── */}
+      <section id="prizes" style={{ padding: '0 24px 88px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>Real results from real students</h2>
-            <p style={{ color: '#4a5e7a' }}>Unverified results shared by community members. Past performance doesn&apos;t guarantee future results.</p>
+            <div style={{ fontSize: 11, color: '#ffa502', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>Prize Structure</div>
+            <h2 style={{ fontSize: 'clamp(26px,4vw,42px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>The math works in your favor.</h2>
+            <p style={{ color: '#4a5e7a' }}>80% of all entry fees go to winning traders. 20% is the platform cut.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }} className="instructor-grid">
-            {WINS.map((win, i) => (
-              <div key={i} className="card-hover" style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 14, padding: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: '#0f1f38', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#7f93b5' }}>
-                    {win.user.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, color: '#cdd6f4', fontSize: 13 }}>{win.user}</div>
-                    <div style={{ fontSize: 10, color: '#4a5e7a' }}>{win.course}</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16 }} className="two-col">
+            {/* Example with 500 players */}
+            <div style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 16, padding: 28 }}>
+              <div style={{ fontSize: 12, color: '#ffa502', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>$1 Tournament · 500 players example</div>
+              {[
+                { rank: '🥇 1st Place', pct: '40%', amount: '$160' },
+                { rank: '🥈 2nd Place', pct: '25%', amount: '$100' },
+                { rank: '🥉 3rd Place', pct: '15%', amount: '$60' },
+                { rank: 'Top 4–10', pct: '12% split', amount: '~$8.50 each' },
+                { rank: 'Top 11–100', pct: '8% split', amount: '~$0.45 each' },
+              ].map(({ rank, pct, amount }) => (
+                <div key={rank} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #0f1f38' }}>
+                  <span style={{ fontSize: 13, color: '#cdd6f4', fontWeight: 600 }}>{rank}</span>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: 14, fontWeight: 900, color: '#ffa502', fontFamily: 'monospace' }}>{amount}</span>
+                    <span style={{ fontSize: 10, color: '#4a5e7a', marginLeft: 8 }}>{pct}</span>
                   </div>
                 </div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#00d4aa', fontFamily: 'monospace', marginBottom: 4 }}>{win.gain}</div>
-                <div style={{ fontSize: 11, color: '#4a5e7a' }}>in {win.time}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: 32 }}>
-            <Link href="/courses" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#00d4aa', textDecoration: 'none', fontWeight: 700 }}>
-              Start your first course for $0.99 <ArrowRight size={14} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* MARKET OPPORTUNITY — YC box: market size + why now */}
-      <section style={{ padding: '80px 24px', background: 'rgba(7,18,32,0.6)', borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }} className="cat-grid">
-            <div>
-              <div style={{ fontSize: 11, color: '#00d4aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>The Opportunity</div>
-              <h2 style={{ fontSize: 'clamp(28px,3.5vw,42px)', fontWeight: 900, color: '#fff', letterSpacing: -1, lineHeight: 1.1, marginBottom: 20 }}>
-                A $3.2B market that&apos;s teaching people the wrong way.
-              </h2>
-              <p style={{ fontSize: 14, color: '#7f93b5', lineHeight: 1.8, marginBottom: 28 }}>
-                50M+ retail traders globally. 90% lose money — not from lack of trying, but from bad education that&apos;s theoretical, expensive, and disconnected from real practice. Every existing platform makes you learn in one place and practice somewhere else. We put both in the same room.
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                {[
-                  { n: '$3.2B', l: 'Trading education TAM' },
-                  { n: '50M+', l: 'Active retail traders globally' },
-                  { n: '90%', l: 'Lose due to bad education' },
-                  { n: '15%', l: 'YoY market growth' },
-                ].map(({ n, l }) => (
-                  <div key={l} style={{ background: '#0a1628', border: '1px solid #1a2d4a', borderRadius: 12, padding: '16px 20px' }}>
-                    <div style={{ fontSize: 24, fontWeight: 900, color: '#00d4aa', fontFamily: 'monospace', marginBottom: 4 }}>{n}</div>
-                    <div style={{ fontSize: 11, color: '#4a5e7a' }}>{l}</div>
-                  </div>
-                ))}
-              </div>
+              ))}
+              <div style={{ marginTop: 16, fontSize: 11, color: '#4a5e7a' }}>Total pool: $400 · 500 × $1 × 80%</div>
             </div>
-            <div>
-              <div style={{ fontSize: 11, color: '#ffa502', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Why Now</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {[
-                  { icon: '📈', title: 'Retail trading surge', desc: 'Post-2020, 15M new retail traders entered US markets. The audience has never been bigger or more eager.' },
-                  { icon: '🤖', title: 'AI makes personalized education possible', desc: 'Interactive AI lectures, voice narration, and personalized learning paths weren\'t buildable 3 years ago.' },
-                  { icon: '🎓', title: 'Gen Z wants skills, not degrees', desc: '$0.99 micro-courses fit the generation that learns from YouTube but wants structure and accountability.' },
-                  { icon: '💸', title: 'Paper trading closes the loop', desc: 'Every course links directly to the paper trading terminal. Students practice the exact strategy the moment they finish a lesson — no context switching.' },
-                ].map(({ icon, title, desc }) => (
-                  <div key={title} style={{ display: 'flex', gap: 14 }}>
-                    <div style={{ fontSize: 24, flexShrink: 0, marginTop: 2 }}>{icon}</div>
-                    <div>
-                      <div style={{ fontWeight: 700, color: '#cdd6f4', fontSize: 13, marginBottom: 4 }}>{title}</div>
-                      <div style={{ fontSize: 12, color: '#4a5e7a', lineHeight: 1.6 }}>{desc}</div>
-                    </div>
+
+            {/* Why this model works */}
+            <div style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 16, padding: 28 }}>
+              <div style={{ fontSize: 12, color: '#00d4aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>Why This Is Different</div>
+              {[
+                { icon: '⚡', title: 'Skill-based, not luck', desc: 'You win by being a better trader. Every edge you develop directly translates to cash.' },
+                { icon: '👁️', title: 'Public leaderboard', desc: 'Every trade is visible to spectators. This is accountability that makes you better.' },
+                { icon: '📈', title: 'Scales with skill', desc: 'Win consistently? Move to higher-entry tournaments. $1 → $5 → $10 → $50 entries.' },
+                { icon: '🌍', title: 'Anyone, anywhere', desc: 'You need $1 and an internet connection. We\'ve democratized competition.' },
+              ].map(({ icon, title, desc }) => (
+                <div key={title} style={{ display: 'flex', gap: 12, marginBottom: 18 }}>
+                  <div style={{ fontSize: 20, flexShrink: 0 }}>{icon}</div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#cdd6f4', marginBottom: 3 }}>{title}</div>
+                    <div style={{ fontSize: 12, color: '#4a5e7a', lineHeight: 1.6 }}>{desc}</div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* COMPETITION — YC box: why better than alternatives */}
-      <section style={{ padding: '80px 24px' }}>
+      {/* ── GATEWAY: 3 paths ── */}
+      <section style={{ padding: '0 24px 88px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <h2 style={{ fontSize: 'clamp(26px,3.5vw,40px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>Why not just use the alternatives?</h2>
-            <p style={{ fontSize: 14, color: '#4a5e7a' }}>Every existing option leaves a critical gap. We close all of them.</p>
+            <h2 style={{ fontSize: 'clamp(26px,4vw,42px)', fontWeight: 900, color: '#fff', letterSpacing: -1 }}>Where do you want to start?</h2>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #1a2d4a' }}>
-                  {['', 'Udemy / Coursera', 'YouTube', 'Paper Trading Apps', 'Real Prop Firms', 'YN Finance ✦'].map((h, i) => (
-                    <th key={h} style={{ padding: '12px 16px', textAlign: i === 0 ? 'left' : 'center', color: i === 5 ? '#00d4aa' : '#7f93b5', fontWeight: i === 5 ? 800 : 600, fontSize: 12, background: i === 5 ? 'rgba(0,212,170,0.06)' : 'transparent' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ['Expert instructors', '✓', '✓', '✗', '✗', '✓'],
-                  ['$0.99 price point', '✗ ($15–$200)', '✓ free', '✓ free', '✗ ($300–$800)', '✓'],
-                  ['Built-in practice mode', '✗', '✗', '✓', '✓', '✓'],
-                  ['Real market data', '✗', '✗', '✓ some', '✓', '✓'],
-                  ['Structured curriculum', '✓', '✗', '✗', '✗', '✓'],
-                  ['Knowledge quizzes', '✓ some', '✗', '✗', '✗', '✓'],
-                  ['Trading community', '✗', '✗', '✓ some', '✓ some', '✓'],
-                  ['Paper trading built-in', '✗', '✗', '✓', '✓', '✓'],
-                ].map(([feature, ...vals]) => (
-                  <tr key={feature as string} style={{ borderBottom: '1px solid #0f1f38' }}>
-                    <td style={{ padding: '10px 16px', color: '#7f93b5', fontWeight: 600 }}>{feature}</td>
-                    {vals.map((v, i) => (
-                      <td key={i} style={{ padding: '10px 16px', textAlign: 'center', color: i === 4 ? '#00d4aa' : v === '✓' ? '#00d4aa' : '#4a5e7a', fontWeight: i === 4 ? 800 : 400, background: i === 4 ? 'rgba(0,212,170,0.04)' : 'transparent', fontSize: i === 4 ? 14 : 13 }}>{v}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }} className="two-col">
+            {[
+              { href: '/app', emoji: '🏆', color: '#ffa502', tag: 'NEW', tagBg: '#ffa50220', title: 'YN Arena', subtitle: 'Compete in daily tournaments', points: ['$1 entry fee', 'Live leaderboard', 'Top 20% wins real money', 'Spectator mode'], cta: 'Enter the Arena →', ctaBg: 'linear-gradient(135deg, #ffa502, #ff4757)' },
+              { href: '/courses', emoji: '📚', color: '#00d4aa', tag: '$0.99', tagBg: '#00d4aa15', title: 'Courses', subtitle: 'Learn from the best traders', points: ['9 expert instructors', 'AI-narrated lessons', 'Built-in practice mode', 'Knowledge quizzes'], cta: 'Browse Courses →', ctaBg: '#00d4aa' },
+              { href: '/app', emoji: '📊', color: '#1e90ff', tag: 'FREE', tagBg: '#1e90ff15', title: 'Trading Terminal', subtitle: 'Professional paper trading', points: ['$100K paper account', 'Real-time market data', 'AI chart analyzer', 'Trade community'], cta: 'Launch Terminal →', ctaBg: '#1e90ff' },
+            ].map(({ href, emoji, color, tag, tagBg, title, subtitle, points, cta, ctaBg }) => (
+              <Link key={title} href={href} style={{ textDecoration: 'none', display: 'block', background: '#071220', border: `1px solid ${color}30`, borderRadius: 20, padding: '32px 28px', transition: 'all 0.25s', position: 'relative', overflow: 'hidden' }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = color; el.style.boxShadow = `0 0 48px ${color}20`; el.style.transform = 'translateY(-4px)' }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = `${color}30`; el.style.boxShadow = 'none'; el.style.transform = 'none' }}>
+                <div style={{ position: 'absolute', top: 16, right: 16, fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 5, background: tagBg, color }}>{tag}</div>
+                <div style={{ fontSize: 44, marginBottom: 16 }}>{emoji}</div>
+                <div style={{ fontSize: 11, color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>{subtitle}</div>
+                <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', letterSpacing: -0.5, marginBottom: 20 }}>{title}</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
+                  {points.map(p => <div key={p} style={{ fontSize: 12, color: '#7f93b5', display: 'flex', alignItems: 'center', gap: 7 }}><span style={{ color }}>✓</span>{p}</div>)}
+                </div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: ctaBg, color: title === 'Courses' ? '#040c14' : '#fff', fontWeight: 900, padding: '12px 22px', borderRadius: 10, fontSize: 13 }}>
+                  {cta}
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* BUSINESS MODEL — YC box: how you make money */}
-      <section style={{ padding: '80px 24px', background: 'rgba(7,18,32,0.6)', borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{ fontSize: 11, color: '#a855f7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Business Model</div>
-          <h2 style={{ fontSize: 'clamp(26px,3.5vw,40px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>Three revenue streams. One flywheel.</h2>
-          <p style={{ fontSize: 14, color: '#7f93b5', marginBottom: 48, maxWidth: 600, margin: '0 auto 48px' }}>Courses drive volume. Ads monetize at scale. Referrals are pure margin with zero extra work.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }} className="cat-grid">
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px 40px' }}>
+        <AdsterraBanner />
+      </div>
+
+      {/* ── COURSES (secondary) ── */}
+      <section id="courses" style={{ padding: '0 24px 88px', borderTop: '1px solid #1a2d4a' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', paddingTop: 80 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40, flexWrap: 'wrap', gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 11, color: '#00d4aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Education Platform</div>
+              <h2 style={{ fontSize: 'clamp(24px,4vw,40px)', fontWeight: 900, color: '#fff', letterSpacing: -1 }}>
+                Learn from the <span className="yn-teal">world&apos;s best traders</span>
+              </h2>
+              <p style={{ fontSize: 14, color: '#4a5e7a', marginTop: 10 }}>Better traders win more tournaments. $0.99 a course — sharpen your edge.</p>
+            </div>
+            <Link href="/courses" style={{ fontSize: 13, fontWeight: 700, color: '#00d4aa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+              All Courses <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }} className="four-col">
+            {INSTRUCTORS.map(inst => (
+              <Link key={inst.name} href="/courses" style={{ textDecoration: 'none' }}>
+                <div style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 14, padding: 20, textAlign: 'center', transition: 'all 0.2s', cursor: 'pointer' }}
+                  onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = inst.color; el.style.boxShadow = `0 8px 32px ${inst.color}20`; el.style.transform = 'translateY(-3px)' }}
+                  onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#1a2d4a'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 14, background: `linear-gradient(135deg, ${inst.color}40, ${inst.color}18)`, border: `2px solid ${inst.color}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: 16, fontWeight: 900, color: inst.color }}>
+                    {inst.initials}
+                  </div>
+                  <div style={{ fontWeight: 800, color: '#fff', fontSize: 13, marginBottom: 2 }}>{inst.name}</div>
+                  <div style={{ fontSize: 10, color: '#4a5e7a', marginBottom: 8 }}>{inst.sub}</div>
+                  <div style={{ display: 'inline-block', fontSize: 9, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: `${inst.color}18`, color: inst.color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{inst.tag}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOUNDERS ── */}
+      <section style={{ padding: '80px 24px', background: 'rgba(7,18,32,0.5)', borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <div style={{ fontSize: 11, color: '#00d4aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>The Team</div>
+            <h2 style={{ fontSize: 'clamp(26px,4vw,42px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>Built by traders who got it wrong first.</h2>
+            <p style={{ fontSize: 14, color: '#4a5e7a', maxWidth: 500, margin: '0 auto' }}>Creating the infrastructure for trading as a competitive sport — from the ground up.</p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }} className="two-col">
             {[
-              { icon: '🎓', color: '#00d4aa', revenue: '$0.99/course', title: 'Course Sales', desc: '70% to instructor, 30% platform. Low barrier drives volume. Target: 100K enrollments = $30K MRR platform share.' },
-              { icon: '📢', color: '#ffa502', revenue: 'CPM / native ads', title: 'Ad Revenue', desc: 'Adsterra native ads on the terminal and course pages. High-intent finance audience = premium CPM rates. Scales linearly with traffic.' },
-              { icon: '🤝', color: '#1e90ff', revenue: 'Revenue share', title: 'Partner Referrals', desc: 'Refer successful traders to real prop firms (FTMO, Topstep, Rise). Earn commission per funded account. Zero marginal cost. Q3 2026.' },
-            ].map(({ icon, color, revenue, title, desc }) => (
-              <div key={title} style={{ background: '#071220', border: `1px solid ${color}30`, borderRadius: 16, padding: 28, textAlign: 'left' }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>{icon}</div>
-                <div style={{ fontSize: 11, color, fontWeight: 700, fontFamily: 'monospace', marginBottom: 6 }}>{revenue}</div>
-                <div style={{ fontWeight: 800, color: '#fff', fontSize: 15, marginBottom: 10 }}>{title}</div>
-                <div style={{ fontSize: 12, color: '#4a5e7a', lineHeight: 1.7 }}>{desc}</div>
+              { name: 'Neil Gilani', role: 'CEO & Co-Founder', initials: 'NG', color: '#00d4aa', quote: '"Trading skill should be rewarded publicly. We built the stage."', bio: 'Built the entire YN Finance platform — terminal, market data pipeline, AI systems, tournament infrastructure, and the Arena. If it runs, Neil built it.', tags: ['Vision', 'Engineering', 'Product'] },
+              { name: 'Yannai Richter', role: 'CTO & Co-Founder', initials: 'YR', color: '#1e90ff', quote: '"The gap between watching a trade and making one should be zero seconds."', bio: 'Co-built the YN Finance stack and runs growth — ad strategy, creator partnerships, and getting the platform in front of the right audiences. Engineer + marketer.', tags: ['Engineering', 'Marketing', 'Growth'] },
+              { name: 'Arjun Bhattula', role: 'COO & Co-Founder', initials: 'AB', color: '#a855f7', quote: '"Every great trader had a mentor. We built the arena where they compete."', bio: 'Runs every partnership, instructor relationship, and growth initiative. Personally brought nine world-class educators onto the platform. The reason the lineup exists.', tags: ['Operations', 'Partnerships', 'Growth'] },
+            ].map(({ name, role, initials, color, quote, bio, tags }) => (
+              <div key={name} style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 20, padding: 28, transition: 'all 0.25s' }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = color; el.style.boxShadow = `0 8px 40px ${color}18`; el.style.transform = 'translateY(-3px)' }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#1a2d4a'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 13, background: `linear-gradient(135deg, ${color}40, ${color}18)`, border: `2px solid ${color}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 900, color, flexShrink: 0 }}>{initials}</div>
+                  <div><div style={{ fontWeight: 900, color: '#fff', fontSize: 15 }}>{name}</div><div style={{ fontSize: 11, color, fontWeight: 700, marginTop: 1 }}>{role}</div></div>
+                </div>
+                <div style={{ fontSize: 12, color: '#cdd6f4', fontStyle: 'italic', lineHeight: 1.6, marginBottom: 14, paddingLeft: 12, borderLeft: `2px solid ${color}50` }}>{quote}</div>
+                <p style={{ fontSize: 12, color: '#7f93b5', lineHeight: 1.8, marginBottom: 18 }}>{bio}</p>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {tags.map(tag => <span key={tag} style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: `${color}15`, color, border: `1px solid ${color}30` }}>{tag}</span>)}
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* FINAL CTA */}
-      <section style={{ padding: '80px 24px', textAlign: 'center', borderTop: '1px solid #1a2d4a' }}>
-        <div style={{ maxWidth: 600, margin: '0 auto' }}>
-          <div style={{ fontSize: 'clamp(32px,5vw,56px)', fontWeight: 900, color: '#fff', letterSpacing: -2, lineHeight: 1.05, marginBottom: 20 }}>
-            What kind of trader are you?
+      {/* ── FINAL CTA ── */}
+      <section style={{ padding: '88px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 60% at 50% 50%, rgba(255,165,2,0.07), transparent)', pointerEvents: 'none' }} />
+        <div style={{ maxWidth: 640, margin: '0 auto', position: 'relative' }}>
+          <div style={{ fontSize: 'clamp(34px,5vw,58px)', fontWeight: 900, color: '#fff', letterSpacing: -2, lineHeight: 1.05, marginBottom: 20 }}>
+            The tournament starts<br /><span className="yn-gradient">at 9:30 AM.</span>
           </div>
-          <p style={{ fontSize: 15, color: '#7f93b5', marginBottom: 36, lineHeight: 1.7 }}>
-            Take the 2-minute quiz and get a personalized learning path built from 9 expert instructors.
+          <p style={{ fontSize: 16, color: '#7f93b5', marginBottom: 36, lineHeight: 1.7 }}>
+            390 traders are already registered for today&apos;s Daily Blitz. $312 in the prize pool. One dollar gets you in.
           </p>
-          <Link href="/quiz" style={{ display: 'inline-flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', color: '#040c14', fontWeight: 900, textDecoration: 'none', padding: '18px 44px', borderRadius: 16, fontSize: 18, boxShadow: '0 0 60px rgba(0,212,170,0.4)' }}>
-            <Sparkles size={20} /> Take the Quiz — Free
+          <Link href="/app" style={{ display: 'inline-flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #ffa502, #ff4757)', color: '#fff', fontWeight: 900, textDecoration: 'none', padding: '18px 44px', borderRadius: 16, fontSize: 18, boxShadow: '0 0 60px rgba(255,165,2,0.4)' }}>
+            <Trophy size={20} /> Compete Now — $1 Entry
           </Link>
-          <div style={{ marginTop: 16, fontSize: 12, color: '#4a5e7a' }}>Takes 2 minutes · No account required · Get results instantly</div>
+          <div style={{ marginTop: 16, fontSize: 12, color: '#4a5e7a' }}>Or <Link href="/app" style={{ color: '#4a5e7a', textDecoration: 'underline' }}>watch free as a spectator</Link> · No account required to observe</div>
         </div>
       </section>
 
       {/* Mobile sticky CTA */}
-      <div className="mobile-sticky-cta" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200, padding: '12px 16px 16px', background: 'linear-gradient(to top, #040c14 80%, transparent)', alignItems: 'center', gap: 10 }}>
-        <Link href="/quiz" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', color: '#040c14', fontWeight: 900, textDecoration: 'none', padding: '14px 20px', borderRadius: 14, fontSize: 15, boxShadow: '0 0 32px rgba(0,212,170,0.5)' }}>
-          <Sparkles size={16} /> Find My Trading Type — Free
+      <div className="mob-sticky" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200, padding: '12px 16px 16px', background: 'linear-gradient(to top, #040c14 80%, transparent)', alignItems: 'center' }}>
+        <Link href="/app" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg, #ffa502, #ff4757)', color: '#fff', fontWeight: 900, textDecoration: 'none', padding: '14px 20px', borderRadius: 14, fontSize: 15, boxShadow: '0 0 32px rgba(255,165,2,0.5)' }}>
+          <Trophy size={16} /> Enter Today&apos;s Tournament — $1
         </Link>
       </div>
 
       {/* Footer */}
-      <footer style={{ borderTop: '1px solid #1a2d4a', padding: '32px 24px', paddingBottom: 80 }} className="footer-mobile">
+      <footer style={{ borderTop: '1px solid #1a2d4a', padding: '32px 24px', paddingBottom: 80 }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Zap size={11} color="#040c14" fill="#040c14" />
+            <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg, #ffa502, #ff4757)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Trophy size={11} color="#fff" />
             </div>
-            <span style={{ fontWeight: 900, color: '#fff' }}>YN Finance</span>
+            <span style={{ fontWeight: 900, color: '#fff' }}>YN Finance Arena</span>
           </div>
           <div style={{ display: 'flex', gap: 24, fontSize: 12, flexWrap: 'wrap' }}>
-            {[['/courses','Courses'],['/quiz','Quiz'],['/app','Terminal'],['/privacy','Privacy'],['/terms','Terms']].map(([h,l]) => (
+            {[['/courses','Courses'],['/app','Terminal'],['/privacy','Privacy'],['/terms','Terms']].map(([h,l]) => (
               <Link key={l} href={h} style={{ color: '#4a5e7a', textDecoration: 'none' }}>{l}</Link>
             ))}
           </div>
-          <div style={{ fontSize: 11, color: '#4a5e7a', maxWidth: 480, textAlign: 'right' }}>
-            © 2026 YN Finance · Independent educational platform · Not affiliated with featured traders · Not financial advice
+          <div style={{ fontSize: 11, color: '#4a5e7a', maxWidth: 420, textAlign: 'right' }}>
+            © 2026 YN Finance · Trading tournaments use simulated accounts only · Not financial advice · Results not guaranteed
           </div>
         </div>
       </footer>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, MessageSquare, Newspaper, ChevronRight, Zap, CandlestickChart, Users, Home, Share2, BarChart2, ScanLine, BookOpen, FlaskConical } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Newspaper, ChevronRight, Zap, CandlestickChart, Users, Home, Share2, BarChart2, ScanLine, BookOpen, FlaskConical, Trophy } from 'lucide-react'
 import PreMarketScanner from '@/components/scanner/PreMarketScanner'
 import TradeJournal from '@/components/journal/TradeJournal'
 import Onboarding from '@/components/ui-overlay/Onboarding'
@@ -31,13 +31,15 @@ import AIChartVision from '@/components/ai/AIChartVision'
 import TopStocksWidget from '@/components/ai/TopStocksWidget'
 import AINewspaper from '@/components/ai/AINewspaper'
 import TradeAnalyzer from '@/components/ai/TradeAnalyzer'
+import TournamentLobby from '@/components/arena/TournamentLobby'
 import type { Quote } from '@/lib/types'
 
 const SYMBOLS = ['AAPL','NVDA','TSLA','MSFT','GOOGL','AMZN','META','AMD','JPM','SPY','NFLX','QQQ']
 
-type Tab = 'dashboard' | 'scanner' | 'trade' | 'journal' | 'community' | 'traderoom' | 'pulse' | 'ai' | 'analyzer'
+type Tab = 'dashboard' | 'scanner' | 'trade' | 'journal' | 'community' | 'traderoom' | 'pulse' | 'ai' | 'analyzer' | 'arena'
 
 const NAV = [
+  { id: 'arena'     as Tab, label: 'Arena',      icon: <Trophy size={13} />,      hot: true, hotColor: '#ffa502' },
   { id: 'dashboard' as Tab, label: 'Dashboard',  icon: <LayoutDashboard size={13} /> },
   { id: 'scanner'   as Tab, label: 'Scanner',    icon: <ScanLine size={13} />,    hot: true  },
   { id: 'trade'     as Tab, label: 'Trade',      icon: <CandlestickChart size={13} /> },
@@ -131,6 +133,9 @@ export default function NexusDashboard() {
               }`}>
               {item.icon}
               <span className="yn-nav-label">{item.label}</span>
+              {item.id === 'arena' && (
+                <span className="ml-1 text-[8px] bg-[#ffa502]/20 text-[#ffa502] px-1 rounded font-mono">LIVE</span>
+              )}
               {item.id === 'scanner' && (
                 <span className="ml-1 text-[8px] bg-[#ffa502]/20 text-[#ffa502] px-1 rounded font-mono">EDGE</span>
               )}
@@ -233,6 +238,10 @@ export default function NexusDashboard() {
 
         {activeTab === 'analyzer' && (
           <div className="flex-1 min-h-0 overflow-hidden"><TradeAnalyzer /></div>
+        )}
+
+        {activeTab === 'arena' && (
+          <div className="flex-1 min-h-0 overflow-hidden"><TournamentLobby /></div>
         )}
 
         {/* Journal */}
