@@ -110,33 +110,39 @@ Exactly 4 slides, 3 bullet points each. Make it practical and actionable.`, unde
       break
 
     case 'trade_analyze': {
-      const { ticker, direction, entry, sl, tp, size, context, rr, imageBase64: chartImg } = data
-      const prompt = `You are a professional trading analyst with access to real-time market data. Search for the latest news and conditions for ${ticker}, then analyze this trade setup comprehensively.
+      const { imageBase64: chartImg, context } = data
+      const prompt = `You are an elite trading analyst with real-time market access and chart vision. A trader has uploaded a chart screenshot for you to analyze.
 
-TRADE SETUP:
-- Asset: ${ticker}
-- Direction: ${String(direction).toUpperCase()}
-- Entry: ${entry}
-- Stop Loss: ${sl}
-- Take Profit: ${tp}
-- Position Size: ${size || 'Not specified'}
-- Risk/Reward: ${rr ? rr + ':1' : 'N/A'}
-- Additional Context: ${context || 'None'}
-${chartImg ? '- Chart image attached — incorporate visual analysis into your assessment.' : ''}
+INSTRUCTIONS:
+1. Read the chart image carefully — identify the asset/ticker, timeframe, current price, chart pattern, trend direction, and key price levels visible on the chart.
+2. Use Google Search to find the latest news, analyst sentiment, and market conditions for the asset you identified.
+3. Based on the chart structure and live market data, generate a complete trade signal with specific entry, stop loss, and take profit levels.
+${context ? `4. Additional context from the trader: "${context}"` : ''}
 
-Search for the latest news, analyst sentiment, and market conditions for ${ticker}. Then return ONLY valid raw JSON (no markdown, no backticks):
+Return ONLY valid raw JSON (no markdown, no code blocks, no backticks):
 {
+  "ticker": "<asset name/symbol you identified from the chart>",
+  "timeframe": "<chart timeframe you identified, e.g. 1H, 4H, 1D>",
+  "signal": "LONG" | "SHORT" | "NO TRADE",
+  "entry": <exact entry price number>,
+  "sl": <stop loss price number>,
+  "tp1": <first take profit price number>,
+  "tp2": <second take profit price number>,
+  "rr": "<risk reward ratio e.g. 1:2.4>",
+  "pattern": "<chart pattern identified e.g. Bull Flag, Order Block, FVG, Double Bottom>",
+  "strategy": "<strategy this aligns with e.g. ICT, Gap & Go, SMC, Trend Follow>",
   "overall_sentiment": "BULLISH" | "BEARISH" | "NEUTRAL",
   "sentiment_score": <integer -100 to 100>,
   "verdict": "STRONG BUY" | "BUY" | "HOLD" | "SELL" | "STRONG SELL" | "AVOID",
-  "summary": "<2-3 sentence market summary for ${ticker}>",
+  "summary": "<2-3 sentence market summary combining chart analysis and live news>",
+  "thesis": "<2 sentences explaining exactly why this signal — reference what you see in the chart>",
+  "invalidation": "<what price action invalidates this setup, under 15 words>",
   "news": [
     { "title": "<real recent headline>", "source": "<Reuters/Bloomberg/FT/WSJ/etc>", "sentiment": "BULLISH"|"BEARISH"|"NEUTRAL", "impact": "HIGH"|"MEDIUM"|"LOW", "date": "<date or Recent>" }
   ],
   "trade_analysis": {
-    "position_assessment": "<specific assessment of this trade setup>",
-    "risk_assessment": "<risk analysis>",
-    "market_conditions": "<current conditions for ${ticker}>",
+    "position_assessment": "<detailed assessment of what you see in the chart>",
+    "market_conditions": "<current live market conditions for this asset>",
     "confluence_factors": ["<factor1>", "<factor2>", "<factor3>"],
     "risk_factors": ["<risk1>", "<risk2>", "<risk3>"]
   },
@@ -146,11 +152,11 @@ Search for the latest news, analyst sentiment, and market conditions for ${ticke
     "resistance": <number>,
     "strong_resistance": <number>
   },
-  "recommendation": "<detailed final recommendation — take, adjust, or avoid>",
+  "recommendation": "<detailed final recommendation — enter, wait, or avoid — with specific reasoning>",
   "confidence": <0-100>
 }
-Include 4-6 real recent news items. Be specific with price levels.`
-      result.raw = await callGeminiSearch(prompt, chartImg || undefined, 4096)
+Include 4-6 real recent news items. All price levels must be specific numbers from the chart.`
+      result.raw = await callGeminiSearch(prompt, chartImg, 4096)
       break
     }
   }
