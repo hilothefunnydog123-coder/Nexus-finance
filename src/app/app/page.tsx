@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, MessageSquare, Newspaper, ChevronRight, Zap, CandlestickChart, Users, Home, Share2, BarChart2, ScanLine, BookOpen } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Newspaper, ChevronRight, Zap, CandlestickChart, Users, Home, Share2, BarChart2, ScanLine, BookOpen, FlaskConical } from 'lucide-react'
 import PreMarketScanner from '@/components/scanner/PreMarketScanner'
 import TradeJournal from '@/components/journal/TradeJournal'
 import Onboarding from '@/components/ui-overlay/Onboarding'
@@ -35,7 +35,7 @@ import type { Quote } from '@/lib/types'
 
 const SYMBOLS = ['AAPL','NVDA','TSLA','MSFT','GOOGL','AMZN','META','AMD','JPM','SPY','NFLX','QQQ']
 
-type Tab = 'dashboard' | 'scanner' | 'trade' | 'journal' | 'community' | 'traderoom' | 'pulse' | 'ai'
+type Tab = 'dashboard' | 'scanner' | 'trade' | 'journal' | 'community' | 'traderoom' | 'pulse' | 'ai' | 'analyzer'
 
 const NAV = [
   { id: 'dashboard' as Tab, label: 'Dashboard',  icon: <LayoutDashboard size={13} /> },
@@ -46,6 +46,7 @@ const NAV = [
   { id: 'traderoom' as Tab, label: 'Trade-Room', icon: <MessageSquare size={13} /> },
   { id: 'pulse'     as Tab, label: 'Pulse',      icon: <Newspaper size={13} /> },
   { id: 'ai'        as Tab, label: 'AI Intel',   icon: <BarChart2 size={13} />, hot: true },
+  { id: 'analyzer'  as Tab, label: 'Analyzer',   icon: <FlaskConical size={13} />, hot: true },
 ]
 
 function PortfolioBar({ quotes }: { quotes: Record<string, Quote> }) {
@@ -133,7 +134,7 @@ export default function NexusDashboard() {
               {item.id === 'scanner' && (
                 <span className="ml-1 text-[8px] bg-[#ffa502]/20 text-[#ffa502] px-1 rounded font-mono">EDGE</span>
               )}
-              {item.id === 'ai' && (
+              {(item.id === 'ai' || item.id === 'analyzer') && (
                 <span className="ml-1 text-[8px] bg-[#a855f7]/20 text-[#a855f7] px-1 rounded font-mono">AI</span>
               )}
             </button>
@@ -227,10 +228,11 @@ export default function NexusDashboard() {
         )}
 
         {activeTab === 'trade' && (
-          <div className="flex flex-1 min-h-0 overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-hidden"><TradingWorkspace /></div>
-            <TradeAnalyzer />
-          </div>
+          <div className="flex-1 min-h-0 overflow-hidden"><TradingWorkspace /></div>
+        )}
+
+        {activeTab === 'analyzer' && (
+          <div className="flex-1 min-h-0 overflow-hidden"><TradeAnalyzer /></div>
         )}
 
         {/* Journal */}
