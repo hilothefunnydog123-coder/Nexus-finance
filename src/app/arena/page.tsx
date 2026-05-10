@@ -5,8 +5,9 @@ import Link from 'next/link'
 import {
   Trophy, Users, Clock, Zap, TrendingUp, TrendingDown, Shield,
   ChevronDown, ChevronUp, Crown, Play, Eye, Star, Flame,
-  BarChart2, MessageSquare, DollarSign, Award, Filter,
+  BarChart2, MessageSquare, DollarSign, Award, Filter, Bot,
 } from 'lucide-react'
+import TradingViewChart, { TV_SYMBOLS } from '@/components/chart/TradingViewChart'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -378,9 +379,9 @@ function StreamCard({ trader, offset, isSelected, onSelect }: { trader: StreamTr
         position: 'relative',
       }}
     >
-      {/* Chart area */}
-      <div style={{ height: 120, position: 'relative', background: '#060c14' }}>
-        <MiniChart trader={trader} offset={offset} />
+      {/* Chart area — real TradingView */}
+      <div style={{ height: 160, position: 'relative', background: '#060c14' }}>
+        <TradingViewChart symbol={trader.asset} interval={trader.timeframe === '5m' ? '5' : trader.timeframe === '1H' ? '60' : trader.timeframe === '15m' ? '15' : trader.timeframe === '1m' ? '1' : trader.timeframe === '4H' ? '240' : 'D'} hideSideToolbar={true} studies={[]} />
 
         {/* Trader overlay top-left */}
         <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -534,8 +535,17 @@ export default function ArenaPage() {
         }),
       })
       const data = await res.json()
-      if (data.url) window.location.href = data.url
-      else window.alert('Configure Stripe in environment variables to accept payments.')
+      if (data.url) {
+        // Store entry locally so tournament room grants access after redirect
+        localStorage.setItem(`yn_tournament_${contest.id}`, 'true')
+        window.location.href = data.url
+      } else if (data.demo) {
+        // Demo mode: go straight to tournament room
+        localStorage.setItem(`yn_tournament_${contest.id}`, 'true')
+        window.location.href = `/arena/tournament/${contest.id}?entered=${contest.id}`
+      } else {
+        window.alert('Configure Stripe in environment variables to accept payments.')
+      }
     } catch {
       window.alert('Error connecting to payment service. Try again.')
     } finally {
@@ -707,8 +717,11 @@ export default function ArenaPage() {
                   <div style={{ fontSize: 28, fontWeight: 900, color: '#fff', lineHeight: 1.15, marginBottom: 8 }}>
                     Mega GPP — <span style={{ color: '#ffd700' }}>$10,000</span> Guaranteed
                   </div>
-                  <div style={{ fontSize: 14, color: '#4a5e7a', marginBottom: 16, lineHeight: 1.6 }}>
-                    The biggest daily tournament on YN Arena. Trade any market, top 15% of the 500-player field wins a share. First place takes <strong style={{ color: '#ffd700' }}>$2,400</strong>.
+                  <div style={{ fontSize: 14, color: '#4a5e7a', marginBottom: 8, lineHeight: 1.6 }}>
+                    The biggest daily tournament on YN Arena. Trade any market, top 10 finishers get their entry multiplied by their P&L%. First place could walk away with <strong style={{ color: '#ffd700' }}>$2,400+</strong>.
+                  </div>
+                  <div style={{ fontSize: 12, background: '#ffd70010', border: '1px solid #ffd70030', borderRadius: 8, padding: '8px 12px', color: '#ffd700', marginBottom: 12, lineHeight: 1.6 }}>
+                    💰 <strong>New prize model:</strong> Top 10 finishers get $25 × (1 + your P&L%). Make +100% → get $50 back. Make +200% → get $75 back. Not top 10? House keeps your $25.
                   </div>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginBottom: 20 }}>
@@ -858,8 +871,10 @@ export default function ArenaPage() {
 
                 <div className="yn-featured-stream">
                   {/* Chart area */}
-                  <div style={{ flex: '0 0 65%', background: '#060c14', border: `1px solid ${selectedStream.color}30`, borderRadius: 12, overflow: 'hidden', position: 'relative' }} className="yn-featured-chart">
-                    <MiniChart trader={selectedStream} offset={offset} />
+                  <div style={{ flex: '0 0 65%', background: '#060c14', border: `1px solid ${selectedStream.color}30`, borderRadius: 12, overflow: 'hidden', position: 'relative', minHeight: 340 }} className="yn-featured-chart">
+                    <div style={{ width: '100%', height: '100%', minHeight: 340 }}>
+                      <TradingViewChart symbol={selectedStream.asset} interval={selectedStream.timeframe === '5m' ? '5' : selectedStream.timeframe === '1H' ? '60' : selectedStream.timeframe === '15m' ? '15' : selectedStream.timeframe === '1m' ? '1' : selectedStream.timeframe === '4H' ? '240' : 'D'} hideSideToolbar={true} />
+                    </div>
 
                     {/* Overlays */}
                     <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
