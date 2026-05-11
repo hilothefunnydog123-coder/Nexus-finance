@@ -35,13 +35,20 @@ const TRADERS = [
   { name: 'YN-BETA',   init: 'Bβ', base: -2.3, color: '#8855ff', trades: 8,  isAI: true },
 ]
 
+// Prize model: house takes 20%, remaining 80% split proportionally among top 10 by P&L%
+// This caps liability to what was collected — house always profits
+const HOUSE_CUT = 0.20
+const TOP_WINNERS = 10
+
 const CONTESTS = [
-  { id: 'blitz',   name: 'Daily Blitz',      fee: 5,   max: 500, filled: 390, allowed: 'All Markets',  color: '#00ffa3', tier: 'standard', description: 'The flagship. Trade anything, beat 90% of the field.' },
-  { id: 'crypto',  name: 'Crypto Night',     fee: 10,  max: 250, filled: 188, allowed: 'Crypto Only',  color: '#8855ff', tier: 'premium',  description: 'Crypto volatility. Top 10 collect massive multipliers.' },
-  { id: 'pro',     name: 'Pro Showdown',     fee: 25,  max: 100, filled: 44,  allowed: 'All Markets',  color: '#ffcc00', tier: 'elite',    description: 'Smaller field, higher stakes. Veterans only.' },
-  { id: 'forex',   name: 'Forex Cup',        fee: 10,  max: 200, filled: 67,  allowed: 'Forex Only',   color: '#0088ff', tier: 'premium',  description: 'Currency pairs. London + New York session overlap.' },
-  { id: 'h2h-1',  name: 'H2H $5 Duel',      fee: 5,   max: 2,   filled: 1,   allowed: 'All Markets',  color: '#ff7700', tier: 'standard', description: '1v1. Higher P&L% wins. Winner takes $10.' },
-  { id: 'h2h-25', name: 'H2H Pro $25',      fee: 25,  max: 2,   filled: 1,   allowed: 'All Markets',  color: '#ff2244', tier: 'elite',    description: 'High-stakes duel. Winner takes $50.' },
+  { id: 'blitz',    name: 'Daily Blitz',       fee: 10,  max: 500, filled: 390, allowed: 'All Markets', color: '#00ffa3', tier: 'standard', description: 'Trade anything. Top 10 split 80% of the prize pool proportionally by P&L%.' },
+  { id: 'crypto',   name: 'Crypto Night',      fee: 25,  max: 250, filled: 188, allowed: 'Crypto Only', color: '#8855ff', tier: 'premium',  description: 'Crypto only. High volatility, high upside. Top 10 split 80% of pool.' },
+  { id: 'pro',      name: 'Pro Showdown',      fee: 100, max: 100, filled: 44,  allowed: 'All Markets', color: '#ffcc00', tier: 'elite',    description: 'Veterans only. 100-player field. First place takes ~40% of the pool.' },
+  { id: 'forex',    name: 'Forex Cup',         fee: 25,  max: 200, filled: 67,  allowed: 'Forex Only',  color: '#0088ff', tier: 'premium',  description: 'Currency pairs. London + NY session. Top 10 split proportionally.' },
+  { id: 'futures',  name: 'Futures Arena',     fee: 50,  max: 150, filled: 31,  allowed: 'Futures Only',color: '#ff7700', tier: 'elite',    description: 'ES, NQ, GC, CL. Futures only. Biggest single-trade P&L% wins more.' },
+  { id: 'h2h-10',  name: 'H2H $10 Duel',      fee: 10,  max: 2,   filled: 1,   allowed: 'All Markets', color: '#ff7700', tier: 'standard', description: '1v1. Higher P&L% after 6 hours takes 90% of pot. House takes 10%.' },
+  { id: 'h2h-100', name: 'H2H Elite $100',     fee: 100, max: 2,   filled: 0,   allowed: 'All Markets', color: '#ff2244', tier: 'elite',    description: 'High-stakes 1v1. Winner takes $190. House takes $10.' },
+  { id: 'mega',     name: 'Weekly Mega',       fee: 25,  max: 1000,filled: 712, allowed: 'All Markets', color: '#ffcc00', tier: 'elite',    description: 'Weekly $25K+ prize pool. 1,000 entries. Top 100 traders paid.' },
 ]
 
 const STREAMS = [
@@ -89,8 +96,21 @@ function buildBoard(tick: number) {
   }).sort((a, b) => b.pct - a.pct).map((t, i) => ({ ...t, rank: i + 1 }))
 }
 
-function multiplier(pct: number) { return +(1 + Math.abs(pct) / 100).toFixed(3) }
-function payout(entry: number, pct: number) { return +(entry * multiplier(pct)).toFixed(2) }
+// New pool model: house takes 20%, top 10 split 80% proportionally by P&L%
+// prizePool = entries × fee × 0.8
+// yourPayout = prizePool × (yourPnL / sumOfAllTop10PnL)
+function prizePool(entries: number, fee: number) { return +(entries * fee * (1 - HOUSE_CUT)).toFixed(0) }
+function estimatePayout(myPct: number, allTopPcts: number[], pool: number): number {
+  const total = allTopPcts.reduce((s, p) => s + Math.abs(p), 0)
+  if (total === 0) return 0
+  return +(pool * (Math.abs(myPct) / total)).toFixed(2)
+}
+// Legacy helper used in UI examples
+function examplePayout(rank: number, totalInPool: number): number {
+  // Approximate: top-heavy distribution, rank 1 gets ~30%, falls off
+  const weights = [0.30, 0.20, 0.14, 0.10, 0.07, 0.06, 0.05, 0.04, 0.03, 0.01]
+  return +(totalInPool * (weights[rank - 1] ?? 0.01)).toFixed(2)
+}
 
 function Countdown({ hours }: { hours: number }) {
   const end = useRef(Date.now() + hours * 3600_000)
@@ -273,8 +293,9 @@ export default function ArenaPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0, borderBottom: '1px solid #0e1a2e' }}>
                   {top3.map((t, i) => {
                     const medals = ['🥇','🥈','🥉']
-                    const mult = multiplier(t.pct)
-                    const pay  = payout(selectedContest.fee, t.pct)
+                    const pool = selectedContest.filled * selectedContest.fee * (1 - HOUSE_CUT)
+                    const pay  = examplePayout(i + 1, pool)
+                    const mult = +(pay / selectedContest.fee).toFixed(2)
                     return (
                       <div key={t.name} style={{
                         padding: '20px 16px', textAlign: 'center',
@@ -308,8 +329,9 @@ export default function ArenaPage() {
                 <div style={{ maxHeight: 340, overflowY: 'auto' }}>
                   {board.map((t, i) => {
                     const paid = i < inMoney
-                    const mult = multiplier(t.pct)
-                    const pay  = payout(selectedContest.fee, t.pct)
+                    const pool = selectedContest.filled * selectedContest.fee * (1 - HOUSE_CUT)
+                    const pay  = examplePayout(i + 1, pool)
+                    const mult = +(pay / selectedContest.fee).toFixed(2)
                     return (
                       <div key={t.name} style={{
                         display: 'grid', gridTemplateColumns: '36px 28px 1fr 90px 90px 80px 70px',
@@ -384,27 +406,46 @@ export default function ArenaPage() {
                   <div style={{ fontSize: 10, color: '#2a4060', textAlign: 'center' }}>Stripe checkout · Simulated trading · Real payouts</div>
                 </div>
 
-                {/* Multiplier model */}
+                {/* Prize pool model */}
                 <div style={{ background: '#080d16', border: '1px solid #0e1a2e', borderRadius: 16, padding: '18px' }}>
                   <div style={{ fontSize: 12, fontWeight: 900, color: '#fff', marginBottom: 4 }}>How payouts work</div>
-                  <div style={{ fontSize: 11, color: '#4a5e7a', marginBottom: 14, lineHeight: 1.6 }}>
-                    Finish top 10, and your entry fee is multiplied by your performance. The better you trade, the more you win. Miss top 10 — the house keeps your entry.
+                  <div style={{ fontSize: 11, color: '#4a5e7a', marginBottom: 12, lineHeight: 1.6 }}>
+                    Every entry fee goes into the prize pool. <strong style={{ color: '#fff' }}>House takes 20%.</strong> The remaining <strong style={{ color: '#00ffa3' }}>80%</strong> is split among the top 10 traders — proportionally by their P&L%. The better you trade relative to others, the bigger your cut.
                   </div>
-                  <div style={{ fontSize: 10, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
-                    ${selectedContest.fee} entry · example returns
-                  </div>
-                  {[[50,payout(selectedContest.fee,50)],[100,payout(selectedContest.fee,100)],[200,payout(selectedContest.fee,200)],[500,payout(selectedContest.fee,500)],[1000,payout(selectedContest.fee,1000)]].map(([pct,pay]) => (
-                    <div key={pct} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #07111c' }}>
-                      <span style={{ fontSize: 12, color: '#00ffa3', fontFamily: 'monospace', fontWeight: 700 }}>+{pct}% P&L</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 10, color: '#4a5e7a' }}>×{multiplier(+pct).toFixed(2)}</span>
-                        <ChevronRight size={10} color="#1e3a5f" />
-                        <span style={{ fontSize: 14, fontWeight: 900, color: '#ffcc00', fontFamily: 'monospace' }}>${pay}</span>
-                      </div>
+                  {/* Example */}
+                  <div style={{ background: '#0a0f1a', borderRadius: 10, padding: '12px', marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: '#4a5e7a', marginBottom: 8 }}>
+                      Example: {selectedContest.filled} traders × ${selectedContest.fee} = <strong style={{ color: '#fff' }}>${(selectedContest.filled * selectedContest.fee).toLocaleString()}</strong> collected
                     </div>
-                  ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, color: '#4a5e7a' }}>House (20%)</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#ff2244', fontFamily: 'monospace' }}>−${Math.floor(selectedContest.filled * selectedContest.fee * HOUSE_CUT).toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 11, color: '#4a5e7a' }}>Prize pool (80%)</span>
+                      <span style={{ fontSize: 14, fontWeight: 900, color: '#00ffa3', fontFamily: 'monospace' }}>${Math.floor(selectedContest.filled * selectedContest.fee * (1 - HOUSE_CUT)).toLocaleString()}</span>
+                    </div>
+                  </div>
+                  {/* Rank payouts from pool */}
+                  <div style={{ fontSize: 10, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Approximate payouts from pool</div>
+                  {[1,2,3,4,5].map(rank => {
+                    const pool = selectedContest.filled * selectedContest.fee * (1 - HOUSE_CUT)
+                    const pay = examplePayout(rank, pool)
+                    const pcts = ['~30%','~20%','~14%','~10%','~7%']
+                    return (
+                      <div key={rank} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid #07111c' }}>
+                        <span style={{ fontSize: 12, color: rank===1?'#ffcc00':rank<=3?'#7f93b5':'#4a5e7a', fontFamily: 'monospace', fontWeight: 700 }}>
+                          {rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'  #'+rank} place
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 10, color: '#4a5e7a' }}>{pcts[rank-1]} of pool</span>
+                          <span style={{ fontSize: 14, fontWeight: 900, color: '#ffcc00', fontFamily: 'monospace' }}>${pay.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
                   <div style={{ marginTop: 10, fontSize: 10, color: '#1e3a5f', lineHeight: 1.5 }}>
-                    Entry fee × (1 + P&amp;L%) = your payout. Top 10 only.
+                    Your exact payout scales with your P&L% relative to other top 10 traders. Higher performance = bigger slice. House is capped at 20% — we can never owe more than we collected.
                   </div>
                 </div>
 
@@ -507,19 +548,34 @@ export default function ArenaPage() {
         {tab === 'streams' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* Go live banner */}
-            <div style={{ background: 'linear-gradient(135deg,#1a0020,#0a0820)', border: '1px solid #ff224430', borderRadius: 14, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#ff224420', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Radio size={20} color="#ff2244" />
+            {/* Two banners: Go live + Creator Program */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 12 }}>
+              <div style={{ background: 'linear-gradient(135deg,#1a0020,#0a0820)', border: '1px solid #ff224430', borderRadius: 14, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: '#ff224420', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Radio size={18} color="#ff2244" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: '#fff', marginBottom: 3 }}>Stream your live trades</div>
+                  <div style={{ fontSize: 11, color: '#4a5e7a', lineHeight: 1.5 }}>Enter a tournament → hit <strong style={{ color: '#ff2244' }}>Go Live</strong> → your chart broadcasts to the Arena in real-time.</div>
+                </div>
+                <a href="/arena/tournament/daily-blitz?entered=daily-blitz" onClick={() => localStorage.setItem('yn_tournament_daily-blitz','true')}
+                  style={{ padding: '9px 16px', background: 'linear-gradient(135deg,#ff2244,#c0392b)', color: '#fff', fontWeight: 800, fontSize: 11, borderRadius: 9, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  Enter &amp; Stream →
+                </a>
               </div>
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <div style={{ fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 4 }}>Go live and stream your trades</div>
-                <div style={{ fontSize: 11, color: '#4a5e7a' }}>Enter a tournament → click <strong style={{ color: '#ff2244' }}>Go Live</strong> in the trading room → your screen and P&L broadcast to the entire Arena in real-time.</div>
+              <div style={{ background: 'linear-gradient(135deg,#08200a,#081520)', border: '1px solid #00ffa330', borderRadius: 14, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: '#00ffa320', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 18 }}>💰</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: '#fff', marginBottom: 3 }}>Earn 12% on every viewer entry</div>
+                  <div style={{ fontSize: 11, color: '#4a5e7a', lineHeight: 1.5 }}>Creator program: your code, your viewers, your commission. Monthly floor guarantee for Pro+ streamers.</div>
+                </div>
+                <Link href="/arena/creator"
+                  style={{ padding: '9px 16px', background: 'linear-gradient(135deg,#00ffa3,#00cc80)', color: '#02030a', fontWeight: 800, fontSize: 11, borderRadius: 9, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  Apply →
+                </Link>
               </div>
-              <a href="/arena/tournament/daily-blitz?entered=daily-blitz" onClick={() => localStorage.setItem('yn_tournament_daily-blitz','true')}
-                style={{ padding: '10px 20px', background: 'linear-gradient(135deg,#ff2244,#c0392b)', color: '#fff', fontWeight: 800, fontSize: 12, borderRadius: 10, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                Enter &amp; Stream →
-              </a>
             </div>
 
             {/* Selected stream - full view */}
