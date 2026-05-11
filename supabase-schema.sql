@@ -296,3 +296,100 @@ create table if not exists public.course_sales (
 );
 alter table course_sales enable row level security;
 create policy "Creators see own sales" on course_sales for select using (auth.uid() = creator_id);
+
+-- ═══════════════════════════════════════════════
+-- YN Arena — Tournament System
+-- ═══════════════════════════════════════════════
+
+create table if not exists tournaments (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique not null,
+  title text not null,
+  description text,
+  entry_fee_cents int not null default 500,
+  status text not null default 'upcoming' check (status in ('upcoming','open','live','calculating','ended')),
+  start_time timestamptz not null,
+  end_time timestamptz not null,
+  max_participants int default 500,
+  account_size int default 10000,
+  allowed_instruments text[] default array['stocks','forex','futures','crypto'],
+  tier text not null default 'standard' check (tier in ('standard','premium','elite')),
+  created_at timestamptz default now()
+);
+
+create table if not exists tournament_entries (
+  id uuid primary key default gen_random_uuid(),
+  tournament_id uuid references tournaments(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,
+  display_name text not null,
+  stripe_session_id text,
+  status text not null default 'pending' check (status in ('pending','active','completed','paid_out')),
+  starting_balance numeric default 10000,
+  current_pnl numeric default 0,
+  current_pnl_pct numeric default 0,
+  rank int,
+  final_rank int,
+  multiplier numeric,
+  payout_cents int default 0,
+  is_ai boolean default false,
+  ai_personality text,
+  joined_at timestamptz default now(),
+  unique(tournament_id, user_id)
+);
+
+create table if not exists tournament_positions (
+  id uuid primary key default gen_random_uuid(),
+  entry_id uuid references tournament_entries(id) on delete cascade,
+  tournament_id uuid references tournaments(id) on delete cascade,
+  symbol text not null,
+  instrument_type text not null,
+  side text not null check (side in ('long','short')),
+  quantity numeric not null,
+  entry_price numeric not null,
+  exit_price numeric,
+  stop_loss numeric,
+  take_profit numeric,
+  leverage int default 1,
+  margin_used numeric not null,
+  realized_pnl numeric,
+  is_open boolean default true,
+  opened_at timestamptz default now(),
+  closed_at timestamptz
+);
+
+create table if not exists tournament_chat (
+  id uuid primary key default gen_random_uuid(),
+  tournament_id uuid references tournaments(id) on delete cascade,
+  user_id uuid,
+  display_name text not null,
+  message text not null,
+  color text default '#00ffa3',
+  created_at timestamptz default now()
+);
+
+-- Enable realtime
+alter publication supabase_realtime add table tournament_entries;
+alter publication supabase_realtime add table tournament_positions;
+alter publication supabase_realtime add table tournament_chat;
+
+-- RLS
+alter table tournaments enable row level security;
+alter table tournament_entries enable row level security;
+alter table tournament_positions enable row level security;
+alter table tournament_chat enable row level security;
+
+create policy "tournaments_public_read"  on tournaments          for select using (true);
+create policy "entries_public_read"      on tournament_entries   for select using (true);
+create policy "entries_own_write"        on tournament_entries   for insert with check (auth.uid() = user_id);
+create policy "entries_own_update"       on tournament_entries   for update using (auth.uid() = user_id);
+create policy "positions_own_all"        on tournament_positions for all    using (entry_id in (select id from tournament_entries where user_id = auth.uid()));
+create policy "chat_public_read"         on tournament_chat      for select using (true);
+create policy "chat_auth_write"          on tournament_chat      for insert with check (true);
+
+-- Seed tournaments
+insert into tournaments (slug,title,description,entry_fee_cents,status,start_time,end_time,max_participants,account_size,tier)
+values
+  ('daily-blitz','Daily Blitz','Trade anything. Top 10 multiply their entry by P&L%. $5 entry.',500,'live',now()-interval '2 hours',now()+interval '4 hours',500,10000,'standard'),
+  ('crypto-night','Crypto Night','Crypto only. Volatile. Top 10 collect multiplied returns.',1000,'open',now()+interval '6 hours',now()+interval '14 hours',250,25000,'premium'),
+  ('pro-showdown','Pro Showdown','Veterans only. $25 entry. Small field, serious traders.',2500,'open',now()+interval '1 day',now()+interval '1 day' + interval '8 hours',100,100000,'elite')
+on conflict (slug) do nothing;

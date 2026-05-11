@@ -1,0 +1,92 @@
+/* YN Arena — Global Styles */
+
+* { box-sizing: border-box; }
+
+/* ── Ticker ── */
+.yn-ticker-inner {
+  display: inline-flex;
+  animation: yn-ticker 44s linear infinite;
+  white-space: nowrap;
+  will-change: transform;
+}
+@keyframes yn-ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+/* ── Core Animations ── */
+@keyframes yn-pulse  { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.25;transform:scale(0.72)} }
+@keyframes yn-glow   { 0%,100%{box-shadow:0 0 18px rgba(0,255,163,0.18)} 50%{box-shadow:0 0 48px rgba(0,255,163,0.58)} }
+@keyframes yn-gold   { 0%,100%{box-shadow:0 0 18px rgba(255,204,0,0.18)} 50%{box-shadow:0 0 48px rgba(255,204,0,0.55)} }
+@keyframes yn-fade   { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+@keyframes yn-popin  { from{opacity:0;transform:scale(0.88) translateY(-14px)} to{opacity:1;transform:scale(1) translateY(0)} }
+@keyframes yn-shimmer{ 0%{background-position:-200% center} 100%{background-position:200% center} }
+@keyframes yn-spin   { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+@keyframes yn-slide  { from{opacity:0;transform:translateX(32px)} to{opacity:1;transform:translateX(0)} }
+@keyframes yn-rank-up{ 0%{background:rgba(0,255,163,0.18)} 100%{background:transparent} }
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar       { width:3px; height:3px; }
+::-webkit-scrollbar-track { background:#07111c; }
+::-webkit-scrollbar-thumb { background:#1a2d4a; border-radius:3px; }
+
+/* ── Shimmer text ── */
+.yn-shimmer-text {
+  background: linear-gradient(90deg,#00ffa3,#0088ff,#8855ff,#00ffa3);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: yn-shimmer 4s linear infinite;
+}
+
+/* ── Tab buttons ── */
+.yn-tab-btn {
+  height: 100%;
+  padding: 0 20px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #4a5e7a;
+  transition: color 0.15s, border-color 0.15s;
+}
+.yn-tab-btn.active { color: #00ffa3; border-bottom-color: #00ffa3; }
+.yn-tab-btn:hover:not(.active) { color: #7f93b5; }
+
+/* ── Cards ── */
+.yn-card-hover {
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+  cursor: pointer;
+}
+.yn-card-hover:hover { transform: translateY(-2px); }
+
+/* ── Responsive grids ── */
+.yn-hero-grid    { display:grid; grid-template-columns:1fr 360px; gap:16px; align-items:start; }
+.yn-contest-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.yn-stream-grid  { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.yn-stat-grid    { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.yn-board-grid   { display:grid; grid-template-columns:36px 28px 1fr 90px 100px 90px 80px; }
+.yn-lb-grid      { display:grid; grid-template-columns:44px 32px 1fr 80px 90px 80px 80px; }
+
+/* ── Tablet (≤1100px) ── */
+@media (max-width:1100px) {
+  .yn-hero-grid    { grid-template-columns:1fr 300px; }
+  .yn-contest-grid { grid-template-columns:repeat(2,1fr); }
+  .yn-stream-grid  { grid-template-columns:repeat(2,1fr); }
+  .yn-stat-grid    { grid-template-columns:repeat(2,1fr); }
+}
+
+/* ── Mobile (≤700px) ── */
+@media (max-width:700px) {
+  .yn-hero-grid     { grid-template-columns:1fr; }
+  .yn-contest-grid  { grid-template-columns:1fr; }
+  .yn-stream-grid   { grid-template-columns:1fr; }
+  .yn-stat-grid     { grid-template-columns:repeat(2,1fr); }
+  .yn-hide-mobile   { display:none !important; }
+  .yn-board-col3    { display:none !important; }
+  .yn-board-col4    { display:none !important; }
+  .yn-nav-links     { display:none !important; }
+  .yn-hero-grid > *:last-child { order:-1; }
+}
