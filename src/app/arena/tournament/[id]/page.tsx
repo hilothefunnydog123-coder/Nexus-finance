@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Trophy, TrendingUp, TrendingDown, Zap, Crown, Bot, X, ChevronDown, BarChart2, Clock } from 'lucide-react'
 import TradingViewChart, { TV_SYMBOLS } from '@/components/chart/TradingViewChart'
 import { INSTRUMENTS, INSTRUMENT_MAP, calcMargin, calcPnL, type Instrument, type InstrumentType } from '@/lib/instruments'
+import GoLive from '@/components/arena/GoLive'
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -289,9 +290,10 @@ export default function TournamentRoom() {
         ))}
         {inTop10 && pnlPct > 0 && (
           <div style={{ background: '#ffd70015', border: '1px solid #ffd70040', borderRadius: 8, padding: '5px 12px', fontSize: 11, color: '#ffd700', fontWeight: 700 }}>
-            🏆 TOP 10 — collecting {(pnlPct).toFixed(1)}% multiplier
+            🏆 TOP 10 — ×{(1 + pnlPct/100).toFixed(2)} multiplier
           </div>
         )}
+        <GoLive traderName="You" pnlPct={pnlPct} rank={userRank} symbol={chartSymbol} />
       </div>
 
       {/* ── MAIN WORKSPACE ── */}

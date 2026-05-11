@@ -461,7 +461,7 @@ export default function ArenaPage() {
   const [contestPrizes, setContestPrizes] = useState<Record<string, number>>(
     Object.fromEntries(CONTESTS.map(c => [c.id, c.prizePool]))
   )
-  const chatEndRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
   const chatColors = ['#00ff88', '#1e90ff', '#bf5fff', '#ffd700', '#ff6b35', '#ff69b4', '#00d4aa']
 
   // Smooth animation tick
@@ -519,7 +519,11 @@ export default function ArenaPage() {
     return () => clearInterval(t)
   }, [])
 
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [chatMsgs.length])
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+    }
+  }, [chatMsgs.length])
 
   const enterContest = useCallback(async (contest: Contest) => {
     setEntering(contest.id)
@@ -857,6 +861,21 @@ export default function ArenaPage() {
         {activeTab === 'streams' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+            {/* Go Live banner */}
+            <div style={{ background: 'linear-gradient(135deg, #1a0812, #0d1020)', border: '1px solid #ff475730', borderRadius: 14, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#ff475720', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 20 }}>📡</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 3 }}>Want to stream your trades live?</div>
+                <div style={{ fontSize: 11, color: '#4a5e7a', lineHeight: 1.5 }}>Enter a tournament, then click the <strong style={{ color: '#ff4757' }}>Go Live</strong> button in the tournament room. Your screen gets shared to the Arena in real-time — your P&L, your chart, your commentary.</div>
+              </div>
+              <a href="/arena/tournament/daily-blitz?entered=daily-blitz" onClick={() => { localStorage.setItem('yn_tournament_daily-blitz', 'true') }}
+                style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #ff4757, #c0392b)', color: '#fff', fontWeight: 800, fontSize: 12, borderRadius: 10, textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                Enter & Stream →
+              </a>
+            </div>
+
             {/* Featured stream */}
             {selectedStream ? (
               <div style={{ animation: 'yn-fadein 0.2s ease' }}>
@@ -934,14 +953,13 @@ export default function ArenaPage() {
                         <span style={{ fontSize: 12, fontWeight: 800, color: '#fff' }}>Live Chat</span>
                         <span style={{ fontSize: 9, color: '#4a5e7a' }}>{viewers.toLocaleString()} watching</span>
                       </div>
-                      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
+                      <div ref={chatContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
                         {chatMsgs.slice(-30).map((m, i) => (
                           <div key={i} style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 1, animation: i === chatMsgs.length - 1 ? 'yn-fadein 0.2s ease' : 'none' }}>
                             <span style={{ fontWeight: 800, color: m.color, marginRight: 5 }}>{m.user}</span>
                             <span style={{ color: '#cdd6f4' }}>{m.text}</span>
                           </div>
                         ))}
-                        <div ref={chatEndRef} />
                       </div>
                       <div style={{ padding: '8px 10px', borderTop: '1px solid #0d1826', display: 'flex', gap: 6 }}>
                         <input
