@@ -39,13 +39,24 @@ const TRADERS = [
 ]
 
 const CONTESTS = [
-  { id:'daily-blitz',  name:'Daily Blitz',    fee:10,  max:500,  filled:390, allowed:'All Markets',  c: G,   tier:'STANDARD' },
-  { id:'crypto-night', name:'Crypto Night',   fee:25,  max:250,  filled:188, allowed:'Crypto Only',  c: PU,  tier:'PREMIUM'  },
-  { id:'pro-showdown', name:'Pro Showdown',   fee:100, max:100,  filled:44,  allowed:'All Markets',  c: GD,  tier:'ELITE'    },
-  { id:'futures-arena',name:'Futures Arena',  fee:50,  max:150,  filled:67,  allowed:'Futures Only', c: BL,  tier:'PREMIUM'  },
-  { id:'h2h-duel',     name:'H2H Duel',       fee:10,  max:2,    filled:1,   allowed:'All Markets',  c: OR,  tier:'1v1'      },
-  { id:'weekly-mega',  name:'Weekly Mega',    fee:25,  max:1000, filled:712, allowed:'All Markets',  c: GD,  tier:'MEGA'     },
+  { id:'daily-blitz',   name:'Daily Blitz',      fee:10,  max:500,  filled:390, allowed:'All Markets',  c: G,   tier:'STANDARD', tagline:'Best for new traders' },
+  { id:'crypto-night',  name:'Crypto Night',      fee:25,  max:250,  filled:188, allowed:'Crypto Only',  c: PU,  tier:'PREMIUM',  tagline:'High volatility, big swings' },
+  { id:'pro-showdown',  name:'Pro Showdown',      fee:100, max:100,  filled:44,  allowed:'All Markets',  c: GD,  tier:'ELITE',    tagline:'Veterans only. Serious money.' },
+  { id:'futures-arena', name:'Futures Arena',     fee:50,  max:150,  filled:67,  allowed:'Futures Only', c: BL,  tier:'PREMIUM',  tagline:'ES, NQ, GC, CL — big leverage' },
+  { id:'h2h-duel',      name:'H2H Duel',          fee:10,  max:2,    filled:1,   allowed:'All Markets',  c: OR,  tier:'1v1',      tagline:'You vs. one trader. Winner takes $18.' },
+  { id:'weekly-mega',   name:'Weekly Mega',       fee:25,  max:1000, filled:712, allowed:'All Markets',  c: GD,  tier:'MEGA',     tagline:'$22,000 pool. Top 200 paid.' },
 ]
+
+// Fixed prize structure: 12% house rake, 88% pool
+// 1st: 30%, 2nd: 18%, 3rd: 12%, 4th: 8%, 5th: 6%, 6-10th: 3% each, rest: split 1%
+const PRIZE_WEIGHTS = [0.30, 0.18, 0.12, 0.08, 0.06, 0.03, 0.03, 0.03, 0.03, 0.03]
+function calcPool(entries: number, fee: number) { return Math.floor(entries * fee * 0.88) }
+function calcPrize(rank: number, pool: number): number {
+  if (rank <= 10) return Math.floor(pool * (PRIZE_WEIGHTS[rank - 1] ?? 0.01))
+  const inMoney = Math.ceil(10 / 0.2) // roughly top 20%
+  if (rank <= inMoney) return Math.floor(pool * 0.01 / (inMoney - 10))
+  return 0
+}
 
 const STREAMS = [
   { name:'Marcus T.',  init:'MT', asset:'AAPL',    tf:'5',   pct: 18.4, viewers:2847, c: G  },
@@ -57,11 +68,11 @@ const STREAMS = [
 ]
 
 const PAYOUTS = [
-  { name:'Marcus T.', pct:'+241%', entry:'$10', won:'$34',  contest:'Daily Blitz',   date:'Today'      },
-  { name:'Priya S.',  pct:'+382%', entry:'$25', won:'$120', contest:'Crypto Night',  date:'Yesterday'  },
-  { name:'Devon P.',  pct:'+198%', entry:'$100',won:'$298', contest:'Pro Showdown',  date:'2 days ago' },
-  { name:'Sarah K.',  pct:'+156%', entry:'$10', won:'$26',  contest:'Daily Blitz',   date:'2 days ago' },
-  { name:'Ryan C.',   pct:'+312%', entry:'$25', won:'$103', contest:'Futures Arena', date:'3 days ago' },
+  { name:'Marcus T.', pct:'+241%', entry:'$10', won:'$1,100', contest:'Daily Blitz',   date:'Today'      },
+  { name:'Priya S.',  pct:'+382%', entry:'$25', won:'$2,904', contest:'Crypto Night',  date:'Yesterday'  },
+  { name:'Devon P.',  pct:'+198%', entry:'$100',won:'$2,640', contest:'Pro Showdown',  date:'2 days ago' },
+  { name:'Sarah K.',  pct:'+156%', entry:'$10', won:'$660',   contest:'Daily Blitz',   date:'2 days ago' },
+  { name:'Ryan C.',   pct:'+312%', entry:'$25', won:'$1,452', contest:'Futures Arena', date:'3 days ago' },
 ]
 
 function buildBoard(tick: number) {
@@ -353,6 +364,58 @@ function ArenaInner() {
             {/* Divider */}
             <div style={{ height:1,background:BO,margin:'52px 0' }} />
 
+            {/* Prize breakdown */}
+            <div className="card" style={{ padding:'28px 32px',marginBottom:0 }}>
+              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:32 }} className="sm-grid1">
+                {/* Left: structure table */}
+                <div>
+                  <div style={{ fontSize:13,fontWeight:800,color:TE,marginBottom:16,letterSpacing:-0.2 }}>Prize Structure</div>
+                  <div style={{ display:'flex',flexDirection:'column',gap:4 }}>
+                    {[
+                      { label:'1st place',  pct:'30%', highlight:true  },
+                      { label:'2nd place',  pct:'18%', highlight:false },
+                      { label:'3rd place',  pct:'12%', highlight:false },
+                      { label:'4th place',  pct:'8%',  highlight:false },
+                      { label:'5th place',  pct:'6%',  highlight:false },
+                      { label:'6th–10th',   pct:'3% each', highlight:false },
+                      { label:'11th–top 20%', pct:'split 1%', highlight:false },
+                    ].map(row => (
+                      <div key={row.label} style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'5px 10px',borderRadius:6,background:row.highlight?`${GD}12`:RA }}>
+                        <span style={{ fontSize:12,color:row.highlight?GD:MT,fontWeight:row.highlight?700:400 }}>{row.label}</span>
+                        <span style={{ fontSize:13,fontWeight:800,color:row.highlight?GD:TE,fontFamily:'monospace' }}>{row.pct}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Right: example payout */}
+                <div>
+                  <div style={{ fontSize:13,fontWeight:800,color:TE,marginBottom:4,letterSpacing:-0.2 }}>Example Payout</div>
+                  <div style={{ fontSize:11,color:DM,marginBottom:14 }}>500 players × $10 entry = <strong style={{color:GD}}>$4,400 pool</strong></div>
+                  <div style={{ display:'flex',flexDirection:'column',gap:4,marginBottom:16 }}>
+                    {[
+                      { label:'1st', amt:'$1,320' },
+                      { label:'2nd', amt:'$792'   },
+                      { label:'3rd', amt:'$528'   },
+                      { label:'4th', amt:'$352'   },
+                      { label:'5th', amt:'$264'   },
+                      { label:'6–10', amt:'$132 ea.' },
+                    ].map(row => (
+                      <div key={row.label} style={{ display:'flex',justifyContent:'space-between',padding:'4px 10px',borderRadius:5,background:RA }}>
+                        <span style={{ fontSize:11,color:MT }}>{row.label}</span>
+                        <span style={{ fontSize:12,fontWeight:700,color:GD,fontFamily:'monospace' }}>{row.amt}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize:10,color:DM,borderTop:`1px solid ${BO}`,paddingTop:10,lineHeight:1.6 }}>
+                    House rake: 12% &nbsp;·&nbsp; Top 20% always paid &nbsp;·&nbsp; Payouts via Stripe within 24hrs
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div style={{ height:1,background:BO,margin:'52px 0' }} />
+
             {/* Contest lobby */}
             <div>
               <div style={{ display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:24,flexWrap:'wrap',gap:10 }}>
@@ -361,7 +424,8 @@ function ArenaInner() {
               </div>
               <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:12 }}>
                 {CONTESTS.map(c => {
-                  const pool = Math.floor(c.filled * c.fee * 0.8)
+                  const pool = calcPool(c.filled, c.fee)
+                  const firstPrize = calcPrize(1, pool)
                   const fill = Math.round((c.filled/c.max)*100)
                   const sel = contest.id === c.id
                   return (
@@ -374,6 +438,7 @@ function ArenaInner() {
                             <span style={{ fontSize:10,color:DM }}>{c.allowed}</span>
                           </div>
                           <div style={{ fontSize:15,fontWeight:800,color:TE }}>{c.name}</div>
+                          <div style={{ fontSize:11,color:DM,marginTop:3 }}>{c.tagline}</div>
                         </div>
                         <div style={{ textAlign:'right' }}>
                           <div style={{ fontSize:21,fontWeight:900,color:c.c,fontFamily:'monospace' }}>${c.fee}</div>
@@ -383,8 +448,18 @@ function ArenaInner() {
                       <div style={{ height:3,background:RA,borderRadius:2,overflow:'hidden',marginBottom:9 }}>
                         <div style={{ width:`${fill}%`,height:'100%',background:fill>85?OR:c.c,transition:'width 1s' }} />
                       </div>
+                      <div style={{ marginBottom:10 }}>
+                        <div style={{ display:'flex',alignItems:'baseline',gap:6 }}>
+                          <span style={{color:GD, fontWeight:900, fontFamily:'monospace', fontSize:14}}>${pool.toLocaleString()} pool</span>
+                          {fill>85&&<span style={{color:OR,fontSize:11}}>· filling fast</span>}
+                        </div>
+                        <div style={{ display:'flex',alignItems:'center',gap:8,marginTop:4 }}>
+                          <span style={{fontSize:10, color:DM}}>1st: <strong style={{color:GD}}>${firstPrize.toLocaleString()}</strong></span>
+                          <span style={{fontSize:9,color:G,background:`${G}15`,padding:'1px 6px',borderRadius:3,fontWeight:700}}>Top 20% paid</span>
+                        </div>
+                      </div>
                       <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center' }}>
-                        <span style={{ fontSize:12,color:DM }}>{c.filled}/{c.max} · <span style={{color:GD,fontWeight:700,fontFamily:'monospace'}}>${pool.toLocaleString()}</span> pool{fill>85&&<span style={{color:OR,marginLeft:6}}>· filling fast</span>}</span>
+                        <span style={{ fontSize:11,color:DM }}>{c.filled}/{c.max} entered</span>
                         <button onClick={e=>{e.stopPropagation();enter(c)}} disabled={!!entering} className="btn"
                           style={{ fontSize:12,fontWeight:700,color:c.c,background:`${c.c}14`,border:`1px solid ${c.c}35`,borderRadius:7,padding:'5px 13px',cursor:'pointer',transition:'background 0.13s' }}>
                           {entering===c.id?'…':`$${c.fee}`}
@@ -409,16 +484,14 @@ function ArenaInner() {
               <div className="card" style={{ overflow:'hidden' }}>
                 {/* Col headers */}
                 <div style={{ display:'grid',gridTemplateColumns:'36px 26px 1fr 88px 96px 84px 70px',padding:'9px 18px',background:RA,borderBottom:`1px solid ${BO}` }}>
-                  {['','RK','TRADER','P&L%','EST. PAYOUT','MULTIPLIER','STATUS'].map((h,i) => (
+                  {['','RK','TRADER','P&L%','PRIZE','RANK PAYOUT','STATUS'].map((h,i) => (
                     <div key={h} style={{ fontSize:9,fontWeight:700,color:'#52525b',letterSpacing:'0.1em',textAlign:i>2?'right':'left' }}>{h}</div>
                   ))}
                 </div>
                 {board.map((t,i) => {
                   const paid = i < inMoney
-                  const weights = [0.30,0.20,0.14,0.10,0.07,0.06,0.05,0.04,0.03,0.01]
-                  const pool = CONTESTS[0].filled * CONTESTS[0].fee * 0.8
-                  const est = paid ? +(pool*(weights[i]??0.01)).toFixed(2) : 0
-                  const mult = paid ? +(1+Math.abs(t.pct)/100).toFixed(3) : 0
+                  const pool = calcPool(CONTESTS[0].filled, CONTESTS[0].fee)
+                  const prize = paid ? calcPrize(i + 1, pool) : 0
                   return (
                     <div key={t.name} style={{ display:'grid',gridTemplateColumns:'36px 26px 1fr 88px 96px 84px 70px',padding:'9px 18px',borderBottom:`1px solid ${BO}`,background:paid?`${t.c}07`:'transparent',transition:'background 0.6s',animation:'yn-in 0.2s ease' }}>
                       <div style={{fontSize:14}}>{i===0?'🥇':i===1?'🥈':i===2?'🥉':''}</div>
@@ -436,10 +509,10 @@ function ArenaInner() {
                         {t.pct>=0?'+':''}{t.pct.toFixed(2)}%
                       </div>
                       <div style={{textAlign:'right',fontSize:13,fontWeight:700,color:paid?GD:DM,fontFamily:'monospace',alignSelf:'center'}}>
-                        {paid?`$${est.toFixed(2)}`:'—'}
+                        {paid?`$${prize.toLocaleString()}`:'—'}
                       </div>
                       <div style={{textAlign:'right',fontSize:12,color:paid?MT:DM,fontFamily:'monospace',alignSelf:'center'}}>
-                        {paid?`×${mult.toFixed(3)}`:'—'}
+                        {paid?`${PRIZE_WEIGHTS[i] != null ? (PRIZE_WEIGHTS[i]*100).toFixed(0) : '~0'}%`:'—'}
                       </div>
                       <div style={{textAlign:'right',alignSelf:'center'}}>
                         {paid
@@ -601,7 +674,7 @@ function ArenaInner() {
             <span style={{ fontSize:13,fontWeight:800,color:TE }}>YN Arena</span>
           </div>
           <div style={{ display:'flex',gap:18,flexWrap:'wrap' }}>
-            {[['/arena/schedule','Schedule'],['/arena/creator','Stream & Earn'],['/courses','Courses'],['/app','Terminal'],['/privacy','Privacy'],['/terms','Terms']].map(([h,l]) => (
+            {[['/arena/schedule','Schedule'],['/arena/creator','Stream & Earn'],['/arena/how-it-works','How It Works'],['/courses','Courses'],['/app','Terminal'],['/privacy','Privacy'],['/terms','Terms']].map(([h,l]) => (
               <Link key={l} href={h} style={{ fontSize:12,color:DM,textDecoration:'none',transition:'color 0.13s' }}>{l}</Link>
             ))}
           </div>

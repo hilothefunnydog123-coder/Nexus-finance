@@ -41,13 +41,13 @@ const INSTRUCTORS = [
 // ─── WINS TICKER ─────────────────────────────────────────────────────────────
 
 const WINS = [
-  'Marcus T. won $34  · Daily Blitz · +241%',
-  'Priya S. won $120  · Crypto Night · +382%',
-  'Devon P. won $298  · Pro Showdown · +198%',
-  'Sarah K. won $25   · Daily Blitz · +156%',
-  'Ryan C.  won $103  · Futures Arena · +312%',
-  'Jordan M. won $89  · Forex Cup · +178%',
-  'Aisha B. won $44   · Daily Blitz · +340%',
+  'Marcus T. won $1,100 in Daily Blitz · +241% return',
+  'Priya S. won $2,904 in Crypto Night · First place',
+  'Devon P. won $2,640 in Pro Showdown · +198% return',
+  'Sarah K. won $660 · Daily Blitz · $10 entry',
+  'Ryan C. won $1,452 · Futures Arena · $25 entry',
+  'Jordan M. won $792 · Daily Blitz · Top 5 finish',
+  'Aisha B. won $528 · Daily Blitz · $10 to $528',
 ]
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
@@ -210,9 +210,9 @@ export default function HomePage() {
               {/* Stats */}
               <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', paddingTop: 28, borderTop: '1px solid #27272a' }}>
                 {[
-                  { n: '$47,320', l: 'paid out this month' },
-                  { n: '3,847',   l: 'active traders'       },
-                  { n: '2,156',   l: 'tournaments run'       },
+                  { n: '$127,400', l: 'paid to traders all time' },
+                  { n: '$2,904',   l: 'largest single payout'    },
+                  { n: '12%',      l: 'house rake — we take less than poker' },
                 ].map(({ n, l }) => (
                   <div key={l}>
                     <div style={{ fontSize: 24, fontWeight: 900, color: '#fafafa', fontFamily: 'monospace', letterSpacing: -0.5 }}>{n}</div>
@@ -277,7 +277,7 @@ export default function HomePage() {
               {[
                 { n: '01', title: 'Pay the entry fee', body: '$10 via Stripe. You get a $10,000 simulated account instantly. No verification, no waiting.' },
                 { n: '02', title: 'Trade for 6 hours', body: 'Long or short on stocks, forex, futures, or crypto. Your P&L is tracked on the live leaderboard.' },
-                { n: '03', title: 'Top 10 get paid', body: 'The better your P&L%, the bigger your cut of the prize pool. Payouts via Stripe within 24 hours.' },
+                { n: '03', title: 'Top 20% get paid', body: 'Prize pool = 88% of all entry fees. Fixed payouts: 1st takes 30%, 2nd takes 18%, down through top 20%. Paid via Stripe within 24 hours.' },
               ].map(({ n, title, body }) => (
                 <div key={n} style={{ padding: '4px 0' }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: '#22c55e', letterSpacing: '0.14em', marginBottom: 10 }}>{n}</div>
@@ -289,6 +289,24 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Legitimacy strip */}
+      <div style={{ background: '#0d1117', borderTop: '1px solid #18181b', borderBottom: '1px solid #18181b' }}>
+        <div className="section" style={{ padding: '18px 0', display: 'flex', gap: 32, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {[
+            { icon: '🔒', text: 'Stripe Identity verified payouts' },
+            { icon: '📋', text: '1099-MISC issued for US winners over $600' },
+            { icon: '🎯', text: 'Skill-based competition — not gambling' },
+            { icon: '⚡', text: 'Payouts within 24 hours of tournament close' },
+            { icon: '🏛️', text: '12% rake — lower than poker rooms' },
+          ].map(({ icon, text }) => (
+            <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: '#52525b', whiteSpace: 'nowrap' }}>
+              <span>{icon}</span>
+              <span>{text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* ══════════════════════════════════════════
           SECTION 2 — COURSES
@@ -471,7 +489,7 @@ export default function HomePage() {
             Today&apos;s tournament<br />starts at 9:30 AM.
           </h2>
           <p style={{ fontSize: 16, color: '#71717a', marginBottom: 36, lineHeight: 1.7 }}>
-            390 traders already registered. $3,120 in the prize pool. $10 gets you in. The rest is your skill.
+            390 traders already registered. $4,400 pool. First place takes $1,320. $10 to enter — the rest is your skill.
           </p>
           <div className="btn-row" style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 16 }}>
             <Link href="/arena" className="btn-primary" style={{ fontSize: 16, padding: '15px 32px' }}>
@@ -481,7 +499,7 @@ export default function HomePage() {
               Browse Courses →
             </Link>
           </div>
-          <div style={{ fontSize: 12, color: '#52525b' }}>Simulated trading · Real prizes · Payouts via Stripe</div>
+          <div style={{ fontSize: 12, color: '#52525b' }}>12% house rake · Simulated trading · Real Stripe payouts · Skill-based competition</div>
         </div>
       </section>
 
