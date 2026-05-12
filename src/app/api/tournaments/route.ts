@@ -35,9 +35,20 @@ function seedLeaderboard(tournamentId: string, count = 20) {
   }).sort((a, b) => b.pnl_percent - a.pnl_percent).map((t, i) => ({ ...t, rank: i + 1 }))
 }
 
+const VALID_ID = /^[a-zA-Z0-9-]{1,50}$/
+const NO_CACHE = { 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': 'https://ynfinance.org' }
+
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('your_supabase')) {
+  console.warn('[tournaments] Supabase not configured — using seeded data')
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
+
+  if (id && !VALID_ID.test(id)) {
+    return NextResponse.json({ error: 'Invalid tournament ID' }, { status: 400, headers: NO_CACHE })
+  }
 
   if (DB) {
     if (id) {

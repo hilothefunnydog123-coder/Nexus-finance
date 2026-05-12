@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Trophy, Clock, Crown, Bot, ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react'
+import { Trophy, Clock, Crown, Bot, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Search, X } from 'lucide-react'
 import TradingViewChart from '@/components/chart/TradingViewChart'
 import { INSTRUMENTS, INSTRUMENT_MAP, calcMargin, calcPnL, type InstrumentType } from '@/lib/instruments'
 import GoLive from '@/components/arena/GoLive'
@@ -13,7 +13,11 @@ const T = {
   bg: '#02030a', surface: '#070c16', raised: '#0c1428', border: '#0f1e38',
   green: '#00ffa3', gold: '#ffcc00', orange: '#ff7700', red: '#ff2244',
   blue: '#0088ff', purple: '#8855ff', text: '#e8eaf0', muted: '#7f93b5', dim: '#4a5e7a',
+  silver: '#c0c0d0', bronze: '#cd7f32',
 }
+
+// Hot instruments (hardcoded popular ones)
+const HOT_INSTRUMENTS = new Set(['NVDA', 'BTC/USD', 'ES'])
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 interface Position {
@@ -81,6 +85,9 @@ export default function TournamentRoom() {
   const [symbol, setSymbol] = useState('AAPL')
   const [interval, setInterval] = useState('5')
 
+  // Instrument search filter
+  const [instSearch, setInstSearch] = useState('')
+
   // Order state
   const [side, setSide] = useState<'long'|'short'>('long')
   const [qty, setQty] = useState('1')
@@ -88,6 +95,7 @@ export default function TournamentRoom() {
   const [slVal, setSlVal] = useState('')
   const [tpVal, setTpVal] = useState('')
   const [msg, setMsg] = useState('')
+  const [orderFlash, setOrderFlash] = useState(false)
 
   // Portfolio
   const [cash, setCash] = useState(10000)
@@ -102,6 +110,9 @@ export default function TournamentRoom() {
   const [tick, setTick] = useState(0)
   const [toast, setToast] = useState<string|null>(null)
   const [lbOpen, setLbOpen] = useState(true)
+  // Track previous ranks to detect changes
+  const prevRanksRef = useRef<Record<string,number>>({})
+  const [flashRows, setFlashRows] = useState<Set<string>>(new Set())
 
   // Live prices
   useEffect(() => {
@@ -163,6 +174,27 @@ export default function TournamentRoom() {
   const inTop10 = userRank<=10
   const projPayout = inTop10 ? +(ENTRY_FEE*(1+Math.abs(pnlPct)/100)).toFixed(2) : 0
 
+  // Count AI traders user is beating
+  const aiTradersBeat = combined.filter(e => e.isAI && e.rank > userRank).length
+
+  // Detect rank changes and flash rows
+  useEffect(() => {
+    const newFlash = new Set<string>()
+    combined.forEach(e => {
+      const prev = prevRanksRef.current[e.name]
+      if (prev !== undefined && e.rank < prev) {
+        newFlash.add(e.name)
+      }
+    })
+    if (newFlash.size > 0) {
+      setFlashRows(newFlash)
+      window.setTimeout(() => setFlashRows(new Set()), 1200)
+    }
+    const rankMap: Record<string,number> = {}
+    combined.forEach(e => { rankMap[e.name] = e.rank })
+    prevRanksRef.current = rankMap
+  }, [tick])
+
   // Order actions
   const placeOrder = useCallback(() => {
     const inst = INSTRUMENT_MAP[symbol]; if(!inst) return
@@ -173,6 +205,9 @@ export default function TournamentRoom() {
     setPositions(p=>[...p,{id:crypto.randomUUID(),symbol,side,quantity:q,entryPrice:price,marginUsed:margin,leverage:lev,openedAt:new Date().toISOString()}])
     setCash(c=>c-margin)
     setMsg(`${side.toUpperCase()} ${q} ${symbol} @ $${price}`)
+    // Flash button green
+    setOrderFlash(true)
+    window.setTimeout(()=>setOrderFlash(false), 500)
     setTimeout(()=>setMsg(''),3000)
   }, [symbol,side,qty,lev,cash,prices])
 
@@ -186,6 +221,23 @@ export default function TournamentRoom() {
     setClosed(c=>[{pnl},...c])
     setMsg(`Closed ${pnl>=0?'+':''}$${pnl.toFixed(2)}`)
     setTimeout(()=>setMsg(''),2500)
+  }, [positions,prices])
+
+  const closeAllPositions = useCallback(() => {
+    let cashBack = 0
+    const newClosed: ClosedTrade[] = []
+    positions.forEach(pos => {
+      const inst = INSTRUMENT_MAP[pos.symbol]; if(!inst) return
+      const exit = prices[pos.symbol]||pos.entryPrice
+      const pnl = calcPnL(inst,pos.side,pos.entryPrice,exit,pos.quantity)
+      cashBack += pos.marginUsed + pnl
+      newClosed.push({pnl})
+    })
+    setPositions([])
+    setCash(c=>c+cashBack)
+    setClosed(c=>[...newClosed,...c])
+    setMsg(`Closed all — ${newClosed.reduce((s,t)=>s+t.pnl,0)>=0?'+':''}$${newClosed.reduce((s,t)=>s+t.pnl,0).toFixed(2)}`)
+    setTimeout(()=>setMsg(''),3000)
   }, [positions,prices])
 
   // ── ACCESS DENIED ──
@@ -206,10 +258,29 @@ export default function TournamentRoom() {
     </div>
   )
 
-  const instList = INSTRUMENTS.filter(i=>i.type===instType)
+  const instList = INSTRUMENTS.filter(i=>i.type===instType && (instSearch==='' || i.symbol.toLowerCase().includes(instSearch.toLowerCase())))
   const currentInst = INSTRUMENT_MAP[symbol]
   const currentPrice = prices[symbol]||(currentInst?.mockBasePrice??0)
   const marginReq = currentInst ? calcMargin(currentInst,currentPrice,parseFloat(qty)||0,lev) : 0
+  const isMarginExceeded = marginReq > cash && marginReq > 0
+
+  // Risk calculator values
+  const entryNum = currentPrice
+  const slNum = parseFloat(slVal) || 0
+  const tpNum = parseFloat(tpVal) || 0
+  const qtyNum = parseFloat(qty) || 0
+  const riskVal = slNum > 0 ? Math.abs(entryNum - slNum) * qtyNum : null
+  const rewardVal = tpNum > 0 ? Math.abs(tpNum - entryNum) * qtyNum : null
+  const rrRatio = riskVal && rewardVal && riskVal > 0 ? (rewardVal / riskVal) : null
+
+  // Rank color helper
+  function rankColor(rank: number): string {
+    if (rank === 1) return T.gold
+    if (rank === 2) return T.silver
+    if (rank === 3) return T.bronze
+    if (rank <= 10) return T.text
+    return T.dim
+  }
 
   return (
     <div style={{background:T.bg,height:'100vh',display:'flex',flexDirection:'column',overflow:'hidden',color:T.text,fontFamily:'Inter,system-ui,sans-serif'}}>
@@ -217,6 +288,8 @@ export default function TournamentRoom() {
         @keyframes yn-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         @keyframes yn-slide{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:translateX(0)}}
         @keyframes yn-pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+        @keyframes yn-gold{0%,100%{box-shadow:0 0 6px ${T.gold}40,0 0 12px ${T.gold}20}50%{box-shadow:0 0 14px ${T.gold}90,0 0 28px ${T.gold}50}}
+        @keyframes yn-rank-up{0%{background:${T.green}30}100%{background:transparent}}
         ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#1a2d4a;border-radius:3px}
       `}</style>
 
@@ -241,18 +314,47 @@ export default function TournamentRoom() {
           <Clock size={10} color={T.orange} /> <Countdown />
         </div>
         <div style={{flex:1}} />
-        {/* Live stats */}
-        {[
-          {l:'Equity',  v:`$${equity.toFixed(0)}`,       c:T.text},
-          {l:'P&L',     v:`${pnlPct>=0?'+':''}${pnlPct.toFixed(2)}%`, c:pnlPct>=0?T.green:T.red},
-          {l:'Rank',    v:`#${userRank}/${combined.length}`, c:userRank<=10?T.gold:T.dim},
-          {l:'Payout',  v:projPayout>0?`$${projPayout}`:'—', c:projPayout>0?T.green:T.dim},
-        ].map(({l,v,c})=>(
-          <div key={l} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:6,padding:'3px 10px',textAlign:'center',flexShrink:0}}>
-            <div style={{fontSize:8,color:T.dim,textTransform:'uppercase',letterSpacing:'0.1em'}}>{l}</div>
-            <div style={{fontSize:12,fontWeight:900,color:c,fontFamily:'monospace'}}>{v}</div>
+
+        {/* ── Equity box ── */}
+        <div style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:6,padding:'3px 10px 0 10px',textAlign:'center',flexShrink:0,position:'relative',overflow:'hidden'}}>
+          <div style={{fontSize:8,color:T.dim,textTransform:'uppercase',letterSpacing:'0.1em'}}>Equity</div>
+          <div style={{fontSize:12,fontWeight:900,color:T.text,fontFamily:'monospace'}}>${equity.toFixed(0)}</div>
+          <div style={{height:2,background:T.text,opacity:0.25,borderRadius:1,marginTop:2}} />
+        </div>
+
+        {/* ── P&L box ── */}
+        <div style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:6,padding:'3px 10px 0 10px',textAlign:'center',flexShrink:0,position:'relative',overflow:'hidden'}}>
+          <div style={{fontSize:8,color:T.dim,textTransform:'uppercase',letterSpacing:'0.1em'}}>P&amp;L</div>
+          <div style={{fontSize:12,fontWeight:900,color:pnlPct>=0?T.green:T.red,fontFamily:'monospace'}}>{pnlPct>=0?'+':''}{pnlPct.toFixed(2)}%</div>
+          <div style={{height:2,background:pnlPct>=0?T.green:T.red,borderRadius:1,marginTop:2}} />
+        </div>
+
+        {/* ── Rank box ── */}
+        <div style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:6,padding:'3px 10px 0 10px',textAlign:'center',flexShrink:0,position:'relative',overflow:'hidden'}}>
+          <div style={{fontSize:8,color:T.dim,textTransform:'uppercase',letterSpacing:'0.1em'}}>Rank</div>
+          <div style={{fontSize:12,fontWeight:900,color:rankColor(userRank),fontFamily:'monospace'}}>
+            {userRank===1?'🥇':userRank===2?'🥈':userRank===3?'🥉':''}#{userRank}/{combined.length}
           </div>
-        ))}
+          <div style={{height:2,background:rankColor(userRank),borderRadius:1,marginTop:2}} />
+        </div>
+
+        {/* ── Payout box — gold glow when top10 + positive ── */}
+        <div style={{
+          background:T.raised,
+          border: inTop10&&pnlPct>0 ? `1px solid ${T.gold}80` : `1px solid ${T.border}`,
+          borderRadius:6,
+          padding:'3px 10px 0 10px',
+          textAlign:'center',
+          flexShrink:0,
+          position:'relative',
+          overflow:'hidden',
+          animation: inTop10&&pnlPct>0 ? 'yn-gold 2.5s ease-in-out infinite' : 'none',
+        }}>
+          <div style={{fontSize:8,color:T.dim,textTransform:'uppercase',letterSpacing:'0.1em'}}>Payout</div>
+          <div style={{fontSize:12,fontWeight:900,color:projPayout>0?T.gold:T.dim,fontFamily:'monospace'}}>{projPayout>0?`$${projPayout}`:'—'}</div>
+          <div style={{height:2,background:projPayout>0?T.gold:T.dim,opacity:0.4,borderRadius:1,marginTop:2}} />
+        </div>
+
         {inTop10&&pnlPct>0&&(
           <div style={{background:`${T.gold}15`,border:`1px solid ${T.gold}40`,borderRadius:6,padding:'3px 10px',fontSize:10,color:T.gold,fontWeight:700,flexShrink:0}}>
             ×{(1+pnlPct/100).toFixed(3)} multiplier
@@ -267,30 +369,71 @@ export default function TournamentRoom() {
         {/* ── INSTRUMENT SIDEBAR (180px) ── */}
         <div style={{width:180,flexShrink:0,background:T.surface,borderRight:`1px solid ${T.border}`,display:'flex',flexDirection:'column',overflow:'hidden'}}>
           {/* Type tabs */}
-          <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',borderBottom:`1px solid ${T.border}`}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
             {(['stock','forex','futures','crypto'] as InstrumentType[]).map(t=>(
-              <button key={t} onClick={()=>{setInstType(t);const f=INSTRUMENTS.find(i=>i.type===t);if(f)setSymbol(f.symbol)}}
+              <button key={t} onClick={()=>{setInstType(t);setInstSearch('');const f=INSTRUMENTS.find(i=>i.type===t);if(f)setSymbol(f.symbol)}}
                 style={{padding:'7px 4px',border:'none',borderBottom:`2px solid ${instType===t?(t==='futures'?T.gold:T.green):'transparent'}`,background:instType===t?T.raised:'transparent',fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'0.06em',color:instType===t?(t==='futures'?T.gold:T.green):T.dim,cursor:'pointer',transition:'all 0.15s'}}>
                 {t==='futures'?'FUT':t==='crypto'?'CRY':t==='forex'?'FX':'STK'}
               </button>
             ))}
           </div>
+
+          {/* Search input */}
+          <div style={{padding:'6px 8px',borderBottom:`1px solid ${T.border}`,flexShrink:0,display:'flex',alignItems:'center',gap:5,background:T.raised}}>
+            <Search size={10} color={T.dim} style={{flexShrink:0}} />
+            <input
+              value={instSearch}
+              onChange={e=>setInstSearch(e.target.value)}
+              placeholder="Search..."
+              style={{
+                flex:1, background:'transparent', border:'none', outline:'none',
+                color:T.text, fontSize:10, fontFamily:'Inter,system-ui,sans-serif',
+              }}
+            />
+            {instSearch&&<button onClick={()=>setInstSearch('')} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'flex',alignItems:'center'}}><X size={9} color={T.dim} /></button>}
+          </div>
+
           {/* Symbol list */}
           <div style={{flex:1,overflowY:'auto'}}>
+            {/* Sticky group header */}
+            <div style={{
+              position:'sticky', top:0, zIndex:2,
+              padding:'4px 10px',
+              background:`linear-gradient(135deg,${T.raised},${T.surface})`,
+              borderBottom:`1px solid ${T.border}`,
+              fontSize:8, fontWeight:900, color:T.muted,
+              textTransform:'uppercase', letterSpacing:'0.14em',
+              display:'flex', alignItems:'center', gap:5,
+            }}>
+              <span style={{
+                display:'inline-block', width:3, height:10, borderRadius:2,
+                background: instType==='futures'?T.gold:instType==='crypto'?T.purple:instType==='forex'?T.blue:T.green,
+                marginRight:2,
+              }} />
+              {instType==='futures'?'FUTURES':instType==='crypto'?'CRYPTO':instType==='forex'?'FOREX':'STOCKS'}
+            </div>
+
             {instList.map(inst=>{
               const p=prices[inst.symbol]||inst.mockBasePrice
               const pct=((p-inst.mockBasePrice)/inst.mockBasePrice)*100
+              const isHot = HOT_INSTRUMENTS.has(inst.symbol)
               return (
                 <div key={inst.symbol} onClick={()=>setSymbol(inst.symbol)}
                   style={{padding:'7px 10px',borderBottom:`1px solid ${T.border}`,cursor:'pointer',background:symbol===inst.symbol?T.raised:'transparent',borderLeft:`2px solid ${symbol===inst.symbol?T.green:'transparent'}`,transition:'all 0.12s'}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{fontSize:11,fontWeight:700,color:symbol===inst.symbol?T.text:T.muted}}>{inst.symbol}</span>
+                    <div style={{display:'flex',alignItems:'center',gap:4}}>
+                      <span style={{fontSize:11,fontWeight:700,color:symbol===inst.symbol?T.text:T.muted}}>{inst.symbol}</span>
+                      {isHot&&<span style={{fontSize:7,fontWeight:800,color:'#ff6600',background:'#ff660018',border:'1px solid #ff660040',borderRadius:4,padding:'1px 4px',letterSpacing:'0.06em'}}>🔥</span>}
+                    </div>
                     <span style={{fontSize:10,fontWeight:700,color:pct>=0?T.green:T.red,fontFamily:'monospace'}}>{pct>=0?'+':''}{pct.toFixed(1)}%</span>
                   </div>
                   <div style={{fontSize:9,color:T.dim,fontFamily:'monospace',marginTop:1}}>${p.toFixed(inst.digits>3?4:2)}</div>
                 </div>
               )
             })}
+            {instList.length===0&&(
+              <div style={{padding:'20px 10px',fontSize:10,color:T.dim,textAlign:'center'}}>No results</div>
+            )}
           </div>
         </div>
 
@@ -317,6 +460,9 @@ export default function TournamentRoom() {
               <span style={{fontSize:10,fontWeight:800,color:T.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>Positions</span>
               <span style={{fontSize:10,color:T.dim}}>{positions.length} open</span>
               <span style={{marginLeft:'auto',fontSize:11,fontWeight:900,color:floatPnL>=0?T.green:T.red,fontFamily:'monospace'}}>{floatPnL>=0?'+':''}${floatPnL.toFixed(2)}</span>
+              {positions.length>1&&(
+                <button onClick={closeAllPositions} style={{fontSize:9,fontWeight:700,color:T.orange,background:`${T.orange}15`,border:`1px solid ${T.orange}30`,borderRadius:5,padding:'2px 8px',cursor:'pointer',marginLeft:4}}>Close All</button>
+              )}
             </div>
             {positions.length===0
               ? <div style={{padding:'20px',fontSize:11,color:T.dim,textAlign:'center'}}>No open positions</div>
@@ -324,16 +470,36 @@ export default function TournamentRoom() {
                   const inst=INSTRUMENT_MAP[pos.symbol]
                   const price=prices[pos.symbol]||pos.entryPrice
                   const pnl=inst?calcPnL(inst,pos.side,pos.entryPrice,price,pos.quantity):0
+                  // Mini P&L bar: pnl as % of margin used, capped at ±100%
+                  const pnlBarPct = pos.marginUsed > 0 ? Math.max(-100, Math.min(100, (pnl/pos.marginUsed)*100)) : 0
+                  const pnlBarWidth = Math.abs(pnlBarPct)
                   return (
-                    <div key={pos.id} style={{display:'grid',gridTemplateColumns:'70px 44px 56px 80px 80px 72px 50px 1fr',padding:'5px 12px',borderBottom:`1px solid ${T.border}`,fontSize:10,alignItems:'center'}}>
-                      <span style={{fontWeight:700,color:T.text}}>{pos.symbol}</span>
-                      <span style={{color:pos.side==='long'?T.green:T.red,fontWeight:700}}>{pos.side.toUpperCase()}</span>
-                      <span style={{color:T.muted,fontFamily:'monospace'}}>{pos.quantity}</span>
-                      <span style={{color:T.dim,fontFamily:'monospace'}}>${pos.entryPrice.toFixed(inst?.digits??2)}</span>
-                      <span style={{color:T.text,fontFamily:'monospace'}}>${price.toFixed(inst?.digits??2)}</span>
-                      <span style={{color:pnl>=0?T.green:T.red,fontFamily:'monospace',fontWeight:700}}>{pnl>=0?'+':''}${pnl.toFixed(2)}</span>
-                      <span style={{color:T.dim}}>×{pos.leverage}</span>
-                      <button onClick={()=>closePos(pos.id)} style={{fontSize:9,color:T.red,background:`${T.red}15`,border:`1px solid ${T.red}30`,borderRadius:4,padding:'2px 7px',cursor:'pointer'}}>Close</button>
+                    <div key={pos.id} style={{borderBottom:`1px solid ${T.border}`}}>
+                      <div style={{display:'grid',gridTemplateColumns:'70px 44px 56px 80px 80px 72px 50px 1fr',padding:'5px 12px 2px 12px',fontSize:10,alignItems:'center'}}>
+                        <span style={{fontWeight:700,color:T.text}}>{pos.symbol}</span>
+                        <span style={{color:pos.side==='long'?T.green:T.red,fontWeight:700}}>{pos.side.toUpperCase()}</span>
+                        <span style={{color:T.muted,fontFamily:'monospace'}}>{pos.quantity}</span>
+                        <span style={{color:T.dim,fontFamily:'monospace'}}>${pos.entryPrice.toFixed(inst?.digits??2)}</span>
+                        <span style={{color:T.text,fontFamily:'monospace'}}>${price.toFixed(inst?.digits??2)}</span>
+                        <span style={{color:pnl>=0?T.green:T.red,fontFamily:'monospace',fontWeight:700}}>{pnl>=0?'+':''}${pnl.toFixed(2)}</span>
+                        <span style={{color:T.dim}}>×{pos.leverage}</span>
+                        <button onClick={()=>closePos(pos.id)} style={{fontSize:9,color:T.red,background:`${T.red}15`,border:`1px solid ${T.red}30`,borderRadius:4,padding:'2px 7px',cursor:'pointer'}}>Close</button>
+                      </div>
+                      {/* Mini P&L bar */}
+                      <div style={{margin:'0 12px 4px 12px',height:3,background:T.raised,borderRadius:2,overflow:'hidden',position:'relative'}}>
+                        <div style={{
+                          position:'absolute',
+                          height:'100%',
+                          width:`${pnlBarWidth}%`,
+                          left: pnlBarPct >= 0 ? '50%' : `${50-pnlBarWidth}%`,
+                          background: pnl >= 0 ? T.green : T.red,
+                          borderRadius:2,
+                          transition:'width 0.6s ease, left 0.6s ease',
+                          opacity:0.85,
+                        }} />
+                        {/* Center tick */}
+                        <div style={{position:'absolute',left:'50%',top:0,width:1,height:'100%',background:T.dim,transform:'translateX(-50%)'}} />
+                      </div>
                     </div>
                   )
                 })
@@ -364,7 +530,7 @@ export default function TournamentRoom() {
                 {currentInst?.type==='forex'?'Lots':currentInst?.type==='futures'?'Contracts':'Shares'}
               </div>
               <input value={qty} onChange={e=>setQty(e.target.value)} type="number"
-                style={{width:'100%',background:T.raised,border:`1px solid ${T.border}`,borderRadius:7,padding:'8px 10px',color:T.text,fontSize:13,fontFamily:'monospace',outline:'none'}}
+                style={{width:'100%',background:T.raised,border:`1px solid ${T.border}`,borderRadius:7,padding:'8px 10px',color:T.text,fontSize:13,fontFamily:'monospace',outline:'none',boxSizing:'border-box'}}
                 onFocus={e=>(e.currentTarget.style.borderColor=T.green)} onBlur={e=>(e.currentTarget.style.borderColor=T.border)} />
             </div>
             {/* Quick qty */}
@@ -389,20 +555,69 @@ export default function TournamentRoom() {
               <div key={label}>
                 <div style={{fontSize:9,color:T.dim,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:4}}>{label}</div>
                 <input value={i===0?slVal:tpVal} onChange={e=>i===0?setSlVal(e.target.value):setTpVal(e.target.value)} type="number" placeholder="Optional"
-                  style={{width:'100%',background:T.raised,border:`1px solid ${i===0?T.red+'30':T.green+'30'}`,borderRadius:7,padding:'7px 10px',color:i===0?T.red:T.green,fontSize:11,fontFamily:'monospace',outline:'none'}} />
+                  style={{width:'100%',background:T.raised,border:`1px solid ${i===0?T.red+'30':T.green+'30'}`,borderRadius:7,padding:'7px 10px',color:i===0?T.red:T.green,fontSize:11,fontFamily:'monospace',outline:'none',boxSizing:'border-box'}} />
               </div>
             ))}
             {/* Margin preview */}
             {marginReq>0&&(
               <div style={{background:T.raised,borderRadius:7,padding:'7px 10px'}}>
                 <div style={{fontSize:9,color:T.dim,marginBottom:3}}>Margin Required</div>
-                <div style={{fontSize:14,fontWeight:900,color:marginReq>cash?T.red:T.text,fontFamily:'monospace'}}>${marginReq.toFixed(2)}</div>
+                <div style={{fontSize:14,fontWeight:900,color:isMarginExceeded?T.red:T.text,fontFamily:'monospace'}}>${marginReq.toFixed(2)}</div>
+                {isMarginExceeded&&<div style={{fontSize:9,color:T.red,marginTop:2}}>Insufficient cash</div>}
               </div>
             )}
             {msg&&<div style={{fontSize:10,color:msg.includes('Need')?T.red:T.green,background:msg.includes('Need')?`${T.red}10`:`${T.green}10`,border:`1px solid ${msg.includes('Need')?T.red:T.green}30`,borderRadius:7,padding:'7px 10px',fontFamily:'monospace'}}>{msg}</div>}
-            <button onClick={placeOrder} style={{width:'100%',padding:'12px',background:`linear-gradient(135deg,${side==='long'?T.green+',#00cc80':T.red+',#cc2233'})`,color:T.bg,border:'none',borderRadius:9,fontSize:13,fontWeight:900,cursor:'pointer',letterSpacing:0.5}}>
-              {side==='long'?'▲ BUY':'▼ SELL'} {symbol}
+
+            {/* Place order button — disabled if margin exceeded */}
+            <button
+              onClick={isMarginExceeded ? undefined : placeOrder}
+              disabled={isMarginExceeded}
+              style={{
+                width:'100%',padding:'12px',
+                background: orderFlash
+                  ? `linear-gradient(135deg,${T.green},#00ee80)`
+                  : isMarginExceeded
+                    ? `${T.dim}40`
+                    : `linear-gradient(135deg,${side==='long'?T.green+',#00cc80':T.red+',#cc2233'})`,
+                color: isMarginExceeded ? T.dim : T.bg,
+                border:'none',borderRadius:9,fontSize:13,fontWeight:900,
+                cursor:isMarginExceeded?'not-allowed':'pointer',
+                letterSpacing:0.5,
+                transition:'background 0.15s',
+                opacity: isMarginExceeded ? 0.5 : 1,
+              }}>
+              {isMarginExceeded ? '✗ Insufficient Margin' : (side==='long'?'▲ BUY':'▼ SELL')+' '+symbol}
             </button>
+
+            {/* Risk Calculator */}
+            {(slNum > 0 || tpNum > 0) && qtyNum > 0 && (
+              <div style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:'8px 10px'}}>
+                <div style={{fontSize:9,fontWeight:800,color:T.muted,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:6}}>Risk Calculator</div>
+                <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                  {riskVal !== null && (
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                      <span style={{fontSize:9,color:T.dim}}>Risk</span>
+                      <span style={{fontSize:11,fontWeight:700,color:T.red,fontFamily:'monospace'}}>${riskVal.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {rewardVal !== null && (
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                      <span style={{fontSize:9,color:T.dim}}>Reward</span>
+                      <span style={{fontSize:11,fontWeight:700,color:T.green,fontFamily:'monospace'}}>${rewardVal.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {rrRatio !== null && (
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',borderTop:`1px solid ${T.border}`,paddingTop:4,marginTop:2}}>
+                      <span style={{fontSize:9,color:T.dim}}>R:R Ratio</span>
+                      <span style={{fontSize:12,fontWeight:900,color:rrRatio>=2?T.green:rrRatio>=1?T.orange:T.red,fontFamily:'monospace'}}>1:{rrRatio.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {(riskVal === null && rewardVal === null) && (
+                    <div style={{fontSize:9,color:T.dim}}>Enter SL and/or TP to calculate</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -412,24 +627,60 @@ export default function TournamentRoom() {
             {lbOpen?<><Crown size={11} color={T.gold}/><span style={{fontSize:10,fontWeight:800,color:T.gold}}>RANKINGS</span><ChevronRight size={10} color={T.dim}/></>:<Crown size={12} color={T.gold}/>}
           </button>
           {lbOpen&&(
-            <div style={{flex:1,overflowY:'auto'}}>
-              {combined.map((e,i)=>(
-                <div key={e.name} style={{display:'flex',alignItems:'center',gap:7,padding:'7px 10px',borderBottom:`1px solid ${T.border}`,background:e.name==='You'?`${T.green}10`:i<3?`${e.color}08`:'transparent',transition:'background 0.5s'}}>
-                  <div style={{fontSize:10,fontWeight:800,color:i===0?T.gold:T.dim,fontFamily:'monospace',width:16,flexShrink:0}}>{i+1}</div>
-                  <div style={{width:24,height:24,borderRadius:6,background:`${e.color}22`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:900,color:e.color,flexShrink:0}}>
-                    {e.isAI?<Bot size={11} color={e.color}/>:e.init}
-                  </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:10,fontWeight:700,color:e.name==='You'?T.green:T.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                      {e.name==='You'?'★ You':e.name}
+            <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column'}}>
+              <div style={{flex:1}}>
+                {combined.map((e,i)=>{
+                  const isFlashing = flashRows.has(e.name)
+                  const leftBorderColor = e.color
+                  return (
+                    <div key={e.name} style={{
+                      display:'flex',alignItems:'center',gap:7,
+                      padding:'7px 10px',
+                      borderBottom:`1px solid ${T.border}`,
+                      borderLeft:`3px solid ${leftBorderColor}`,
+                      background: isFlashing
+                        ? `${T.green}25`
+                        : e.name==='You'
+                          ? `${T.green}10`
+                          : i<3
+                            ? `${e.color}08`
+                            : 'transparent',
+                      transition:'background 0.5s',
+                      animation: isFlashing ? 'yn-rank-up 1.2s ease' : 'none',
+                    }}>
+                      <div style={{fontSize:10,fontWeight:800,color:rankColor(i+1),fontFamily:'monospace',width:16,flexShrink:0}}>{i+1}</div>
+                      <div style={{width:24,height:24,borderRadius:6,background:`${e.color}22`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:900,color:e.color,flexShrink:0}}>
+                        {e.isAI?<Bot size={11} color={e.color}/>:e.init}
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:10,fontWeight:700,color:e.name==='You'?T.green:T.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                          {e.name==='You'?'★ You':e.name}
+                        </div>
+                        {e.isAI&&<div style={{fontSize:7,color:T.purple}}>{e.style}</div>}
+                      </div>
+                      <div style={{fontSize:11,fontWeight:900,color:e.pnlPct>=0?T.green:T.red,fontFamily:'monospace',flexShrink:0}}>
+                        {e.pnlPct>=0?'+':''}{e.pnlPct.toFixed(1)}%
+                      </div>
                     </div>
-                    {e.isAI&&<div style={{fontSize:7,color:T.purple}}>{e.style}</div>}
-                  </div>
-                  <div style={{fontSize:11,fontWeight:900,color:e.pnlPct>=0?T.green:T.red,fontFamily:'monospace',flexShrink:0}}>
-                    {e.pnlPct>=0?'+':''}{e.pnlPct.toFixed(1)}%
-                  </div>
+                  )
+                })}
+              </div>
+              {/* "You are beating X AI traders" footer */}
+              {aiTradersBeat > 0 && (
+                <div style={{
+                  flexShrink:0,
+                  padding:'8px 10px',
+                  borderTop:`1px solid ${T.border}`,
+                  background:`${T.green}08`,
+                  fontSize:10,
+                  color:T.green,
+                  fontWeight:700,
+                  textAlign:'center',
+                  lineHeight:1.4,
+                }}>
+                  You are beating {aiTradersBeat} AI trader{aiTradersBeat>1?'s':''}
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>

@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { NotificationStack } from '@/components/arena/NotificationToast'
 import { Trophy, Users, Zap, Crown, Eye, Radio, ChevronRight, TrendingUp, TrendingDown, Bot, Shield } from 'lucide-react'
 import TradingViewChart from '@/components/chart/TradingViewChart'
 
@@ -123,10 +125,23 @@ function Countdown({ hours }: { hours: number }) {
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default function ArenaPage() {
+  const searchParams = useSearchParams()
   const [board, setBoard] = useState(() => buildBoard(0))
   const [tick, setTick] = useState(0)
   const [viewers, setViewers] = useState(3847)
   const [tab, setTab] = useState<'competition' | 'streams' | 'leaderboard'>('competition')
+  const [successModal, setSuccessModal] = useState<{ tournamentId: string } | null>(null)
+
+  // Show success modal when returning from Stripe
+  useEffect(() => {
+    const entered = searchParams?.get('entered')
+    const session = searchParams?.get('session_id')
+    if (entered && session) {
+      setSuccessModal({ tournamentId: entered })
+      const t = window.setTimeout(() => setSuccessModal(null), 8000)
+      return () => window.clearTimeout(t)
+    }
+  }, [searchParams])
   const [selectedContest, setSelectedContest] = useState(CONTESTS[0])
   const [selectedStream, setSelectedStream] = useState<typeof STREAMS[0] | null>(null)
   const [entering, setEntering] = useState<string | null>(null)
@@ -173,6 +188,44 @@ export default function ArenaPage() {
 
   return (
     <div style={{ background: '#03050a', minHeight: '100vh', color: '#e8eaf0', fontFamily: 'Inter,system-ui,sans-serif', display: 'flex', flexDirection: 'column' }}>
+      <NotificationStack />
+
+      {/* Success modal — shown after Stripe redirect */}
+      {successModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(2,3,10,0.88)', zIndex:9000, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+          <style>{`
+            @keyframes yn-confetti-drop {
+              0%{transform:translateY(-20px) rotate(0deg);opacity:1}
+              100%{transform:translateY(100vh) rotate(720deg);opacity:0}
+            }
+          `}</style>
+          {/* Confetti */}
+          {Array.from({length:20}).map((_,i) => (
+            <div key={i} style={{ position:'fixed', top:0, left:`${5+i*4.5}%`, width:8, height:8, borderRadius:i%3===0?'50%':2, background:['#00ffa3','#ffcc00','#8855ff','#ff7700','#0088ff'][i%5], animation:`yn-confetti-drop ${1.5+i*0.15}s ease-in ${i*0.08}s forwards`, pointerEvents:'none' }} />
+          ))}
+          <div style={{ background:'#070c16', border:'1px solid #0f1e38', borderRadius:20, padding:'36px 40px', maxWidth:440, width:'100%', textAlign:'center', animation:'yn-popin 0.4s cubic-bezier(0.34,1.56,0.64,1)', position:'relative' }}>
+            <div style={{ fontSize:52, marginBottom:16 }}>🎉</div>
+            <div style={{ fontSize:24, fontWeight:900, color:'#fff', marginBottom:8 }}>You&apos;re in!</div>
+            <div style={{ fontSize:14, color:'#7f93b5', marginBottom:24, lineHeight:1.7 }}>
+              You&apos;ve entered the <strong style={{color:'#00ffa3'}}>{successModal.tournamentId.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</strong>.<br />
+              Your $10,000 simulated account is ready. Trade until 4:00 PM ET.
+            </div>
+            <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap' }}>
+              <button onClick={() => { setSuccessModal(null); setTab('competition') }}
+                style={{ padding:'11px 22px', background:'#00ffa320', border:'1px solid #00ffa340', borderRadius:10, color:'#00ffa3', fontWeight:800, fontSize:13, cursor:'pointer' }}>
+                Watch Live Leaderboard
+              </button>
+              <Link href={`/arena/tournament/${successModal.tournamentId}?entered=${successModal.tournamentId}`}
+                onClick={() => { localStorage.setItem(`yn_tournament_${successModal.tournamentId}`,'true'); setSuccessModal(null) }}
+                style={{ padding:'11px 22px', background:'linear-gradient(135deg,#00ffa3,#00cc80)', color:'#02030a', fontWeight:900, fontSize:13, borderRadius:10, textDecoration:'none' }}>
+                ⚡ Enter Trading Room →
+              </Link>
+            </div>
+            <div style={{ fontSize:10, color:'#2a4060', marginTop:16 }}>Auto-closes in 8 seconds</div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         * { box-sizing:border-box }
         @keyframes yn-ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
@@ -253,9 +306,10 @@ export default function ArenaPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Link href="/"        style={{ fontSize: 11, color: '#2a4060', textDecoration: 'none', padding: '5px 10px', border: '1px solid #0d1826', borderRadius: 6 }}>← Home</Link>
-            <Link href="/courses" style={{ fontSize: 11, color: '#4a5e7a', textDecoration: 'none', padding: '5px 10px', border: '1px solid #0d1826', borderRadius: 6 }}>Courses</Link>
-            <Link href="/app"     style={{ fontSize: 11, color: '#4a5e7a', textDecoration: 'none', padding: '5px 10px', border: '1px solid #0d1826', borderRadius: 6 }}>Terminal</Link>
+            <Link href="/"                style={{ fontSize: 11, color: '#2a4060', textDecoration: 'none', padding: '5px 10px', border: '1px solid #0d1826', borderRadius: 6 }}>← Home</Link>
+            <Link href="/arena/schedule"  style={{ fontSize: 11, color: '#4a5e7a', textDecoration: 'none', padding: '5px 10px', border: '1px solid #0d1826', borderRadius: 6 }}>Schedule</Link>
+            <Link href="/arena/creator"   style={{ fontSize: 11, color: '#8855ff', textDecoration: 'none', padding: '5px 10px', border: '1px solid #8855ff30', borderRadius: 6 }}>Stream &amp; Earn</Link>
+            <Link href="/courses"         style={{ fontSize: 11, color: '#4a5e7a', textDecoration: 'none', padding: '5px 10px', border: '1px solid #0d1826', borderRadius: 6 }}>Courses</Link>
             <button onClick={() => enter(selectedContest)} disabled={!!entering}
               style={{ padding: '9px 20px', background: entering?'#0a1020':'linear-gradient(135deg,#00ffa3,#00cc80)', color: '#03050a', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 900, cursor: entering?'not-allowed':'pointer', whiteSpace: 'nowrap', letterSpacing: 0.3 }}>
               {entering ? '...' : `⚡ Enter $${selectedContest.fee}`}

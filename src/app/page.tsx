@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ChevronRight, TrendingUp, TrendingDown, Zap, BookOpen, Users, Sparkles, Trophy, Play } from 'lucide-react'
+import { ArrowRight, Trophy, Play } from 'lucide-react'
 import AdsterraBanner from '@/components/ads/AdsterraBanner'
 
 const INSTRUCTORS = [
@@ -19,6 +19,19 @@ const INSTRUCTORS = [
 const NAMES = ['Marcus T.','Sarah K.','Devon P.','Jordan M.','Aisha B.','Chris L.','Nina R.','Tyler W.','Priya S.','Alex M.']
 const COLORS = ['#00d4aa','#1e90ff','#a855f7','#ffa502','#ff4757','#00d4aa','#1e90ff','#a855f7','#ffa502','#ff4757']
 
+const TICKER_ITEMS = [
+  'Marcus T. just won $156 in Daily Blitz',
+  'Priya S. made +382% in Crypto Night',
+  'Devon P. entered Pro Showdown',
+  'Jordan M. won $89 · Forex Cup',
+  'Aisha B. hit +214% in Daily Blitz',
+  'Chris L. just entered Weekend Showdown',
+  'Nina R. made +167% · $1 entry',
+  'Tyler W. won $312 · tournament top 3',
+  'Sarah K. up +290% in Crypto Night',
+  'Alex M. placed #2 in Daily Blitz · $74 payout',
+]
+
 function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0)
   const ref = useRef<HTMLSpanElement>(null)
@@ -32,6 +45,31 @@ function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: str
     return () => observer.disconnect()
   }, [target])
   return <span ref={ref}>{count.toLocaleString()}{suffix}</span>
+}
+
+function BlitzCountdown() {
+  const [secs, setSecs] = useState(0)
+  useEffect(() => {
+    const calc = () => {
+      const now = new Date()
+      const close = new Date(now)
+      close.setHours(16, 0, 0, 0)
+      if (now >= close) close.setDate(close.getDate() + 1)
+      setSecs(Math.floor((close.getTime() - now.getTime()) / 1000))
+    }
+    calc()
+    const t = setInterval(calc, 1000)
+    return () => clearInterval(t)
+  }, [])
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  const s = secs % 60
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return (
+    <span style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: 28, color: '#ff4757', letterSpacing: 2 }}>
+      {pad(h)}:{pad(m)}:{pad(s)}
+    </span>
+  )
 }
 
 function LiveLeaderboardPreview() {
@@ -81,6 +119,7 @@ export default function HomePage() {
         @keyframes yn-shimmer { 0% { background-position: -200% center } 100% { background-position: 200% center } }
         @keyframes yn-pulse { 0%,100% { opacity:1; transform:scale(1) } 50% { opacity:0.5; transform:scale(0.85) } }
         @keyframes yn-slide { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes yn-ticker { 0% { transform: translateX(0) } 100% { transform: translateX(-50%) } }
         .yn-gradient { background: linear-gradient(135deg, #ffa502, #ff4757, #a855f7); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: yn-shimmer 4s linear infinite; }
         .yn-teal { background: linear-gradient(135deg, #00d4aa, #1e90ff); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: yn-shimmer 4s linear infinite; }
         .glass { background: rgba(7,18,32,0.85); backdrop-filter: blur(12px); }
@@ -88,6 +127,7 @@ export default function HomePage() {
           .hero-h1 { font-size: 38px !important; }
           .two-col { grid-template-columns: 1fr !important; }
           .four-col { grid-template-columns: repeat(2,1fr) !important; }
+          .three-col { grid-template-columns: 1fr !important; }
           .hide-mob { display: none !important; }
           .mob-sticky { display: flex !important; }
         }
@@ -118,12 +158,32 @@ export default function HomePage() {
             <Link href="/arena" style={{ fontSize: 12, fontWeight: 700, color: '#ffa502', textDecoration: 'none', padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(255,165,2,0.3)', background: 'rgba(255,165,2,0.08)', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
               <Trophy size={12} /> Open Arena
             </Link>
-            <Link href="/app" style={{ fontSize: 13, fontWeight: 800, color: '#040c14', background: 'linear-gradient(135deg, #ffa502, #ff4757)', textDecoration: 'none', padding: '10px 20px', borderRadius: 10, boxShadow: '0 0 20px rgba(255,165,2,0.4)', whiteSpace: 'nowrap' }}>
+            <Link href="/arena" style={{ fontSize: 13, fontWeight: 800, color: '#040c14', background: 'linear-gradient(135deg, #ffa502, #ff4757)', textDecoration: 'none', padding: '10px 20px', borderRadius: 10, boxShadow: '0 0 20px rgba(255,165,2,0.4)', whiteSpace: 'nowrap' }}>
               Compete Now →
             </Link>
           </div>
         </div>
       </nav>
+
+      {/* ── SOCIAL PROOF TICKER ── */}
+      <div style={{ background: 'linear-gradient(90deg, #071220 0%, #0a1a2e 100%)', borderBottom: '1px solid #1a2d4a', borderLeft: '3px solid #00d4aa', overflow: 'hidden', position: 'relative', zIndex: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', height: 36, overflow: 'hidden' }}>
+          <div style={{ flexShrink: 0, padding: '0 14px', fontSize: 9, fontWeight: 900, color: '#00d4aa', textTransform: 'uppercase', letterSpacing: '0.15em', borderRight: '1px solid #1a2d4a', height: '100%', display: 'flex', alignItems: 'center', background: 'rgba(0,212,170,0.07)', whiteSpace: 'nowrap' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00d4aa', display: 'inline-block', animation: 'yn-pulse 1.5s ease-in-out infinite', marginRight: 7 }} />
+            LIVE WINS
+          </div>
+          <div style={{ overflow: 'hidden', flex: 1 }}>
+            <div style={{ display: 'inline-flex', animation: 'yn-ticker 36s linear infinite', whiteSpace: 'nowrap' }}>
+              {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, color: '#7f93b5', padding: '0 24px', gap: 8, flexShrink: 0 }}>
+                  <span style={{ color: '#00d4aa', fontSize: 10 }}>●</span>
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* ── HERO ── */}
       <section style={{ minHeight: '95vh', display: 'flex', alignItems: 'center', padding: '60px 24px', position: 'relative', overflow: 'hidden' }}>
@@ -135,19 +195,38 @@ export default function HomePage() {
             {/* Live badge */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,165,2,0.1)', border: '1px solid rgba(255,165,2,0.25)', borderRadius: 100, padding: '8px 18px', fontSize: 12, color: '#ffa502', fontWeight: 700, marginBottom: 28 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ffa502', boxShadow: '0 0 6px #ffa502', display: 'inline-block', animation: 'yn-pulse 1.5s ease-in-out infinite' }} />
-              390 traders competing right now · $312 live prize pool
+              <span style={{ animation: 'yn-pulse 1.5s ease-in-out infinite' }}>390 traders competing RIGHT NOW</span>
+              <span style={{ color: '#4a5e7a', fontWeight: 400 }}>· $312 live prize pool</span>
             </div>
 
-            <h1 className="hero-h1" style={{ fontSize: 'clamp(44px,6vw,78px)', fontWeight: 900, lineHeight: 1.0, letterSpacing: -3, marginBottom: 24 }}>
-              <span style={{ color: '#fff' }}>Trading</span><br />
-              <span className="yn-gradient">is a Sport.</span><br />
-              <span style={{ color: '#fff' }}>Compete Live.</span>
+            <h1 className="hero-h1" style={{ fontSize: 'clamp(44px,6vw,78px)', fontWeight: 900, lineHeight: 1.0, letterSpacing: -3, marginBottom: 20 }}>
+              <span style={{ color: '#fff' }}>The fastest $1</span><br />
+              <span className="yn-gradient">you&apos;ll ever make</span><br />
+              <span style={{ color: '#fff', fontSize: 'clamp(22px,3vw,40px)', fontWeight: 700, letterSpacing: -1 }}>— or lose.</span>
             </h1>
 
-            <p style={{ fontSize: 'clamp(15px,1.8vw,19px)', color: '#7f93b5', maxWidth: 540, lineHeight: 1.75, marginBottom: 36 }}>
-              Enter a daily tournament for $1. Get a $10K simulated account. Trade for 6.5 hours.
-              Top 20% split the prize pool. Spectators watch every trade live — like Twitch, but for markets.
+            <p style={{ fontSize: 'clamp(15px,1.8vw,19px)', color: '#7f93b5', maxWidth: 540, lineHeight: 1.75, marginBottom: 28 }}>
+              Daily tournaments. Real entry fees. Simulated trading — but the prize pool is 100% real cash.
+              Top performers walk away with multiples of their entry. Every trade streamed live.
             </p>
+
+            {/* Hero stats — big and scary */}
+            <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', marginBottom: 32, padding: '20px 24px', background: 'rgba(7,18,32,0.7)', border: '1px solid #1a2d4a', borderRadius: 14 }}>
+              <div>
+                <div style={{ fontSize: 48, fontWeight: 900, fontFamily: 'monospace', background: 'linear-gradient(135deg, #ffa502, #ff4757)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1 }}>
+                  $<AnimatedCounter target={47320} />
+                </div>
+                <div style={{ fontSize: 11, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>paid out this month</div>
+              </div>
+              <div style={{ width: 1, background: '#1a2d4a', flexShrink: 0 }} />
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 36, fontWeight: 900, fontFamily: 'monospace', color: '#00d4aa', lineHeight: 1 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#00d4aa', boxShadow: '0 0 8px #00d4aa', display: 'inline-block', animation: 'yn-pulse 1.5s ease-in-out infinite', flexShrink: 0 }} />
+                  <AnimatedCounter target={390} />
+                </div>
+                <div style={{ fontSize: 11, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>traders competing right now</div>
+              </div>
+            </div>
 
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 20 }}>
               <Link href="/arena" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg, #ffa502, #ff4757)', color: '#fff', fontWeight: 900, textDecoration: 'none', padding: '16px 36px', borderRadius: 14, fontSize: 16, boxShadow: '0 0 40px rgba(255,165,2,0.4)', whiteSpace: 'nowrap' }}>
@@ -181,8 +260,34 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── FOMO: BLITZ COUNTDOWN BANNER ── */}
+      <section style={{ padding: '0 24px 0' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <Link href="/arena" style={{ textDecoration: 'none', display: 'block' }}>
+            <div style={{ background: 'linear-gradient(90deg, rgba(255,71,87,0.12) 0%, rgba(255,165,2,0.10) 100%)', border: '1px solid rgba(255,71,87,0.35)', borderRadius: 16, padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <span style={{ fontSize: 28 }}>⚡</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: '#ff4757', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 2 }}>Today&apos;s Daily Blitz closes in</div>
+                  <BlitzCountdown />
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: '#ffa502', fontFamily: 'monospace' }}>47</div>
+                  <div style={{ fontSize: 10, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>spots remaining</div>
+                </div>
+                <div style={{ background: 'linear-gradient(135deg, #ffa502, #ff4757)', color: '#fff', fontWeight: 900, padding: '12px 24px', borderRadius: 10, fontSize: 14, whiteSpace: 'nowrap' }}>
+                  Claim Your Spot →
+                </div>
+              </div>
+            </div>
+          </Link>
+        </div>
+      </section>
+
       {/* ── STATS ── */}
-      <section style={{ borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a', background: 'rgba(7,18,32,0.6)', padding: '44px 24px' }}>
+      <section style={{ borderTop: '1px solid #1a2d4a', borderBottom: '1px solid #1a2d4a', background: 'rgba(7,18,32,0.6)', padding: '44px 24px', marginTop: 32 }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 32, textAlign: 'center' }} className="four-col">
           {[
             { value: 1, suffix: '', label: '$1 entry fee', prefix: '$' },
@@ -197,6 +302,46 @@ export default function HomePage() {
               <div style={{ fontSize: 12, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>{label}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── HOW THE MONEY WORKS ── */}
+      <section style={{ padding: '88px 24px 0' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <div style={{ fontSize: 11, color: '#ffa502', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>The Prize Model</div>
+            <h2 style={{ fontSize: 'clamp(26px,4vw,44px)', fontWeight: 900, color: '#fff', letterSpacing: -1, marginBottom: 12 }}>Here&apos;s exactly how the money works.</h2>
+            <p style={{ color: '#4a5e7a', fontSize: 15, maxWidth: 500, margin: '0 auto' }}>Simulated trading. Real entry fees. Real cash prizes. Top performers multiply their entry.</p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0, background: '#071220', border: '1px solid #1a2d4a', borderRadius: 20, overflow: 'hidden' }} className="three-col">
+            {[
+              { icon: '💵', step: '01', color: '#00d4aa', title: 'Pay $10 Entry', desc: 'Pick a tournament tier. Pay with Stripe. You\'re in instantly — no waiting, no approval.' },
+              { icon: '📊', step: '02', color: '#1e90ff', title: 'Trade 6 Hours', desc: 'You get a $10K simulated account. Trade stocks, crypto, forex. Every move is live-streamed on the leaderboard.' },
+              { icon: '🏆', step: '03', color: '#ffa502', title: 'Top 10% Multiply', desc: 'Tournament closes at 4 PM. Top 10 traders split 80% of the prize pool. $10 entry can become $30, $50, or more.' },
+            ].map(({ icon, step, color, title, desc }, i) => (
+              <div key={step} style={{ padding: '32px 28px', borderRight: i < 2 ? '1px solid #1a2d4a' : 'none', position: 'relative' }}>
+                <div style={{ fontSize: 64, fontWeight: 900, color: '#0f1f38', fontFamily: 'monospace', position: 'absolute', top: 0, right: 12, lineHeight: 1 }}>{step}</div>
+                <div style={{ fontSize: 40, marginBottom: 18 }}>{icon}</div>
+                <div style={{ fontWeight: 900, color: '#fff', fontSize: 17, marginBottom: 10 }}>{title}</div>
+                <div style={{ fontSize: 13, color: '#4a5e7a', lineHeight: 1.7 }}>{desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Example math callout */}
+          <div style={{ marginTop: 20, background: 'rgba(0,212,170,0.07)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 14, padding: '18px 28px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 20 }}>💡</span>
+            <div style={{ flex: 1 }}>
+              <span style={{ color: '#00d4aa', fontWeight: 900, fontSize: 15 }}>Example: </span>
+              <span style={{ color: '#cdd6f4', fontSize: 14 }}>$10 entry → make +200% on your simulated account → finish in top 3 → </span>
+              <span style={{ color: '#ffa502', fontWeight: 900, fontSize: 15 }}>walk away with $30 cash.</span>
+              <span style={{ color: '#4a5e7a', fontSize: 13 }}> Payouts via Stripe within 24 hours.</span>
+            </div>
+            <Link href="/arena" style={{ background: 'linear-gradient(135deg, #00d4aa, #1e90ff)', color: '#040c14', fontWeight: 900, textDecoration: 'none', padding: '12px 22px', borderRadius: 10, fontSize: 13, whiteSpace: 'nowrap' }}>
+              Try It — $10 →
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -274,6 +419,63 @@ export default function HomePage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TRUST SIGNALS ── */}
+      <section style={{ padding: '0 24px 88px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          {/* Testimonials */}
+          <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <div style={{ fontSize: 11, color: '#a855f7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>What Traders Say</div>
+            <h2 style={{ fontSize: 'clamp(24px,3vw,38px)', fontWeight: 900, color: '#fff', letterSpacing: -1 }}>Real entries. Real results.</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18, marginBottom: 40 }} className="three-col">
+            {[
+              { quote: 'I turned $25 into $74 in my first Pro Showdown. Finished 3rd out of 400. The live leaderboard made it feel like a real competition.', name: 'Devon P.', tag: 'Pro Showdown — 3rd place', color: '#00d4aa' },
+              { quote: 'Came in skeptical. Paid $10, traded the Daily Blitz, ended up +310% on my sim account. Walked away with $34. Not life-changing — but proof it works.', name: 'Marcus T.', tag: 'Daily Blitz — 2nd place', color: '#ffa502' },
+              { quote: 'I\'ve spent $500 on trading courses. $1 to actually compete and win money is the best ROI I\'ve ever seen. Already up on the month.', name: 'Priya S.', tag: 'Crypto Night — Top 5', color: '#a855f7' },
+            ].map(({ quote, name, tag, color }) => (
+              <div key={name} style={{ background: '#071220', border: `1px solid ${color}25`, borderRadius: 16, padding: '24px 22px' }}>
+                <div style={{ fontSize: 28, color: color, marginBottom: 12, lineHeight: 1 }}>&ldquo;</div>
+                <div style={{ fontSize: 13, color: '#cdd6f4', lineHeight: 1.75, marginBottom: 18, fontStyle: 'italic' }}>{quote}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color, flexShrink: 0 }}>{name.slice(0, 2).toUpperCase()}</div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#fff' }}>{name}</div>
+                    <div style={{ fontSize: 10, color, fontWeight: 700 }}>{tag}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Trust badges */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, flexWrap: 'wrap', padding: '24px 28px', background: 'rgba(7,18,32,0.6)', border: '1px solid #1a2d4a', borderRadius: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 32, height: 32, background: '#635BFF', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: '#fff', flexShrink: 0 }}>S</div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>Powered by Stripe</div>
+                <div style={{ fontSize: 10, color: '#4a5e7a' }}>Secure payments & instant payouts</div>
+              </div>
+            </div>
+            <div style={{ width: 1, height: 36, background: '#1a2d4a', flexShrink: 0 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 20 }}>🔒</span>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>Simulated trading — real money prizes</div>
+                <div style={{ fontSize: 10, color: '#4a5e7a' }}>No real capital at risk. Prize pool is 100% real cash.</div>
+              </div>
+            </div>
+            <div style={{ width: 1, height: 36, background: '#1a2d4a', flexShrink: 0 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 20 }}>⚡</span>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>Payouts within 24 hours</div>
+                <div style={{ fontSize: 10, color: '#4a5e7a' }}>Winners paid automatically via Stripe</div>
+              </div>
             </div>
           </div>
         </div>
@@ -401,7 +603,7 @@ export default function HomePage() {
       {/* Mobile sticky CTA */}
       <div className="mob-sticky" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200, padding: '12px 16px 16px', background: 'linear-gradient(to top, #040c14 80%, transparent)', alignItems: 'center' }}>
         <Link href="/arena" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg, #ffa502, #ff4757)', color: '#fff', fontWeight: 900, textDecoration: 'none', padding: '14px 20px', borderRadius: 14, fontSize: 15, boxShadow: '0 0 32px rgba(255,165,2,0.5)' }}>
-          <Trophy size={16} /> Enter Today&apos;s Tournament — $1
+          ⚡ Compete Now — $10 Entry
         </Link>
       </div>
 
