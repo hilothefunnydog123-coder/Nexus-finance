@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Trophy, Clock, Crown, Bot, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Search, X } from 'lucide-react'
@@ -66,7 +66,7 @@ function Countdown() {
 }
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
-export default function TournamentRoom() {
+function TournamentRoomInner() {
   const params = useParams()
   const searchParams = useSearchParams()
   const id = (params?.id as string) || 'daily-blitz'
@@ -686,5 +686,14 @@ export default function TournamentRoom() {
         </div>
       </div>
     </div>
+  )
+}
+
+
+export default function TournamentRoom() {
+  return (
+    <Suspense>
+      <TournamentRoomInner />
+    </Suspense>
   )
 }

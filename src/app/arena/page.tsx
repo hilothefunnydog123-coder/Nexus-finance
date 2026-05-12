@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Trophy, Eye, Zap, ArrowRight, Radio, BarChart2 } from 'lucide-react'
@@ -87,7 +87,7 @@ function Countdown({ h: hours }: { h: number }) {
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
-export default function ArenaPage() {
+function ArenaInner() {
   const sp = useSearchParams()
   const [board, setBoard] = useState(() => buildBoard(0))
   const [tick, setTick] = useState(0)
@@ -609,5 +609,14 @@ export default function ArenaPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+
+export default function ArenaPage() {
+  return (
+    <Suspense>
+      <ArenaInner />
+    </Suspense>
   )
 }
