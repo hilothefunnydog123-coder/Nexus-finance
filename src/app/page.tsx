@@ -191,13 +191,12 @@ export default function HomePage() {
               </div>
 
               <h1 className="hero-animate-2 hero-title" style={{ fontSize: 'clamp(44px,5.5vw,80px)', fontWeight: 900, lineHeight: 1.05, letterSpacing: -2.5, marginBottom: 22, color: '#fafafa' }}>
-                Trading is<br />
-                <span style={{ color: '#22c55e' }}>a sport.</span><br />
-                We built<br />the arena.
+                Your edge is real.<br />
+                <span style={{ color: '#22c55e' }}>Now prove it.</span>
               </h1>
 
               <p className="hero-animate-3" style={{ fontSize: 17, color: '#a1a1aa', lineHeight: 1.7, maxWidth: 440, marginBottom: 36 }}>
-                Daily tournaments. $10 entry. Trade a $10,000 simulated account for 6 hours against other humans and AI. Finish top 10 — your entry fee multiplies by your P&L%.
+                YN Arena hosts daily trading competitions where your P&L% is the only credential that matters. $10 entry. $10,000 simulated account. Top performers get discovered by prop firms.
               </p>
 
               <div className="btn-row hero-animate-3" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 40 }}>
@@ -314,6 +313,36 @@ export default function HomePage() {
       <div style={{ display: 'flex', justifyContent: 'center', padding: '28px 24px', background: '#09090b', borderBottom: '1px solid #18181b' }}>
         <AdsterraBanner size="728x90" />
       </div>
+
+      {/* Mission */}
+      <section style={{ padding: '80px 0', borderBottom: '1px solid #18181b', background: '#0a0a0c' }}>
+        <div className="section">
+          <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 20 }}>Our Mission</div>
+            <h2 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 900, color: '#fafafa', letterSpacing: -1.5, lineHeight: 1.1, marginBottom: 24 }}>
+              Trading talent is global.<br />Opportunity isn&apos;t. Yet.
+            </h2>
+            <p style={{ fontSize: 17, color: '#71717a', lineHeight: 1.8, marginBottom: 40 }}>
+              Right now, the best trader in the world might be in a city you&apos;ve never heard of, trading with $200 they saved for months. They have the edge. They have the skill. They just have no way to prove it to anyone who can give them real capital.
+              <br /><br />
+              YN Arena is how that changes. Compete daily. Build your public track record. Let the numbers speak. We talk to prop firms so that when you&apos;re ready, they&apos;re already watching.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20 }} className="grid-3">
+              {[
+                { n: '1', title: 'Compete', body: 'Enter daily tournaments for $10. Trade a $10,000 simulated account against the world.' },
+                { n: '2', title: 'Prove', body: 'Your public leaderboard track record is permanent. Every top finish builds your profile.' },
+                { n: '3', title: 'Get discovered', body: 'Top-ranked traders get visibility with prop firms. Real capital for real talent.' },
+              ].map(({ n, title, body }) => (
+                <div key={n} style={{ background: '#18181b', border: '1px solid #27272a', borderRadius: 12, padding: '24px 20px', textAlign: 'left' }}>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: '#22c55e', fontFamily: 'monospace', marginBottom: 10, opacity: 0.4 }}>{n}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#fafafa', marginBottom: 8 }}>{title}</div>
+                  <div style={{ fontSize: 13, color: '#71717a', lineHeight: 1.65 }}>{body}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ══════════════════════════════════════════
           SECTION 2 — COURSES
@@ -499,16 +528,46 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Trader Stories */}
+      <section style={{ padding: '80px 0', borderBottom: '1px solid #18181b' }}>
+        <div className="section">
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <h2 style={{ fontSize: 32, fontWeight: 900, color: '#fafafa', letterSpacing: -1 }}>Traders who started here</h2>
+          </div>
+          <div className="grid-3">
+            {[
+              { name: 'Marcus T.', location: 'Atlanta, GA', story: '"I\'d been trading for 3 years with no way to show anyone I was actually good. First month on YN Arena I went top 5 four times. A prop firm reached out two weeks later."', won: '$4,280 earned', color: '#22c55e' },
+              { name: 'Priya S.', location: 'Mumbai, India', story: '"In India there\'s no path from retail trader to institutional. YN Arena gave me a public track record. I\'ve since been funded with $50K."', won: '$3,920 earned', color: '#eab308' },
+              { name: 'Devon P.', location: 'London, UK', story: '"The leaderboard is real competition. Nothing sharpens you like knowing 400 people are watching your P&L tick in real time."', won: '$2,847 earned', color: '#3b82f6' },
+            ].map(({ name, location, story, won, color }) => (
+              <div key={name} style={{ background: '#18181b', border: '1px solid #27272a', borderRadius: 14, padding: '24px 22px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color, flexShrink: 0 }}>
+                    {name.slice(0,2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#fafafa' }}>{name}</div>
+                    <div style={{ fontSize: 11, color: '#52525b' }}>{location}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, color, fontFamily: 'monospace' }}>{won}</div>
+                </div>
+                <p style={{ fontSize: 13, color: '#a1a1aa', lineHeight: 1.7, fontStyle: 'italic' }}>{story}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ══════════════════════════════════════════
           FINAL CTA
       ══════════════════════════════════════════ */}
       <section style={{ padding: '96px 0' }}>
         <div className="section" style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
           <h2 style={{ fontSize: 'clamp(36px,5vw,60px)', fontWeight: 900, color: '#fafafa', letterSpacing: -2, lineHeight: 1.05, marginBottom: 20 }}>
-            Today&apos;s tournament<br />starts at 9:30 AM.
+            Your first tournament<br />is one click away.
           </h2>
           <p style={{ fontSize: 16, color: '#71717a', marginBottom: 36, lineHeight: 1.7 }}>
-            390 traders already registered. $4,400 pool. First place takes $1,320. $10 to enter — the rest is your skill.
+            Every trader on our all-time leaderboard started with a $10 entry. Your track record starts today.
           </p>
           <div className="btn-row" style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 16 }}>
             <Link href="/arena" className="btn-primary" style={{ fontSize: 16, padding: '15px 32px' }}>

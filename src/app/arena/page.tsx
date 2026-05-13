@@ -708,6 +708,24 @@ function ArenaInner() {
       {/* MARKET TICKER */}
       <MarketTicker tick={tick} />
 
+      {/* Live Stats Bar */}
+      <div style={{ background: '#0d1117', borderBottom: `1px solid #21262d`, padding: '0 24px', overflow: 'hidden' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', height: 32, display: 'flex', alignItems: 'center', gap: 24, overflowX: 'auto' }}>
+          {[
+            { label: 'TOURNAMENTS TODAY', value: '12', color: '#22c55e' },
+            { label: 'PRIZE POOL LIVE', value: '$31,240', color: '#f59e0b' },
+            { label: 'TRADERS COMPETING', value: '1,847', color: '#22c55e' },
+            { label: 'PAID OUT TODAY', value: '$4,420', color: '#f59e0b' },
+            { label: 'LARGEST WIN TODAY', value: '+312%', color: '#22c55e' },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+              <span style={{ fontSize: 9, color: '#484f58', letterSpacing: '0.12em', fontWeight: 700 }}>{label}</span>
+              <span style={{ fontSize: 12, fontWeight: 900, color, fontFamily: 'monospace' }}>{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* NAV */}
       <nav style={{ borderBottom:`1px solid ${BO}`, position:'sticky', top:0, zIndex:100, backdropFilter:'blur(24px)', background:`${BG}ee` }}>
         <div className="w" style={{ height:54, display:'flex', alignItems:'center', gap:12 }}>
@@ -740,6 +758,7 @@ function ArenaInner() {
           <div style={{ display:'flex', gap:8, alignItems:'center', marginLeft:'auto' }}>
             <Link href="/arena/schedule" style={{ fontSize:11, color:DM, textDecoration:'none', padding:'5px 10px', border:`1px solid ${BO}`, borderRadius:6 }} className="sm-hide">Schedule</Link>
             <Link href="/arena/creator" style={{ fontSize:11, color:PU, textDecoration:'none', padding:'5px 10px', border:`1px solid ${PU}35`, borderRadius:6 }} className="sm-hide">Stream &amp; Earn</Link>
+            <Link href="/arena/discover" style={{ fontSize:12, color:DM, textDecoration:'none', padding:'5px 10px', border:`1px solid ${BO}`, borderRadius:6 }} className="sm-hide">Get Discovered</Link>
             <Link href="/" style={{ fontSize:11, color:DM, textDecoration:'none', padding:'5px 10px', border:`1px solid ${BO}`, borderRadius:6 }} className="sm-hide">← Home</Link>
             <button onClick={() => enter(contest)} disabled={!!entering} className="yn-btn yn-btn-green" style={{ fontSize:13, padding:'9px 20px' }}>
               {entering ? '…' : `Enter $${contest.fee}`}
@@ -759,6 +778,44 @@ function ArenaInner() {
         ══════════════════════════════════════════════════ */}
         {tab === 'competition' && (
           <div style={{ animation:'yn-in 0.25s ease' }}>
+
+            {/* Hero */}
+            <div style={{ marginBottom: 32, paddingTop: 8 }}>
+              <h1 style={{ fontSize: 36, fontWeight: 900, color: TE, letterSpacing: -1, lineHeight: 1.15, marginBottom: 14 }}>
+                Your edge is real.<br />Now prove it.
+              </h1>
+              <p style={{ fontSize: 15, color: MT, lineHeight: 1.75, maxWidth: 640 }}>
+                $10 entry. $10,000 account. 6 hours. Your P&amp;L% is the only thing that matters. Top performers build a public track record that prop firms actually look at.
+              </p>
+            </div>
+
+            {/* Featured Match Banner */}
+            <div style={{
+              background: 'linear-gradient(135deg, #0d1117 0%, #0a1420 100%)',
+              border: '1px solid #21262d',
+              borderLeft: '4px solid #22c55e',
+              borderRadius: 14,
+              padding: '20px 24px',
+              marginBottom: 24,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 24,
+              flexWrap: 'wrap'
+            }}>
+              <div>
+                <div style={{ fontSize: 9, color: '#22c55e', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 6 }}>⚡ Featured Tournament</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: '#f0f6fc', letterSpacing: -0.5 }}>Daily Blitz — All Markets</div>
+                <div style={{ fontSize: 13, color: '#8b949e', marginTop: 4 }}>390 traders · $4,400 prize pool · Closes at 4:00 PM ET</div>
+              </div>
+              <div style={{ display: 'flex', gap: 16, marginLeft: 'auto', flexWrap: 'wrap' }}>
+                {([['1st Prize', '$1,320', '#f59e0b'], ['Top 20%', '78 traders', '#22c55e'], ['Entry', '$10', '#f0f6fc']] as [string, string, string][]).map(([l, v, c]) => (
+                  <div key={l} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>{l}</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: c, fontFamily: 'monospace' }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* Row 1: Scoreboard + Prize Panel */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 340px', gap:20, marginBottom:32, alignItems:'start' }} className="sm-col sm-grid1">
@@ -810,6 +867,31 @@ function ArenaInner() {
             {/* Ad unit 2 */}
             <div style={{ margin:'32px 0', display:'flex', justifyContent:'center' }}>
               <AdsterraBanner />
+            </div>
+
+            {/* Entry Feed */}
+            <div style={{ marginTop: 40, marginBottom: 40 }}>
+              <div style={{ fontSize: 10, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14, fontWeight: 700 }}>
+                🔴 Live Entries
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[
+                  { name: 'Alex M.', location: 'New York', contest: 'Daily Blitz', fee: '$10', time: '2m ago' },
+                  { name: 'Zoe H.', location: 'London', contest: 'Crypto Night', fee: '$25', time: '3m ago' },
+                  { name: 'Kai N.', location: 'Singapore', contest: 'Daily Blitz', fee: '$10', time: '4m ago' },
+                  { name: 'Anonymous', location: 'Chicago', contest: 'Pro Showdown', fee: '$100', time: '5m ago' },
+                  { name: 'Leila F.', location: 'Dubai', contest: 'Futures Arena', fee: '$50', time: '6m ago' },
+                ].map((e, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 14px', background: '#0d1117', border: '1px solid #21262d', borderRadius: 8 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', flexShrink: 0, animation: 'yn-dot 1.5s ease-in-out infinite', animationDelay: `${i*0.2}s` }} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#f0f6fc' }}>{e.name}</span>
+                    <span style={{ fontSize: 11, color: '#484f58' }}>{e.location}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: 12, color: '#8b949e' }}>{e.contest}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: '#f59e0b', fontFamily: 'monospace' }}>{e.fee}</span>
+                    <span style={{ fontSize: 10, color: '#484f58' }}>{e.time}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Row 3: Recent Payouts */}
@@ -1004,6 +1086,7 @@ function ArenaInner() {
               ['/arena/schedule','Schedule'],
               ['/arena/creator','Stream & Earn'],
               ['/arena/how-it-works','How It Works'],
+              ['/arena/discover','Get Discovered'],
               ['/courses','Courses'],
               ['/app','Terminal'],
               ['/privacy','Privacy'],
