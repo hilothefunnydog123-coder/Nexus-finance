@@ -90,3 +90,63 @@
   .yn-nav-links     { display:none !important; }
   .yn-hero-grid > *:last-child { order:-1; }
 }
+
+/* ── MOBILE BOTTOM BAR SPACING ── */
+/* All arena pages need padding-bottom for the MarketBar */
+body { padding-bottom: 32px; }
+
+/* ── IMPROVED MOBILE NAVIGATION ── */
+@media (max-width: 768px) {
+  /* Tournament room on mobile: stack vertically */
+  .tournament-mobile {
+    flex-direction: column !important;
+    height: auto !important;
+    overflow-y: auto !important;
+  }
+  /* Hide instrument sidebar on mobile */
+  .inst-sidebar { display: none !important; }
+  /* Order panel full width on mobile */
+  .order-panel-mobile { width: 100% !important; }
+  /* Leaderboard panel: hidden by default on mobile, togglable */
+  .lb-panel-mobile { display: none !important; }
+
+  /* MarketBar: scrollable on mobile */
+  .market-bar-scroll { overflow-x: auto; scrollbar-width: none; }
+  .market-bar-scroll::-webkit-scrollbar { display: none; }
+}
+
+/* ── CONTEST GRID RESPONSIVE ── */
+.yn-contest-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 1100px) { .yn-contest-grid { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 680px)  { .yn-contest-grid { grid-template-columns: 1fr; } }
+
+/* ── SCOREBOARD RESPONSIVE ── */
+@media (max-width: 768px) {
+  .board-col-prize   { display: none !important; }
+  .board-col-mult    { display: none !important; }
+  .board-col-medal   { display: none !important; }
+}
+
+/* ── SMOOTH TRANSITIONS ── */
+.pnl-number { transition: color 0.35s ease; }
+.board-row   { transition: background 0.5s ease; }
+.contest-card { transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s; }
+.contest-card:hover { transform: translateY(-2px); }
+
+/* ── LOADING STATES ── */
+@keyframes skeleton { 0%{opacity:0.5} 50%{opacity:1} 100%{opacity:0.5} }
+.skeleton { animation: skeleton 1.5s ease-in-out infinite; background: #161b22; border-radius: 6px; }
+
+/* ── TYPOGRAPHY ── */
+.mono { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; }
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ── FOCUS STYLES ── */
+button:focus-visible, a:focus-visible { outline: 2px solid #22c55e; outline-offset: 2px; }
+
+/* ── PRINT ── */
+@media print { .yn-ticker, .market-bar, nav { display: none !important; } }

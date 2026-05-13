@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Trophy, BookOpen, BarChart2, Zap, TrendingUp } from 'lucide-react'
+import NativeAd from '@/components/ads/NativeAd'
+import AdsterraBanner from '@/components/ads/AdsterraBanner'
 
 // ─── LIVE BOARD (mini demo in hero) ──────────────────────────────────────────
 
@@ -308,6 +310,11 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* ── ADSTERRA BANNER (hero → courses) ── */}
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '28px 24px', background: '#09090b', borderBottom: '1px solid #18181b' }}>
+        <AdsterraBanner size="728x90" />
+      </div>
+
       {/* ══════════════════════════════════════════
           SECTION 2 — COURSES
       ══════════════════════════════════════════ */}
@@ -338,6 +345,11 @@ export default function HomePage() {
                 </div>
               </Link>
             ))}
+          </div>
+
+          {/* Native Ad — Prop Firm */}
+          <div style={{ marginBottom: 24 }}>
+            <NativeAd variant="prop-firm" size="md" />
           </div>
 
           {/* Bottom CTA */}
@@ -445,6 +457,13 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── NATIVE AD — Broker (after terminal) ── */}
+      <div style={{ padding: '0 24px 40px', maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ maxWidth: 680 }}>
+          <NativeAd variant="broker" size="md" />
+        </div>
+      </div>
 
       {/* ══════════════════════════════════════════
           SECTION 4 — FOUNDERS
