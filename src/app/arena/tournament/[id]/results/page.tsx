@@ -16,7 +16,7 @@ const T = {
 
 // ─── FAKE DATA ────────────────────────────────────────────────────────────────
 const USER_NAME   = 'Alex R.'
-const USER_RANK   = 3
+const USER_RANK: number = 3
 const USER_TOTAL  = 390
 const USER_PNL    = 18.4
 const USER_PAYOUT = 132
