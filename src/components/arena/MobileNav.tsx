@@ -6,10 +6,9 @@ interface MobileNavProps {
 }
 
 const TABS = [
-  { id: 'arena',   label: 'Arena',   icon: '🏆' },
-  { id: 'trade',   label: 'Trade',   icon: '📊' },
-  { id: 'streams', label: 'Streams', icon: '📺' },
-  { id: 'board',   label: 'Board',   icon: '🏅' },
+  { id: 'competition', label: 'Compete', icon: '🏆' },
+  { id: 'streams',     label: 'Streams', icon: '📺' },
+  { id: 'leaderboard', label: 'Board',  icon: '🏅' },
 ]
 
 export default function MobileNav({ activeTab, onChange }: MobileNavProps) {

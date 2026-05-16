@@ -26,3 +26,8 @@
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Daily Intelligence pre-market cache warming cron
+# Runs Mon–Fri at 08:30 AM ET (12:30 UTC)
+[functions."daily-intel-cron"]
+  schedule = "30 12 * * 1-5"
