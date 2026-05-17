@@ -202,6 +202,7 @@ export default function PerformancePage() {
           <Link href="/ai-stocks" className="nav-link">AI Analyzer</Link>
           <Link href="/daily"     className="nav-link">Daily Intel</Link>
           <Link href="/courses"   className="nav-link">Courses</Link>
+          <Link href="/app"       className="nav-link">Terminal</Link>
         </div>
         <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:10 }}>
           <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'#00d4aa', background:'rgba(0,212,170,.1)', border:'1px solid rgba(0,212,170,.2)', borderRadius:20, padding:'5px 14px' }}>
