@@ -388,9 +388,49 @@ export default function AIStocksPage() {
   const [cursorY,setCursorY]     = useState(-100)
   const [account,setAccount]     = useState('10000')
   const [riskPct,setRiskPct]     = useState('1')
-  const [timeframe,setTimeframe] = useState('3M')
+  const [timeframe,setTimeframe]   = useState('3M')
+  const [showPaywall,setShowPaywall] = useState(false)
+  const [isPro,setIsPro]           = useState(false)
+  const [freeUsed,setFreeUsed]     = useState(0)
+  const [pwEmail,setPwEmail]       = useState('')
+  const [pwLoading,setPwLoading]   = useState(false)
   const intervalRef = useRef<NodeJS.Timeout|null>(null)
   const resultsRef  = useRef<HTMLDivElement>(null)
+  const FREE_LIMIT  = 3
+
+  // Load usage from localStorage + check for pro activation
+  useEffect(() => {
+    const month = new Date().toISOString().slice(0,7)
+    const stored = JSON.parse(localStorage.getItem('yn_usage') ?? '{}')
+    if (stored.month !== month) {
+      localStorage.setItem('yn_usage', JSON.stringify({ month, count: 0 }))
+      setFreeUsed(0)
+    } else {
+      setFreeUsed(stored.count ?? 0)
+    }
+    // Check if pro (cookie set after Stripe payment or URL param)
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('pro') === '1' || document.cookie.includes('yn-sub-id')) {
+      setIsPro(true)
+      if (params.get('pro') === '1') {
+        window.history.replaceState({}, '', '/ai-stocks')
+      }
+    }
+  }, [])
+
+  async function handlePaywall() {
+    if (!pwEmail.includes('@')) return
+    setPwLoading(true)
+    try {
+      const r = await fetch('/api/stripe/analyzer/checkout', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email: pwEmail }),
+      })
+      const d = await r.json()
+      if (d.demo) { alert('Stripe not configured yet — add keys to Netlify env vars'); setPwLoading(false); return }
+      if (d.url) window.location.href = d.url
+    } catch { setPwLoading(false) }
+  }
 
   // Smooth cursor
   useEffect(() => {
@@ -403,6 +443,15 @@ export default function AIStocksPage() {
 
   const analyze = useCallback(async (sym:string) => {
     const t=sym.trim().toUpperCase(); if(!t) return
+
+    // Check free limit
+    if (!isPro) {
+      const month   = new Date().toISOString().slice(0,7)
+      const stored  = JSON.parse(localStorage.getItem('yn_usage') ?? '{}')
+      const count   = stored.month === month ? (stored.count ?? 0) : 0
+      if (count >= FREE_LIMIT) { setShowPaywall(true); return }
+    }
+
     setInput(t); setLoading(true); setResult(null); setError('')
     let idx=0; intervalRef.current=setInterval(()=>{idx=(idx+1)%AGENTS.length;setAgentIdx(idx)},900)
     try {
@@ -410,10 +459,31 @@ export default function AIStocksPage() {
       const d=await r.json()
       if(!r.ok||d.error){setError(d.error||'Analysis failed');return}
       setResult(d)
+
+      // Increment usage
+      if (!isPro) {
+        const month  = new Date().toISOString().slice(0,7)
+        const stored = JSON.parse(localStorage.getItem('yn_usage') ?? '{}')
+        const count  = stored.month === month ? (stored.count ?? 0) + 1 : 1
+        localStorage.setItem('yn_usage', JSON.stringify({ month, count }))
+        setFreeUsed(count)
+      }
+
+      // Log to track record (fire and forget)
+      const a = d.analysis
+      fetch('/api/ai-calls', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          ticker: t, rating: a.rating, price_at_analysis: d.price,
+          price_target: a.price_target, stop_loss: a.stop_loss,
+          take_profit_1: a.take_profit_1, confidence: a.confidence,
+        }),
+      }).catch(()=>{})
+
       setTimeout(()=>resultsRef.current?.scrollIntoView({behavior:'smooth',block:'start'}),100)
     } catch {setError('Network error.')}
     finally {if(intervalRef.current)clearInterval(intervalRef.current);setLoading(false)}
-  },[timeframe])
+  },[timeframe, isPro])
 
   const a     = result?.analysis
   const rCfg  = RATING_CFG[a?.rating??''] ?? RATING_CFG['Hold']
@@ -543,7 +613,30 @@ export default function AIStocksPage() {
             <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
               {POPULAR.map(s=><button key={s} className="chip" onClick={()=>analyze(s)}>{s}</button>)}
             </div>
-            <div style={{fontSize:10,color:'#1a4a2a',letterSpacing:'1px'}}>// ANALYSIS TAKES ~15 SECONDS · MODEL: NANO-BANANA-PRO</div>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
+              <div style={{fontSize:10,color:'#1a4a2a',letterSpacing:'1px'}}>// ANALYSIS TAKES ~15 SECONDS · GEMINI AI</div>
+              {!isPro && (
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <div style={{display:'flex',gap:4}}>
+                    {[0,1,2].map(i=>(
+                      <div key={i} style={{width:10,height:10,borderRadius:'50%',background:i<freeUsed?'#00ff88':'#1a4a2a',border:`1px solid ${i<freeUsed?'#00ff88':'#00ff8830'}`,boxShadow:i<freeUsed?'0 0 6px #00ff88':'none',transition:'all .3s'}}/>
+                    ))}
+                  </div>
+                  <span style={{fontSize:10,color:freeUsed>=FREE_LIMIT?'#ff2d78':'#4a7a6a',letterSpacing:'.5px'}}>
+                    {freeUsed >= FREE_LIMIT ? 'LIMIT REACHED' : `${FREE_LIMIT - freeUsed} FREE LEFT`}
+                  </span>
+                  {freeUsed >= FREE_LIMIT && (
+                    <button onClick={()=>setShowPaywall(true)} style={{fontSize:10,color:'#00ff88',background:'#00ff8815',border:'1px solid #00ff8840',borderRadius:2,padding:'3px 10px',cursor:'pointer',fontFamily:'inherit',fontWeight:700,letterSpacing:'1px'}}>
+                      UPGRADE $19/mo
+                    </button>
+                  )}
+                </div>
+              )}
+              {isPro && <div style={{fontSize:10,color:'#00ff88',letterSpacing:'.5px'}}>✓ PRO · UNLIMITED</div>}
+            </div>
+            <Link href="/performance" style={{fontSize:10,color:'#4a7a6a',letterSpacing:'1px',textDecoration:'none',transition:'color .2s'}} onMouseEnter={e=>(e.currentTarget.style.color='#00ff88')} onMouseLeave={e=>(e.currentTarget.style.color='#4a7a6a')}>
+              → VIEW AI TRACK RECORD
+            </Link>
           </div>
 
           {/* RIGHT: Radar */}
@@ -866,6 +959,62 @@ export default function AIStocksPage() {
       <div style={{textAlign:'center',padding:'20px',borderTop:'1px solid #00ff8810',fontSize:9,color:'#1a4a2a',position:'relative',zIndex:2,letterSpacing:'2px',background:'rgba(3,10,6,.9)',backdropFilter:'blur(12px)'}}>
         // NOT FINANCIAL ADVICE · EDUCATIONAL PURPOSES ONLY · ALWAYS DYOR
       </div>
+
+      {/* ══ PAYWALL MODAL ══════════════════════════════════════════════════════ */}
+      {showPaywall && (
+        <div style={{position:'fixed',inset:0,zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(3,10,6,.92)',backdropFilter:'blur(20px)'}}
+          onClick={e=>{if(e.target===e.currentTarget)setShowPaywall(false)}}>
+          <div style={{background:'#030a06',border:'1px solid #00ff8840',borderRadius:4,padding:'40px',maxWidth:480,width:'90%',position:'relative',overflow:'hidden'}}>
+            {/* Top glow bar */}
+            <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:'linear-gradient(90deg,#00ff88,#00d4ff,#a855f7)'}}/>
+
+            <button onClick={()=>setShowPaywall(false)} style={{position:'absolute',top:16,right:16,background:'transparent',border:'none',color:'#4a7a6a',fontSize:18,cursor:'pointer',fontFamily:'inherit'}}>✕</button>
+
+            <div style={{fontSize:9,color:'#4a7a6a',letterSpacing:'3px',marginBottom:16}}>// FREE_LIMIT_REACHED</div>
+            <h2 style={{fontSize:28,fontWeight:900,letterSpacing:'-1px',color:'#00ff88',textShadow:'0 0 30px #00ff88',marginBottom:8}}>
+              Upgrade to YN Pro
+            </h2>
+            <p style={{fontSize:13,color:'#4a7a6a',lineHeight:1.7,marginBottom:24}}>
+              You&apos;ve used your 3 free analyses this month. Get unlimited AI analyses, the full track record, and every future feature we ship.
+            </p>
+
+            {/* Features */}
+            <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:28}}>
+              {[
+                '∞  Unlimited AI stock analyses',
+                '📊  Full 5-agent research every time',
+                '📈  Candlestick chart with annotated levels',
+                '🎯  Options play · position sizing · catalysts',
+                '📋  Access to AI track record dashboard',
+                '⚡  Every new feature we ship, forever',
+              ].map(f=>(
+                <div key={f} style={{display:'flex',alignItems:'center',gap:10,fontSize:12,color:'#a0ffcc',letterSpacing:'.3px'}}>
+                  <span>{f}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Price */}
+            <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:24}}>
+              <span style={{fontSize:40,fontWeight:900,color:'#00ff88',fontFamily:'monospace',textShadow:'0 0 20px #00ff88'}}>$19</span>
+              <span style={{fontSize:14,color:'#4a7a6a'}}>/month · cancel anytime</span>
+            </div>
+
+            {/* Email + CTA */}
+            <div style={{display:'flex',gap:0,marginBottom:12}}>
+              <input value={pwEmail} onChange={e=>setPwEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handlePaywall()}
+                placeholder="your@email.com" style={{flex:1,background:'rgba(0,20,10,.9)',border:'1px solid #00ff8840',borderRight:'none',borderRadius:'2px 0 0 2px',padding:'13px 16px',color:'#00ff88',fontSize:13,fontFamily:'monospace',outline:'none',letterSpacing:'.5px'}}/>
+              <button onClick={handlePaywall} disabled={pwLoading}
+                style={{background:pwLoading?'#1a4a2a':'#00ff88',border:'none',borderRadius:'0 2px 2px 0',padding:'13px 22px',color:'#030a06',fontWeight:900,fontSize:12,cursor:pwLoading?'not-allowed':'pointer',fontFamily:'inherit',letterSpacing:'1px',whiteSpace:'nowrap'}}>
+                {pwLoading ? '...' : 'GO PRO →'}
+              </button>
+            </div>
+            <div style={{fontSize:10,color:'#1a4a2a',letterSpacing:'.5px',textAlign:'center'}}>
+              Secure payment via Stripe · Instant access · No commitment
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
