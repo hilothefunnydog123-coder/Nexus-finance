@@ -12,11 +12,21 @@ async function fhFetch(path: string) {
 }
 
 function extractJson(raw: string): object {
-  const s = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+  const s     = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
   const start = s.indexOf('{')
-  const end   = s.lastIndexOf('}')
-  if (start === -1 || end === -1) throw new Error('No JSON object found in response')
-  return JSON.parse(s.slice(start, end + 1))
+  if (start === -1) throw new Error('No JSON object found in response')
+  // Walk forward tracking depth so extra text after the object is ignored
+  let depth = 0, inStr = false, esc = false
+  for (let i = start; i < s.length; i++) {
+    const c = s[i]
+    if (esc)              { esc = false; continue }
+    if (c === '\\' && inStr) { esc = true;  continue }
+    if (c === '"')        { inStr = !inStr; continue }
+    if (inStr)            continue
+    if (c === '{')        depth++
+    if (c === '}')        { depth--; if (depth === 0) return JSON.parse(s.slice(start, i + 1)) }
+  }
+  throw new Error('Unbalanced JSON in response')
 }
 
 export async function POST(req: NextRequest) {
