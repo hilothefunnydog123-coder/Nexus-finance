@@ -12,21 +12,36 @@ async function fh<T>(path: string, fallback: T): Promise<T> {
 }
 
 async function gemini(prompt: string): Promise<string> {
-  const key = GM || 'AIzaSyACZjdcSbccKMVF-aYhW-XN5C_w-_gSrj8'
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 2048 },
-      }),
-    }
-  )
-  if (!r.ok) throw new Error(`Gemini ${r.status}`)
-  const d = await r.json()
-  return d.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}'
+  const key = GM || 'AIzaSyD2nxZxQBe03_BVXfQYO7UmMQEgzIQ_S-g'
+  // Try 1.5-pro first (reliable), fall back to 1.5-flash
+  for (const model of ['gemini-1.5-pro', 'gemini-1.5-flash']) {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
+        }),
+      }
+    )
+    if (!r.ok) continue
+    const d = await r.json()
+    const text = d.candidates?.[0]?.content?.parts?.[0]?.text
+    if (text) return text
+  }
+  throw new Error('Gemini unavailable')
+}
+
+function extractJson(raw: string): string {
+  // Strip markdown code fences
+  let s = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+  // Extract the first { ... } block in case of extra text
+  const start = s.indexOf('{')
+  const end   = s.lastIndexOf('}')
+  if (start !== -1 && end !== -1) s = s.slice(start, end + 1)
+  return s
 }
 
 export async function POST(req: NextRequest) {
@@ -112,9 +127,8 @@ Return this exact JSON:
   }
 }`
 
-    const raw  = await gemini(prompt)
-    const json = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-    const analysis = JSON.parse(json)
+    const raw      = await gemini(prompt)
+    const analysis = JSON.parse(extractJson(raw))
 
     // Compute options specifics from the AI recommendation
     const strikeDir = analysis.options?.type === 'PUT' ? -1 : 1
@@ -147,8 +161,9 @@ Return this exact JSON:
       },
     })
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Analysis failed. Try again.' }, { status: 500 })
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('[stock-analyzer]', msg)
+    return NextResponse.json({ error: `Analysis failed: ${msg}` }, { status: 500 })
   }
 }
 
