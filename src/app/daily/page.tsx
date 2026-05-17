@@ -131,8 +131,7 @@ function DailyInner() {
       .finally(() => setLoading(false))
   }, [checking, activating, subscribed])
 
-  const show = subscribed || demo
-  if (!checking && !activating && !show && !loading) return <Paywall />
+  const show = true
 
   const sc   = SENT_CLR[intel?.sentiment ?? 'NEUTRAL']
   const now  = new Date()

@@ -141,14 +141,18 @@ export default function HomePage() {
           </Link>
 
           <div style={{ display: 'flex', gap: 24, marginLeft: 8 }} className="hide-sm">
-            <Link href="/daily"   className="nav-link">Daily Intelligence</Link>
-            <Link href="/courses" className="nav-link">Courses</Link>
+            <Link href="/daily"      className="nav-link">Daily Intel</Link>
+            <Link href="/ai-stocks"  className="nav-link">AI Analyzer</Link>
+            <Link href="/courses"    className="nav-link">Courses</Link>
+            <Link href="/arena"      className="nav-link">Arena</Link>
           </div>
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-            <Link href="/courses" className="ghost-btn" style={{ fontSize: 13, padding: '7px 16px' }}>Courses — $0.99</Link>
-            <Link href="/daily/subscribe" style={{ background: 'linear-gradient(135deg,#00d4aa,#0ea5e9)', color: '#040d14', fontWeight: 800, fontSize: 13, padding: '8px 18px', borderRadius: 7, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              Get Daily Intelligence →
+            <Link href="/ai-stocks" style={{ background: 'linear-gradient(135deg,#a855f7,#3b8eea)', color: '#fff', fontWeight: 800, fontSize: 13, padding: '8px 18px', borderRadius: 7, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              AI Stock Analyzer →
+            </Link>
+            <Link href="/app" style={{ background: 'linear-gradient(135deg,#00d4aa,#0ea5e9)', color: '#040d14', fontWeight: 800, fontSize: 13, padding: '8px 18px', borderRadius: 7, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              Launch App →
             </Link>
           </div>
         </div>
