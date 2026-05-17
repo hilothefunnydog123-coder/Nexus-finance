@@ -413,7 +413,7 @@ export default function AIStocksPage() {
       setTimeout(()=>resultsRef.current?.scrollIntoView({behavior:'smooth',block:'start'}),100)
     } catch {setError('Network error.')}
     finally {if(intervalRef.current)clearInterval(intervalRef.current);setLoading(false)}
-  },[])
+  },[timeframe])
 
   const a     = result?.analysis
   const rCfg  = RATING_CFG[a?.rating??''] ?? RATING_CFG['Hold']

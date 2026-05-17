@@ -29,8 +29,9 @@ function extractJson(raw: string): Record<string, unknown> {
 }
 
 async function callGemini(prompt: string): Promise<string> {
-  // Try nano-banana first (fast + creative), fall back to 2.0-flash
+  // nano-banana first, gemini-2.0-flash as fallback
   const models = ['nano-banana-pro-preview', 'gemini-2.0-flash']
+  let lastErr = ''
   for (const model of models) {
     try {
       const r = await fetch(
@@ -40,17 +41,18 @@ async function callGemini(prompt: string): Promise<string> {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.8, maxOutputTokens: 2500 },
+            generationConfig: { temperature: 0.7, maxOutputTokens: 2000 },
           }),
         }
       )
-      if (!r.ok) continue
-      const d = await r.json()
+      if (!r.ok) { lastErr = `${model} ${r.status}`; continue }
+      const d    = await r.json()
       const text = d?.candidates?.[0]?.content?.parts?.[0]?.text
       if (text) return text
-    } catch { continue }
+      lastErr = `${model} returned empty`
+    } catch (e) { lastErr = String(e); continue }
   }
-  throw new Error('All Gemini models failed')
+  throw new Error(`Gemini unavailable: ${lastErr}`)
 }
 
 export async function POST(req: NextRequest) {
@@ -68,12 +70,17 @@ export async function POST(req: NextRequest) {
     const todayStr = today.toISOString().split('T')[0]
     const weekAgo  = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
 
-    const [quote, profile, news, recommend, candles] = await Promise.all([
+    // Core data in parallel, candles separately (non-blocking if slow)
+    const [quote, profile, news, recommend] = await Promise.all([
       fhFetch(`/quote?symbol=${sym}`),
       fhFetch(`/stock/profile2?symbol=${sym}`),
       fhFetch(`/company-news?symbol=${sym}&from=${weekAgo}&to=${todayStr}`),
       fhFetch(`/stock/recommendation?symbol=${sym}`),
+    ])
+    // Candles with a separate timeout so they don't block the AI call
+    const candles = await Promise.race([
       fhFetch(`/stock/candle?symbol=${sym}&resolution=D&from=${frUnix}&to=${toUnix}`),
+      new Promise(r => setTimeout(() => r(null), 5000)),
     ])
 
     const price    = Number(quote?.c  ?? 0)
