@@ -26,7 +26,7 @@ async function gemini(prompt: string): Promise<string> {
   if (!GM) return '{}'
   // Use Pro for highest quality analysis
   const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GM}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GM}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -51,7 +51,7 @@ async function gemini(prompt: string): Promise<string> {
   // Fallback to flash if pro quota exceeded
   if (json.error?.status === 'RESOURCE_EXHAUSTED' || json.error?.code === 429) {
     const r2 = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GM}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GM}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -43,7 +43,7 @@ Return JSON array (${picks.length} objects):
 Rules: entry must be close to real current price, use min 1.5:1 R:R, short if price is falling, long if rising.`
 
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 900, temperature: 0.3 } }) }
     )
     const geminiJson = await geminiRes.json()
