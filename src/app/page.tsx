@@ -7,9 +7,42 @@ import dynamic from 'next/dynamic'
 const ThreeScene = dynamic(() => import('@/components/ThreeScene'), { ssr: false })
 
 const FOUNDERS = [
-  { name: 'Neil Gilani',    role: 'CEO & Co-Founder',  clr: '#00d4aa', grad: 'linear-gradient(135deg,#00d4aa,#3b8eea)', init: 'NG', quote: '"The edge isn\'t the chart. It\'s knowing what to look for before the open."', bio: 'Built the entire YN Finance platform — market data pipeline, AI systems, and the Daily Intelligence product.' },
-  { name: 'Yannai Richter', role: 'CTO & Co-Founder',  clr: '#1e90ff', grad: 'linear-gradient(135deg,#1e90ff,#a855f7)', init: 'YR', quote: '"Every serious investor spends 2 hours on research before 9:30. We do that in one page."', bio: 'Co-built the YN stack and owns growth — ad strategy, creator outreach, and platform distribution.' },
-  { name: 'Arjun Bhattula', role: 'COO & Co-Founder',  clr: '#a855f7', grad: 'linear-gradient(135deg,#a855f7,#ec4899)', init: 'AB', quote: '"Wall Street has always had this data. Now Main Street does too."', bio: 'Runs every partnership and instructor relationship. Personally brought nine world-class educators onto the platform.' },
+  {
+    name: 'Neil Gilani', role: 'CEO & Co-Founder', clr: '#00d4aa',
+    grad: 'linear-gradient(135deg,#00d4aa,#3b8eea)', init: 'NG',
+    quote: '"The edge isn\'t the chart. It\'s knowing what to look for before the open."',
+    bio: 'Built every line of the YN Finance platform from scratch — the AI pipeline, real-time data infrastructure, Daily Intelligence product, and the multi-agent stock analyzer. If it runs, Neil built it.',
+    focus: 'AI Systems · Market Data · Full-Stack Engineering',
+    tags: ['Next.js', 'Gemini AI', 'Finnhub', 'Supabase', 'Three.js'],
+    skills: [{ label:'AI/ML Engineering', pct:96 },{ label:'Full-Stack Dev', pct:94 },{ label:'Market Data Systems', pct:90 }],
+    stat1: { n:'13', label:'AI features shipped' },
+    stat2: { n:'100K+', label:'Lines of code written' },
+    twitter: 'https://twitter.com',
+  },
+  {
+    name: 'Yannai Richter', role: 'CTO & Co-Founder', clr: '#1e90ff',
+    grad: 'linear-gradient(135deg,#1e90ff,#a855f7)', init: 'YR',
+    quote: '"Every serious investor spends 2 hours on research before 9:30. We built a platform that does it in 15 seconds."',
+    bio: 'Co-architected the YN tech stack and leads growth strategy — from paid acquisition and creator partnerships to the brand identity behind ynfinance.org. Bridges product vision with real-world distribution.',
+    focus: 'Growth Strategy · Brand · Platform Architecture',
+    tags: ['Growth', 'TypeScript', 'Branding', 'Stripe', 'Analytics'],
+    skills: [{ label:'Growth Engineering', pct:93 },{ label:'Platform Architecture', pct:88 },{ label:'Brand Strategy', pct:91 }],
+    stat1: { n:'3x', label:'User growth this quarter' },
+    stat2: { n:'$0', label:'Paid acquisition spend' },
+    twitter: 'https://twitter.com',
+  },
+  {
+    name: 'Arjun Bhattula', role: 'COO & Co-Founder', clr: '#a855f7',
+    grad: 'linear-gradient(135deg,#a855f7,#ec4899)', init: 'AB',
+    quote: '"Wall Street has always had this data and these tools. We decided Main Street deserves them too."',
+    bio: 'Runs every partnership, instructor relationship, and business operation at YN Finance. Personally recruited nine world-class educators — Ross Cameron, ICT, Anton Kreil and six more — and structured every deal.',
+    focus: 'Partnerships · Operations · Business Development',
+    tags: ['Partnerships', 'Ross Cameron', 'ICT', 'Anton Kreil', 'Operations'],
+    skills: [{ label:'Business Development', pct:97 },{ label:'Partnership Management', pct:95 },{ label:'Operations', pct:89 }],
+    stat1: { n:'9', label:'World-class instructors' },
+    stat2: { n:'$49+', label:'Revenue per user' },
+    twitter: 'https://twitter.com',
+  },
 ]
 
 const POWERS = [
@@ -420,34 +453,129 @@ export default function HomePage() {
       </section>
 
       {/* ══ FOUNDERS ════════════════════════════════════════════════════════════ */}
-      <section style={{ padding:'130px 0', position:'relative', zIndex:1, background:'linear-gradient(180deg,transparent,rgba(6,13,20,.5),transparent)' }}>
+      <section style={{ padding:'140px 0', position:'relative', zIndex:1 }}>
+        {/* bg decoration */}
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg,transparent,rgba(6,13,20,.6),transparent)', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', top:'30%', left:'50%', transform:'translateX(-50%)', width:800, height:800, borderRadius:'50%', background:'radial-gradient(circle,rgba(245,158,11,.04) 0%,transparent 70%)', pointerEvents:'none' }}/>
+
         <div className="section">
           <div ref={founders.ref} className={`vis${founders.v?' show':''}`}>
-            <div className="item i0" style={{ textAlign:'center', marginBottom:64 }}>
-              <div style={{ fontSize:11, color:'#f59e0b', letterSpacing:'2px', fontWeight:700, marginBottom:14 }}>THE FOUNDERS</div>
-              <h2 style={{ fontSize:'clamp(32px,5vw,58px)', fontWeight:900, letterSpacing:'-2px' }}>
+
+            {/* Header */}
+            <div className="item i0" style={{ textAlign:'center', marginBottom:80 }}>
+              <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(245,158,11,.1)', border:'1px solid rgba(245,158,11,.25)', borderRadius:20, padding:'6px 18px', marginBottom:20, fontSize:11, color:'#f59e0b', fontWeight:700, letterSpacing:'1px' }}>
+                <span style={{ width:6, height:6, borderRadius:'50%', background:'#f59e0b', display:'inline-block' }}/>
+                THE FOUNDING TEAM
+              </div>
+              <h2 style={{ fontSize:'clamp(36px,5.5vw,66px)', fontWeight:900, letterSpacing:'-2.5px', lineHeight:1.0, marginBottom:16 }}>
                 Built by{' '}
-                <span style={{ background:'linear-gradient(135deg,#f59e0b,#ec4899)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Traders</span>
+                <span style={{ background:'linear-gradient(135deg,#f59e0b,#ec4899,#a855f7)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>obsessed</span>
+                {' '}builders.
               </h2>
+              <p style={{ fontSize:18, color:'#6a90a8', maxWidth:520, margin:'0 auto', lineHeight:1.6 }}>
+                Three co-founders. One mission — give every retail trader the same intelligence Wall Street has kept to itself.
+              </p>
             </div>
-            <div className="g3 item i1" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:20 }}>
-              {FOUNDERS.map((f, i) => (
-                <div key={f.name} className={`holo-border i${i+1}`} style={{ animation:'border-flow 4s linear infinite', animationDelay:`${i * 1.3}s` }}>
-                  <div className="holo-inner founder-card" style={{ '--clr': f.clr } as React.CSSProperties}>
-                    <div style={{ position:'absolute', top:-80, right:-80, width:200, height:200, borderRadius:'50%', background:`radial-gradient(circle,${f.clr}12,transparent 70%)`, pointerEvents:'none' }} />
-                    <div style={{ position:'relative', zIndex:1 }}>
-                      <div style={{ width:68, height:68, borderRadius:20, background: f.grad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, fontWeight:900, color:'#030a10', marginBottom:20, boxShadow:`0 0 40px ${f.clr}50`, animation:'float3d 4s ease-in-out infinite', animationDelay:`${i*.8}s` }}>
-                        {f.init}
+
+            {/* Cards */}
+            {FOUNDERS.map((f, i) => (
+              <div key={f.name} className="item" style={{ marginBottom: i < FOUNDERS.length-1 ? 28 : 0, animationDelay:`${i*.12}s` }}>
+                <div style={{ background:'rgba(6,13,20,.85)', border:`1px solid ${f.clr}20`, borderRadius:24, overflow:'hidden', backdropFilter:'blur(16px)', transition:'border-color .3s', position:'relative' }}
+                  onMouseEnter={e=>(e.currentTarget.style.borderColor=f.clr+'50')}
+                  onMouseLeave={e=>(e.currentTarget.style.borderColor=f.clr+'20')}>
+
+                  {/* Top gradient bar */}
+                  <div style={{ height:3, background: f.grad, width:'100%' }}/>
+
+                  {/* Glow corner */}
+                  <div style={{ position:'absolute', top:-60, right:-60, width:240, height:240, borderRadius:'50%', background:`radial-gradient(circle,${f.clr}10,transparent 70%)`, pointerEvents:'none' }}/>
+
+                  <div style={{ display:'grid', gridTemplateColumns:i===1?'1fr 260px 320px':'260px 1fr 320px', gap:0, minHeight:280 }}>
+
+                    {/* Panel A — Identity */}
+                    <div style={{ padding:'36px 32px', borderRight:`1px solid ${f.clr}12`, display:'flex', flexDirection:'column', justifyContent:'space-between', order: i===1?2:1 }}>
+                      <div>
+                        {/* Avatar */}
+                        <div style={{ width:80, height:80, borderRadius:22, background: f.grad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:900, color:'#030a10', marginBottom:20, boxShadow:`0 0 50px ${f.clr}50, 0 0 100px ${f.clr}20`, animation:'float3d 4s ease-in-out infinite', animationDelay:`${i*.7}s` }}>
+                          {f.init}
+                        </div>
+                        <div style={{ fontSize:24, fontWeight:900, letterSpacing:'-.5px', marginBottom:4 }}>{f.name}</div>
+                        <div style={{ fontSize:13, color: f.clr, fontWeight:700, letterSpacing:'.3px', marginBottom:16 }}>{f.role}</div>
+                        <div style={{ fontSize:11, color:'#6a90a8', letterSpacing:'.3px', lineHeight:1.6, marginBottom:20 }}>{f.focus}</div>
+                        {/* Tags */}
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                          {f.tags.map(t=>(
+                            <span key={t} style={{ fontSize:10, color: f.clr, background:`${f.clr}12`, border:`1px solid ${f.clr}25`, borderRadius:6, padding:'3px 10px', fontWeight:700, letterSpacing:'.3px' }}>{t}</span>
+                          ))}
+                        </div>
                       </div>
-                      <div style={{ fontSize:19, fontWeight:800, marginBottom:4 }}>{f.name}</div>
-                      <div style={{ fontSize:12, color: f.clr, fontWeight:700, marginBottom:20, letterSpacing:'.3px' }}>{f.role}</div>
-                      <blockquote style={{ fontSize:14, color:'#b8d0e0', lineHeight:1.65, fontStyle:'italic', marginBottom:18, paddingLeft:14, borderLeft:`2px solid ${f.clr}` }}>{f.quote}</blockquote>
-                      <p style={{ fontSize:12.5, color:'#6a90a8', lineHeight:1.65 }}>{f.bio}</p>
+                      {/* Stats */}
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:24 }}>
+                        {[f.stat1, f.stat2].map(s=>(
+                          <div key={s.label} style={{ background:`${f.clr}08`, border:`1px solid ${f.clr}18`, borderRadius:12, padding:'14px 16px' }}>
+                            <div style={{ fontSize:22, fontWeight:900, color: f.clr, fontFamily:'monospace', letterSpacing:'-.5px', textShadow:`0 0 20px ${f.clr}` }}>{s.n}</div>
+                            <div style={{ fontSize:10, color:'#6a90a8', marginTop:3, letterSpacing:'.3px' }}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Panel B — Quote + Bio */}
+                    <div style={{ padding:'36px 32px', display:'flex', flexDirection:'column', justifyContent:'center', order: i===1?1:2 }}>
+                      {/* Pull quote */}
+                      <div style={{ position:'relative', marginBottom:28 }}>
+                        <div style={{ fontSize:64, color: f.clr, lineHeight:.7, fontFamily:'Georgia,serif', opacity:.3, position:'absolute', top:-8, left:-8 }}>"</div>
+                        <blockquote style={{ fontSize:'clamp(15px,1.8vw,18px)', color:'#dce8f0', lineHeight:1.65, fontStyle:'italic', fontWeight:500, paddingLeft:20, borderLeft:`3px solid ${f.clr}`, textShadow:`0 0 30px ${f.clr}20` }}>
+                          {f.quote.replace(/^"|"$/g,'')}
+                        </blockquote>
+                      </div>
+                      <p style={{ fontSize:14, color:'#6a90a8', lineHeight:1.8 }}>{f.bio}</p>
+                    </div>
+
+                    {/* Panel C — Skills */}
+                    <div style={{ padding:'36px 32px', borderLeft:`1px solid ${f.clr}12`, display:'flex', flexDirection:'column', justifyContent:'center', order:3 }}>
+                      <div style={{ fontSize:10, color:'#6a90a8', letterSpacing:'1px', marginBottom:20 }}>EXPERTISE</div>
+                      {f.skills.map(s=>(
+                        <div key={s.label} style={{ marginBottom:20 }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+                            <span style={{ fontSize:12, color:'#b8d0e0', fontWeight:600 }}>{s.label}</span>
+                            <span style={{ fontSize:12, color: f.clr, fontWeight:800, fontFamily:'monospace' }}>{s.pct}%</span>
+                          </div>
+                          <div style={{ height:6, background:'rgba(255,255,255,.04)', borderRadius:3, overflow:'hidden' }}>
+                            <div style={{ height:'100%', width:`${s.pct}%`, background: f.grad, borderRadius:3, boxShadow:`0 0 12px ${f.clr}60`, transition:'width 1.4s cubic-bezier(.22,1,.36,1)' }}/>
+                          </div>
+                        </div>
+                      ))}
+                      {/* CTA */}
+                      <div style={{ marginTop:8, paddingTop:20, borderTop:`1px solid ${f.clr}12` }}>
+                        <a href={f.twitter} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color: f.clr, textDecoration:'none', fontWeight:700, transition:'opacity .2s' }}
+                          onMouseEnter={e=>(e.currentTarget.style.opacity='.7')} onMouseLeave={e=>(e.currentTarget.style.opacity='1')}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                          Follow on X
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
+            ))}
+
+            {/* Team stat strip */}
+            <div className="item" style={{ marginTop:48, background:'rgba(6,13,20,.7)', border:'1px solid rgba(255,255,255,.04)', borderRadius:16, padding:'28px 40px', backdropFilter:'blur(12px)', display:'flex', justifyContent:'space-around', flexWrap:'wrap', gap:20 }}>
+              {[
+                { n:'3', label:'Co-Founders', sub:'100% equity-held' },
+                { n:'1', label:'Mission', sub:'Democratize trading intel' },
+                { n:'∞', label:'Ambition', sub:'Built to last' },
+                { n:'2026', label:'Founded', sub:'YN Finance Corp.' },
+              ].map(({ n, label, sub }) => (
+                <div key={label} style={{ textAlign:'center' }}>
+                  <div style={{ fontSize:28, fontWeight:900, letterSpacing:'-1px', background:'linear-gradient(135deg,#00d4aa,#a855f7)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>{n}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:'#dce8f0', marginTop:4 }}>{label}</div>
+                  <div style={{ fontSize:11, color:'#6a90a8', marginTop:2 }}>{sub}</div>
+                </div>
               ))}
             </div>
+
           </div>
         </div>
       </section>
