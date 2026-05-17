@@ -223,7 +223,7 @@ export default function HomePage() {
           <span style={{ fontWeight:900, fontSize:15, letterSpacing:'-0.5px' }}>YN Finance</span>
         </Link>
         <div className="hide-sm" style={{ display:'flex', gap:24 }}>
-          {[['AI Analyzer','/ai-stocks'],['Daily Intel','/daily'],['Arena','/arena'],['Courses','/courses'],['Terminal','/app']].map(([l,h])=>(
+          {[['AI Analyzer','/ai-stocks'],['Daily Intel','/daily'],['Courses','/courses'],['Terminal','/app']].map(([l,h])=>(
             <Link key={l} href={h} className="nav-link">{l}</Link>
           ))}
         </div>
@@ -493,7 +493,7 @@ export default function HomePage() {
             <span style={{ fontSize:11, color:'#1a3550', marginLeft:8 }}>© 2026</span>
           </div>
           <div style={{ display:'flex', gap:22 }}>
-            {[['Privacy','/privacy'],['Terms','/terms'],['AI Analyzer','/ai-stocks'],['Daily Intel','/daily'],['Arena','/arena'],['Courses','/courses']].map(([l,h])=>(
+            {[['Privacy','/privacy'],['Terms','/terms'],['AI Analyzer','/ai-stocks'],['Daily Intel','/daily'],['Courses','/courses']].map(([l,h])=>(
               <Link key={l} href={h} style={{ fontSize:12, color:'#2a4a62', textDecoration:'none', transition:'color .2s' }}>{l}</Link>
             ))}
           </div>

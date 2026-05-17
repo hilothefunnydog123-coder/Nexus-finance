@@ -36,10 +36,163 @@ type Analysis   = {
   sentiment:string;fundamentals_score:number;technical_score:number;sentiment_score:number
   analyst_consensus:string;vs_sector:string;timeframes:Timeframes;options:Options
 }
+type Candle = { t:number; o:number; h:number; l:number; c:number }
 type Result = {
   ticker:string;name:string;price:number;change1d:number;prevClose:number
   high52:number;low52:number;pe:number;marketCap:number;beta:number;industry:string
-  analystBuy:number;analystHold:number;analystSell:number;analystTotal:number;analysis:Analysis
+  analystBuy:number;analystHold:number;analystSell:number;analystTotal:number
+  candles:Candle[];timeframe:string;analysis:Analysis
+}
+
+// ── CANDLESTICK CHART ─────────────────────────────────────────────────────────
+function CandlestickChart({ candles, levels, ticker, timeframe }: {
+  candles: Candle[]
+  levels: { entry_low:number; entry_high:number; stop_loss:number; take_profit_1:number; take_profit_2:number; price:number }
+  ticker: string
+  timeframe: string
+}) {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const canvas = ref.current; if (!canvas || candles.length < 2) return
+    const ctx = canvas.getContext('2d')!
+    const DPR = window.devicePixelRatio || 1
+    const W   = canvas.offsetWidth * DPR
+    const H   = canvas.offsetHeight * DPR
+    canvas.width = W; canvas.height = H
+    ctx.scale(DPR, DPR)
+    const CW = canvas.offsetWidth, CH = canvas.offsetHeight
+
+    const ML = 12, MR = 110, MT = 38, MB = 36
+    const chartW = CW - ML - MR, chartH = CH - MT - MB
+
+    // Price range including all levels
+    const allPrices = [
+      ...candles.flatMap(c => [c.h, c.l]),
+      levels.entry_low, levels.entry_high, levels.stop_loss,
+      levels.take_profit_1, levels.take_profit_2, levels.price,
+    ].filter(Boolean)
+    const rawMin = Math.min(...allPrices), rawMax = Math.max(...allPrices)
+    const pad    = (rawMax - rawMin) * 0.08
+    const minP   = rawMin - pad, maxP = rawMax + pad
+    const toY    = (p: number) => MT + chartH - ((p - minP) / (maxP - minP)) * chartH
+    const candleW = Math.max(1.5, (chartW / candles.length) * 0.7)
+    const toX    = (i: number) => ML + (i + 0.5) * (chartW / candles.length)
+
+    // Background
+    ctx.fillStyle = '#030a06'
+    ctx.fillRect(0, 0, CW, CH)
+
+    // Grid lines
+    const priceSteps = 6
+    ctx.setLineDash([2, 4])
+    ctx.lineWidth = 0.5
+    for (let i = 0; i <= priceSteps; i++) {
+      const p = minP + (maxP - minP) * (i / priceSteps)
+      const y = toY(p)
+      ctx.strokeStyle = '#00ff8810'
+      ctx.beginPath(); ctx.moveTo(ML, y); ctx.lineTo(CW - MR, y); ctx.stroke()
+      ctx.fillStyle = '#1a4a2a'; ctx.font = '9px JetBrains Mono,monospace'
+      ctx.textAlign = 'right'
+      ctx.fillText(`$${p.toFixed(0)}`, ML - 2, y + 3)
+    }
+    ctx.setLineDash([])
+
+    // Title
+    ctx.fillStyle = '#00ff88'; ctx.font = 'bold 11px JetBrains Mono,monospace'
+    ctx.textAlign = 'left'
+    ctx.fillText(`${ticker}  DAILY  [${timeframe}]`, ML, 20)
+    ctx.fillStyle = '#1a4a2a'; ctx.font = '9px JetBrains Mono,monospace'
+    ctx.fillText(`${candles.length} bars`, ML + 160, 20)
+
+    // Level zones & lines
+    const LEVELS = [
+      { price: levels.take_profit_2, label: 'TP2',    clr: '#00ff88', dash: [6,3] },
+      { price: levels.take_profit_1, label: 'TP1',    clr: '#00d4ff', dash: [6,3] },
+      { price: levels.price,         label: 'PRICE',  clr: '#ffffff', dash: [0,0] },
+      { price: levels.entry_high,    label: 'ENTRY ↑',clr: '#f0b429', dash: [4,3] },
+      { price: levels.entry_low,     label: 'ENTRY ↓',clr: '#f0b429', dash: [4,3] },
+      { price: levels.stop_loss,     label: 'STOP',   clr: '#ff2d78', dash: [3,3] },
+    ]
+
+    // Entry zone fill
+    const eyTop = toY(levels.entry_high), eyBot = toY(levels.entry_low)
+    ctx.fillStyle = 'rgba(240,180,41,0.06)'
+    ctx.fillRect(ML, eyTop, chartW, eyBot - eyTop)
+
+    LEVELS.forEach(({ price: lp, label, clr, dash }) => {
+      if (!lp) return
+      const y = toY(lp)
+      ctx.setLineDash(dash)
+      ctx.strokeStyle = clr + '90'
+      ctx.lineWidth   = label === 'PRICE' ? 1.5 : 1
+      ctx.beginPath(); ctx.moveTo(ML, y); ctx.lineTo(CW - MR, y); ctx.stroke()
+      ctx.setLineDash([])
+
+      // Arrow  → →
+      const ax = CW - MR + 4
+      ctx.fillStyle = clr
+      ctx.beginPath()
+      ctx.moveTo(ax, y)
+      ctx.lineTo(ax + 7, y - 4)
+      ctx.lineTo(ax + 7, y + 4)
+      ctx.closePath(); ctx.fill()
+
+      // Label box
+      const bx = ax + 10, bw = 78, bh = 16
+      ctx.fillStyle = clr + '18'
+      ctx.strokeStyle = clr + '50'
+      ctx.lineWidth = 1
+      roundRect(ctx, bx, y - bh/2, bw, bh, 2)
+      ctx.fill(); ctx.stroke()
+
+      ctx.fillStyle = clr
+      ctx.font = `bold 9px JetBrains Mono,monospace`
+      ctx.textAlign = 'left'
+      ctx.fillText(`${label}  $${lp.toFixed(2)}`, bx + 4, y + 3)
+    })
+
+    // Candles
+    candles.forEach((c, i) => {
+      const x   = toX(i)
+      const top = Math.min(c.o, c.c), bot = Math.max(c.o, c.c)
+      const bull = c.c >= c.o
+      const bodyH = Math.max(1, Math.abs(toY(c.o) - toY(c.c)))
+      const clr   = bull ? '#00ff88' : '#ff2d78'
+
+      // Wick
+      ctx.strokeStyle = clr + '90'
+      ctx.lineWidth   = 1
+      ctx.beginPath()
+      ctx.moveTo(x, toY(c.h)); ctx.lineTo(x, toY(c.l))
+      ctx.stroke()
+
+      // Body
+      ctx.fillStyle = bull ? clr + '90' : clr + '80'
+      ctx.fillRect(x - candleW/2, toY(top) - (bull ? 0 : bodyH), candleW, bodyH || 1)
+      ctx.strokeStyle = clr
+      ctx.lineWidth   = 0.8
+      ctx.strokeRect(x - candleW/2, toY(top) - (bull ? 0 : bodyH), candleW, bodyH || 1)
+    })
+
+    // Date labels
+    const step = Math.max(1, Math.floor(candles.length / 5))
+    ctx.fillStyle = '#1a4a2a'; ctx.font = '9px JetBrains Mono,monospace'; ctx.textAlign = 'center'
+    for (let i = 0; i < candles.length; i += step) {
+      const d = new Date(candles[i].t * 1000)
+      const lbl = `${d.getMonth()+1}/${d.getDate()}`
+      ctx.fillText(lbl, toX(i), CH - 8)
+    }
+  }, [candles, levels, ticker, timeframe])
+
+  return <canvas ref={ref} style={{ width:'100%', height:340, display:'block' }}/>
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x:number, y:number, w:number, h:number, r:number) {
+  ctx.beginPath()
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r)
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h)
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r)
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath()
 }
 
 // ── MATRIX RAIN CANVAS ────────────────────────────────────────────────────────
@@ -235,6 +388,7 @@ export default function AIStocksPage() {
   const [cursorY,setCursorY]     = useState(-100)
   const [account,setAccount]     = useState('10000')
   const [riskPct,setRiskPct]     = useState('1')
+  const [timeframe,setTimeframe] = useState('3M')
   const intervalRef = useRef<NodeJS.Timeout|null>(null)
   const resultsRef  = useRef<HTMLDivElement>(null)
 
@@ -252,7 +406,7 @@ export default function AIStocksPage() {
     setInput(t); setLoading(true); setResult(null); setError('')
     let idx=0; intervalRef.current=setInterval(()=>{idx=(idx+1)%AGENTS.length;setAgentIdx(idx)},900)
     try {
-      const r=await fetch('/api/stock-analyzer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:t})})
+      const r=await fetch('/api/stock-analyzer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:t,timeframe})})
       const d=await r.json()
       if(!r.ok||d.error){setError(d.error||'Analysis failed');return}
       setResult(d)
@@ -376,11 +530,20 @@ export default function AIStocksPage() {
               {loading && <div style={{position:'absolute',bottom:0,left:0,right:0,height:2,background:'linear-gradient(90deg,#00ff88,#00d4ff,#a855f7,#00ff88)',backgroundSize:'200%',animation:'holo .8s linear infinite'}}/>}
             </div>
 
+            {/* TIMEFRAME */}
+            <div style={{display:'flex',gap:6,marginBottom:10,alignItems:'center'}}>
+              <span style={{fontSize:9,color:'#1a4a2a',letterSpacing:'1px',marginRight:4}}>CHART:</span>
+              {['1M','3M','6M','1Y'].map(tf=>(
+                <button key={tf} onClick={()=>setTimeframe(tf)} style={{background:timeframe===tf?'#00ff8820':'transparent',border:`1px solid ${timeframe===tf?'#00ff88':'#00ff8820'}`,borderRadius:2,padding:'4px 12px',fontSize:10,cursor:'pointer',color:timeframe===tf?'#00ff88':'#1a4a2a',fontFamily:'inherit',fontWeight:700,letterSpacing:'1px',transition:'all .15s'}}>
+                  {tf}
+                </button>
+              ))}
+            </div>
             {/* TICKER CHIPS */}
             <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
               {POPULAR.map(s=><button key={s} className="chip" onClick={()=>analyze(s)}>{s}</button>)}
             </div>
-            <div style={{fontSize:10,color:'#1a4a2a',letterSpacing:'1px'}}>// ANALYSIS TAKES ~15 SECONDS</div>
+            <div style={{fontSize:10,color:'#1a4a2a',letterSpacing:'1px'}}>// ANALYSIS TAKES ~15 SECONDS · MODEL: NANO-BANANA-PRO</div>
           </div>
 
           {/* RIGHT: Radar */}
@@ -488,6 +651,37 @@ export default function AIStocksPage() {
               </div>
             </div>
           </div>
+
+          {/* CANDLESTICK CHART */}
+          {result.candles && result.candles.length > 5 && (
+            <div className="card" style={{padding:'8px',marginBottom:12,overflow:'hidden'}}>
+              {/* Timeframe selector inside chart card */}
+              <div style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px 4px'}}>
+                <span style={{fontSize:9,color:'#4a7a6a',letterSpacing:'2px'}}>// CHART_VIEW</span>
+                <div style={{marginLeft:'auto',display:'flex',gap:5}}>
+                  {['1M','3M','6M','1Y'].map(tf=>(
+                    <button key={tf} onClick={()=>{ setTimeframe(tf); if(result) result.timeframe=tf }}
+                      style={{background:result.timeframe===tf?'#00ff8820':'transparent',border:`1px solid ${result.timeframe===tf?'#00ff88':'#00ff8815'}`,borderRadius:2,padding:'3px 10px',fontSize:9,cursor:'pointer',color:result.timeframe===tf?'#00ff88':'#1a4a2a',fontFamily:'inherit',fontWeight:700,letterSpacing:'1px'}}>
+                      {tf}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <CandlestickChart
+                candles={result.candles}
+                ticker={result.ticker}
+                timeframe={result.timeframe}
+                levels={{
+                  entry_low:     a.entry_low,
+                  entry_high:    a.entry_high,
+                  stop_loss:     a.stop_loss,
+                  take_profit_1: a.take_profit_1,
+                  take_profit_2: a.take_profit_2,
+                  price:         result.price,
+                }}
+              />
+            </div>
+          )}
 
           {/* SUMMARY */}
           <div className="card" style={{padding:'18px 22px',marginBottom:12,borderLeft:`2px solid ${rCfg.clr}`,boxShadow:`-4px 0 20px ${rCfg.glow}`}}>
