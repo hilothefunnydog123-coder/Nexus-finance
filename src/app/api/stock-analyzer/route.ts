@@ -41,12 +41,13 @@ export async function POST(req: NextRequest) {
     const toUnix   = Math.floor(Date.now() / 1000)
     const frUnix   = Math.floor((Date.now() - tfDays * 86400000) / 1000)
 
-    // Fetch market data
-    const [quote, profile, news, rec] = await Promise.all([
+    // Fetch market data + earnings
+    const [quote, profile, news, rec, earnings] = await Promise.all([
       fh(`/quote?symbol=${sym}`),
       fh(`/stock/profile2?symbol=${sym}`),
       fh(`/company-news?symbol=${sym}&from=${weekAgo}&to=${todayStr}`),
       fh(`/stock/recommendation?symbol=${sym}`),
+      fh(`/stock/earnings?symbol=${sym}&limit=4`),
     ])
 
     // Candles non-blocking — won't break analysis if slow
@@ -84,12 +85,23 @@ export async function POST(req: NextRequest) {
 
     const pct52 = high52 > low52 ? (((price - low52) / (high52 - low52)) * 100).toFixed(0) : '50'
 
+    // Earnings context
+    const earningsArr = Array.isArray(earnings) ? earnings : []
+    const nextEarnings = earningsArr[0]?.date ?? null
+    const lastEPS      = earningsArr[0]?.actualEPS ?? earningsArr[0]?.actual ?? null
+    const estEPS       = earningsArr[0]?.estimateEPS ?? earningsArr[0]?.estimate ?? null
+    const epsSurprise  = lastEPS && estEPS ? (((lastEPS - estEPS) / Math.abs(estEPS)) * 100).toFixed(1) : null
+    const earningsCtx  = nextEarnings
+      ? `Next earnings: ${nextEarnings}${epsSurprise ? ` | Last EPS surprise: ${epsSurprise}%` : ''}`
+      : 'Earnings date: N/A'
+
     const prompt = `Analyze ${sym} (${name}, ${industry}) as a hedge fund team. Return ONLY raw JSON, no markdown, no explanation.
 
 DATA:
 Price $${price.toFixed(2)} | Change ${change1d.toFixed(2)}% | 52W $${low52.toFixed(2)}-$${high52.toFixed(2)} (${pct52}% of range)
 MarketCap $${(marketCap/1000).toFixed(1)}B | P/E ${pe>0?pe.toFixed(1):'N/A'} | Beta ${beta.toFixed(2)}
 Analysts: ${analystTotal>0?`${analystBuy}B/${analystHold}H/${analystSell}S`:'none'}
+${earningsCtx}
 News: ${headlines}
 
 Rules: All price levels must be based on $${price.toFixed(2)}. No round numbers. Be specific to ${sym}.
@@ -134,6 +146,7 @@ Return exactly this JSON:
       ticker: sym, name, price, change1d, prevClose,
       high52, low52, pe, marketCap, beta, industry,
       analystBuy, analystHold, analystSell, analystTotal,
+      nextEarnings, lastEPS, estEPS, epsSurprise,
       candles: candleArr.slice(-120),
       timeframe: tf,
       analysis: {

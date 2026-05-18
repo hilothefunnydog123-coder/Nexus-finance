@@ -41,7 +41,144 @@ type Result = {
   ticker:string;name:string;price:number;change1d:number;prevClose:number
   high52:number;low52:number;pe:number;marketCap:number;beta:number;industry:string
   analystBuy:number;analystHold:number;analystSell:number;analystTotal:number
+  nextEarnings:string|null;lastEPS:number|null;estEPS:number|null;epsSurprise:string|null
   candles:Candle[];timeframe:string;analysis:Analysis
+}
+
+type ScanResult = {
+  ticker:string;name?:string;price?:number;change1d?:number;pe?:number
+  industry?:string;nextEarnings?:string|null;error:boolean
+  rating?:string;confidence?:number;price_target?:number
+  entry_low?:number;entry_high?:number;stop_loss?:number;take_profit_1?:number
+  one_liner?:string;sentiment?:string;top_risk?:string;urgency?:string
+}
+
+const RATING_SCORE: Record<string,number> = {
+  'Strong Buy':5,'Buy':4,'Hold':3,'Sell':2,'Strong Sell':1,
+}
+const RATING_CLR: Record<string,string> = {
+  'Strong Buy':'#00ff88','Buy':'#00c896','Hold':'#ff9500','Sell':'#ff6b35','Strong Sell':'#ff2d78',
+}
+
+// ── WATCHLIST SCANNER UI ──────────────────────────────────────────────────────
+function ScannerPanel({ isPro, onSelectTicker }: { isPro:boolean; onSelectTicker:(t:string)=>void }) {
+  const [watchlist,   setWatchlist]  = useState<string[]>(['AAPL','NVDA','TSLA','MSFT','AMZN'])
+  const [addInput,    setAddInput]   = useState('')
+  const [scanning,    setScanning]   = useState(false)
+  const [results,     setResults]    = useState<ScanResult[]>([])
+  const [scanError,   setScanError]  = useState('')
+  const [scanAgentIdx,setScanAgent]  = useState(0)
+  const scanRef = useRef<NodeJS.Timeout|null>(null)
+
+  // Persist watchlist
+  useEffect(() => {
+    const saved = localStorage.getItem('yn_watchlist')
+    if (saved) { try { setWatchlist(JSON.parse(saved)) } catch {} }
+  }, [])
+  function saveList(list: string[]) { setWatchlist(list); localStorage.setItem('yn_watchlist', JSON.stringify(list)) }
+  function addTicker() {
+    const t = addInput.trim().toUpperCase()
+    if (!t || watchlist.includes(t) || watchlist.length >= 8) return
+    saveList([...watchlist, t]); setAddInput('')
+  }
+  function removeTicker(t: string) { saveList(watchlist.filter(x => x !== t)) }
+
+  async function runScan() {
+    if (!isPro && watchlist.length > 3) { setScanError('Upgrade to Pro to scan more than 3 tickers'); return }
+    setScanning(true); setResults([]); setScanError('')
+    let idx=0; scanRef.current=setInterval(()=>{idx=(idx+1)%5;setScanAgent(idx)},600)
+    try {
+      const r = await fetch('/api/scan-watchlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tickers:watchlist})})
+      const d = await r.json()
+      if (d.error) { setScanError(d.error); return }
+      setResults(d.results ?? [])
+    } catch { setScanError('Scan failed. Try again.') }
+    finally { if(scanRef.current)clearInterval(scanRef.current); setScanning(false) }
+  }
+
+  const agentNames = ['Fetching data...','Running fundamentals...','Technical scan...','Sentiment analysis...','Ranking signals...']
+
+  return (
+    <div>
+      {/* Watchlist editor */}
+      <div style={{marginBottom:20}}>
+        <div style={{fontSize:9,color:'#4a7a6a',letterSpacing:'2px',marginBottom:10}}>// YOUR_WATCHLIST {watchlist.length}/8</div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:12}}>
+          {watchlist.map(t=>(
+            <div key={t} style={{display:'flex',alignItems:'center',gap:6,background:'rgba(0,20,10,.9)',border:'1px solid #00ff8830',borderRadius:2,padding:'6px 12px'}}>
+              <span style={{fontSize:12,fontWeight:800,fontFamily:'monospace',color:'#00ff88',letterSpacing:'1px'}}>{t}</span>
+              <button onClick={()=>removeTicker(t)} style={{background:'transparent',border:'none',color:'#4a7a6a',cursor:'pointer',fontSize:14,lineHeight:1,padding:0,fontFamily:'inherit'}}>×</button>
+            </div>
+          ))}
+          {watchlist.length < 8 && (
+            <div style={{display:'flex',gap:0}}>
+              <input value={addInput} onChange={e=>setAddInput(e.target.value.toUpperCase())} onKeyDown={e=>e.key==='Enter'&&addTicker()}
+                placeholder="+ ADD" style={{width:80,background:'rgba(0,20,10,.9)',border:'1px solid #00ff8815',borderRight:'none',borderRadius:'2px 0 0 2px',padding:'6px 10px',color:'#00ff88',fontSize:11,fontFamily:'monospace',fontWeight:700,outline:'none',letterSpacing:'1px'}}/>
+              <button onClick={addTicker} style={{background:'#00ff8820',border:'1px solid #00ff8830',borderRadius:'0 2px 2px 0',padding:'6px 10px',color:'#00ff88',fontSize:11,cursor:'pointer',fontFamily:'inherit',fontWeight:700}}>ADD</button>
+            </div>
+          )}
+        </div>
+
+        <button onClick={runScan} disabled={scanning||watchlist.length===0}
+          style={{width:'100%',background:scanning?'transparent':'linear-gradient(135deg,#00ff88,#00d4ff)',border:`1px solid ${scanning?'#00ff8830':'transparent'}`,borderRadius:2,padding:'14px',color:scanning?'#00ff88':'#030a06',fontWeight:900,fontSize:13,cursor:scanning?'not-allowed':'pointer',fontFamily:'monospace',letterSpacing:'1px',transition:'all .2s',boxShadow:scanning?'none':'0 0 30px rgba(0,255,136,.3)'}}>
+          {scanning ? agentNames[scanAgentIdx] : `⚡ SCAN ${watchlist.length} STOCKS`}
+        </button>
+        {!isPro && <div style={{fontSize:10,color:'#1a4a2a',marginTop:6,letterSpacing:'.5px',textAlign:'center'}}>Free: scan up to 3 · Pro: scan up to 8</div>}
+      </div>
+
+      {scanError && <div style={{background:'rgba(255,45,120,.08)',border:'1px solid rgba(255,45,120,.2)',borderRadius:2,padding:'10px 14px',color:'#ff2d78',fontSize:11,marginBottom:16}}>{scanError}</div>}
+
+      {/* Results */}
+      {results.length > 0 && (
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          <div style={{fontSize:9,color:'#4a7a6a',letterSpacing:'2px',marginBottom:4}}>// RANKED_BY_SIGNAL_STRENGTH</div>
+          {results.map((r,i)=>{
+            const clr = r.error ? '#4a7a6a' : (RATING_CLR[r.rating ?? '']??'#f59e0b')
+            if (r.error) return (
+              <div key={r.ticker} style={{background:'rgba(0,20,10,.5)',border:'1px solid #00ff8810',borderRadius:2,padding:'12px 14px',display:'flex',alignItems:'center',gap:12}}>
+                <span style={{fontFamily:'monospace',fontWeight:800,color:'#4a7a6a',fontSize:13}}>{r.ticker}</span>
+                <span style={{fontSize:11,color:'#1a4a2a'}}>scan failed</span>
+              </div>
+            )
+            const upDay = (r.change1d ?? 0) >= 0
+            const urgencyClr = r.urgency==='high'?'#ff2d78':r.urgency==='medium'?'#f59e0b':'#4a7a6a'
+            return (
+              <div key={r.ticker} onClick={()=>onSelectTicker(r.ticker)}
+                style={{background:'rgba(0,20,10,.8)',border:`1px solid ${clr}30`,borderRadius:2,padding:'14px 16px',cursor:'pointer',transition:'all .2s',position:'relative',overflow:'hidden'}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=clr+'60';e.currentTarget.style.background='rgba(0,40,20,.9)'}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=clr+'30';e.currentTarget.style.background='rgba(0,20,10,.8)'}}>
+                {/* Rank badge */}
+                <div style={{position:'absolute',top:0,left:0,width:3,height:'100%',background:clr,boxShadow:`0 0 8px ${clr}`}}/>
+                <div style={{marginLeft:8}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:6,flexWrap:'wrap'}}>
+                    <span style={{fontSize:16,fontWeight:900,fontFamily:'monospace',color:'#00ff88',letterSpacing:'1px'}}>{r.ticker}</span>
+                    <span style={{fontSize:11,color:'#4a7a6a'}}>{r.name}</span>
+                    <span style={{marginLeft:'auto',fontSize:11,fontWeight:700,color:clr,background:`${clr}15`,padding:'2px 10px',borderRadius:2,border:`1px solid ${clr}30`}}>{r.rating}</span>
+                    <span style={{fontSize:12,fontWeight:800,fontFamily:'monospace',color:upDay?'#00ff88':'#ff2d78'}}>{upDay?'+':''}{r.change1d?.toFixed(2)}%</span>
+                    <span style={{fontSize:11,fontFamily:'monospace',color:'#a0ffcc'}}>${r.price?.toFixed(2)}</span>
+                  </div>
+                  <div style={{fontSize:12,color:'#a0ffcc',marginBottom:6,lineHeight:1.5}}>{r.one_liner}</div>
+                  <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <div style={{fontSize:10,color:'#4a7a6a'}}>CONFIDENCE</div>
+                      <div style={{height:4,width:60,background:'#041810',borderRadius:2,overflow:'hidden'}}>
+                        <div style={{height:'100%',width:`${r.confidence}%`,background:`${clr}`,boxShadow:`0 0 6px ${clr}`}}/>
+                      </div>
+                      <div style={{fontSize:10,fontFamily:'monospace',color:clr,fontWeight:700}}>{r.confidence}%</div>
+                    </div>
+                    {r.nextEarnings && <div style={{fontSize:10,color:'#4a7a6a'}}>📅 EPS {r.nextEarnings}</div>}
+                    <div style={{fontSize:10,fontWeight:700,color:urgencyClr,letterSpacing:'.5px',marginLeft:'auto'}}>
+                      {r.urgency?.toUpperCase()} URGENCY → FULL ANALYSIS
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ── CANDLESTICK CHART ─────────────────────────────────────────────────────────
@@ -379,6 +516,7 @@ function Ring({pct,clr,size=88}:{pct:number;clr:string;size?:number}) {
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function AIStocksPage() {
+  const [mode,setMode]           = useState<'analyze'|'scan'>('analyze')
   const [input,setInput]         = useState('')
   const [loading,setLoading]     = useState(false)
   const [agentIdx,setAgentIdx]   = useState(0)
@@ -582,11 +720,25 @@ export default function AIStocksPage() {
               <span style={{color:'#00d4ff',textShadow:'0 0 30px #00d4ff',display:'block'}}>ANALYZER</span>
             </h1>
 
-            <p style={{fontSize:13,color:'#4a7a6a',lineHeight:1.8,marginBottom:32,maxWidth:480,letterSpacing:'.3px'}}>
+            <p style={{fontSize:13,color:'#4a7a6a',lineHeight:1.8,marginBottom:24,maxWidth:480,letterSpacing:'.3px'}}>
               Five specialized agents. One decisive call. Entry zones, stop loss, price targets, options strategy, catalysts. Institutional research in 15 seconds — free.
             </p>
 
-            {/* SEARCH BAR — terminal style */}
+            {/* MODE TOGGLE */}
+            <div style={{display:'flex',gap:0,marginBottom:20,background:'rgba(0,20,10,.8)',border:'1px solid #00ff8820',borderRadius:2,overflow:'hidden',width:'fit-content'}}>
+              {([['analyze','⚡ ANALYZE ONE'],['scan','🔍 SCAN WATCHLIST']] as const).map(([m,l])=>(
+                <button key={m} onClick={()=>setMode(m)}
+                  style={{padding:'10px 20px',fontSize:11,fontWeight:900,fontFamily:'monospace',letterSpacing:'1px',cursor:'pointer',border:'none',background:mode===m?'#00ff88':' transparent',color:mode===m?'#030a06':'#4a7a6a',transition:'all .2s'}}>
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            {/* SCANNER MODE */}
+            {mode === 'scan' && <ScannerPanel isPro={isPro} onSelectTicker={(t)=>{setMode('analyze');analyze(t)}}/>}
+
+            {/* SEARCH BAR + CHIPS (analyze mode only) */}
+            {mode === 'analyze' && <>
             <div style={{marginBottom:16,position:'relative'}}>
               <div style={{display:'flex',background:'rgba(0,20,10,.95)',border:`1px solid ${loading?'#00ff88':'#00ff8840'}`,borderRadius:2,overflow:'hidden',boxShadow:loading?'0 0 40px rgba(0,255,136,.3)':'none',transition:'all .4s'}}>
                 <span style={{padding:'16px 16px',fontSize:13,color:'#00ff8860',flexShrink:0,borderRight:'1px solid #00ff8820',letterSpacing:'1px'}}>$</span>
@@ -637,7 +789,8 @@ export default function AIStocksPage() {
             <Link href="/performance" style={{fontSize:10,color:'#4a7a6a',letterSpacing:'1px',textDecoration:'none',transition:'color .2s'}} onMouseEnter={e=>(e.currentTarget.style.color='#00ff88')} onMouseLeave={e=>(e.currentTarget.style.color='#4a7a6a')}>
               → VIEW AI TRACK RECORD
             </Link>
-          </div>
+          </>}  {/* end mode=analyze */}
+          </div>{/* end LEFT col */}
 
           {/* RIGHT: Radar */}
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:20}} className="hide-sm">
@@ -712,11 +865,25 @@ export default function AIStocksPage() {
         <div ref={resultsRef} style={{maxWidth:1060,margin:'0 auto 80px',padding:'0 20px',position:'relative',zIndex:2}}>
 
           {/* SYSTEM OUTPUT HEADER */}
-          <div style={{fontFamily:'monospace',fontSize:11,marginBottom:20,padding:'12px 16px',background:'rgba(3,12,6,.9)',border:'1px solid #00ff8820',borderRadius:2}}>
-            <span style={{color:'#1a4a2a'}}>[ANALYSIS COMPLETE] </span>
-            <span style={{color:'#00ff88'}}>{result.ticker}</span>
-            <span style={{color:'#1a4a2a'}}> — {result.name} — {result.industry}</span>
-            <span style={{marginLeft:16,color:upDay?'#00ff88':'#ff2d78',fontWeight:700}}>${result.price.toFixed(2)} ({upDay?'+':''}{result.change1d.toFixed(2)}%)</span>
+          <div style={{fontFamily:'monospace',fontSize:11,marginBottom:20,padding:'12px 16px',background:'rgba(3,12,6,.9)',border:'1px solid #00ff8820',borderRadius:2,display:'flex',flexWrap:'wrap',gap:12,alignItems:'center'}}>
+            <div>
+              <span style={{color:'#1a4a2a'}}>[ANALYSIS COMPLETE] </span>
+              <span style={{color:'#00ff88',fontWeight:900}}>{result.ticker}</span>
+              <span style={{color:'#1a4a2a'}}> — {result.name} — {result.industry}</span>
+              <span style={{marginLeft:16,color:upDay?'#00ff88':'#ff2d78',fontWeight:700}}>${result.price.toFixed(2)} ({upDay?'+':''}{result.change1d.toFixed(2)}%)</span>
+            </div>
+            {result.nextEarnings && (
+              <div style={{marginLeft:'auto',display:'flex',gap:12,flexWrap:'wrap'}}>
+                <span style={{color:'#f59e0b',background:'rgba(245,158,11,.1)',padding:'3px 10px',borderRadius:2,border:'1px solid rgba(245,158,11,.3)'}}>
+                  📅 EARNINGS {result.nextEarnings}
+                </span>
+                {result.epsSurprise && (
+                  <span style={{color:Number(result.epsSurprise)>0?'#00ff88':'#ff2d78',background:Number(result.epsSurprise)>0?'rgba(0,255,136,.1)':'rgba(255,45,120,.1)',padding:'3px 10px',borderRadius:2,border:`1px solid ${Number(result.epsSurprise)>0?'rgba(0,255,136,.3)':'rgba(255,45,120,.3)'}`}}>
+                    Last EPS: {Number(result.epsSurprise)>0?'+':''}{result.epsSurprise}% vs est
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* VERDICT ROW */}
