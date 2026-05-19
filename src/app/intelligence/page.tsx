@@ -1,661 +1,718 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 
 const MODULES = [
-  {
-    id: 'lockup',
-    code: 'LOCKUP-ASSASSIN',
-    name: 'Lock-Up Assassin',
-    icon: '🔫',
-    clr: '#ff2d78',
-    glow: '#ff2d7840',
-    tag: 'SCHEDULED DESTRUCTION',
-    desc: 'Every IPO has a 180-day lock-up. When it expires, insiders dump. This is guaranteed, dated, and sized. Build the put position 3 weeks early.',
-    needsInput: true,
-    placeholder: 'Enter recent IPO ticker...',
-    example: 'RDDT',
-    classif: 'SECRET',
-  },
-  {
-    id: 'liedetector',
-    code: 'LIE-DETECTOR',
-    name: 'Lie Detector',
-    icon: '🧪',
-    clr: '#f59e0b',
-    glow: '#f59e0b40',
-    tag: 'FORENSIC EARNINGS ANALYSIS',
-    desc: 'AI reads between the lines of earnings calls and filings. Finds what management buried. Spots the divergence between narrative and numbers before Wall Street does.',
-    needsInput: true,
-    placeholder: 'Enter ticker to analyze...',
-    example: 'TSLA',
-    classif: 'SECRET',
-  },
-  {
-    id: 'galaxybrain',
-    code: 'GALAXY-BRAIN',
-    name: 'Galaxy Brain',
-    icon: '🧠',
-    clr: '#a855f7',
-    glow: '#a855f740',
-    tag: 'MACRO DOMINO TRACER',
-    desc: 'Enter any macro event. AI traces the full domino chain to specific stocks and options trades — including the 3-step connections nobody else makes.',
-    needsInput: true,
-    placeholder: 'Enter macro scenario...',
-    example: 'Fed holds rates, dollar weakens',
-    classif: 'TOP SECRET',
-  },
-  {
-    id: 'flow',
-    code: 'FORCED-FLOW',
-    name: 'Forced Flow',
-    icon: '🌊',
-    clr: '#00d4ff',
-    glow: '#00d4ff40',
-    tag: 'MECHANICAL MONEY MOVEMENTS',
-    desc: 'Billions of dollars HAVE to move into specific stocks every month regardless of news. Index rebalancing. Gamma hedging. ETF flows. Front-run guaranteed mechanical buying.',
-    needsInput: false,
-    placeholder: '',
-    example: '',
-    classif: 'TOP SECRET',
-  },
-  {
-    id: 'signals',
-    code: 'SIGNAL-RADAR',
-    name: 'Signal Radar',
-    icon: '⚡',
-    clr: '#00ff88',
-    glow: '#00ff8840',
-    tag: 'CROSS-ASSET CORRELATION ENGINE',
-    desc: 'Non-obvious correlations that predict stock moves 24-72 hours early. Korean Won weakens → semiconductor stocks follow. Oil spikes → airlines drop 48h later. Fire when trigger hits.',
-    needsInput: false,
-    placeholder: '',
-    example: '',
-    classif: 'SECRET',
-  },
-  {
-    id: 'filing',
-    code: 'FILING-XRAY',
-    name: 'Filing X-Ray',
-    icon: '📄',
-    clr: '#ec4899',
-    glow: '#ec489940',
-    tag: 'SEC DOCUMENT INTELLIGENCE',
-    desc: 'AI reads SEC filings the second they drop and extracts what management buried on page 47. Finds the $200M write-down, the quiet accounting change, the going-concern footnote before analysts do.',
-    needsInput: true,
-    placeholder: 'Enter ticker to X-Ray...',
-    example: 'NVDA',
-    classif: 'TOP SECRET',
-  },
+  { id:'lockup',      name:'Lock-Up Assassin', icon:'🔫', clr:'#ff2d78', bg:'radial-gradient(ellipse at 30% 50%,rgba(255,45,120,.12),transparent 70%)', tag:'SCHEDULED DESTRUCTION',     classif:'SECRET',     needsInput:true,  placeholder:'Recent IPO ticker...', example:'RDDT', desc:'Insiders are about to dump. You know before they do.', hook:'Every IPO has a 180-day lock-up. When it expires, insiders sell. This is guaranteed, dated, and sized.' },
+  { id:'liedetector', name:'Lie Detector',     icon:'🧪', clr:'#f59e0b', bg:'radial-gradient(ellipse at 70% 30%,rgba(245,158,11,.12),transparent 70%)', tag:'FORENSIC EARNINGS ANALYSIS', classif:'SECRET',     needsInput:true,  placeholder:'Ticker to analyze...',   example:'TSLA', desc:'Management is lying. Find the gap before analysts do.', hook:'AI reads the earnings narrative vs the actual numbers. Divergence score 0-100.' },
+  { id:'galaxybrain', name:'Galaxy Brain',     icon:'🧠', clr:'#a855f7', bg:'radial-gradient(ellipse at 50% 20%,rgba(168,85,247,.12),transparent 70%)', tag:'MACRO DOMINO TRACER',       classif:'TOP SECRET', needsInput:true,  placeholder:'Enter macro scenario...',  example:'Fed holds rates, dollar weakens', desc:'Trace the 5-step chain. Find trades nobody else sees.', hook:'One macro event triggers a chain. AI finds the non-obvious end of the chain.' },
+  { id:'flow',        name:'Forced Flow',      icon:'🌊', clr:'#00d4ff', bg:'radial-gradient(ellipse at 80% 60%,rgba(0,212,255,.12),transparent 70%)', tag:'MECHANICAL MONEY MOVEMENTS', classif:'TOP SECRET', needsInput:false, placeholder:'',                         example:'',   desc:'Guaranteed buying is coming. You know when and where.', hook:'Billions HAVE to move into specific stocks this month. Front-run the mechanical flow.' },
+  { id:'signals',     name:'Signal Radar',     icon:'⚡', clr:'#00ff88', bg:'radial-gradient(ellipse at 20% 70%,rgba(0,255,136,.12),transparent 70%)', tag:'CROSS-ASSET CORRELATION',   classif:'SECRET',     needsInput:false, placeholder:'',                         example:'',   desc:'8 correlations. 73-91% hit rates. Live right now.', hook:'Korean Won weakens → Qualcomm drops 72h later. 7/8 times.' },
+  { id:'filing',      name:'Filing X-Ray',     icon:'📄', clr:'#ec4899', bg:'radial-gradient(ellipse at 60% 80%,rgba(236,72,153,.12),transparent 70%)', tag:'SEC DOCUMENT INTELLIGENCE',  classif:'TOP SECRET', needsInput:true,  placeholder:'Ticker to X-Ray...',       example:'NVDA', desc:'They buried it on page 47. You found it first.', hook:'AI reads SEC filings the second they drop. Extracts what management buried.' },
 ]
 
 const VERDICT_CLR: Record<string,string> = {
-  HIGH:'#00ff88', MEDIUM:'#f59e0b', LOW:'#6a90a8',
-  FIRING:'#ff2d78', APPROACHING:'#f59e0b', COOLING:'#6a90a8',
-  BULLISH_HIDDEN:'#00ff88', BEARISH_HIDDEN:'#ff2d78', NEUTRAL:'#f59e0b',
-  CONFIRMED_BULLISH:'#00e5a0', CONFIRMED_BEARISH:'#ff2d78',
-  CLEAN:'#00ff88', YELLOW_FLAGS:'#f59e0b', RED_FLAGS:'#ff6b35', CRITICAL:'#ff2d78',
-  FORCED_BUY:'#00ff88', FORCED_SELL:'#ff2d78', MIXED:'#f59e0b',
+  HIGH:'#00ff88',MEDIUM:'#f59e0b',LOW:'#6a90a8',
+  FIRING:'#ff2d78',APPROACHING:'#f59e0b',COOLING:'#6a90a8',
+  BULLISH_HIDDEN:'#00ff88',BEARISH_HIDDEN:'#ff2d78',NEUTRAL:'#f59e0b',
+  CONFIRMED_BULLISH:'#00e5a0',CONFIRMED_BEARISH:'#ff2d78',
+  CLEAN:'#00ff88',YELLOW_FLAGS:'#f59e0b',RED_FLAGS:'#ff6b35',CRITICAL:'#ff2d78',
+  FORCED_BUY:'#00ff88',FORCED_SELL:'#ff2d78',MIXED:'#f59e0b',
 }
 
-function SeverityBadge({ level, label }: { level: string; label?: string }) {
-  const clr = VERDICT_CLR[level] ?? '#6a90a8'
-  return (
-    <span style={{ fontSize:9, fontWeight:800, color:clr, background:`${clr}18`, border:`1px solid ${clr}40`, borderRadius:3, padding:'2px 8px', letterSpacing:'1px' }}>
-      {label ?? level}
-    </span>
-  )
-}
-
-function LoadingScreen({ mod }: { mod: typeof MODULES[0] }) {
-  const [dots, setDots] = useState('')
-  const [lines, setLines] = useState<string[]>([])
-  const msgs = [
-    `[INIT] Activating ${mod.code}...`,
-    '[CONN] Establishing secure data channel...',
-    '[AUTH] Clearance level verified',
-    '[SCAN] Pulling market intelligence...',
-    '[AI]   Deploying Gemini analysis engine...',
-    '[PROC] Cross-referencing signal database...',
-    '[DONE] Intelligence report compiling...',
-  ]
+// ── COSMIC SELECTION CANVAS ───────────────────────────────────────────────────
+function CosmicCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  const mouse = useRef({ x:-1000, y:-1000 })
   useEffect(() => {
-    let i = 0
-    const t = setInterval(() => {
-      if (i < msgs.length) { setLines(prev => [...prev, msgs[i]]); i++ }
-      else clearInterval(t)
-    }, 340)
-    const d = setInterval(() => setDots(p => p.length >= 3 ? '' : p + '.'), 400)
-    return () => { clearInterval(t); clearInterval(d) }
-  }, [])
+    const c = ref.current; if (!c) return
+    const ctx = c.getContext('2d')!
+    let W = c.width = window.innerWidth
+    let H = c.height = window.innerHeight
+    let raf: number, t = 0
+
+    // Stars with depth
+    const stars = Array.from({ length:200 }, () => ({
+      x: Math.random()*W, y: Math.random()*H,
+      z: 0.1 + Math.random()*.9,
+      phase: Math.random()*Math.PI*2,
+      clr: Math.random()>.8 ? '#a855f7' : Math.random()>.6 ? '#1e90ff' : '#00d4aa',
+    }))
+
+    // Constellation connections
+    const constellations: [number,number][] = []
+    for (let i=0; i<stars.length; i++) {
+      for (let j=i+1; j<stars.length; j++) {
+        if (constellations.length > 180) break
+        const dx=stars[i].x-stars[j].x, dy=stars[i].y-stars[j].y
+        const d=Math.sqrt(dx*dx+dy*dy)
+        if (d<110 && Math.random()>.65) constellations.push([i,j])
+      }
+    }
+
+    // Shooting stars
+    const shoots: { x:number; y:number; vx:number; vy:number; life:number; maxLife:number }[] = []
+    const spawnShoot = () => {
+      if (shoots.length < 3) {
+        shoots.push({ x:Math.random()*W, y:0, vx:3+Math.random()*4, vy:1+Math.random()*2, life:0, maxLife:60+Math.random()*40 })
+      }
+    }
+    const si = setInterval(spawnShoot, 3500)
+
+    const draw = () => {
+      ctx.clearRect(0,0,W,H)
+
+      // Constellation lines
+      constellations.forEach(([a,b]) => {
+        const s1=stars[a], s2=stars[b]
+        const alpha = ((s1.z+s2.z)/2)*0.06
+        ctx.beginPath(); ctx.moveTo(s1.x,s1.y); ctx.lineTo(s2.x,s2.y)
+        ctx.strokeStyle=`rgba(168,85,247,${alpha})`; ctx.lineWidth=0.5; ctx.stroke()
+      })
+
+      // Stars — mouse creates gravity lens
+      stars.forEach(s => {
+        const dx=mouse.current.x-s.x, dy=mouse.current.y-s.y
+        const d=Math.sqrt(dx*dx+dy*dy)
+        const shift = d<200 ? (1-d/200)*3*s.z : 0
+        const sx = s.x + (dx/Math.max(d,1))*shift
+        const sy = s.y + (dy/Math.max(d,1))*shift
+        const pulse = 0.6+Math.sin(t*.04+s.phase)*.4
+        const sz = (0.8+s.z*2)*pulse
+        ctx.beginPath(); ctx.arc(sx,sy,sz,0,Math.PI*2)
+        ctx.fillStyle=`${s.clr}${Math.floor((0.3+s.z*.6)*255).toString(16).padStart(2,'0')}`
+        if (s.z>.8) { ctx.shadowBlur=6; ctx.shadowColor=s.clr }
+        ctx.fill(); ctx.shadowBlur=0
+      })
+
+      // Shooting stars
+      for (let i=shoots.length-1; i>=0; i--) {
+        const sh=shoots[i]
+        const progress=sh.life/sh.maxLife
+        const alpha=(1-progress)*0.8
+        const len=20+progress*40
+        ctx.beginPath()
+        ctx.moveTo(sh.x,sh.y)
+        ctx.lineTo(sh.x-sh.vx/Math.sqrt(sh.vx*sh.vx+sh.vy*sh.vy)*len, sh.y-sh.vy/Math.sqrt(sh.vx*sh.vx+sh.vy*sh.vy)*len)
+        const g=ctx.createLinearGradient(sh.x,sh.y,sh.x-sh.vx*len*.2,sh.y-sh.vy*len*.2)
+        g.addColorStop(0,`rgba(255,255,255,${alpha})`); g.addColorStop(1,'rgba(255,255,255,0)')
+        ctx.strokeStyle=g; ctx.lineWidth=1.5; ctx.stroke()
+        sh.x+=sh.vx; sh.y+=sh.vy; sh.life++
+        if (sh.life>=sh.maxLife||sh.x>W||sh.y>H) shoots.splice(i,1)
+      }
+
+      // Radial glow from center
+      const g2=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*.6)
+      g2.addColorStop(0,'rgba(168,85,247,.04)'); g2.addColorStop(.5,'rgba(0,212,170,.02)'); g2.addColorStop(1,'transparent')
+      ctx.fillStyle=g2; ctx.fillRect(0,0,W,H)
+
+      t++; raf=requestAnimationFrame(draw)
+    }
+    draw()
+
+    const onMouse=(e:MouseEvent)=>{mouse.current={x:e.clientX,y:e.clientY}}
+    const resize=()=>{W=c.width=window.innerWidth;H=c.height=window.innerHeight}
+    window.addEventListener('mousemove',onMouse)
+    window.addEventListener('resize',resize)
+    return ()=>{cancelAnimationFrame(raf);clearInterval(si);window.removeEventListener('mousemove',onMouse);window.removeEventListener('resize',resize)}
+  },[])
+  return <canvas ref={ref} style={{position:'fixed',inset:0,zIndex:0,pointerEvents:'none',opacity:.75}}/>
+}
+
+// ── WEAPON CANVAS BACKGROUNDS ─────────────────────────────────────────────────
+function WeaponCanvas({ moduleId, clr }: { moduleId:string; clr:string }) {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const c = ref.current; if (!c) return
+    const ctx = c.getContext('2d')!
+    let W = c.width = window.innerWidth, H = c.height = window.innerHeight
+    let raf: number, t = 0
+
+    if (moduleId==='lockup') {
+      const drops=Array.from({length:80},()=>({x:Math.random()*W,y:Math.random()*H-H,speed:1+Math.random()*3,len:20+Math.random()*60,alpha:0.1+Math.random()*0.4}))
+      const draw=()=>{ctx.clearRect(0,0,W,H);drops.forEach(d=>{ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(d.x,d.y+d.len);ctx.strokeStyle=`rgba(255,45,120,${d.alpha})`;ctx.lineWidth=1;ctx.stroke();d.y+=d.speed;if(d.y>H)d.y=-100});t++;raf=requestAnimationFrame(draw)};draw()
+    } else if (moduleId==='liedetector') {
+      const draw=()=>{ctx.fillStyle='rgba(3,10,16,0.08)';ctx.fillRect(0,0,W,H);for(let row=0;row<4;row++){const yBase=H*0.2+row*(H*0.2);ctx.beginPath();for(let x=0;x<W;x++){const chaos=row===2?Math.sin(x/30+t*0.08)*30+Math.sin(x/10)*15:Math.sin(x/40+t*0.04)*15;const y=yBase+chaos+(row===2&&x>W/2?(x-W/2)*0.08:0);x===0?ctx.moveTo(x,y):ctx.lineTo(x,y)}ctx.strokeStyle=row===2?`rgba(245,158,11,0.3)`:`rgba(245,158,11,0.08)`;ctx.lineWidth=row===2?1.5:0.5;ctx.stroke()}t++;raf=requestAnimationFrame(draw)};draw()
+    } else if (moduleId==='galaxybrain') {
+      const nodes=Array.from({length:30},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*0.3,vy:(Math.random()-.5)*0.3}))
+      const draw=()=>{ctx.fillStyle='rgba(3,10,16,0.06)';ctx.fillRect(0,0,W,H);nodes.forEach(n=>{n.x+=n.vx;n.y+=n.vy;if(n.x<0||n.x>W)n.vx*=-1;if(n.y<0||n.y>H)n.vy*=-1});nodes.forEach((a,i)=>nodes.forEach((b,j)=>{if(i>=j)return;const d=Math.hypot(a.x-b.x,a.y-b.y);if(d<200){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=`rgba(168,85,247,${(1-d/200)*0.15})`;ctx.stroke()}}));nodes.forEach(n=>{ctx.beginPath();ctx.arc(n.x,n.y,2,0,Math.PI*2);ctx.fillStyle='rgba(168,85,247,0.4)';ctx.fill()});raf=requestAnimationFrame(draw)};draw()
+    } else if (moduleId==='flow') {
+      const streams=Array.from({length:12},(_,i)=>({y:H*(i+0.5)/12,particles:Array.from({length:8},()=>({x:Math.random()*W,speed:2+Math.random()*3}))}))
+      const draw=()=>{ctx.fillStyle='rgba(3,10,16,0.07)';ctx.fillRect(0,0,W,H);streams.forEach(s=>{ctx.strokeStyle='rgba(0,212,255,0.06)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,s.y);ctx.lineTo(W,s.y);ctx.stroke();s.particles.forEach(p=>{ctx.beginPath();ctx.arc(p.x,s.y,3,0,Math.PI*2);ctx.fillStyle='rgba(0,212,255,0.5)';ctx.shadowBlur=8;ctx.shadowColor='#00d4ff';ctx.fill();ctx.shadowBlur=0;p.x+=p.speed;if(p.x>W)p.x=-20})});raf=requestAnimationFrame(draw)};draw()
+    } else if (moduleId==='signals') {
+      const cx=W/2,cy=H/2,r=Math.max(W,H)*0.8
+      const draw=()=>{ctx.fillStyle='rgba(3,10,16,0.05)';ctx.fillRect(0,0,W,H);for(let i=1;i<=5;i++){ctx.beginPath();ctx.arc(cx,cy,r*i/5,0,Math.PI*2);ctx.strokeStyle='rgba(0,255,136,0.04)';ctx.stroke()}ctx.save();ctx.translate(cx,cy);ctx.rotate(t*0.015);const grad=ctx.createRadialGradient(0,0,0,0,0,r/3);grad.addColorStop(0,'rgba(0,255,136,0.08)');grad.addColorStop(1,'rgba(0,255,136,0)');ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,-0.6,0);ctx.closePath();ctx.fillStyle=grad;ctx.fill();ctx.restore();t++;raf=requestAnimationFrame(draw)};draw()
+    } else {
+      const docs=Array.from({length:6},()=>({x:Math.random()*W,y:Math.random()*H-H,speed:0.4+Math.random()*0.8,width:100+Math.random()*200,lines:5+Math.floor(Math.random()*6)}))
+      const draw=()=>{ctx.fillStyle='rgba(3,10,16,0.04)';ctx.fillRect(0,0,W,H);docs.forEach(d=>{ctx.fillStyle='rgba(236,72,153,0.04)';ctx.fillRect(d.x,d.y,d.width,d.lines*12+16);ctx.strokeStyle='rgba(236,72,153,0.12)';ctx.lineWidth=0.5;ctx.strokeRect(d.x,d.y,d.width,d.lines*12+16);for(let i=0;i<d.lines;i++){ctx.fillStyle=`rgba(236,72,153,${Math.random()>0.7?0.5:0.1})`;ctx.fillRect(d.x+8,d.y+8+i*12,(d.width-16)*(0.4+Math.random()*0.6),4)}d.y+=d.speed;if(d.y>H+100)d.y=-200});t++;raf=requestAnimationFrame(draw)};draw()
+    }
+
+    const resize=()=>{W=c.width=window.innerWidth;H=c.height=window.innerHeight}
+    window.addEventListener('resize',resize)
+    return ()=>{cancelAnimationFrame(raf);window.removeEventListener('resize',resize)}
+  },[moduleId,clr])
+  return <canvas ref={ref} style={{position:'fixed',inset:0,zIndex:0,pointerEvents:'none',opacity:.6}}/>
+}
+
+// ── RESULT COMPONENTS ─────────────────────────────────────────────────────────
+function Chip({ label, clr }: { label:string; clr:string }) {
+  return <span style={{fontSize:9,fontWeight:800,color:clr,background:`${clr}18`,border:`1px solid ${clr}35`,borderRadius:3,padding:'2px 8px',letterSpacing:'1px'}}>{label}</span>
+}
+function ScoreBar({ score, label, clr }: { score:number; label:string; clr:string }) {
+  const c=clr||(score>=7?'#00ff88':score>=5?'#f59e0b':'#ff2d78')
   return (
-    <div style={{ padding:'32px', background:'#000', border:`1px solid ${mod.clr}30`, borderRadius:4 }}>
-      <div style={{ fontFamily:'monospace', fontSize:11, display:'flex', flexDirection:'column', gap:6 }}>
-        {lines.map((l,i) => (
-          <div key={i} style={{ color: i === lines.length-1 ? mod.clr : '#1a4a2a', transition:'color .3s' }}>
-            {l}{i === lines.length-1 ? dots : ' ✓'}
-          </div>
-        ))}
+    <div style={{marginBottom:10}}>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
+        <span style={{fontSize:11,color:'#6a8a98'}}>{label}</span>
+        <span style={{fontSize:11,fontWeight:800,color:c,fontFamily:'monospace'}}>{score}/10</span>
+      </div>
+      <div style={{height:3,background:'rgba(255,255,255,.06)',borderRadius:2,overflow:'hidden'}}>
+        <div style={{height:'100%',width:`${score*10}%`,background:c,borderRadius:2,boxShadow:`0 0 8px ${c}`,transition:'width 1.2s cubic-bezier(.22,1,.36,1)'}}/>
       </div>
     </div>
   )
 }
-
-function ResultCard({ title, value, clr, sub }: { title:string; value:string|number; clr:string; sub?:string }) {
+function InfoBlock({ title, content, clr }: { title:string; content:string; clr:string }) {
   return (
-    <div style={{ background:`${clr}08`, border:`1px solid ${clr}25`, borderRadius:4, padding:'16px 18px' }}>
-      <div style={{ fontSize:9, color:'#6a90a8', letterSpacing:'2px', marginBottom:6 }}>{title}</div>
-      <div style={{ fontSize:20, fontWeight:900, color:clr, fontFamily:'monospace', textShadow:`0 0 16px ${clr}`, lineHeight:1.2 }}>{value}</div>
-      {sub && <div style={{ fontSize:11, color:'#6a90a8', marginTop:4 }}>{sub}</div>}
+    <div style={{background:'rgba(255,255,255,.03)',border:`1px solid ${clr}20`,borderRadius:6,padding:'14px 16px'}}>
+      <div style={{fontSize:9,color:'#6a8a98',letterSpacing:'1.5px',marginBottom:8}}>{title}</div>
+      <p style={{fontSize:13,color:'#c8d8e0',lineHeight:1.7}}>{content}</p>
+    </div>
+  )
+}
+function TradeBox({ trade, clr }: { trade:string; clr:string }) {
+  return (
+    <div style={{background:`${clr}10`,border:`1px solid ${clr}35`,borderRadius:6,padding:'16px 18px',position:'relative',overflow:'hidden'}}>
+      <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${clr},transparent)`}}/>
+      <div style={{fontSize:9,color:clr,letterSpacing:'1.5px',marginBottom:8}}>THE TRADE</div>
+      <p style={{fontSize:14,fontWeight:600,color:'#dce8f0',lineHeight:1.65}}>{trade}</p>
     </div>
   )
 }
 
-// ── RESULT RENDERERS ─────────────────────────────────────────────────────────
-
-function LockupResult({ data, clr }: { data: Record<string,unknown>; clr:string }) {
-  const trade = data.trade as Record<string,string> ?? {}
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
-        <ResultCard title="LOCK-UP DATE" value={String(data.lockup_date ?? 'ESTIMATING')} clr={clr}/>
-        <ResultCard title="DAYS UNTIL" value={data.days_until ? `${data.days_until}d` : 'TBD'} clr={clr}/>
-        <ResultCard title="SETUP QUALITY" value={String(data.setup_quality ?? '?')} clr={VERDICT_CLR[String(data.setup_quality)] ?? clr}/>
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-        <ResultCard title="SHARES UNLOCKING" value={String(data.estimated_unlock_shares ?? '?')} clr='#f59e0b'/>
-        <ResultCard title="HISTORICAL AVG DROP" value={String(data.historical_avg_drop ?? '?')} clr='#ff2d78'/>
-      </div>
-      <div style={{ background:'#050505', border:`1px solid ${clr}20`, borderRadius:4, padding:'18px' }}>
-        <div style={{ fontSize:9, color:'#6a90a8', letterSpacing:'2px', marginBottom:10 }}>THESIS</div>
-        <p style={{ fontSize:13, color:'#d0e8d8', lineHeight:1.75 }}>{String(data.thesis ?? '')}</p>
-      </div>
-      <div style={{ background:'#0a0005', border:`1px solid ${clr}30`, borderRadius:4, padding:'18px' }}>
-        <div style={{ fontSize:9, color:clr, letterSpacing:'2px', marginBottom:12 }}>THE TRADE</div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+function ResultRenderer({ mode, data, clr }: { mode:string; data:Record<string,unknown>; clr:string }) {
+  if (mode==='lockup') {
+    const trade=(data.trade as Record<string,string>)??{}
+    return (
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
+          {[['LOCK-UP DATE',String(data.lockup_date??'?')],['DAYS UNTIL',data.days_until?`${data.days_until}d`:'TBD'],['SETUP',String(data.setup_quality??'?')]].map(([l,v])=>(
+            <div key={l} style={{background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',borderRadius:6,padding:'14px 16px',textAlign:'center'}}>
+              <div style={{fontSize:9,color:'#6a8a98',letterSpacing:'1px',marginBottom:6}}>{l}</div>
+              <div style={{fontSize:17,fontWeight:900,color:clr,fontFamily:'monospace',textShadow:`0 0 12px ${clr}`}}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <InfoBlock title="THESIS" content={String(data.thesis??'')} clr={clr}/>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+          {[['UNLOCK SHARES',String(data.estimated_unlock_shares??'?'),'#f59e0b'],['HISTORICAL DROP',String(data.historical_avg_drop??'?'),'#ff2d78']].map(([l,v,c])=>(
+            <div key={l} style={{background:'rgba(255,255,255,.03)',border:`1px solid ${c}25`,borderRadius:6,padding:'12px 14px'}}>
+              <div style={{fontSize:9,color:'#6a8a98',letterSpacing:'1px',marginBottom:6}}>{l}</div>
+              <div style={{fontSize:18,fontWeight:900,color:c,fontFamily:'monospace'}}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
           {[['TYPE',trade.type],['ENTRY TIMING',trade.entry_timing],['EXPIRY',trade.expiry]].map(([l,v])=>(
-            <div key={l} style={{ background:'#0a0005', border:'1px solid #1a0010', borderRadius:3, padding:'10px 12px' }}>
-              <div style={{ fontSize:9, color:'#6a90a8', letterSpacing:'1px', marginBottom:4 }}>{l}</div>
-              <div style={{ fontSize:12, fontWeight:800, color:clr, fontFamily:'monospace' }}>{v}</div>
+            <div key={l} style={{background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',borderRadius:6,padding:'10px 12px'}}>
+              <div style={{fontSize:9,color:'#6a8a98',letterSpacing:'1px',marginBottom:4}}>{l}</div>
+              <div style={{fontSize:12,fontWeight:700,color:clr,fontFamily:'monospace'}}>{v}</div>
             </div>
           ))}
         </div>
-        <div style={{ marginTop:10, fontSize:12, color:'#6a90a8', lineHeight:1.6 }}>
-          <span style={{ color:'#ff2d78', fontWeight:700 }}>EXIT: </span>{trade.exit}
-        </div>
-        <div style={{ marginTop:6, fontSize:12, color:'#f59e0b', lineHeight:1.6 }}>
-          <span style={{ fontWeight:700 }}>RISK: </span>{trade.risk}
-        </div>
-      </div>
-      {Array.isArray(data.red_flags) && data.red_flags.length > 0 && (
-        <div>
-          <div style={{ fontSize:9, color:'#ff2d78', letterSpacing:'2px', marginBottom:8 }}>RED FLAGS</div>
-          {(data.red_flags as string[]).map((f,i) => (
-            <div key={i} style={{ display:'flex', gap:8, padding:'8px 12px', marginBottom:6, background:'rgba(255,45,120,.06)', border:'1px solid rgba(255,45,120,.2)', borderRadius:3 }}>
-              <span style={{ color:'#ff2d78', fontWeight:700 }}>{i+1}.</span>
-              <span style={{ fontSize:12, color:'#d0e8d8' }}>{f}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function LieDetectorResult({ data, clr }: { data: Record<string,unknown>; clr:string }) {
-  const verdictClr = VERDICT_CLR[String(data.verdict)] ?? clr
-  const div = data.narrative_vs_reality as Record<string,string> ?? {}
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
-        <ResultCard title="VERDICT" value={String(data.verdict ?? '?').replace('_',' ')} clr={verdictClr}/>
-        <ResultCard title="CONFIDENCE" value={`${data.confidence ?? 0}%`} clr={verdictClr}/>
-        <ResultCard title="DIVERGENCE SCORE" value={`${data.divergence_score ?? 0}/100`} clr='#f59e0b' sub="narrative vs reality"/>
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-        <div style={{ background:'rgba(0,20,10,.6)', border:'1px solid rgba(0,255,136,.15)', borderRadius:4, padding:'16px' }}>
-          <div style={{ fontSize:9, color:'#6a90a8', letterSpacing:'2px', marginBottom:8 }}>WHAT THEY WANT YOU TO THINK</div>
-          <p style={{ fontSize:13, color:'#6a90a8', lineHeight:1.65, fontStyle:'italic' }}>{div.what_they_want_you_to_think}</p>
-        </div>
-        <div style={{ background:'rgba(255,45,120,.06)', border:'1px solid rgba(255,45,120,.25)', borderRadius:4, padding:'16px' }}>
-          <div style={{ fontSize:9, color:'#ff2d78', letterSpacing:'2px', marginBottom:8 }}>HIDDEN TRUTH</div>
-          <p style={{ fontSize:13, color:'#d0e8d8', lineHeight:1.65, fontWeight:500 }}>{String(data.hidden_truth ?? '')}</p>
-        </div>
-      </div>
-      {Array.isArray(data.red_flags) && (
-        <div>
-          <div style={{ fontSize:9, color:'#ff2d78', letterSpacing:'2px', marginBottom:8 }}>SIGNALS DETECTED</div>
-          {(data.red_flags as Record<string,string>[]).map((f,i) => (
-            <div key={i} style={{ display:'grid', gridTemplateColumns:'auto 1fr auto', gap:12, padding:'10px 14px', marginBottom:6, background:'rgba(0,0,0,.4)', border:'1px solid #1a1a1a', borderRadius:3 }}>
-              <SeverityBadge level={f.severity}/>
-              <div>
-                <div style={{ fontSize:12, fontWeight:700, color:'#d0e8d8', marginBottom:2 }}>{f.signal}</div>
-                <div style={{ fontSize:11, color:'#6a90a8' }}>{f.implication}</div>
-              </div>
-              <SeverityBadge level={f.severity === 'HIGH' ? 'BEARISH_HIDDEN' : 'NEUTRAL'} label={f.severity === 'HIGH' ? '↓ BEARISH' : 'WATCH'}/>
-            </div>
-          ))}
-        </div>
-      )}
-      <div style={{ background:'#050505', border:`1px solid ${clr}25`, borderRadius:4, padding:'18px' }}>
-        <div style={{ fontSize:9, color:clr, letterSpacing:'2px', marginBottom:10 }}>THE TRADE</div>
-        <p style={{ fontSize:14, color:'#d0e8d8', lineHeight:1.7, fontWeight:500 }}>{String(data.the_trade ?? '')}</p>
-        <div style={{ marginTop:10, display:'flex', gap:16 }}>
-          <div style={{ fontSize:11, color:'#6a90a8' }}>Catalyst: <span style={{ color:'#f59e0b' }}>{String(data.catalyst ?? '')}</span></div>
-          <div style={{ fontSize:11, color:'#6a90a8' }}>Timeline: <span style={{ color:'#f59e0b' }}>{String(data.timeline ?? '')}</span></div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function GalaxyBrainResult({ data, clr }: { data: Record<string,unknown>; clr:string }) {
-  const dominoes = (data.domino_chain as Record<string,unknown>[] ?? [])
-  const nonObvious = (data.non_obvious_trades as Record<string,unknown>[] ?? [])
-  const obvious = (data.obvious_trades as Record<string,unknown>[] ?? [])
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-        <ResultCard title="DIRECTION" value={String(data.primary_direction ?? '?').replace('_',' ')} clr={clr}/>
-        <ResultCard title="SCENARIO CLARITY" value={`${data.scenario_clarity ?? 0}/100`} clr={clr} sub="how tradeable this is"/>
-      </div>
-
-      {/* Domino chain */}
-      <div>
-        <div style={{ fontSize:9, color:clr, letterSpacing:'2px', marginBottom:10 }}>DOMINO CHAIN</div>
-        {dominoes.map((d,i) => (
-          <div key={i} style={{ display:'flex', gap:0, marginBottom:0 }}>
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginRight:14 }}>
-              <div style={{ width:28, height:28, borderRadius:'50%', background:`${clr}20`, border:`2px solid ${clr}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:900, color:clr, flexShrink:0 }}>{i+1}</div>
-              {i < dominoes.length-1 && <div style={{ width:2, height:28, background:`${clr}30` }}/>}
-            </div>
-            <div style={{ background:'#050505', border:`1px solid ${clr}15`, borderRadius:4, padding:'12px 14px', flex:1, marginBottom:8 }}>
-              <div style={{ fontSize:12, fontWeight:700, color:'#d0e8d8', marginBottom:4 }}>{String(d.what_happens)}</div>
-              <div style={{ display:'flex', gap:16, fontSize:10, color:'#6a90a8' }}>
-                <span>Moves: <span style={{ color:clr }}>{String(d.who_moves_first)}</span></span>
-                <span>Size: <span style={{ color:'#f59e0b' }}>{String(d.magnitude)}</span></span>
-                <span>Timing: <span style={{ color:'#d0e8d8' }}>{String(d.timing)}</span></span>
-              </div>
-            </div>
+        <TradeBox trade={`${trade.exit} | Risk: ${trade.risk}`} clr={clr}/>
+        {Array.isArray(data.red_flags)&&(data.red_flags as string[]).map((f,i)=>(
+          <div key={i} style={{display:'flex',gap:10,padding:'10px 14px',background:'rgba(255,45,120,.06)',border:'1px solid rgba(255,45,120,.2)',borderRadius:6}}>
+            <span style={{color:'#ff2d78',fontWeight:700,flexShrink:0}}>{i+1}.</span>
+            <span style={{fontSize:12,color:'#c8d8e0',lineHeight:1.5}}>{f}</span>
           </div>
         ))}
       </div>
-
-      {/* Non-obvious trades */}
-      {nonObvious.length > 0 && (
-        <div>
-          <div style={{ fontSize:9, color:'#ff2d78', letterSpacing:'2px', marginBottom:10 }}>🔥 NON-OBVIOUS TRADES — THE CONNECTIONS RETAIL MISSES</div>
-          {nonObvious.map((t,i) => (
-            <div key={i} style={{ background:'rgba(255,45,120,.05)', border:'1px solid rgba(255,45,120,.2)', borderRadius:4, padding:'14px 16px', marginBottom:8 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:8 }}>
-                <span style={{ fontSize:16, fontWeight:900, fontFamily:'monospace', color: t.direction === 'LONG' ? '#00ff88' : '#ff2d78' }}>{String(t.ticker)}</span>
-                <SeverityBadge level={t.direction === 'LONG' ? 'BULLISH_HIDDEN' : 'BEARISH_HIDDEN'} label={String(t.direction)}/>
-                <SeverityBadge level={String(t.conviction)} label={`${t.conviction} CONVICTION`}/>
-              </div>
-              <div style={{ fontSize:12, color:'#d0e8d8', marginBottom:6, lineHeight:1.6 }}>
-                <span style={{ color:'#a855f7', fontWeight:700 }}>CONNECTION: </span>{String(t.connection)}
-              </div>
-              <div style={{ fontSize:11, color:'#f59e0b' }}>Options: {String(t.options_play)}</div>
+    )
+  }
+  if (mode==='liedetector') {
+    const verdClr2=VERDICT_CLR[String(data.verdict)]??clr
+    const nvr=(data.narrative_vs_reality as Record<string,string>)??{}
+    return (
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+          {[['VERDICT',String(data.verdict??'?').replace('_',' '),verdClr2],['CONFIDENCE',`${data.confidence??0}%`,verdClr2],['DIVERGENCE',`${data.divergence_score??0}/100`,'#f59e0b']].map(([l,v,c])=>(
+            <div key={l} style={{background:'rgba(255,255,255,.04)',border:`1px solid ${c}30`,borderRadius:6,padding:'14px 16px',textAlign:'center'}}>
+              <div style={{fontSize:9,color:'#6a8a98',letterSpacing:'1px',marginBottom:6}}>{l}</div>
+              <div style={{fontSize:16,fontWeight:900,color:c,fontFamily:'monospace',textShadow:`0 0 12px ${c}`}}>{v}</div>
             </div>
           ))}
         </div>
-      )}
-
-      <div style={{ background:'#050505', border:`1px solid ${clr}20`, borderRadius:4, padding:'16px' }}>
-        <div style={{ fontSize:9, color:'#ff2d78', letterSpacing:'2px', marginBottom:8 }}>WHAT BREAKS THE THESIS</div>
-        <p style={{ fontSize:13, color:'#d0e8d8', lineHeight:1.65 }}>{String(data.what_breaks_the_thesis ?? '')}</p>
-      </div>
-    </div>
-  )
-}
-
-function FlowResult({ data, clr }: { data: Record<string,unknown>; clr:string }) {
-  const events = (data.events as Record<string,unknown>[] ?? [])
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
-        <ResultCard title="NEXT OPEX" value={String(data.opex_date ?? '?')} clr={clr}/>
-        <ResultCard title="DAYS TO OPEX" value={`${data.days_to_opex ?? '?'}d`} clr={clr}/>
-        <ResultCard title="MAX PAIN SPY" value={`$${data.max_pain_levels ? String((data.max_pain_levels as Record<string,number>).SPY ?? '?') : '?'}`} clr='#f59e0b'/>
-      </div>
-      <div style={{ background:`${clr}08`, border:`1px solid ${clr}25`, borderRadius:4, padding:'16px' }}>
-        <div style={{ fontSize:9, color:clr, letterSpacing:'2px', marginBottom:8 }}>🔥 BIGGEST EDGE THIS MONTH</div>
-        <p style={{ fontSize:14, color:'#d0e8d8', lineHeight:1.7, fontWeight:600 }}>{String(data.biggest_edge ?? '')}</p>
-      </div>
-      <div style={{ fontSize:9, color:clr, letterSpacing:'2px', marginBottom:0 }}>FORCED FLOW EVENTS</div>
-      {events.map((ev,i) => (
-        <div key={i} style={{ background:'#050505', border:`1px solid ${VERDICT_CLR[String(ev.direction)] ?? clr}25`, borderRadius:4, padding:'14px 16px' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-            <SeverityBadge level={String(ev.direction)} label={String(ev.direction).replace('_',' ')}/>
-            <span style={{ fontSize:13, fontWeight:700, color:'#d0e8d8' }}>{String(ev.event_type)}</span>
-            <span style={{ marginLeft:'auto', fontSize:11, color:'#6a90a8' }}>{String(ev.date)}</span>
-          </div>
-          <div style={{ display:'flex', gap:16, fontSize:11, color:'#6a90a8', marginBottom:8 }}>
-            <span>Size: <span style={{ color:'#f59e0b' }}>{String(ev.magnitude)}</span></span>
-            <span>Confidence: <span style={{ color:clr }}>{String(ev.confidence)}%</span></span>
-            <span>Window: <span style={{ color:'#d0e8d8' }}>{String(ev.window)}</span></span>
-          </div>
-          {Array.isArray(ev.affected_tickers) && (
-            <div style={{ display:'flex', gap:6, marginBottom:8 }}>
-              {(ev.affected_tickers as string[]).map(t=>(
-                <span key={t} style={{ fontSize:11, fontWeight:700, color:clr, background:`${clr}12`, border:`1px solid ${clr}30`, borderRadius:3, padding:'2px 8px', fontFamily:'monospace' }}>{t}</span>
-              ))}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+          <InfoBlock title="OFFICIAL NARRATIVE" content={nvr.what_they_want_you_to_think} clr="#6a8a98"/>
+          <InfoBlock title="HIDDEN TRUTH" content={String(data.hidden_truth??'')} clr={verdClr2}/>
+        </div>
+        {Array.isArray(data.red_flags)&&(data.red_flags as Record<string,string>[]).map((f,i)=>(
+          <div key={i} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'12px 14px',background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',borderRadius:6}}>
+            <Chip label={f.severity} clr={f.severity==='HIGH'?'#ff2d78':f.severity==='MEDIUM'?'#f59e0b':'#6a8a98'}/>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,fontWeight:700,color:'#dce8f0',marginBottom:3}}>{f.signal}</div>
+              <div style={{fontSize:11,color:'#6a8a98'}}>{f.implication}</div>
             </div>
-          )}
-          <div style={{ fontSize:12, color:'#d0e8d8', lineHeight:1.6 }}><span style={{ color:clr, fontWeight:700 }}>EDGE: </span>{String(ev.edge)}</div>
+          </div>
+        ))}
+        <TradeBox trade={`${data.the_trade} · ${data.catalyst} · ${data.timeline}`} clr={clr}/>
+      </div>
+    )
+  }
+  if (mode==='galaxybrain') {
+    const dominoes=(data.domino_chain as Record<string,unknown>[])??[]
+    const nonOb=(data.non_obvious_trades as Record<string,unknown>[])??[]
+    return (
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+          <InfoBlock title="DIRECTION" content={String(data.primary_direction??'?').replace('_',' ')} clr={clr}/>
+          <InfoBlock title="SCENARIO CLARITY" content={`${data.scenario_clarity??0}/100 — ${data.timeline??''}`} clr={clr}/>
+        </div>
+        <div>
+          <div style={{fontSize:9,color:clr,letterSpacing:'1.5px',marginBottom:10}}>DOMINO CHAIN</div>
+          {dominoes.map((d,i)=>(
+            <div key={i} style={{display:'flex',gap:12,marginBottom:8,alignItems:'flex-start'}}>
+              <div style={{width:24,height:24,borderRadius:'50%',background:`${clr}20`,border:`1px solid ${clr}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:900,color:clr,flexShrink:0,marginTop:2}}>{i+1}</div>
+              <div style={{background:'rgba(255,255,255,.03)',border:`1px solid ${clr}15`,borderRadius:6,padding:'10px 14px',flex:1}}>
+                <div style={{fontSize:12,fontWeight:600,color:'#dce8f0',marginBottom:3}}>{String(d.what_happens)}</div>
+                <div style={{fontSize:10,color:'#6a8a98'}}>{String(d.who_moves_first)} · {String(d.magnitude)} · {String(d.timing)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {nonOb.length>0&&(
+          <div>
+            <div style={{fontSize:9,color:'#ff2d78',letterSpacing:'1.5px',marginBottom:10}}>🔥 NON-OBVIOUS — WHAT RETAIL MISSES</div>
+            {nonOb.map((tr,i)=>(
+              <div key={i} style={{display:'flex',gap:12,padding:'12px 14px',background:'rgba(255,45,120,.05)',border:'1px solid rgba(255,45,120,.2)',borderRadius:6,marginBottom:8}}>
+                <span style={{fontSize:14,fontWeight:900,fontFamily:'monospace',color:tr.direction==='LONG'?'#00ff88':'#ff2d78'}}>{String(tr.ticker)}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:11,color:'#c8d8e0',marginBottom:4,lineHeight:1.5}}><span style={{color:'#a855f7',fontWeight:700}}>Connection: </span>{String(tr.connection)}</div>
+                  <div style={{fontSize:11,color:'#f59e0b'}}>{String(tr.options_play)}</div>
+                </div>
+                <Chip label={String(tr.conviction)} clr={clr}/>
+              </div>
+            ))}
+          </div>
+        )}
+        <InfoBlock title="WHAT BREAKS THE THESIS" content={String(data.what_breaks_the_thesis??'')} clr="#ff2d78"/>
+      </div>
+    )
+  }
+  if (mode==='flow') {
+    const events=(data.events as Record<string,unknown>[])??[]
+    return (
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
+          {[['NEXT OPEX',String(data.opex_date??'?')],['DAYS AWAY',`${data.days_to_opex??'?'}d`],['REGIME',String(data.regime??'?').slice(0,30)]].map(([l,v])=>(
+            <div key={l} style={{background:'rgba(255,255,255,.04)',border:`1px solid ${clr}25`,borderRadius:6,padding:'14px 16px',textAlign:'center'}}>
+              <div style={{fontSize:9,color:'#6a8a98',letterSpacing:'1px',marginBottom:6}}>{l}</div>
+              <div style={{fontSize:14,fontWeight:900,color:clr,fontFamily:'monospace'}}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <TradeBox trade={String(data.biggest_edge??'')} clr={clr}/>
+        {events.map((ev,i)=>(
+          <div key={i} style={{background:'rgba(255,255,255,.03)',border:`1px solid ${VERDICT_CLR[String(ev.direction)]??clr}25`,borderRadius:6,padding:'14px 16px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+              <Chip label={String(ev.direction).replace('_',' ')} clr={VERDICT_CLR[String(ev.direction)]??clr}/>
+              <span style={{fontSize:12,fontWeight:700,color:'#dce8f0'}}>{String(ev.event_type)}</span>
+              <span style={{marginLeft:'auto',fontSize:11,color:'#6a8a98'}}>{String(ev.date)}</span>
+            </div>
+            <div style={{fontSize:12,color:'#6a8a98',marginBottom:8}}>{String(ev.magnitude)} · {String(ev.confidence)}% confidence · {String(ev.window)}</div>
+            {Array.isArray(ev.affected_tickers)&&<div style={{display:'flex',gap:6,marginBottom:8}}>{(ev.affected_tickers as string[]).map(tk=><span key={tk} style={{fontSize:11,fontWeight:700,color:clr,background:`${clr}12`,border:`1px solid ${clr}30`,borderRadius:3,padding:'2px 8px',fontFamily:'monospace'}}>{tk}</span>)}</div>}
+            <div style={{fontSize:12,color:'#dce8f0'}}><span style={{color:clr,fontWeight:700}}>Edge: </span>{String(ev.edge)}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (mode==='signals') {
+    const signals=(data.active_signals as Record<string,unknown>[])??[]
+    return (
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        <TradeBox trade={String(data.most_actionable??'')} clr={clr}/>
+        <InfoBlock title="CURRENT REGIME" content={String(data.market_regime??'')} clr={clr}/>
+        {signals.map((s,i)=>(
+          <div key={i} style={{background:'rgba(255,255,255,.03)',border:`1px solid ${VERDICT_CLR[String(s.status)]??clr}30`,borderRadius:6,padding:'14px 16px',position:'relative'}}>
+            {s.status==='FIRING'&&<div style={{position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${clr},transparent)`}}/>}
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+              <div style={{width:8,height:8,borderRadius:'50%',background:VERDICT_CLR[String(s.status)]??clr,boxShadow:`0 0 8px ${VERDICT_CLR[String(s.status)]??clr}`,flexShrink:0}}/>
+              <Chip label={String(s.status)} clr={VERDICT_CLR[String(s.status)]??clr}/>
+              <span style={{fontSize:12,fontWeight:700,color:'#dce8f0'}}>{String(s.correlation)}</span>
+              <span style={{marginLeft:'auto',fontSize:11,color:VERDICT_CLR[String(s.status)]??clr,fontFamily:'monospace',fontWeight:700}}>{String(s.historical_hit_rate)}</span>
+            </div>
+            <div style={{fontSize:11,color:'#6a8a98',marginBottom:8}}>{String(s.current_trigger)} · {String(s.timing)} · {String(s.magnitude)}</div>
+            <div style={{fontSize:12,color:'#dce8f0'}}><span style={{color:clr,fontWeight:700}}>Trade: </span>{String(s.trade)}</div>
+          </div>
+        ))}
+        <InfoBlock title="CONTRARIAN READ" content={String(data.contrarian_read??'')} clr="#a855f7"/>
+      </div>
+    )
+  }
+  // filing
+  const buried=(data.buried_signals as Record<string,string>[])??[]
+  const nvr2=(data.narrative_vs_reality as Record<string,string>)??{}
+  const verdClr3=VERDICT_CLR[String(data.xray_verdict)]??clr
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:12}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+        <div style={{background:'rgba(255,255,255,.04)',border:`1px solid ${verdClr3}30`,borderRadius:6,padding:'16px',textAlign:'center'}}>
+          <div style={{fontSize:9,color:'#6a8a98',letterSpacing:'1px',marginBottom:6}}>X-RAY VERDICT</div>
+          <div style={{fontSize:20,fontWeight:900,color:verdClr3,textShadow:`0 0 16px ${verdClr3}`}}>{String(data.xray_verdict??'?').replace('_',' ')}</div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+          <InfoBlock title="WHAT THEY SAY" content={(nvr2.what_they_want_you_to_think?.slice(0,80)+'...')||''} clr="#6a8a98"/>
+          <InfoBlock title="REALITY" content={(nvr2.what_the_numbers_actually_say?.slice(0,80)+'...')||''} clr={verdClr3}/>
+        </div>
+      </div>
+      {buried.map((s,i)=>(
+        <div key={i} style={{display:'flex',gap:12,padding:'12px 14px',background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',borderRadius:6}}>
+          <Chip label={s.severity} clr={s.severity==='CRITICAL'?'#ff2d78':s.severity==='HIGH'?'#ff6b35':s.severity==='MEDIUM'?'#f59e0b':'#6a8a98'}/>
+          <Chip label={s.market_impact} clr={s.market_impact==='BEARISH'?'#ff2d78':s.market_impact==='BULLISH'?'#00ff88':'#f59e0b'}/>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:600,color:'#dce8f0',marginBottom:3}}>{s.what_it_says}</div>
+            <div style={{fontSize:11,color:'#6a8a98'}}>{s.what_it_means}</div>
+          </div>
         </div>
       ))}
+      <TradeBox trade={`${data.the_trade} · ${data.timeline} · Watch: ${data.key_metric_to_watch}`} clr={clr}/>
     </div>
   )
 }
 
-function SignalRadarResult({ data, clr }: { data: Record<string,unknown>; clr:string }) {
-  const signals = (data.active_signals as Record<string,unknown>[] ?? [])
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      <div style={{ background:`${clr}08`, border:`1px solid ${clr}25`, borderRadius:4, padding:'16px' }}>
-        <div style={{ fontSize:9, color:clr, letterSpacing:'2px', marginBottom:8 }}>🔥 MOST ACTIONABLE SIGNAL NOW</div>
-        <p style={{ fontSize:14, fontWeight:700, color:'#d0e8d8', lineHeight:1.65 }}>{String(data.most_actionable ?? '')}</p>
-      </div>
-      <div style={{ background:'#050505', border:'1px solid #1a1a1a', borderRadius:4, padding:'14px' }}>
-        <div style={{ fontSize:9, color:'#6a90a8', letterSpacing:'2px', marginBottom:6 }}>MARKET REGIME</div>
-        <p style={{ fontSize:13, color:'#d0e8d8', lineHeight:1.65 }}>{String(data.market_regime ?? '')}</p>
-      </div>
-      {signals.map((s,i) => {
-        const statusClr = VERDICT_CLR[String(s.status)] ?? clr
-        return (
-          <div key={i} style={{ background:'#050505', border:`1px solid ${statusClr}30`, borderRadius:4, padding:'16px', position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background: s.status === 'FIRING' ? `linear-gradient(90deg,${statusClr},transparent)` : 'transparent' }}/>
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-              <div style={{ width:8, height:8, borderRadius:'50%', background:statusClr, boxShadow:`0 0 8px ${statusClr}`, animation: s.status === 'FIRING' ? 'none' : 'none', flexShrink:0 }}/>
-              <SeverityBadge level={String(s.status)}/>
-              <span style={{ fontSize:13, fontWeight:700, color:'#d0e8d8' }}>{String(s.correlation)}</span>
-              <span style={{ marginLeft:'auto', fontSize:11, fontWeight:700, color:statusClr, fontFamily:'monospace' }}>{String(s.historical_hit_rate)}</span>
-            </div>
-            <div style={{ fontSize:12, color:'#6a90a8', marginBottom:8, lineHeight:1.6 }}>
-              <span style={{ color:'#d0e8d8' }}>Trigger: </span>{String(s.current_trigger)}
-            </div>
-            <div style={{ display:'flex', gap:16, fontSize:11, color:'#6a90a8', marginBottom:8 }}>
-              <span>Implied: <span style={{ color:statusClr }}>{String(s.implied_move)} {String(s.magnitude)}</span></span>
-              <span>Timing: <span style={{ color:'#d0e8d8' }}>{String(s.timing)}</span></span>
-              <span>Conviction: <span style={{ color:statusClr }}>{String(s.conviction)}</span></span>
-            </div>
-            <div style={{ fontSize:12, color:'#d0e8d8', lineHeight:1.6 }}>
-              <span style={{ color:clr, fontWeight:700 }}>TRADE: </span>{String(s.trade)}
-            </div>
-          </div>
-        )
-      })}
-      <div style={{ background:'rgba(168,85,247,.05)', border:'1px solid rgba(168,85,247,.2)', borderRadius:4, padding:'14px' }}>
-        <div style={{ fontSize:9, color:'#a855f7', letterSpacing:'2px', marginBottom:6 }}>CONTRARIAN READ</div>
-        <p style={{ fontSize:13, color:'#d0e8d8', lineHeight:1.65 }}>{String(data.contrarian_read ?? '')}</p>
-      </div>
-    </div>
-  )
-}
+// ── WEAPON CARD with 3D tilt ──────────────────────────────────────────────────
+function WeaponCard({ mod, onClick, delay }: { mod:typeof MODULES[0]; onClick:()=>void; delay:number }) {
+  const [tilt, setTilt] = useState({ x:0, y:0 })
+  const [hov, setHov] = useState(false)
 
-function FilingXRayResult({ data, clr }: { data: Record<string,unknown>; clr:string }) {
-  const verdictClr = VERDICT_CLR[String(data.xray_verdict)] ?? clr
-  const buried = (data.buried_signals as Record<string,string>[] ?? [])
-  const nvr    = data.narrative_vs_reality as Record<string,string> ?? {}
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-        <ResultCard title="X-RAY VERDICT" value={String(data.xray_verdict ?? '?').replace('_',' ')} clr={verdictClr}/>
-        <ResultCard title="CONFIDENCE" value={`${data.confidence ?? 0}%`} clr={verdictClr}/>
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-        <div style={{ background:'rgba(0,0,0,.5)', border:'1px solid #1a1a1a', borderRadius:4, padding:'14px' }}>
-          <div style={{ fontSize:9, color:'#6a90a8', letterSpacing:'2px', marginBottom:6 }}>WHAT THEY WANT YOU TO SEE</div>
-          <p style={{ fontSize:12, color:'#6a90a8', fontStyle:'italic', lineHeight:1.65 }}>{nvr.what_they_want_you_to_think}</p>
-        </div>
-        <div style={{ background:`${verdictClr}08`, border:`1px solid ${verdictClr}25`, borderRadius:4, padding:'14px' }}>
-          <div style={{ fontSize:9, color:verdictClr, letterSpacing:'2px', marginBottom:6 }}>WHAT THE NUMBERS SAY</div>
-          <p style={{ fontSize:12, color:'#d0e8d8', lineHeight:1.65, fontWeight:500 }}>{nvr.what_the_numbers_actually_say}</p>
-        </div>
-      </div>
-      {buried.length > 0 && (
-        <div>
-          <div style={{ fontSize:9, color:clr, letterSpacing:'2px', marginBottom:10 }}>BURIED SIGNALS</div>
-          {buried.map((s,i) => (
-            <div key={i} style={{ border:`1px solid ${VERDICT_CLR[s.market_impact] ?? '#1a1a1a'}25`, borderRadius:4, padding:'12px 14px', marginBottom:8, background:'#030303' }}>
-              <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:8 }}>
-                <SeverityBadge level={s.severity}/>
-                <SeverityBadge level={s.market_impact} label={s.market_impact}/>
-                <span style={{ fontSize:10, color:'#6a90a8', marginLeft:'auto' }}>Found: {s.location}</span>
-              </div>
-              <div style={{ fontSize:12, fontWeight:700, color:'#d0e8d8', marginBottom:4 }}>{s.what_it_says}</div>
-              <div style={{ fontSize:11, color:'#6a90a8', lineHeight:1.6 }}>{s.what_it_means}</div>
-            </div>
-          ))}
-        </div>
-      )}
-      <div style={{ background:`${clr}08`, border:`1px solid ${clr}25`, borderRadius:4, padding:'16px' }}>
-        <div style={{ fontSize:9, color:clr, letterSpacing:'2px', marginBottom:8 }}>THE TRADE</div>
-        <p style={{ fontSize:13, color:'#d0e8d8', lineHeight:1.7 }}>{String(data.the_trade ?? '')}</p>
-        <div style={{ marginTop:10, display:'flex', gap:20 }}>
-          <div style={{ fontSize:11, color:'#6a90a8' }}>Timeline: <span style={{ color:'#f59e0b' }}>{String(data.timeline ?? '')}</span></div>
-          <div style={{ fontSize:11, color:'#6a90a8' }}>Watch: <span style={{ color:clr }}>{String(data.key_metric_to_watch ?? '')}</span></div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── MAIN ──────────────────────────────────────────────────────────────────────
-export default function IntelligencePage() {
-  const [active,   setActive]   = useState(MODULES[0])
-  const [input,    setInput]    = useState('')
-  const [loading,  setLoading]  = useState(false)
-  const [result,   setResult]   = useState<Record<string,unknown>|null>(null)
-  const [error,    setError]    = useState('')
-  const [cursorX,  setCursorX]  = useState(-100)
-  const [cursorY,  setCursorY]  = useState(-100)
-  const resultRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    let ax=-100, ay=-100, tx=-100, ty=-100, raf: number
-    const onMove = (e: MouseEvent) => { tx=e.clientX; ty=e.clientY }
-    const loop   = () => { ax+=(tx-ax)*.1; ay+=(ty-ay)*.1; setCursorX(ax); setCursorY(ay); raf=requestAnimationFrame(loop) }
-    window.addEventListener('mousemove', onMove); raf=requestAnimationFrame(loop)
-    return () => { window.removeEventListener('mousemove',onMove); cancelAnimationFrame(raf) }
-  }, [])
-
-  useEffect(() => {
-    setResult(null); setError(''); setInput(active.example || '')
-  }, [active])
-
-  async function runIntel() {
-    setLoading(true); setResult(null); setError('')
-    try {
-      const r = await fetch('/api/intelligence', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: active.id, input: input || active.example }),
-      })
-      const d = await r.json()
-      if (!r.ok || d.error) { setError(d.error || 'Analysis failed'); return }
-      setResult(d.result ?? {})
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior:'smooth', block:'start' }), 100)
-    } catch { setError('Network error. Retry.') }
-    finally { setLoading(false) }
+  const onMove = (e:React.MouseEvent) => {
+    const r=e.currentTarget.getBoundingClientRect()
+    const cx=r.width/2, cy=r.height/2
+    setTilt({ x:-(e.clientY-r.top-cy)/cy*12, y:(e.clientX-r.left-cx)/cx*12 })
   }
 
   return (
-    <div style={{ background:'#020408', color:'#c8d8e0', fontFamily:'"Inter",system-ui,sans-serif', minHeight:'100vh', display:'flex', flexDirection:'column', cursor:'none' }}>
+    <div onClick={onClick}
+      onMouseMove={onMove}
+      onMouseEnter={()=>setHov(true)}
+      onMouseLeave={()=>{setHov(false);setTilt({x:0,y:0})}}
+      style={{
+        background:'rgba(6,13,20,.88)',
+        border:`1px solid ${mod.clr}${hov?'55':'1e'}`,
+        backdropFilter:'blur(16px)',
+        padding:'28px 24px',
+        borderRadius:12,
+        cursor:'pointer',
+        position:'relative',
+        overflow:'hidden',
+        transform:`perspective(700px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${hov?1.03:1})`,
+        transition:hov?'transform .1s ease,border-color .2s,box-shadow .2s':'transform .35s ease,border-color .25s,box-shadow .25s',
+        boxShadow:hov?`0 28px 72px rgba(0,0,0,.55),0 0 50px ${mod.clr}14`:'0 8px 32px rgba(0,0,0,.3)',
+        animation:'fadeUp .7s ease both',
+        animationDelay:`${delay}s`,
+        willChange:'transform',
+      }}>
+      {/* Top accent bar */}
+      <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${mod.clr},transparent 65%)`}}/>
+      {/* Inner glow follows tilt */}
+      <div style={{position:'absolute',inset:0,borderRadius:12,background:`radial-gradient(circle at ${50+tilt.y*3}% ${50-tilt.x*3}%,${mod.clr}12,transparent 60%)`,pointerEvents:'none',transition:'background .1s'}}/>
+      {/* Holographic shimmer on hover */}
+      {hov&&<div style={{position:'absolute',inset:0,borderRadius:12,background:'linear-gradient(135deg,rgba(255,255,255,.03),transparent 50%,rgba(255,255,255,.02))',pointerEvents:'none'}}/>}
+      {/* Corner scan */}
+      {hov&&<div style={{position:'absolute',top:0,right:0,width:60,height:1,background:`linear-gradient(90deg,transparent,${mod.clr}60)`,transition:'opacity .3s'}}/>}
+
+      <div style={{position:'relative',zIndex:1}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}}>
+          <span style={{fontSize:34,filter:`drop-shadow(0 0 16px ${mod.clr})`,display:'inline-block',animation:hov?'float 2s ease-in-out infinite':'none'}}>{mod.icon}</span>
+          <span style={{fontSize:'8px',color:mod.clr,background:`${mod.clr}14`,border:`1px solid ${mod.clr}30`,borderRadius:3,padding:'3px 8px',fontWeight:800,letterSpacing:'1.2px'}}>{mod.classif}</span>
+        </div>
+        <div style={{fontSize:'8px',color:'#2a4050',letterSpacing:'1.5px',marginBottom:6,fontFamily:'monospace'}}>{mod.tag}</div>
+        <h3 style={{fontSize:20,fontWeight:900,letterSpacing:'-.4px',color:'#fff',marginBottom:10}}>{mod.name}</h3>
+        <p style={{fontSize:13,color:'#3a5a6a',lineHeight:1.65,marginBottom:16}}>{mod.hook}</p>
+        <p style={{fontSize:12,color:mod.clr,lineHeight:1.6,marginBottom:20,opacity:.8}}>{mod.desc}</p>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',paddingTop:14,borderTop:`1px solid ${mod.clr}14`}}>
+          <span style={{fontSize:10,color:'#1a3040',fontFamily:'monospace'}}>{mod.needsInput?'Requires input':'Auto-detects live data'}</span>
+          <span style={{fontSize:12,color:mod.clr,fontWeight:700,letterSpacing:'.5px'}}>DEPLOY →</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── MAIN PAGE ─────────────────────────────────────────────────────────────────
+export default function IntelligencePage() {
+  const [active, setActive] = useState<typeof MODULES[0]|null>(null)
+  const [activating, setActivating] = useState<typeof MODULES[0]|null>(null)
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<Record<string,unknown>|null>(null)
+  const [error, setError] = useState('')
+  const [phase, setPhase] = useState<'select'|'activate'|'input'|'analyzing'|'result'>('select')
+  const [cursorX, setCursorX] = useState(-100)
+  const [cursorY, setCursorY] = useState(-100)
+  const [logLines, setLogLines] = useState<string[]>([])
+  const resultRef = useRef<HTMLDivElement>(null)
+  const logRef = useRef<ReturnType<typeof setInterval>|null>(null)
+
+  useEffect(() => {
+    let ax=-100,ay=-100,tx=-100,ty=-100,raf:number
+    const m=(e:MouseEvent)=>{tx=e.clientX;ty=e.clientY}
+    const l=()=>{ax+=(tx-ax)*.1;ay+=(ty-ay)*.1;setCursorX(ax);setCursorY(ay);raf=requestAnimationFrame(l)}
+    window.addEventListener('mousemove',m); raf=requestAnimationFrame(l)
+    return ()=>{window.removeEventListener('mousemove',m);cancelAnimationFrame(raf)}
+  },[])
+
+  const activateWeapon = useCallback((mod:typeof MODULES[0]) => {
+    setActivating(mod); setPhase('activate'); setResult(null); setError('')
+    setInput(mod.example||'')
+    setTimeout(()=>{setActive(mod);setActivating(null);setPhase(mod.needsInput?'input':'analyzing');if(!mod.needsInput)runAnalysis(mod,'')},1900)
+  },[])
+
+  const runAnalysis = useCallback(async (mod:typeof MODULES[0], inp:string) => {
+    setPhase('analyzing'); setResult(null); setError(''); setLogLines([])
+    const logs=[`[INIT] Deploying ${mod.name}...`,'[CONN] Secure channel established','[DATA] Fetching live market intelligence...','[AI]   Gemini analysis engine active','[PROC] Cross-referencing signal database...','[DONE] Compiling intelligence report...']
+    let i=0
+    logRef.current=setInterval(()=>{if(i<logs.length){setLogLines(p=>[...p,logs[i]]);i++}else clearInterval(logRef.current!)},400)
+    try {
+      const r=await fetch('/api/intelligence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:mod.id,input:inp||mod.example})})
+      const d=await r.json()
+      if(!r.ok||d.error){setError(d.error||'Analysis failed');setPhase('input');return}
+      setResult(d.result??{}); setPhase('result')
+      setTimeout(()=>resultRef.current?.scrollIntoView({behavior:'smooth',block:'start'}),100)
+    } catch {setError('Network error');setPhase('input')}
+    finally{if(logRef.current)clearInterval(logRef.current)}
+  },[])
+
+  const handleRun = () => {if(active)runAnalysis(active,input)}
+  const handleBack = () => {setPhase('select');setActive(null);setResult(null);setError('');setLogLines([])}
+
+  const acl = active?.clr??'#00d4aa'
+
+  return (
+    <div style={{background:'#030a10',color:'#dce8f0',fontFamily:'"Inter",system-ui,sans-serif',minHeight:'100vh',overflowX:'hidden',cursor:'none',position:'relative'}}>
       <style>{`
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.5)}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes glitch{0%,92%,100%{transform:none}95%{transform:skew(-2deg);filter:blur(.4px)}97%{transform:skew(2deg) scaleX(1.02)}}
+        @keyframes holo{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
         @keyframes scan{0%{top:-4px}100%{top:100%}}
-        @keyframes border-flow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-        @keyframes glow-shift{0%,100%{filter:blur(60px);opacity:.5}50%{filter:blur(90px);opacity:.9}}
-        @keyframes glitch{0%,100%{transform:none}94%{transform:skew(-1deg)}96%{transform:skew(1deg)}}
-        body{background:#020408}
-        .mod-btn{width:100%;text-align:left;background:transparent;border:none;cursor:pointer;padding:14px 16px;border-radius:4px;transition:all .2s;position:relative;overflow:hidden}
-        .mod-btn:hover{background:rgba(255,255,255,.03)}
-        .mod-btn.active{background:rgba(255,255,255,.04)}
-        .run-btn{border:none;border-radius:4px;padding:14px 28px;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:.5px;transition:all .2s;font-family:inherit}
-        .run-btn:hover{opacity:.9;transform:translateY(-1px)}
-        .run-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
-        .inp{background:#000;border:1px solid #1a1a1a;border-radius:4px;padding:14px 16px;color:#c8d8e0;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
-        .inp:focus{border-color:var(--active-clr)}
-        .nav-link{color:#4a6a78;text-decoration:none;font-size:12px;transition:color .2s;letter-spacing:.3px}
-        .nav-link:hover{color:#c8d8e0}
-        ::selection{background:#00ff8830}
-        @media(max-width:768px){.sidebar{display:none!important}}
+        @keyframes scanPage{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+        @keyframes pulse-w{0%,100%{opacity:1}50%{opacity:.25}}
+        @keyframes activateFlash{0%{opacity:0;transform:scale(.92)}25%{opacity:1;transform:scale(1.03)}100%{opacity:1;transform:scale(1)}}
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+        @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+        @keyframes spinSlow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        @keyframes borderPulse{0%,100%{opacity:.3}50%{opacity:.8}}
+        @keyframes textReveal{from{opacity:0;letter-spacing:6px}to{opacity:1;letter-spacing:normal}}
+
+        .nav-link{color:#4a6a78;text-decoration:none;font-size:13px;transition:color .2s}
+        .nav-link:hover{color:#00d4aa}
+        ::selection{background:#00d4aa25}
+        @media(max-width:900px){.wg3{grid-template-columns:1fr 1fr!important}}
+        @media(max-width:580px){.wg3{grid-template-columns:1fr!important}}
       `}</style>
 
-      {/* Cursor */}
-      <div style={{ position:'fixed', zIndex:9999, pointerEvents:'none', left:cursorX-5, top:cursorY-5, width:10, height:10, borderRadius:'50%', background:active.clr, mixBlendMode:'difference', transition:'background .3s' }}/>
-      <div style={{ position:'fixed', zIndex:9998, pointerEvents:'none', left:cursorX-18, top:cursorY-18, width:36, height:36, borderRadius:'50%', border:`1px solid ${active.clr}50`, transition:'left .08s,top .08s,border-color .3s' }}/>
+      {/* Custom cursor */}
+      <div style={{position:'fixed',zIndex:9999,pointerEvents:'none',left:cursorX-5,top:cursorY-5,width:10,height:10,borderRadius:'50%',background:acl,mixBlendMode:'difference',transition:'background .4s'}}/>
+      <div style={{position:'fixed',zIndex:9998,pointerEvents:'none',left:cursorX-18,top:cursorY-18,width:36,height:36,borderRadius:'50%',border:`1px solid ${acl}45`,transition:'left .08s,top .08s,border-color .4s'}}/>
 
-      {/* Ambient glow */}
-      <div style={{ position:'fixed', top:'20%', left:'30%', width:500, height:500, borderRadius:'50%', background:`radial-gradient(circle,${active.glow},transparent 70%)`, pointerEvents:'none', animation:'glow-shift 4s ease-in-out infinite', transition:'background .5s', zIndex:0 }}/>
+      {/* Cosmic canvas (selection) / Weapon canvas (active) */}
+      {phase==='select' ? <CosmicCanvas/> : (active&&<WeaponCanvas moduleId={active.id} clr={active.clr}/>)}
+
+      {/* Page-wide scan line (selection only) */}
+      {phase==='select'&&(
+        <div style={{position:'fixed',inset:0,zIndex:1,pointerEvents:'none',overflow:'hidden'}}>
+          <div style={{position:'absolute',left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(0,212,170,.25),transparent)',animation:'scanPage 8s linear infinite',top:0}}/>
+        </div>
+      )}
+
+      {/* Base ambient glow */}
+      <div style={{position:'fixed',inset:0,zIndex:0,pointerEvents:'none'}}>
+        <div style={{position:'absolute',top:'20%',left:'20%',width:700,height:700,borderRadius:'50%',background:`radial-gradient(circle,${acl}07,transparent 70%)`,transition:'background 1s',animation:'pulse-w 5s ease-in-out infinite'}}/>
+        <div style={{position:'absolute',bottom:'20%',right:'20%',width:500,height:500,borderRadius:'50%',background:`radial-gradient(circle,${acl}05,transparent 70%)`,transition:'background 1s',animation:'pulse-w 6s ease-in-out infinite 1s'}}/>
+        <div style={{position:'absolute',inset:0,backgroundImage:`linear-gradient(${acl}03 1px,transparent 1px),linear-gradient(90deg,${acl}03 1px,transparent 1px)`,backgroundSize:'60px 60px',transition:'background 1s'}}/>
+      </div>
+
+      {/* ACTIVATION OVERLAY */}
+      {phase==='activate'&&activating&&(
+        <div style={{position:'fixed',inset:0,zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(3,10,16,.96)',backdropFilter:'blur(24px)',animation:'fadeIn .12s ease'}}>
+          {/* Rotating ring */}
+          <div style={{position:'absolute',width:300,height:300,borderRadius:'50%',border:`1px solid ${activating.clr}20`,animation:'spinSlow 8s linear infinite'}}/>
+          <div style={{position:'absolute',width:200,height:200,borderRadius:'50%',border:`1px solid ${activating.clr}15`,animation:'spinSlow 5s linear infinite reverse'}}/>
+          <div style={{textAlign:'center',animation:'activateFlash .9s cubic-bezier(.22,1,.36,1)',position:'relative',zIndex:1}}>
+            <div style={{fontSize:90,marginBottom:20,filter:`drop-shadow(0 0 40px ${activating.clr})`,display:'inline-block',animation:'float 1.5s ease-in-out infinite'}}>{activating.icon}</div>
+            <div style={{fontSize:'8px',color:activating.clr,letterSpacing:'5px',marginBottom:14,animation:'textReveal .6s ease .3s both'}}>{activating.classif} · CLEARANCE GRANTED</div>
+            <h2 style={{fontSize:'clamp(36px,6vw,76px)',fontWeight:900,letterSpacing:'-2.5px',color:activating.clr,textShadow:`0 0 80px ${activating.clr}`,animation:'glitch 2s infinite'}}>{activating.name.toUpperCase()}</h2>
+            <div style={{fontSize:13,color:'#3a5a6a',marginTop:10,fontFamily:'monospace',letterSpacing:'.5px'}}>{activating.tag}</div>
+            <div style={{marginTop:24,display:'flex',justifyContent:'center',gap:8}}>
+              {[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:'50%',background:activating.clr,animation:`pulse-w 1s infinite ${i*.2}s`}}/>)}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* NAV */}
-      <nav style={{ position:'fixed', top:0, left:0, right:0, zIndex:100, height:52, display:'flex', alignItems:'center', padding:'0 0 0 300px', gap:24, background:'rgba(2,4,8,.95)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,.04)' }}>
-        <Link href="/" style={{ position:'absolute', left:20, display:'flex', alignItems:'center', gap:8, textDecoration:'none' }}>
-          <div style={{ width:26, height:26, borderRadius:6, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:9, color:'#000' }}>YN</div>
+      <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:100,height:56,display:'flex',alignItems:'center',padding:'0 28px',gap:24,background:'rgba(3,10,16,.88)',backdropFilter:'blur(24px)',borderBottom:`1px solid ${acl}12`,transition:'border-color .4s'}}>
+        <Link href="/" style={{display:'flex',alignItems:'center',gap:8,textDecoration:'none',flexShrink:0}}>
+          <div style={{width:28,height:28,borderRadius:7,background:'linear-gradient(135deg,#00d4aa,#1e90ff)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:10,color:'#030a10',boxShadow:'0 0 16px #00d4aa35'}}>YN</div>
+          <span style={{fontWeight:900,fontSize:14,letterSpacing:'-.3px'}}>YN Finance</span>
         </Link>
-        <div style={{ display:'flex', gap:20 }}>
-          <Link href="/ai-stocks"    className="nav-link">AI Analyzer</Link>
-          <Link href="/daily"        className="nav-link">Daily Intel</Link>
-          <Link href="/performance"  className="nav-link">Performance</Link>
-          <Link href="/courses"      className="nav-link">Courses</Link>
-          <Link href="/app"          className="nav-link">Terminal</Link>
+        <div style={{display:'flex',alignItems:'center',gap:6,fontSize:10,color:acl,fontWeight:700,letterSpacing:'.8px',transition:'color .4s'}}>
+          <span style={{width:5,height:5,borderRadius:'50%',background:acl,display:'inline-block',animation:'pulse-w 1.4s infinite',transition:'background .4s'}}/>
+          INTELLIGENCE SUITE
+          {active&&<span style={{color:'#2a4050',fontWeight:400}}> · {active.name}</span>}
         </div>
-        <div style={{ marginLeft:'auto', marginRight:20, display:'flex', alignItems:'center', gap:8, fontSize:11, color:active.clr, fontWeight:700, letterSpacing:'.5px' }}>
-          <span style={{ width:6, height:6, borderRadius:'50%', background:active.clr, display:'inline-block', animation:'pulse 1.5s infinite' }}/>
-          {active.code} ACTIVE
+        <div style={{display:'flex',gap:20,marginLeft:'auto'}}>
+          <Link href="/analyzer" className="nav-link">Trade Analyzer</Link>
+          <Link href="/app"      className="nav-link">Terminal</Link>
         </div>
+        {active&&(
+          <button onClick={handleBack} style={{marginLeft:8,background:'transparent',border:`1px solid ${acl}35`,color:acl,padding:'6px 16px',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.8px',transition:'all .2s'}}>
+            ← WEAPONS
+          </button>
+        )}
       </nav>
 
-      <div style={{ display:'flex', flex:1, paddingTop:52 }}>
+      <div style={{paddingTop:56,minHeight:'100vh',position:'relative',zIndex:2}}>
 
-        {/* SIDEBAR */}
-        <div className="sidebar" style={{ width:300, flexShrink:0, position:'fixed', top:52, left:0, bottom:0, background:'#000', borderRight:'1px solid rgba(255,255,255,.05)', overflowY:'auto', zIndex:90, display:'flex', flexDirection:'column' }}>
-          {/* Header */}
-          <div style={{ padding:'24px 20px 16px', borderBottom:'1px solid rgba(255,255,255,.05)' }}>
-            <div style={{ fontSize:9, color:'#4a6a78', letterSpacing:'3px', marginBottom:6 }}>YN INTELLIGENCE SUITE</div>
-            <div style={{ fontSize:18, fontWeight:900, letterSpacing:'-0.5px', color:'#c8d8e0', animation:'glitch 8s infinite' }}>OPS CENTER</div>
-            <div style={{ fontSize:10, color:'#4a6a78', marginTop:4 }}>6 weapons. 1 platform. Unlimited edge.</div>
-          </div>
+        {/* ── SELECTION PHASE ──────────────────────────────────────────────── */}
+        {phase==='select'&&(
+          <div style={{maxWidth:1120,margin:'0 auto',padding:'64px 24px'}}>
 
-          {/* Module list */}
-          <div style={{ padding:'8px', flex:1 }}>
-            {MODULES.map(m => (
-              <button key={m.id} className={`mod-btn${active.id===m.id?' active':''}`} onClick={()=>setActive(m)}
-                style={{ '--active-clr': m.clr } as React.CSSProperties}>
-                {active.id === m.id && <div style={{ position:'absolute', left:0, top:0, bottom:0, width:3, background:m.clr, boxShadow:`0 0 12px ${m.clr}` }}/>}
-                <div style={{ display:'flex', alignItems:'center', gap:10, marginLeft:8 }}>
-                  <span style={{ fontSize:18, filter: active.id===m.id ? `drop-shadow(0 0 6px ${m.clr})` : 'none', transition:'filter .3s' }}>{m.icon}</span>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:12, fontWeight:700, color: active.id===m.id ? m.clr : '#8a9aaa', transition:'color .2s' }}>{m.name}</div>
-                    <div style={{ fontSize:9, color:'#4a6a78', letterSpacing:'.5px' }}>{m.tag}</div>
-                  </div>
-                  <div style={{ fontSize:8, color: active.id===m.id ? m.clr : '#2a3a48', background: active.id===m.id ? `${m.clr}15` : '#0a0a0a', border:`1px solid ${active.id===m.id ? m.clr+'40' : '#1a1a1a'}`, borderRadius:2, padding:'2px 6px', letterSpacing:'.5px', fontWeight:700 }}>
-                    {m.classif}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Footer */}
-          <div style={{ padding:'16px 20px', borderTop:'1px solid rgba(255,255,255,.04)', fontSize:9, color:'#2a3a48', letterSpacing:'.5px' }}>
-            NOT FINANCIAL ADVICE · EDUCATIONAL ONLY
-          </div>
-        </div>
-
-        {/* MAIN CONTENT */}
-        <div style={{ marginLeft:300, flex:1, minHeight:'100vh', position:'relative', zIndex:1 }}>
-
-          {/* Scanline */}
-          <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${active.clr}40,transparent)`, animation:'scan 6s linear infinite', pointerEvents:'none' }}/>
-
-          {/* Module header */}
-          <div style={{ padding:'40px 40px 32px', borderBottom:'1px solid rgba(255,255,255,.04)', background:'linear-gradient(180deg,rgba(0,0,0,.4),transparent)' }}>
-            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:20 }}>
-              <div>
-                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
-                  <span style={{ fontSize:32, filter:`drop-shadow(0 0 12px ${active.clr})` }}>{active.icon}</span>
-                  <div>
-                    <div style={{ fontSize:9, color:'#4a6a78', letterSpacing:'3px', marginBottom:2 }}>{active.tag}</div>
-                    <h1 style={{ fontSize:'clamp(24px,3.5vw,44px)', fontWeight:900, letterSpacing:'-1.5px', color:active.clr, textShadow:`0 0 40px ${active.glow}`, animation:'glitch 10s infinite' }}>
-                      {active.name.toUpperCase()}
-                    </h1>
-                  </div>
-                </div>
-                <p style={{ fontSize:14, color:'#6a8a98', lineHeight:1.7, maxWidth:580 }}>{active.desc}</p>
+            {/* Header */}
+            <div style={{textAlign:'center',marginBottom:72,animation:'fadeUp .7s ease'}}>
+              {/* Decorative top element */}
+              <div style={{display:'flex',alignItems:'center',gap:16,maxWidth:320,margin:'0 auto 24px'}}>
+                <div style={{flex:1,height:1,background:'linear-gradient(90deg,transparent,rgba(255,45,120,.3))'}}/>
+                <div style={{width:5,height:5,borderRadius:'50%',background:'#ff2d78',boxShadow:'0 0 12px #ff2d78',animation:'pulse-w 1.5s infinite'}}/>
+                <div style={{flex:1,height:1,background:'linear-gradient(90deg,rgba(255,45,120,.3),transparent)'}}/>
               </div>
-              <div style={{ fontSize:10, color:active.clr, background:`${active.clr}15`, border:`1px solid ${active.clr}30`, borderRadius:3, padding:'6px 16px', letterSpacing:'1px', fontWeight:700, flexShrink:0 }}>
-                {active.classif} ▸ CLEARANCE REQUIRED
+
+              <div style={{display:'inline-flex',alignItems:'center',gap:8,background:'rgba(255,45,120,.08)',border:'1px solid rgba(255,45,120,.2)',borderRadius:20,padding:'6px 18px',marginBottom:22,fontSize:'8px',color:'#ff2d78',fontWeight:700,letterSpacing:'2px'}}>
+                <span style={{width:5,height:5,borderRadius:'50%',background:'#ff2d78',display:'inline-block',animation:'pulse-w 1.5s infinite'}}/>
+                SIX WEAPONS · SELECT YOUR MISSION
+              </div>
+
+              <h1 style={{fontSize:'clamp(44px,8vw,88px)',fontWeight:900,letterSpacing:'-4px',lineHeight:.88,marginBottom:18}}>
+                Intelligence<br/>
+                <span style={{background:'linear-gradient(135deg,#ff2d78 0%,#a855f7 50%,#00d4ff 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundSize:'200%',animation:'holo 4s linear infinite'}}>Suite</span>
+              </h1>
+
+              <p style={{fontSize:16,color:'#2a4050',lineHeight:1.7,maxWidth:500,margin:'0 auto',fontFamily:'monospace',letterSpacing:'.2px'}}>
+                Six tools that don&apos;t exist anywhere else.<br/>Select your weapon.
+              </p>
+
+              {/* Stats row */}
+              <div style={{display:'flex',justifyContent:'center',gap:32,marginTop:28,flexWrap:'wrap'}}>
+                {[['6','Weapons'],['73–91%','Hit Rates'],['∞','Free to Use']].map(([val,label])=>(
+                  <div key={label} style={{textAlign:'center'}}>
+                    <div style={{fontFamily:'monospace',fontSize:20,fontWeight:900,color:'#00d4aa',marginBottom:3}}>{val}</div>
+                    <div style={{fontFamily:'monospace',fontSize:'9px',color:'#1a3040',letterSpacing:'1.5px'}}>{label}</div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
 
-          {/* Input + Run */}
-          <div style={{ padding:'28px 40px', borderBottom:'1px solid rgba(255,255,255,.04)' }}>
-            <div style={{ display:'flex', gap:12, maxWidth:600, '--active-clr': active.clr } as React.CSSProperties}>
-              {active.needsInput && (
-                <input className="inp" value={input} onChange={e => setInput(e.target.value.toUpperCase())}
-                  onKeyDown={e => e.key === 'Enter' && !loading && runIntel()}
-                  placeholder={active.placeholder}
-                  style={{ flex:1 }}/>
-              )}
-              {!active.needsInput && (
-                <div style={{ flex:1, background:'#000', border:'1px solid #1a1a1a', borderRadius:4, padding:'14px 16px', fontSize:13, color:'#4a6a78' }}>
-                  Auto-detects from live market data — no input needed
-                </div>
-              )}
-              <button className="run-btn" onClick={runIntel} disabled={loading}
-                style={{ background: loading ? '#0a0a0a' : `linear-gradient(135deg,${active.clr},${active.clr}cc)`, color: loading ? active.clr : '#000', boxShadow: loading ? 'none' : `0 0 30px ${active.glow}` }}>
-                {loading ? 'SCANNING...' : `RUN ${active.code.split('-')[0]} →`}
-              </button>
+            {/* Weapon grid — 3D perspective container */}
+            <div style={{perspective:'1200px'}}>
+              <div className="wg3" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16}}>
+                {MODULES.map((mod,i)=>(
+                  <WeaponCard key={mod.id} mod={mod} onClick={()=>activateWeapon(mod)} delay={i*.08}/>
+                ))}
+              </div>
+            </div>
+
+            <div style={{textAlign:'center',marginTop:44,fontFamily:'monospace',fontSize:'9px',color:'#0a1a22',letterSpacing:'1.5px'}}>
+              FREE TO USE · POWERED BY GEMINI AI + LIVE FINNHUB DATA · CLICK ANY WEAPON TO DEPLOY
             </div>
           </div>
+        )}
 
-          {/* Content area */}
-          <div style={{ padding:'32px 40px', minHeight:'60vh' }}>
-            {!loading && !result && !error && (
-              <div style={{ textAlign:'center', paddingTop:60 }}>
-                <div style={{ fontSize:64, marginBottom:20, filter:`drop-shadow(0 0 20px ${active.clr})` }}>{active.icon}</div>
-                <div style={{ fontSize:14, color:'#4a6a78', marginBottom:8 }}>{active.name} is ready.</div>
-                <div style={{ fontSize:12, color:'#2a3a48' }}>
-                  {active.needsInput ? `Enter a ticker or use the example: ${active.example}` : 'Hit RUN to generate live intelligence.'}
+        {/* ── ACTIVE WEAPON PHASE ──────────────────────────────────────────── */}
+        {active&&phase!=='select'&&phase!=='activate'&&(
+          <div style={{maxWidth:920,margin:'0 auto',padding:'44px 24px',animation:'fadeUp .5s ease'}}>
+
+            {/* Weapon header */}
+            <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:36,padding:'22px 26px',background:'rgba(0,0,0,.5)',border:`1px solid ${acl}20`,borderRadius:12,backdropFilter:'blur(16px)',position:'relative',overflow:'hidden'}}>
+              <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${acl},transparent 60%)`}}/>
+              <div style={{position:'absolute',bottom:0,right:0,width:'35%',height:1,background:`linear-gradient(90deg,transparent,${acl}35)`}}/>
+              {/* Radial glow */}
+              <div style={{position:'absolute',top:'50%',left:0,transform:'translateY(-50%)',width:200,height:200,borderRadius:'50%',background:`radial-gradient(circle,${acl}08,transparent 70%)`,pointerEvents:'none'}}/>
+              <span style={{fontSize:40,filter:`drop-shadow(0 0 20px ${acl})`,position:'relative'}}>{active.icon}</span>
+              <div style={{flex:1,position:'relative'}}>
+                <div style={{fontSize:'8px',color:'#2a4050',letterSpacing:'2.5px',marginBottom:5,fontFamily:'monospace'}}>{active.classif} · {active.tag}</div>
+                <h2 style={{fontSize:'clamp(24px,3.5vw,44px)',fontWeight:900,letterSpacing:'-1.5px',color:acl,textShadow:`0 0 40px ${acl}50`,animation:'glitch 9s infinite'}}>{active.name}</h2>
+              </div>
+              <div style={{fontSize:12,color:'#2a4050',maxWidth:260,lineHeight:1.65,textAlign:'right'}}>{active.hook}</div>
+            </div>
+
+            {/* Input */}
+            {(phase==='input'||phase==='result')&&active.needsInput&&(
+              <div style={{marginBottom:24}}>
+                <div style={{display:'flex',gap:0,background:'rgba(0,0,0,.65)',border:`1px solid ${acl}38`,borderRadius:9,overflow:'hidden',backdropFilter:'blur(16px)',boxShadow:loading?`0 0 50px ${acl}18`:'none',transition:'box-shadow .3s'}}>
+                  <span style={{padding:'16px 16px',fontSize:13,color:`${acl}60`,flexShrink:0,borderRight:`1px solid ${acl}18`,letterSpacing:'1px',fontFamily:'monospace'}}>$</span>
+                  <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!loading&&handleRun()}
+                    placeholder={active.placeholder}
+                    style={{flex:1,background:'transparent',border:'none',padding:'16px 16px',fontSize:15,color:acl,fontFamily:'monospace',fontWeight:700,outline:'none',letterSpacing:'.5px'}}/>
+                  <button onClick={handleRun} disabled={loading} style={{background:loading?'transparent':acl,border:'none',borderLeft:`1px solid ${acl}35`,padding:'0 28px',cursor:loading?'not-allowed':'pointer',color:'#000',fontWeight:900,fontSize:11,fontFamily:'inherit',letterSpacing:'1.5px',transition:'all .2s',whiteSpace:'nowrap',minWidth:110}}>
+                    {loading?<span style={{color:acl,animation:'pulse-w .8s infinite'}}>···</span>:'ANALYZE →'}
+                  </button>
                 </div>
               </div>
             )}
 
-            {loading && <LoadingScreen mod={active}/>}
+            {/* Analyzing */}
+            {phase==='analyzing'&&(
+              <div style={{background:'rgba(0,0,0,.75)',border:`1px solid ${acl}22`,borderRadius:9,padding:'24px',marginBottom:24,backdropFilter:'blur(20px)',position:'relative',overflow:'hidden'}}>
+                <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${acl},transparent)`,animation:'scan 1.4s linear infinite'}}/>
+                <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20,paddingBottom:16,borderBottom:`1px solid ${acl}12`}}>
+                  <div style={{display:'flex',gap:5}}>{['#ff5f57','#febc2e','#28c840'].map(c=><div key={c} style={{width:9,height:9,borderRadius:'50%',background:c}}/>)}</div>
+                  <span style={{fontFamily:'monospace',fontSize:10,color:'#2a4050'}}>{active.id}.exe · {active.needsInput?input:'live data'}</span>
+                  <div style={{marginLeft:'auto',fontSize:'9px',color:acl,fontWeight:700,animation:'pulse-w .8s infinite',letterSpacing:'1.5px'}}>● RUNNING</div>
+                </div>
+                {logLines.map((line,i)=>(
+                  <div key={i} style={{fontFamily:'monospace',fontSize:12,color:i===logLines.length-1?acl:'#1a3040',marginBottom:6,transition:'color .3s',animation:'fadeUp .2s ease',letterSpacing:'.4px'}}>
+                    {line}{i===logLines.length-1&&<span style={{animation:'pulse-w .8s infinite'}}>▋</span>}
+                  </div>
+                ))}
+              </div>
+            )}
 
-            {error && (
-              <div style={{ background:'rgba(255,45,120,.08)', border:'1px solid rgba(255,45,120,.25)', borderRadius:4, padding:'16px', color:'#ff2d78', fontSize:13, fontFamily:'monospace' }}>
+            {/* Error */}
+            {error&&(
+              <div style={{background:'rgba(255,45,120,.07)',border:'1px solid rgba(255,45,120,.28)',borderRadius:8,padding:'14px 18px',color:'#ff2d78',fontSize:12,fontFamily:'monospace',marginBottom:24,letterSpacing:'.3px'}}>
                 [ERROR] {error}
               </div>
             )}
 
-            {result && !loading && (
-              <div ref={resultRef} style={{ animation:'fadeUp .5s ease' }}>
-                {/* Result header */}
-                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20, padding:'12px 16px', background:'#000', border:`1px solid ${active.clr}25`, borderRadius:4 }}>
-                  <span style={{ fontSize:16 }}>{active.icon}</span>
-                  <span style={{ fontSize:11, fontFamily:'monospace', color:active.clr, fontWeight:700, letterSpacing:'1px' }}>[INTELLIGENCE REPORT] {active.code}</span>
-                  <span style={{ fontSize:10, color:'#4a6a78', marginLeft:'auto' }}>Generated {new Date().toLocaleTimeString()}</span>
+            {/* Results */}
+            {result&&phase==='result'&&(
+              <div ref={resultRef} style={{animation:'fadeUp .5s ease'}}>
+                <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20,padding:'12px 16px',background:'rgba(0,0,0,.55)',border:`1px solid ${acl}22`,borderRadius:7,fontFamily:'monospace',fontSize:10}}>
+                  <span style={{color:acl,fontWeight:700,fontSize:14}}>✓</span>
+                  <span style={{color:acl,letterSpacing:'.8px'}}>INTELLIGENCE REPORT READY</span>
+                  <span style={{color:'#1a3040',marginLeft:'auto',letterSpacing:'.5px'}}>{active.id} · {new Date().toLocaleTimeString()}</span>
+                  {active.needsInput&&(
+                    <button onClick={handleRun} style={{background:'transparent',border:`1px solid ${acl}35`,color:acl,padding:'4px 12px',borderRadius:4,fontSize:'9px',cursor:'pointer',fontFamily:'inherit',fontWeight:700,letterSpacing:'1px'}}>
+                      RE-RUN
+                    </button>
+                  )}
                 </div>
-
-                {active.id === 'lockup'      && <LockupResult      data={result} clr={active.clr}/>}
-                {active.id === 'liedetector' && <LieDetectorResult data={result} clr={active.clr}/>}
-                {active.id === 'galaxybrain' && <GalaxyBrainResult data={result} clr={active.clr}/>}
-                {active.id === 'flow'        && <FlowResult        data={result} clr={active.clr}/>}
-                {active.id === 'signals'     && <SignalRadarResult data={result} clr={active.clr}/>}
-                {active.id === 'filing'      && <FilingXRayResult  data={result} clr={active.clr}/>}
+                <ResultRenderer mode={active.id} data={result} clr={acl}/>
+                <div style={{marginTop:28,textAlign:'center'}}>
+                  <button onClick={handleBack} style={{background:'transparent',border:`1px solid ${acl}28`,color:'#2a4050',padding:'11px 32px',borderRadius:7,fontSize:13,cursor:'pointer',fontFamily:'inherit',fontWeight:600,transition:'all .2s'}}
+                    onMouseEnter={e=>(e.currentTarget.style.color=acl)} onMouseLeave={e=>(e.currentTarget.style.color='#2a4050')}>
+                    ← Deploy Another Weapon
+                  </button>
+                </div>
               </div>
             )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
