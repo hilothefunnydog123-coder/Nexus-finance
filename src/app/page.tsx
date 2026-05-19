@@ -256,7 +256,7 @@ export default function HomePage() {
           <span style={{ fontWeight:900, fontSize:15, letterSpacing:'-0.5px' }}>YN Finance</span>
         </Link>
         <div className="hide-sm" style={{ display:'flex', gap:24 }}>
-          {[['AI Analyzer','/ai-stocks'],['Daily Intel','/daily'],['Performance','/performance'],['Courses','/courses'],['Terminal','/app']].map(([l,h])=>(
+          {[['AI Analyzer','/ai-stocks'],['Intelligence','/intelligence'],['Daily Intel','/daily'],['Performance','/performance'],['Courses','/courses'],['Terminal','/app']].map(([l,h])=>(
             <Link key={l} href={h} className="nav-link">{l}</Link>
           ))}
         </div>

@@ -688,7 +688,7 @@ export default function AIStocksPage() {
           <span style={{fontWeight:900,fontSize:13,color:'#00ff88',letterSpacing:'2px',textShadow:'0 0 12px #00ff88'}}>YN_FINANCE</span>
         </Link>
         <div className="hide-sm" style={{display:'flex',gap:28}}>
-          {[['DAILY','/daily'],['PERFORMANCE','/performance'],['COURSES','/courses'],['TERMINAL','/app']].map(([l,h])=>(
+          {[['INTEL','/intelligence'],['DAILY','/daily'],['PERFORMANCE','/performance'],['COURSES','/courses'],['TERMINAL','/app']].map(([l,h])=>(
             <Link key={l} href={h} className="nav-link">{l}</Link>
           ))}
         </div>
