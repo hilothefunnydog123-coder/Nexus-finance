@@ -6,6 +6,210 @@ import dynamic from 'next/dynamic'
 
 const ThreeScene = dynamic(() => import('@/components/ThreeScene'), { ssr: false })
 
+// ── WEAPON MINI-VISUALIZATIONS ────────────────────────────────────────────────
+function CrashChart() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const c = ref.current; if (!c) return
+    const ctx = c.getContext('2d')!; const W = c.width = 280; const H = c.height = 120
+    const pts = [20,18,22,25,23,28,32,30,35,38,36,40,38,42,44,41,45,43,46,42,38,30,22,14,8,4,6,9,12,10]
+    let p = 0; let raf: number
+    function draw() {
+      ctx.clearRect(0,0,W,H)
+      ctx.strokeStyle = '#0c1e2e'; ctx.lineWidth = 1
+      for(let i=0;i<6;i++){ctx.beginPath();ctx.moveTo(0,H/6*i);ctx.lineTo(W,H/6*i);ctx.stroke()}
+      const n = Math.min(pts.length, Math.floor(p))
+      const grad = ctx.createLinearGradient(0,0,0,H)
+      const isBear = n > 19
+      const clr = isBear ? '#ff2d78' : '#00d4aa'
+      grad.addColorStop(0, isBear ? '#ff2d7830' : '#00d4aa30'); grad.addColorStop(1,'transparent')
+      if(n>1){
+        ctx.beginPath()
+        pts.slice(0,n).forEach((v,i)=>{const x=i/(pts.length-1)*W; const y=H-(v/50)*H; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)})
+        ctx.lineTo((n-1)/(pts.length-1)*W,H); ctx.lineTo(0,H); ctx.closePath()
+        ctx.fillStyle=grad; ctx.fill()
+        ctx.beginPath()
+        pts.slice(0,n).forEach((v,i)=>{const x=i/(pts.length-1)*W; const y=H-(v/50)*H; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)})
+        ctx.strokeStyle=clr; ctx.lineWidth=2; ctx.shadowBlur=10; ctx.shadowColor=clr; ctx.stroke(); ctx.shadowBlur=0
+        if(n===pts.length){
+          ctx.fillStyle='#ff2d78'; ctx.font='bold 11px monospace'
+          ctx.fillText('LOCK-UP EXPIRED →', 155, H-(pts[19]/50)*H-8)
+        }
+      }
+      if(p<pts.length){p+=0.4; raf=requestAnimationFrame(draw)}
+    }
+    draw(); return ()=>cancelAnimationFrame(raf)
+  },[])
+  return <canvas ref={ref} style={{width:'100%',height:120,display:'block'}}/>
+}
+
+function LieWave() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(()=>{
+    const c=ref.current; if(!c) return
+    const ctx=c.getContext('2d')!; const W=c.width=280; const H=c.height=120
+    let t=0; let raf: number
+    function draw(){
+      ctx.clearRect(0,0,W,H)
+      // "What they say" - smooth line
+      ctx.beginPath()
+      for(let x=0;x<W;x++){const y=H/2+Math.sin(x/40+t)*12; x===0?ctx.moveTo(x,y):ctx.lineTo(x,y)}
+      ctx.strokeStyle='#6a90a8'; ctx.lineWidth=1.5; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([])
+      // "Reality" - diverging chaotic line
+      ctx.beginPath()
+      for(let x=0;x<W;x++){
+        const chaos=x>120?Math.sin(x/20+t*2)*20+Math.sin(x/8)*8:Math.sin(x/40+t)*12
+        const y=H/2+chaos+(x>120?(x-120)*0.12:0)
+        x===0?ctx.moveTo(x,y):ctx.lineTo(x,y)
+      }
+      ctx.strokeStyle='#ff2d78'; ctx.lineWidth=2; ctx.shadowBlur=8; ctx.shadowColor='#ff2d78'; ctx.stroke(); ctx.shadowBlur=0
+      if(t>1){
+        ctx.font='9px monospace'; ctx.fillStyle='#6a90a8'; ctx.fillText('NARRATIVE',8,H/2-16)
+        ctx.fillStyle='#ff2d78'; ctx.fillText('REALITY',8,H/2+28)
+        ctx.fillStyle='#ff2d78'; ctx.font='bold 10px monospace'; ctx.fillText('DIVERGENCE DETECTED',145,20)
+      }
+      t+=0.02; raf=requestAnimationFrame(draw)
+    }
+    draw(); return ()=>cancelAnimationFrame(raf)
+  },[])
+  return <canvas ref={ref} style={{width:'100%',height:120,display:'block'}}/>
+}
+
+function NeuralWeb() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(()=>{
+    const c=ref.current; if(!c) return
+    const ctx=c.getContext('2d')!; const W=c.width=280; const H=c.height=120
+    const nodes=[{x:20,y:60,l:'FED'},{x:80,y:30,l:'USD↑'},{x:80,y:90,l:'BONDS'},{x:150,y:20,l:'EM↓'},{x:150,y:60,l:'GOLD'},{x:150,y:100,l:'BANKS'},{x:220,y:40,l:'EEM'},{x:220,y:80,l:'KWEB'},{x:260,y:60,l:'🎯PUT'}]
+    const edges=[[0,1],[0,2],[1,3],[1,4],[2,5],[3,6],[3,7],[4,6],[5,8],[6,8],[7,8]]
+    let t=0; let raf: number
+    function draw(){
+      ctx.clearRect(0,0,W,H)
+      const visibleEdges=Math.floor((Math.sin(t*0.5)*0.5+0.5)*edges.length)
+      edges.slice(0,Math.min(visibleEdges+1,edges.length)).forEach(([a,b],i)=>{
+        const fa=Math.max(0,Math.min(1,(visibleEdges-i)*2))
+        const na=nodes[a]; const nb=nodes[b]
+        ctx.beginPath(); ctx.moveTo(na.x,na.y); ctx.lineTo(nb.x,nb.y)
+        ctx.strokeStyle=`rgba(168,85,247,${fa*0.6})`; ctx.lineWidth=1.5
+        ctx.shadowBlur=fa*8; ctx.shadowColor='#a855f7'; ctx.stroke(); ctx.shadowBlur=0
+      })
+      nodes.forEach((n,i)=>{
+        const visible=i<=visibleEdges
+        ctx.beginPath(); ctx.arc(n.x,n.y,visible?5:3,0,Math.PI*2)
+        ctx.fillStyle=visible?'#a855f7':'#2a2a3a'
+        ctx.shadowBlur=visible?14:0; ctx.shadowColor='#a855f7'; ctx.fill(); ctx.shadowBlur=0
+        if(visible){ctx.font='8px monospace'; ctx.fillStyle='#a855f7'; ctx.fillText(n.l,n.x-12,n.y-8)}
+      })
+      t+=0.03; if(t>Math.PI*2)t=0; raf=requestAnimationFrame(draw)
+    }
+    draw(); return ()=>cancelAnimationFrame(raf)
+  },[])
+  return <canvas ref={ref} style={{width:'100%',height:120,display:'block'}}/>
+}
+
+function FlowStream() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(()=>{
+    const c=ref.current; if(!c) return
+    const ctx=c.getContext('2d')!; const W=c.width=280; const H=c.height=120
+    const particles: {x:number;y:number;speed:number;label:string;opacity:number}[]=[]
+    const labels=['$340M','$128M','$89M','$215M','$67M','$180M']
+    let t=0; let raf: number
+    setInterval(()=>{particles.push({x:-10,y:20+Math.random()*80,speed:1.5+Math.random(),label:labels[Math.floor(Math.random()*labels.length)],opacity:1})},600)
+    function draw(){
+      ctx.clearRect(0,0,W,H)
+      // Channel
+      ctx.strokeStyle='#00d4ff15'; ctx.lineWidth=40
+      ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke()
+      // Flow lines
+      for(let i=0;i<3;i++){
+        ctx.beginPath()
+        for(let x=0;x<W;x++){const y=H/2+Math.sin(x/30+t+i)*8; x===0?ctx.moveTo(x,y):ctx.lineTo(x,y)}
+        ctx.strokeStyle=`rgba(0,212,255,${0.15-i*0.04})`; ctx.lineWidth=1; ctx.stroke()
+      }
+      // Target tickers
+      ['MSFT','AAPL','SPY'].forEach((tk,i)=>{
+        const x=60+i*80; ctx.fillStyle='#00d4ff20'; ctx.fillRect(x-20,H/2-12,40,24)
+        ctx.strokeStyle='#00d4ff40'; ctx.strokeRect(x-20,H/2-12,40,24)
+        ctx.font='bold 9px monospace'; ctx.fillStyle='#00d4ff'; ctx.textAlign='center'; ctx.fillText(tk,x,H/2+4)
+      })
+      ctx.textAlign='left'
+      // Particles
+      for(let i=particles.length-1;i>=0;i--){
+        const p=particles[i]
+        ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2)
+        ctx.fillStyle=`rgba(0,212,255,${p.opacity})`; ctx.shadowBlur=12; ctx.shadowColor='#00d4ff'; ctx.fill(); ctx.shadowBlur=0
+        ctx.font='8px monospace'; ctx.fillStyle=`rgba(0,212,255,${p.opacity})`; ctx.fillText(p.label,p.x+6,p.y+3)
+        p.x+=p.speed; if(p.x>W+40)particles.splice(i,1)
+      }
+      t+=0.04; raf=requestAnimationFrame(draw)
+    }
+    draw(); return ()=>cancelAnimationFrame(raf)
+  },[])
+  return <canvas ref={ref} style={{width:'100%',height:120,display:'block'}}/>
+}
+
+function MiniRadar() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(()=>{
+    const c=ref.current; if(!c) return
+    const ctx=c.getContext('2d')!; const S=120; c.width=S; c.height=S
+    const cx=S/2; const cy=S/2; const r=S/2-6
+    let angle=0; let raf: number
+    const blips=[{a:0.8,d:0.5,clr:'#ff2d78'},{a:2.1,d:0.7,clr:'#f59e0b'},{a:3.9,d:0.4,clr:'#00ff88'},{a:5.2,d:0.65,clr:'#ff2d78'}]
+    function draw(){
+      ctx.clearRect(0,0,S,S)
+      for(let i=1;i<=4;i++){ctx.beginPath();ctx.arc(cx,cy,r*i/4,0,Math.PI*2);ctx.strokeStyle='rgba(0,255,136,0.08)';ctx.lineWidth=1;ctx.stroke()}
+      ctx.strokeStyle='rgba(0,255,136,0.08)';['',1,2,3].forEach((_,i)=>{ctx.beginPath();const a=i*Math.PI/2;ctx.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.lineTo(cx-Math.cos(a)*r,cy-Math.sin(a)*r);ctx.stroke()})
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(angle)
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r,-0.5,0.1); ctx.closePath()
+      ctx.fillStyle='rgba(0,255,136,0.12)'; ctx.fill(); ctx.restore()
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.strokeStyle='rgba(0,255,136,0.5)'; ctx.lineWidth=1.5; ctx.stroke()
+      blips.forEach(b=>{
+        const bx=cx+Math.cos(b.a)*r*b.d; const by=cy+Math.sin(b.a)*r*b.d
+        const fade=Math.max(0,Math.cos(angle-b.a)*0.7+0.3)
+        ctx.beginPath(); ctx.arc(bx,by,4,0,Math.PI*2)
+        ctx.fillStyle=b.clr+Math.floor(fade*255).toString(16).padStart(2,'0')
+        ctx.shadowBlur=10; ctx.shadowColor=b.clr; ctx.fill(); ctx.shadowBlur=0
+      })
+      angle=(angle+0.03)%(Math.PI*2); raf=requestAnimationFrame(draw)
+    }
+    draw(); return ()=>cancelAnimationFrame(raf)
+  },[])
+  return <canvas ref={ref} style={{width:120,height:120,display:'block'}}/>
+}
+
+function XRayDoc() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(()=>{
+    const c=ref.current; if(!c) return
+    const ctx=c.getContext('2d')!; const W=c.width=280; const H=c.height=120
+    const lines=['Revenue grew 12% YoY.........', 'Gross margins expanded 200bps.', 'Operating leverage improving..', 'Strong demand environment......', 'DEFERRED REV DOWN 31% QoQ....', 'WARRANTY RESERVES +$800M.....', 'REGULATORY CREDITS → ZERO Q3.', 'FREE CASH FLOW MISS $400M....']
+    const hidden=[false,false,false,false,true,true,true,true]
+    let reveal=0; let raf: number
+    function draw(){
+      ctx.clearRect(0,0,W,H)
+      ctx.fillStyle='#050505'; ctx.fillRect(0,0,W,H)
+      lines.forEach((line,i)=>{
+        const y=12+i*14; const isHidden=hidden[i]; const isRevealed=isHidden&&reveal>(i-4)*0.3
+        if(isHidden&&!isRevealed){
+          // Redacted bar
+          ctx.fillStyle='#1a1a1a'; ctx.fillRect(8,y-8,W-16,11)
+          ctx.fillStyle='#2a2a2a'; ctx.fillRect(8,y-8,Math.random()*50+20,11)
+        } else {
+          ctx.font=`${isHidden?'bold ':''}9px monospace`
+          ctx.fillStyle=isHidden?'#ff2d78':'#4a6a78'
+          if(isHidden){ ctx.shadowBlur=8; ctx.shadowColor='#ff2d78' }
+          ctx.fillText(line,8,y); ctx.shadowBlur=0
+        }
+      })
+      if(reveal<1.5){ reveal+=0.015; raf=requestAnimationFrame(draw) }
+    }
+    draw(); return ()=>cancelAnimationFrame(raf)
+  },[])
+  return <canvas ref={ref} style={{width:'100%',height:120,display:'block'}}/>
+}
+
 const FOUNDERS = [
   {
     name: 'Neil Gilani', role: 'CEO & Co-Founder', clr: '#00d4aa',
@@ -423,162 +627,237 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ══ INTELLIGENCE SUITE ══════════════════════════════════════════════════ */}
-      <section style={{ padding:'0 0 140px', position:'relative', zIndex:1, overflow:'hidden' }}>
-        {/* Full-bleed dark bg */}
-        <div style={{ background:'#000', borderTop:'1px solid rgba(255,255,255,.04)', borderBottom:'1px solid rgba(255,255,255,.04)', padding:'130px 0', position:'relative' }}>
-          {/* Animated grid bg */}
-          <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(255,45,120,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,45,120,.03) 1px,transparent 1px)', backgroundSize:'40px 40px', pointerEvents:'none' }}/>
-          {/* Glow orbs */}
-          <div style={{ position:'absolute', top:'20%', left:'15%', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle,rgba(168,85,247,.08),transparent 70%)', pointerEvents:'none' }}/>
-          <div style={{ position:'absolute', top:'50%', right:'10%', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle,rgba(255,45,120,.06),transparent 70%)', pointerEvents:'none' }}/>
-          <div style={{ position:'absolute', bottom:'10%', left:'40%', width:600, height:300, borderRadius:'50%', background:'radial-gradient(circle,rgba(0,212,255,.05),transparent 70%)', pointerEvents:'none' }}/>
+      {/* ══ INTELLIGENCE SUITE — CINEMATIC ═══════════════════════════════════════ */}
+      <section style={{ position:'relative', zIndex:1, overflow:'hidden', background:'#000' }}>
+        {/* Grid + multi-glow bg */}
+        <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(255,45,120,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,45,120,.025) 1px,transparent 1px)', backgroundSize:'48px 48px', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:'linear-gradient(90deg,transparent,#ff2d78,#a855f7,#00d4ff,transparent)' }}/>
+        <div style={{ position:'absolute', bottom:0, left:0, right:0, height:1, background:'linear-gradient(90deg,transparent,#00d4ff,#a855f7,#ff2d78,transparent)' }}/>
+        <div style={{ position:'absolute', width:600, height:600, borderRadius:'50%', background:'radial-gradient(circle,rgba(255,45,120,.06),transparent 70%)', top:'5%', left:'5%', pointerEvents:'none', animation:'glow-anim 4s ease-in-out infinite' }}/>
+        <div style={{ position:'absolute', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle,rgba(168,85,247,.07),transparent 70%)', top:'40%', right:'0%', pointerEvents:'none', animation:'glow-anim 5s ease-in-out infinite .8s' }}/>
+        <div style={{ position:'absolute', width:700, height:700, borderRadius:'50%', background:'radial-gradient(circle,rgba(0,212,255,.05),transparent 70%)', top:'70%', left:'30%', pointerEvents:'none', animation:'glow-anim 6s ease-in-out infinite 1.6s' }}/>
+        <div style={{ position:'absolute', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle,rgba(0,255,136,.04),transparent 70%)', top:'20%', left:'50%', pointerEvents:'none', animation:'glow-anim 7s ease-in-out infinite 2.4s' }}/>
 
-          <div className="section" style={{ position:'relative', zIndex:1 }}>
-            <div ref={intel.ref} className={`vis${intel.v?' show':''}`}>
 
-              {/* HEADER */}
-              <div className="item i0" style={{ textAlign:'center', marginBottom:72 }}>
-                <div style={{ display:'inline-flex', alignItems:'center', gap:10, background:'rgba(255,45,120,.12)', border:'1px solid rgba(255,45,120,.3)', borderRadius:20, padding:'7px 20px', marginBottom:20, fontSize:11, color:'#ff2d78', fontWeight:700, letterSpacing:'1px' }}>
-                  <span style={{ width:6, height:6, borderRadius:'50%', background:'#ff2d78', display:'inline-block', animation:'pulse-dot 1.5s infinite' }}/>
-                  CLASSIFIED · TOP SECRET · CLEARANCE REQUIRED
+        <div ref={intel.ref} className={`vis${intel.v?' show':''}`} style={{ padding:'120px 0 0' }}>
+
+          {/* ── INTRO HEADER ─────────────────────────────────────────────── */}
+          <div className="section item i0" style={{ textAlign:'center', marginBottom:100 }}>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:10, background:'rgba(255,45,120,.1)', border:'1px solid rgba(255,45,120,.3)', borderRadius:20, padding:'8px 20px', marginBottom:24, fontSize:11, color:'#ff2d78', fontWeight:700, letterSpacing:'1.5px' }}>
+              <span style={{ width:7, height:7, borderRadius:'50%', background:'#ff2d78', display:'inline-block', animation:'pulse-dot 1s infinite' }}/>
+              CLASSIFIED · INTELLIGENCE SUITE · CLEARANCE REQUIRED
+            </div>
+            <h2 style={{ fontSize:'clamp(44px,7.5vw,96px)', fontWeight:900, lineHeight:.88, letterSpacing:'-4px', color:'#fff', marginBottom:24 }}>
+              Six Weapons.<br/>
+              <span style={{ background:'linear-gradient(135deg,#ff2d78 0%,#a855f7 40%,#00d4ff 80%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundSize:'200%', animation:'holo 4s linear infinite' }}>
+                Unprecedented.
+              </span>
+            </h2>
+            <p style={{ fontSize:'clamp(16px,2vw,22px)', color:'#5a7a88', lineHeight:1.6, maxWidth:680, margin:'0 auto' }}>
+              The intelligence hedge funds pay analysts $500K/year to produce. We automated all six. In one ops center. Free.
+            </p>
+          </div>
+
+          {/* ── WEAPON 1: LOCK-UP ASSASSIN ───────────────────────────────── */}
+          <div className="item i1" style={{ marginBottom:2, background:'rgba(255,45,120,.03)', borderTop:'1px solid rgba(255,45,120,.12)', borderBottom:'1px solid rgba(255,45,120,.08)' }}>
+            <div className="section" style={{ padding:'80px 24px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:60, alignItems:'center' }} >
+              <div>
+                <div style={{ fontSize:9, color:'#ff2d78', letterSpacing:'3px', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ width:5, height:5, borderRadius:'50%', background:'#ff2d78', display:'inline-block' }}/> WEAPON 01 · SCHEDULED DESTRUCTION
                 </div>
-                <h2 style={{ fontSize:'clamp(38px,6vw,72px)', fontWeight:900, lineHeight:.95, letterSpacing:'-3px', marginBottom:20, color:'#fff' }}>
-                  The{' '}
-                  <span style={{ background:'linear-gradient(135deg,#ff2d78,#a855f7,#00d4ff)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundSize:'200%', animation:'holo 4s linear infinite' }}>
-                    Intelligence Suite
-                  </span>
-                </h2>
-                <p style={{ fontSize:'clamp(15px,2vw,20px)', color:'#6a8a98', lineHeight:1.65, maxWidth:640, margin:'0 auto 0' }}>
-                  Six tools that don&apos;t exist anywhere else. The kind of intelligence hedge funds pay analysts $500K/year to produce. We automated it.
+                <h3 style={{ fontSize:'clamp(32px,4vw,54px)', fontWeight:900, letterSpacing:'-2px', color:'#fff', marginBottom:16, lineHeight:1 }}>
+                  🔫 Lock-Up<br/>Assassin
+                </h3>
+                <p style={{ fontSize:16, color:'#5a7a88', lineHeight:1.75, marginBottom:20 }}>
+                  Every IPO has a 180-day lock-up. When it expires, insiders sell. This is <em style={{ color:'#ff2d78' }}>guaranteed, dated, and sized</em>. Build the put position 3 weeks before everyone else knows it&apos;s coming.
                 </p>
-              </div>
-
-              {/* THE 6 WEAPONS — large cards */}
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:16 }} className="g3 item i1">
-                {[
-                  {
-                    icon:'🔫', name:'Lock-Up Assassin', clr:'#ff2d78', classif:'SECRET',
-                    tag:'SCHEDULED DESTRUCTION',
-                    hook: 'Every IPO has a 180-day lock-up. When insiders can finally sell, they dump. This is guaranteed. It\'s dated. It\'s sized.',
-                    reveal: 'Enter any recent IPO ticker and get the exact put position, entry date, and magnitude of the coming drop — 3 weeks before everyone else knows.',
-                    stat: '180-day lock-ups',
-                    statSub: 'have predictable patterns',
-                  },
-                  {
-                    icon:'🧪', name:'Lie Detector', clr:'#f59e0b', classif:'SECRET',
-                    tag:'FORENSIC EARNINGS ANALYSIS',
-                    hook: 'Management has a story. The numbers have a different one. AI reads both and finds the gap before analysts publish their notes.',
-                    reveal: 'Scores the divergence between narrative and reality 0-100. Finds buried signals — deferred revenue manipulation, quiet guidance cuts, footnote disclosures.',
-                    stat: '0-100',
-                    statSub: 'divergence score per call',
-                  },
-                  {
-                    icon:'🧠', name:'Galaxy Brain', clr:'#a855f7', classif:'TOP SECRET',
-                    tag:'MACRO DOMINO TRACER',
-                    hook: 'The Fed raises rates. That\'s the obvious trade. But 5 steps down the domino chain, a completely unrelated stock makes a 20% move nobody predicted.',
-                    reveal: 'Type any macro event. AI traces every step — with magnitudes, timing, and the non-obvious 3-step connections retail traders would never make.',
-                    stat: '5-step',
-                    statSub: 'domino chains traced',
-                  },
-                  {
-                    icon:'🌊', name:'Forced Flow', clr:'#00d4ff', classif:'TOP SECRET',
-                    tag:'MECHANICAL MONEY MOVEMENTS',
-                    hook: 'Every month, billions of dollars HAVE to move into specific stocks whether fund managers want to or not. Index rebalancing. Gamma hedging. ETF flows.',
-                    reveal: 'AI calculates exactly when and how much forced buying hits, which tickers are affected, and the window to front-run the guaranteed mechanical flow.',
-                    stat: '$Billions',
-                    statSub: 'in forced flows monthly',
-                  },
-                  {
-                    icon:'⚡', name:'Signal Radar', clr:'#00ff88', classif:'SECRET',
-                    tag:'CROSS-ASSET CORRELATION ENGINE',
-                    hook: 'Korean Won weakens 2% today. Qualcomm drops 4-8% in 72 hours. This has happened 7 out of 8 times. Almost nobody knows it exists.',
-                    reveal: 'Monitors 8 cross-asset signals live. When a correlation fires, you get the specific ticker, direction, historical hit rate, and options play — in real time.',
-                    stat: '73-91%',
-                    statSub: 'historical hit rates',
-                  },
-                  {
-                    icon:'📄', name:'Filing X-Ray', clr:'#ec4899', classif:'TOP SECRET',
-                    tag:'SEC DOCUMENT INTELLIGENCE',
-                    hook: 'Companies bury the bad news on page 47. A $200M write-down. An accounting methodology change. A going-concern footnote. The stock hasn\'t moved yet.',
-                    reveal: 'AI reads SEC filings the second they drop, extracts what management buried, scores the severity, and builds the trade before analysts even open the document.',
-                    stat: 'Real-time',
-                    statSub: 'SEC EDGAR monitoring',
-                  },
-                ].map((w, i) => (
-                  <Link key={w.name} href="/intelligence" style={{ textDecoration:'none' }}>
-                    <div style={{ background:'#000', border:`1px solid ${w.clr}20`, borderRadius:12, padding:'28px 24px', height:'100%', cursor:'pointer', transition:'all .3s', position:'relative', overflow:'hidden' }}
-                      onMouseEnter={e => {
-                        const el = e.currentTarget
-                        el.style.borderColor = `${w.clr}60`
-                        el.style.background  = `${w.clr}06`
-                        el.style.transform   = 'translateY(-6px)'
-                        el.style.boxShadow   = `0 24px 60px rgba(0,0,0,.5), 0 0 40px ${w.clr}15`
-                      }}
-                      onMouseLeave={e => {
-                        const el = e.currentTarget
-                        el.style.borderColor = `${w.clr}20`
-                        el.style.background  = '#000'
-                        el.style.transform   = 'translateY(0)'
-                        el.style.boxShadow   = 'none'
-                      }}>
-                      {/* Gradient line top */}
-                      <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,${w.clr},transparent 60%)` }}/>
-
-                      {/* Header row */}
-                      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
-                        <span style={{ fontSize:28, filter:`drop-shadow(0 0 10px ${w.clr})` }}>{w.icon}</span>
-                        <span style={{ fontSize:8, color:w.clr, background:`${w.clr}15`, border:`1px solid ${w.clr}30`, borderRadius:3, padding:'3px 8px', fontWeight:800, letterSpacing:'1px' }}>{w.classif}</span>
-                      </div>
-
-                      {/* Tag */}
-                      <div style={{ fontSize:8, color:'#6a8a98', letterSpacing:'1.5px', marginBottom:6 }}>{w.tag}</div>
-
-                      {/* Name */}
-                      <div style={{ fontSize:18, fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-.5px' }}>{w.name}</div>
-
-                      {/* Hook */}
-                      <p style={{ fontSize:12.5, color:'#6a8a98', lineHeight:1.7, marginBottom:16 }}>{w.hook}</p>
-
-                      {/* Reveal */}
-                      <p style={{ fontSize:12, color:w.clr, lineHeight:1.65, marginBottom:20, opacity:.85 }}>{w.reveal}</p>
-
-                      {/* Stat */}
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingTop:16, borderTop:`1px solid ${w.clr}15` }}>
-                        <div>
-                          <div style={{ fontSize:18, fontWeight:900, color:w.clr, fontFamily:'monospace', textShadow:`0 0 12px ${w.clr}` }}>{w.stat}</div>
-                          <div style={{ fontSize:10, color:'#4a6a78' }}>{w.statSub}</div>
-                        </div>
-                        <div style={{ fontSize:11, color:w.clr, fontWeight:700, display:'flex', alignItems:'center', gap:4 }}>
-                          DEPLOY <span style={{ fontSize:14 }}>→</span>
-                        </div>
-                      </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:28 }}>
+                  {['Lock-up expiry date calculated from SEC S-1','Insider float size and sell probability modeled','Exact put position: strike, expiry, entry window','Historical drop analysis for comparable IPOs'].map(f=>(
+                    <div key={f} style={{ display:'flex', gap:10, fontSize:13, color:'#8a9aaa' }}>
+                      <span style={{ color:'#ff2d78', flexShrink:0 }}>→</span>{f}
                     </div>
-                  </Link>
-                ))}
+                  ))}
+                </div>
+                <Link href="/intelligence" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'#ff2d78', color:'#fff', padding:'13px 28px', borderRadius:8, fontSize:13, fontWeight:800, textDecoration:'none', boxShadow:'0 0 30px rgba(255,45,120,.4)' }}>
+                  Deploy Lock-Up Assassin →
+                </Link>
               </div>
-
-              {/* BOTTOM CTA */}
-              <div className="item i2" style={{ textAlign:'center', marginTop:48 }}>
-                <div style={{ display:'inline-flex', flexDirection:'column', alignItems:'center', gap:16, background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.06)', borderRadius:16, padding:'32px 48px' }}>
-                  <div style={{ fontSize:11, color:'#6a8a98', letterSpacing:'1px' }}>
-                    All six tools. One ops center. Free to access.
-                  </div>
-                  <Link href="/intelligence" style={{ background:'linear-gradient(135deg,#ff2d78,#a855f7,#00d4ff)', backgroundSize:'200%', animation:'holo 3s linear infinite', color:'#fff', padding:'16px 48px', borderRadius:10, fontSize:15, fontWeight:900, textDecoration:'none', boxShadow:'0 0 60px rgba(255,45,120,.3), 0 20px 40px rgba(0,0,0,.5)', letterSpacing:'-.3px', display:'inline-block' }}>
-                    Access Intelligence Suite →
-                  </Link>
-                  <div style={{ display:'flex', gap:24, fontSize:11, color:'#4a6a78' }}>
-                    {['Lock-Up Assassin','Lie Detector','Galaxy Brain','Forced Flow','Signal Radar','Filing X-Ray'].map(n=>(
-                      <span key={n}>{n}</span>
-                    ))}
-                  </div>
+              <div style={{ background:'rgba(0,0,0,.6)', border:'1px solid rgba(255,45,120,.2)', borderRadius:12, overflow:'hidden', backdropFilter:'blur(12px)' }}>
+                <div style={{ padding:'14px 18px', borderBottom:'1px solid rgba(255,45,120,.1)', display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ display:'flex', gap:5 }}>{['#ff5f57','#febc2e','#28c840'].map(c=><div key={c} style={{ width:9,height:9,borderRadius:'50%',background:c }}/>)}</div>
+                  <span style={{ fontFamily:'monospace', fontSize:11, color:'#5a7a88' }}>lockup_assassin.exe — RDDT</span>
+                  <span style={{ marginLeft:'auto', fontSize:10, color:'#ff2d78', fontWeight:700 }}>SECRET</span>
+                </div>
+                <div style={{ padding:'6px' }}><CrashChart/></div>
+                <div style={{ padding:'14px 18px', borderTop:'1px solid rgba(255,45,120,.1)', fontFamily:'monospace', fontSize:11 }}>
+                  <div style={{ color:'#5a7a88' }}>Lock-up expiry: <span style={{ color:'#ff2d78' }}>DAY 180 → JUNE 14</span></div>
+                  <div style={{ color:'#5a7a88', marginTop:4 }}>Unlock shares: <span style={{ color:'#ff2d78' }}>84.2M (3.1× daily volume)</span></div>
+                  <div style={{ color:'#5a7a88', marginTop:4 }}>Historical drop: <span style={{ color:'#ff2d78' }}>-21% avg, starts -6 days</span></div>
+                  <div style={{ color:'#00ff88', marginTop:8, fontWeight:700 }}>→ BUY PUTS · Entry June 8 · $10P Jun 21</div>
                 </div>
               </div>
-
             </div>
           </div>
+
+          {/* ── WEAPON 2: LIE DETECTOR ──────────────────────────────────── */}
+          <div className="item i2" style={{ marginBottom:2, background:'rgba(245,158,11,.03)', borderTop:'1px solid rgba(245,158,11,.12)', borderBottom:'1px solid rgba(245,158,11,.08)' }}>
+            <div className="section" style={{ padding:'80px 24px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:60, alignItems:'center' }}>
+              <div style={{ background:'rgba(0,0,0,.6)', border:'1px solid rgba(245,158,11,.2)', borderRadius:12, overflow:'hidden' }}>
+                <div style={{ padding:'14px 18px', borderBottom:'1px solid rgba(245,158,11,.1)', display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ display:'flex', gap:5 }}>{['#ff5f57','#febc2e','#28c840'].map(c=><div key={c} style={{ width:9,height:9,borderRadius:'50%',background:c }}/>)}</div>
+                  <span style={{ fontFamily:'monospace', fontSize:11, color:'#5a7a88' }}>lie_detector.exe — TSLA</span>
+                </div>
+                <div style={{ padding:'6px' }}><LieWave/></div>
+                <div style={{ padding:'14px 18px', borderTop:'1px solid rgba(245,158,11,.1)', fontFamily:'monospace', fontSize:11 }}>
+                  <div style={{ color:'#f59e0b', fontWeight:700 }}>DIVERGENCE SCORE: 84/100</div>
+                  <div style={{ color:'#5a7a88', marginTop:4 }}>Narrative: <span style={{ color:'#6a90a8' }}>Record deliveries, strong demand</span></div>
+                  <div style={{ color:'#5a7a88', marginTop:4 }}>Reality: <span style={{ color:'#f59e0b' }}>FCF miss $400M · Warranty +$800M</span></div>
+                  <div style={{ color:'#00ff88', marginTop:8, fontWeight:700 }}>→ HIGH DIVERGENCE · Fade the narrative</div>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize:9, color:'#f59e0b', letterSpacing:'3px', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ width:5, height:5, borderRadius:'50%', background:'#f59e0b', display:'inline-block' }}/> WEAPON 02 · FORENSIC EARNINGS ANALYSIS
+                </div>
+                <h3 style={{ fontSize:'clamp(32px,4vw,54px)', fontWeight:900, letterSpacing:'-2px', color:'#fff', marginBottom:16, lineHeight:1 }}>
+                  🧪 Lie<br/>Detector
+                </h3>
+                <p style={{ fontSize:16, color:'#5a7a88', lineHeight:1.75, marginBottom:20 }}>
+                  Management has a story. The numbers have a completely different one. AI reads the earnings narrative, cross-references the actual data, and scores the <em style={{ color:'#f59e0b' }}>divergence 0-100</em> before analysts publish.
+                </p>
+                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:28 }}>
+                  {['What management is deflecting from — and why','Deferred revenue, warranty reserve, and FCF manipulation','Divergence score between narrative and actual numbers','The specific hidden signal and how to trade it'].map(f=>(
+                    <div key={f} style={{ display:'flex', gap:10, fontSize:13, color:'#8a9aaa' }}>
+                      <span style={{ color:'#f59e0b', flexShrink:0 }}>→</span>{f}
+                    </div>
+                  ))}
+                </div>
+                <Link href="/intelligence" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'#f59e0b', color:'#000', padding:'13px 28px', borderRadius:8, fontSize:13, fontWeight:800, textDecoration:'none', boxShadow:'0 0 30px rgba(245,158,11,.4)' }}>
+                  Run Lie Detector →
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* ── WEAPON 3: GALAXY BRAIN — FULL WIDTH ─────────────────────── */}
+          <div className="item i3" style={{ marginBottom:2, background:'rgba(168,85,247,.03)', borderTop:'1px solid rgba(168,85,247,.12)', borderBottom:'1px solid rgba(168,85,247,.08)', padding:'80px 0' }}>
+            <div className="section" style={{ textAlign:'center', marginBottom:40 }}>
+              <div style={{ fontSize:9, color:'#a855f7', letterSpacing:'3px', marginBottom:10 }}>WEAPON 03 · MACRO DOMINO TRACER</div>
+              <h3 style={{ fontSize:'clamp(36px,5vw,64px)', fontWeight:900, letterSpacing:'-2.5px', color:'#fff', marginBottom:16 }}>
+                🧠 Galaxy Brain
+              </h3>
+              <p style={{ fontSize:17, color:'#5a7a88', lineHeight:1.7, maxWidth:620, margin:'0 auto 32px' }}>
+                Type any macro event. AI traces the full domino chain — 5 steps deep — including the <em style={{ color:'#a855f7' }}>non-obvious connections retail traders would never make</em>.
+              </p>
+            </div>
+            <div className="section" style={{ display:'grid', gridTemplateColumns:'1fr 300px 1fr', gap:24, alignItems:'center' }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                {['Fed holds rates', 'Dollar weakens', 'EM currencies strengthen', 'EM fund inflows'].map((step,i)=>(
+                  <div key={step} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(168,85,247,.2)', border:'1px solid #a855f7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:900, color:'#a855f7', flexShrink:0 }}>{i+1}</div>
+                    <div style={{ background:'rgba(0,0,0,.5)', border:'1px solid rgba(168,85,247,.2)', borderRadius:8, padding:'10px 14px', flex:1, fontSize:13, color:'#8a9aaa' }}>{step}</div>
+                    {i<3 && <div style={{ fontSize:16, color:'rgba(168,85,247,.5)' }}>↓</div>}
+                  </div>
+                ))}
+              </div>
+              <div style={{ display:'flex', justifyContent:'center' }}><NeuralWeb/></div>
+              <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                {['EM stocks surge','Tech rotation begins','⚡ KWEB calls (nobody sees this)','⚡ EEM calls + DXY puts'].map((step,i)=>(
+                  <div key={step} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ width:28, height:28, borderRadius:'50%', background: step.includes('⚡')?'rgba(168,85,247,.4)':'rgba(168,85,247,.2)', border:`1px solid ${step.includes('⚡')?'#a855f7':'rgba(168,85,247,.4)'}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:900, color:'#a855f7', flexShrink:0, boxShadow:step.includes('⚡')?'0 0 12px #a855f7':'none' }}>{i+5}</div>
+                    <div style={{ background: step.includes('⚡')?'rgba(168,85,247,.12)':'rgba(0,0,0,.5)', border:`1px solid ${step.includes('⚡')?'rgba(168,85,247,.5)':'rgba(168,85,247,.2)'}`, borderRadius:8, padding:'10px 14px', flex:1, fontSize:13, color: step.includes('⚡')?'#a855f7':'#8a9aaa', fontWeight:step.includes('⚡')?700:400 }}>{step}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ textAlign:'center', marginTop:40 }}>
+              <Link href="/intelligence" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'#a855f7', color:'#fff', padding:'13px 28px', borderRadius:8, fontSize:13, fontWeight:800, textDecoration:'none', boxShadow:'0 0 30px rgba(168,85,247,.4)' }}>
+                Trace Any Macro Scenario →
+              </Link>
+            </div>
+          </div>
+
+          {/* ── WEAPONS 4-6: THREE CARDS SIDE BY SIDE ────────────────────── */}
+          <div className="item i4" style={{ borderTop:'1px solid rgba(255,255,255,.04)' }}>
+            <div className="section" style={{ padding:'80px 24px' }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:20 }} className="g3">
+
+                {/* Forced Flow */}
+                <div style={{ background:'rgba(0,0,0,.7)', border:'1px solid rgba(0,212,255,.2)', borderRadius:12, overflow:'hidden', transition:'all .3s' }}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(0,212,255,.5)';e.currentTarget.style.transform='translateY(-8px)';e.currentTarget.style.boxShadow='0 30px 60px rgba(0,0,0,.5),0 0 40px rgba(0,212,255,.15)'}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(0,212,255,.2)';e.currentTarget.style.transform='none';e.currentTarget.style.boxShadow='none'}}>
+                  <div style={{ padding:'24px', borderBottom:'1px solid rgba(0,212,255,.12)' }}>
+                    <div style={{ fontSize:9, color:'#00d4ff', letterSpacing:'2px', marginBottom:8 }}>WEAPON 04 · MECHANICAL FLOWS</div>
+                    <div style={{ fontSize:24, fontWeight:900, color:'#fff', marginBottom:10 }}>🌊 Forced Flow</div>
+                    <p style={{ fontSize:12.5, color:'#5a7a88', lineHeight:1.65 }}>Billions HAVE to move into specific stocks every month. Index rebalancing. Gamma hedging. ETF creations. Front-run guaranteed mechanical buying.</p>
+                  </div>
+                  <div style={{ padding:'4px' }}><FlowStream/></div>
+                  <div style={{ padding:'16px 20px', borderTop:'1px solid rgba(0,212,255,.1)' }}>
+                    <Link href="/intelligence" style={{ display:'block', textAlign:'center', background:'rgba(0,212,255,.15)', border:'1px solid rgba(0,212,255,.3)', color:'#00d4ff', padding:'10px', borderRadius:6, fontSize:12, fontWeight:700, textDecoration:'none' }}>
+                      See This Month&apos;s Flows →
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Signal Radar */}
+                <div style={{ background:'rgba(0,0,0,.7)', border:'1px solid rgba(0,255,136,.2)', borderRadius:12, overflow:'hidden', transition:'all .3s' }}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(0,255,136,.5)';e.currentTarget.style.transform='translateY(-8px)';e.currentTarget.style.boxShadow='0 30px 60px rgba(0,0,0,.5),0 0 40px rgba(0,255,136,.15)'}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(0,255,136,.2)';e.currentTarget.style.transform='none';e.currentTarget.style.boxShadow='none'}}>
+                  <div style={{ padding:'24px', borderBottom:'1px solid rgba(0,255,136,.12)' }}>
+                    <div style={{ fontSize:9, color:'#00ff88', letterSpacing:'2px', marginBottom:8 }}>WEAPON 05 · CROSS-ASSET CORRELATIONS</div>
+                    <div style={{ fontSize:24, fontWeight:900, color:'#fff', marginBottom:10 }}>⚡ Signal Radar</div>
+                    <p style={{ fontSize:12.5, color:'#5a7a88', lineHeight:1.65 }}>Korean Won weakens → Qualcomm drops 72h later. 7/8 times. We track 8 of these correlations live and alert you the second one fires.</p>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'center', padding:'8px 0', background:'rgba(0,10,5,.5)' }}><MiniRadar/></div>
+                  <div style={{ padding:'16px 20px', borderTop:'1px solid rgba(0,255,136,.1)' }}>
+                    <Link href="/intelligence" style={{ display:'block', textAlign:'center', background:'rgba(0,255,136,.15)', border:'1px solid rgba(0,255,136,.3)', color:'#00ff88', padding:'10px', borderRadius:6, fontSize:12, fontWeight:700, textDecoration:'none' }}>
+                      Check Active Signals →
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Filing X-Ray */}
+                <div style={{ background:'rgba(0,0,0,.7)', border:'1px solid rgba(236,72,153,.2)', borderRadius:12, overflow:'hidden', transition:'all .3s' }}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(236,72,153,.5)';e.currentTarget.style.transform='translateY(-8px)';e.currentTarget.style.boxShadow='0 30px 60px rgba(0,0,0,.5),0 0 40px rgba(236,72,153,.15)'}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(236,72,153,.2)';e.currentTarget.style.transform='none';e.currentTarget.style.boxShadow='none'}}>
+                  <div style={{ padding:'24px', borderBottom:'1px solid rgba(236,72,153,.12)' }}>
+                    <div style={{ fontSize:9, color:'#ec4899', letterSpacing:'2px', marginBottom:8 }}>WEAPON 06 · SEC DOCUMENT INTELLIGENCE</div>
+                    <div style={{ fontSize:24, fontWeight:900, color:'#fff', marginBottom:10 }}>📄 Filing X-Ray</div>
+                    <p style={{ fontSize:12.5, color:'#5a7a88', lineHeight:1.65 }}>Companies bury the bad news on page 47. AI reads SEC filings the second they drop and finds the $200M write-down before any analyst opens the document.</p>
+                  </div>
+                  <div style={{ padding:'4px', background:'rgba(0,0,0,.3)' }}><XRayDoc/></div>
+                  <div style={{ padding:'16px 20px', borderTop:'1px solid rgba(236,72,153,.1)' }}>
+                    <Link href="/intelligence" style={{ display:'block', textAlign:'center', background:'rgba(236,72,153,.15)', border:'1px solid rgba(236,72,153,.3)', color:'#ec4899', padding:'10px', borderRadius:6, fontSize:12, fontWeight:700, textDecoration:'none' }}>
+                      X-Ray a Filing →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── MASTER CTA ──────────────────────────────────────────────── */}
+          <div className="item i5" style={{ textAlign:'center', padding:'80px 24px 120px', borderTop:'1px solid rgba(255,255,255,.04)' }}>
+            <div style={{ fontSize:11, color:'#4a6a78', letterSpacing:'2px', marginBottom:20 }}>ALL SIX WEAPONS · ONE OPS CENTER · FREE TO ACCESS</div>
+            <h3 style={{ fontSize:'clamp(28px,4vw,52px)', fontWeight:900, letterSpacing:'-2px', color:'#fff', marginBottom:20 }}>
+              Enter the Intelligence Suite
+            </h3>
+            <p style={{ fontSize:16, color:'#5a7a88', marginBottom:36, maxWidth:480, margin:'0 auto 36px' }}>
+              The tools that don&apos;t exist anywhere else. The edge that only institutions have had. Until now.
+            </p>
+            <Link href="/intelligence" style={{ display:'inline-flex', alignItems:'center', gap:12, background:'linear-gradient(135deg,#ff2d78,#a855f7,#00d4ff)', backgroundSize:'200%', animation:'holo 3s linear infinite', color:'#fff', padding:'20px 56px', borderRadius:12, fontSize:17, fontWeight:900, textDecoration:'none', boxShadow:'0 0 80px rgba(168,85,247,.4),0 24px 60px rgba(0,0,0,.6)', letterSpacing:'-.5px' }}>
+              <span style={{ fontSize:20 }}>🎯</span> Access Intelligence Suite — Free
+            </Link>
+            <div style={{ marginTop:24, display:'flex', gap:20, justifyContent:'center', flexWrap:'wrap' }}>
+              {[['🔫','Lock-Up Assassin'],['🧪','Lie Detector'],['🧠','Galaxy Brain'],['🌊','Forced Flow'],['⚡','Signal Radar'],['📄','Filing X-Ray']].map(([icon,name])=>(
+                <div key={name} style={{ fontSize:12, color:'#3a5a68' }}>{icon} {name}</div>
+              ))}
+            </div>
+          </div>
+
         </div>
       </section>
+
 
       {/* ══ POWERED BY ══════════════════════════════════════════════════════════ */}
       <section style={{ padding:'130px 0', position:'relative', zIndex:1 }}>
