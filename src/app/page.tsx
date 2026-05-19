@@ -196,6 +196,7 @@ export default function HomePage() {
   const analyzer = useInView()
   const founders = useInView()
   const stats    = useInView()
+  const intel    = useInView(0.05)
 
   const heroOp    = Math.max(0, 1 - scrollY / 600)
   const heroTrans = `translateY(${scrollY * 0.3}px)`
@@ -299,8 +300,8 @@ export default function HomePage() {
             <Link href="/ai-stocks" className="mag-btn" style={{ background:'linear-gradient(135deg,#00d4aa,#3b8eea)', color:'#030a10', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:900, textDecoration:'none', boxShadow:'0 0 60px #00d4aa50,0 20px 40px rgba(0,0,0,.4)', letterSpacing:'-.3px', display:'inline-block' }}>
               Analyze Any Stock Free →
             </Link>
-            <Link href="/arena" style={{ background:'rgba(6,13,20,.8)', border:'1px solid rgba(255,255,255,.08)', color:'#dce8f0', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(12px)' }}>
-              Join a Tournament
+            <Link href="/intelligence" style={{ background:'linear-gradient(135deg,rgba(255,45,120,.15),rgba(168,85,247,.15))', border:'1px solid rgba(168,85,247,.3)', color:'#dce8f0', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(12px)' }}>
+              🔫 Intelligence Suite
             </Link>
           </div>
 
@@ -323,7 +324,7 @@ export default function HomePage() {
       {/* TICKER */}
       <div style={{ borderTop:'1px solid rgba(255,255,255,.04)', borderBottom:'1px solid rgba(255,255,255,.04)', height:38, overflow:'hidden', position:'relative', zIndex:1, background:'rgba(4,10,16,.8)', backdropFilter:'blur(12px)' }}>
         <div style={{ display:'inline-flex', animation:'ticker3d 28s linear infinite', whiteSpace:'nowrap', height:'100%', alignItems:'center' }}>
-          {[...Array(2)].flatMap(() => ['🤖 AI Stock Analyzer — 15s full analysis','⚡ YN Arena — Live prize pools','📰 Daily Intelligence — Free forever','$100K Paper Trading','5 AI Agent System','Real Finnhub Data','Gemini 2.0 Engine','Prop Firm Challenges','🏆 Tournament Prizes','Zero cost to start'].map((t,i)=>(
+          {[...Array(2)].flatMap(() => ['🤖 AI Stock Analyzer — 5 agents, 15 seconds','🔫 Lock-Up Assassin — Predict the dump','🧪 Lie Detector — Find what they buried','🧠 Galaxy Brain — Trace the domino chain','🌊 Forced Flow — Front-run guaranteed money','⚡ Signal Radar — 73-91% hit rates','📄 Filing X-Ray — Read SEC before analysts','📰 Daily Intelligence — Free every morning'].map((t,i)=>(
             <span key={t+i} style={{ padding:'0 28px', fontSize:11, fontWeight:700, letterSpacing:'.5px', color:['#00d4aa','#3b8eea','#a855f7','#f59e0b','#ec4899'][i%5] }}>
               {t} <span style={{ opacity:.2, marginLeft:12 }}>✦</span>
             </span>
@@ -421,6 +422,163 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      {/* ══ INTELLIGENCE SUITE ══════════════════════════════════════════════════ */}
+      <section style={{ padding:'0 0 140px', position:'relative', zIndex:1, overflow:'hidden' }}>
+        {/* Full-bleed dark bg */}
+        <div style={{ background:'#000', borderTop:'1px solid rgba(255,255,255,.04)', borderBottom:'1px solid rgba(255,255,255,.04)', padding:'130px 0', position:'relative' }}>
+          {/* Animated grid bg */}
+          <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(255,45,120,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,45,120,.03) 1px,transparent 1px)', backgroundSize:'40px 40px', pointerEvents:'none' }}/>
+          {/* Glow orbs */}
+          <div style={{ position:'absolute', top:'20%', left:'15%', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle,rgba(168,85,247,.08),transparent 70%)', pointerEvents:'none' }}/>
+          <div style={{ position:'absolute', top:'50%', right:'10%', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle,rgba(255,45,120,.06),transparent 70%)', pointerEvents:'none' }}/>
+          <div style={{ position:'absolute', bottom:'10%', left:'40%', width:600, height:300, borderRadius:'50%', background:'radial-gradient(circle,rgba(0,212,255,.05),transparent 70%)', pointerEvents:'none' }}/>
+
+          <div className="section" style={{ position:'relative', zIndex:1 }}>
+            <div ref={intel.ref} className={`vis${intel.v?' show':''}`}>
+
+              {/* HEADER */}
+              <div className="item i0" style={{ textAlign:'center', marginBottom:72 }}>
+                <div style={{ display:'inline-flex', alignItems:'center', gap:10, background:'rgba(255,45,120,.12)', border:'1px solid rgba(255,45,120,.3)', borderRadius:20, padding:'7px 20px', marginBottom:20, fontSize:11, color:'#ff2d78', fontWeight:700, letterSpacing:'1px' }}>
+                  <span style={{ width:6, height:6, borderRadius:'50%', background:'#ff2d78', display:'inline-block', animation:'pulse-dot 1.5s infinite' }}/>
+                  CLASSIFIED · TOP SECRET · CLEARANCE REQUIRED
+                </div>
+                <h2 style={{ fontSize:'clamp(38px,6vw,72px)', fontWeight:900, lineHeight:.95, letterSpacing:'-3px', marginBottom:20, color:'#fff' }}>
+                  The{' '}
+                  <span style={{ background:'linear-gradient(135deg,#ff2d78,#a855f7,#00d4ff)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundSize:'200%', animation:'holo 4s linear infinite' }}>
+                    Intelligence Suite
+                  </span>
+                </h2>
+                <p style={{ fontSize:'clamp(15px,2vw,20px)', color:'#6a8a98', lineHeight:1.65, maxWidth:640, margin:'0 auto 0' }}>
+                  Six tools that don&apos;t exist anywhere else. The kind of intelligence hedge funds pay analysts $500K/year to produce. We automated it.
+                </p>
+              </div>
+
+              {/* THE 6 WEAPONS — large cards */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:16 }} className="g3 item i1">
+                {[
+                  {
+                    icon:'🔫', name:'Lock-Up Assassin', clr:'#ff2d78', classif:'SECRET',
+                    tag:'SCHEDULED DESTRUCTION',
+                    hook: 'Every IPO has a 180-day lock-up. When insiders can finally sell, they dump. This is guaranteed. It\'s dated. It\'s sized.',
+                    reveal: 'Enter any recent IPO ticker and get the exact put position, entry date, and magnitude of the coming drop — 3 weeks before everyone else knows.',
+                    stat: '180-day lock-ups',
+                    statSub: 'have predictable patterns',
+                  },
+                  {
+                    icon:'🧪', name:'Lie Detector', clr:'#f59e0b', classif:'SECRET',
+                    tag:'FORENSIC EARNINGS ANALYSIS',
+                    hook: 'Management has a story. The numbers have a different one. AI reads both and finds the gap before analysts publish their notes.',
+                    reveal: 'Scores the divergence between narrative and reality 0-100. Finds buried signals — deferred revenue manipulation, quiet guidance cuts, footnote disclosures.',
+                    stat: '0-100',
+                    statSub: 'divergence score per call',
+                  },
+                  {
+                    icon:'🧠', name:'Galaxy Brain', clr:'#a855f7', classif:'TOP SECRET',
+                    tag:'MACRO DOMINO TRACER',
+                    hook: 'The Fed raises rates. That\'s the obvious trade. But 5 steps down the domino chain, a completely unrelated stock makes a 20% move nobody predicted.',
+                    reveal: 'Type any macro event. AI traces every step — with magnitudes, timing, and the non-obvious 3-step connections retail traders would never make.',
+                    stat: '5-step',
+                    statSub: 'domino chains traced',
+                  },
+                  {
+                    icon:'🌊', name:'Forced Flow', clr:'#00d4ff', classif:'TOP SECRET',
+                    tag:'MECHANICAL MONEY MOVEMENTS',
+                    hook: 'Every month, billions of dollars HAVE to move into specific stocks whether fund managers want to or not. Index rebalancing. Gamma hedging. ETF flows.',
+                    reveal: 'AI calculates exactly when and how much forced buying hits, which tickers are affected, and the window to front-run the guaranteed mechanical flow.',
+                    stat: '$Billions',
+                    statSub: 'in forced flows monthly',
+                  },
+                  {
+                    icon:'⚡', name:'Signal Radar', clr:'#00ff88', classif:'SECRET',
+                    tag:'CROSS-ASSET CORRELATION ENGINE',
+                    hook: 'Korean Won weakens 2% today. Qualcomm drops 4-8% in 72 hours. This has happened 7 out of 8 times. Almost nobody knows it exists.',
+                    reveal: 'Monitors 8 cross-asset signals live. When a correlation fires, you get the specific ticker, direction, historical hit rate, and options play — in real time.',
+                    stat: '73-91%',
+                    statSub: 'historical hit rates',
+                  },
+                  {
+                    icon:'📄', name:'Filing X-Ray', clr:'#ec4899', classif:'TOP SECRET',
+                    tag:'SEC DOCUMENT INTELLIGENCE',
+                    hook: 'Companies bury the bad news on page 47. A $200M write-down. An accounting methodology change. A going-concern footnote. The stock hasn\'t moved yet.',
+                    reveal: 'AI reads SEC filings the second they drop, extracts what management buried, scores the severity, and builds the trade before analysts even open the document.',
+                    stat: 'Real-time',
+                    statSub: 'SEC EDGAR monitoring',
+                  },
+                ].map((w, i) => (
+                  <Link key={w.name} href="/intelligence" style={{ textDecoration:'none' }}>
+                    <div style={{ background:'#000', border:`1px solid ${w.clr}20`, borderRadius:12, padding:'28px 24px', height:'100%', cursor:'pointer', transition:'all .3s', position:'relative', overflow:'hidden' }}
+                      onMouseEnter={e => {
+                        const el = e.currentTarget
+                        el.style.borderColor = `${w.clr}60`
+                        el.style.background  = `${w.clr}06`
+                        el.style.transform   = 'translateY(-6px)'
+                        el.style.boxShadow   = `0 24px 60px rgba(0,0,0,.5), 0 0 40px ${w.clr}15`
+                      }}
+                      onMouseLeave={e => {
+                        const el = e.currentTarget
+                        el.style.borderColor = `${w.clr}20`
+                        el.style.background  = '#000'
+                        el.style.transform   = 'translateY(0)'
+                        el.style.boxShadow   = 'none'
+                      }}>
+                      {/* Gradient line top */}
+                      <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,${w.clr},transparent 60%)` }}/>
+
+                      {/* Header row */}
+                      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
+                        <span style={{ fontSize:28, filter:`drop-shadow(0 0 10px ${w.clr})` }}>{w.icon}</span>
+                        <span style={{ fontSize:8, color:w.clr, background:`${w.clr}15`, border:`1px solid ${w.clr}30`, borderRadius:3, padding:'3px 8px', fontWeight:800, letterSpacing:'1px' }}>{w.classif}</span>
+                      </div>
+
+                      {/* Tag */}
+                      <div style={{ fontSize:8, color:'#6a8a98', letterSpacing:'1.5px', marginBottom:6 }}>{w.tag}</div>
+
+                      {/* Name */}
+                      <div style={{ fontSize:18, fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-.5px' }}>{w.name}</div>
+
+                      {/* Hook */}
+                      <p style={{ fontSize:12.5, color:'#6a8a98', lineHeight:1.7, marginBottom:16 }}>{w.hook}</p>
+
+                      {/* Reveal */}
+                      <p style={{ fontSize:12, color:w.clr, lineHeight:1.65, marginBottom:20, opacity:.85 }}>{w.reveal}</p>
+
+                      {/* Stat */}
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingTop:16, borderTop:`1px solid ${w.clr}15` }}>
+                        <div>
+                          <div style={{ fontSize:18, fontWeight:900, color:w.clr, fontFamily:'monospace', textShadow:`0 0 12px ${w.clr}` }}>{w.stat}</div>
+                          <div style={{ fontSize:10, color:'#4a6a78' }}>{w.statSub}</div>
+                        </div>
+                        <div style={{ fontSize:11, color:w.clr, fontWeight:700, display:'flex', alignItems:'center', gap:4 }}>
+                          DEPLOY <span style={{ fontSize:14 }}>→</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* BOTTOM CTA */}
+              <div className="item i2" style={{ textAlign:'center', marginTop:48 }}>
+                <div style={{ display:'inline-flex', flexDirection:'column', alignItems:'center', gap:16, background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.06)', borderRadius:16, padding:'32px 48px' }}>
+                  <div style={{ fontSize:11, color:'#6a8a98', letterSpacing:'1px' }}>
+                    All six tools. One ops center. Free to access.
+                  </div>
+                  <Link href="/intelligence" style={{ background:'linear-gradient(135deg,#ff2d78,#a855f7,#00d4ff)', backgroundSize:'200%', animation:'holo 3s linear infinite', color:'#fff', padding:'16px 48px', borderRadius:10, fontSize:15, fontWeight:900, textDecoration:'none', boxShadow:'0 0 60px rgba(255,45,120,.3), 0 20px 40px rgba(0,0,0,.5)', letterSpacing:'-.3px', display:'inline-block' }}>
+                    Access Intelligence Suite →
+                  </Link>
+                  <div style={{ display:'flex', gap:24, fontSize:11, color:'#4a6a78' }}>
+                    {['Lock-Up Assassin','Lie Detector','Galaxy Brain','Forced Flow','Signal Radar','Filing X-Ray'].map(n=>(
+                      <span key={n}>{n}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ══ POWERED BY ══════════════════════════════════════════════════════════ */}
       <section style={{ padding:'130px 0', position:'relative', zIndex:1 }}>
@@ -594,12 +752,15 @@ export default function HomePage() {
           <p style={{ fontSize:20, color:'#6a90a8', lineHeight:1.6, marginBottom:52, maxWidth:500, margin:'0 auto 52px' }}>
             Join thousands of traders using AI to find better entries, tighter stops, and bigger wins.
           </p>
-          <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap', marginBottom:40 }}>
-            <Link href="/ai-stocks" style={{ background:'linear-gradient(135deg,#00d4aa,#3b8eea)', color:'#030a10', padding:'20px 50px', borderRadius:16, fontSize:18, fontWeight:900, textDecoration:'none', boxShadow:'0 0 80px #00d4aa40,0 24px 60px rgba(0,0,0,.5)', letterSpacing:'-.5px', display:'inline-block' }}>
-              Analyze a Stock Now →
+          <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap', marginBottom:40 }}>
+            <Link href="/ai-stocks" style={{ background:'linear-gradient(135deg,#00d4aa,#3b8eea)', color:'#030a10', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:900, textDecoration:'none', boxShadow:'0 0 60px #00d4aa40,0 20px 40px rgba(0,0,0,.5)', letterSpacing:'-.3px', display:'inline-block' }}>
+              AI Analyzer →
             </Link>
-            <Link href="/daily" style={{ background:'rgba(6,13,20,.9)', border:'1px solid rgba(255,255,255,.08)', color:'#dce8f0', padding:'20px 50px', borderRadius:16, fontSize:18, fontWeight:700, textDecoration:'none', backdropFilter:'blur(16px)' }}>
-              Daily Intelligence
+            <Link href="/intelligence" style={{ background:'linear-gradient(135deg,rgba(255,45,120,.2),rgba(168,85,247,.2))', border:'1px solid rgba(168,85,247,.4)', color:'#dce8f0', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(16px)', boxShadow:'0 0 40px rgba(168,85,247,.2)' }}>
+              Intelligence Suite →
+            </Link>
+            <Link href="/daily" style={{ background:'rgba(6,13,20,.9)', border:'1px solid rgba(255,255,255,.08)', color:'#dce8f0', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(16px)' }}>
+              Daily Intel
             </Link>
           </div>
           <div style={{ display:'flex', gap:36, justifyContent:'center', flexWrap:'wrap' }}>
@@ -621,7 +782,7 @@ export default function HomePage() {
             <span style={{ fontSize:11, color:'#1a3550', marginLeft:8 }}>© 2026</span>
           </div>
           <div style={{ display:'flex', gap:22 }}>
-            {[['Privacy','/privacy'],['Terms','/terms'],['AI Analyzer','/ai-stocks'],['Daily Intel','/daily'],['Performance','/performance'],['Courses','/courses']].map(([l,h])=>(
+            {[['Privacy','/privacy'],['Terms','/terms'],['AI Analyzer','/ai-stocks'],['Intelligence','/intelligence'],['Daily Intel','/daily'],['Performance','/performance'],['Courses','/courses']].map(([l,h])=>(
               <Link key={l} href={h} style={{ fontSize:12, color:'#2a4a62', textDecoration:'none', transition:'color .2s' }}>{l}</Link>
             ))}
           </div>
