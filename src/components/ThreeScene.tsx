@@ -15,272 +15,332 @@ export default function ThreeScene({ scrollY }: { scrollY: number }) {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
     renderer.setSize(W, H)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setClearColor(0x020509, 1)
+    renderer.setClearColor(0x020810, 1)
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.3
+    renderer.toneMappingExposure = 1.25
     mount.appendChild(renderer.domElement)
 
     // ── SCENE / CAMERA ────────────────────────────────────────────────────────
-    const scene  = new THREE.Scene()
-    scene.fog    = new THREE.FogExp2(0x020509, 0.018)
-    const camera = new THREE.PerspectiveCamera(72, W / H, 0.1, 400)
-    camera.position.set(0, 4, 20)
-    camera.lookAt(0, 0, 0)
+    const scene = new THREE.Scene()
+    scene.fog = new THREE.FogExp2(0x020810, 0.02)
+    const camera = new THREE.PerspectiveCamera(68, W / H, 0.1, 300)
+    camera.position.set(0, 9, 22)
+    camera.lookAt(0, -1, 0)
 
-    // ── GALAXY PARTICLE SYSTEM ────────────────────────────────────────────────
-    const GALAXY_N = 16000
-    const gPos   = new Float32Array(GALAXY_N * 3)
-    const gClr   = new Float32Array(GALAXY_N * 3)
-    const MAX_R  = 18
-    const ARMS   = 3
+    // ── CANDLESTICK GRID ──────────────────────────────────────────────────────
+    const COLS = 16, ROWS = 7, SP = 2.3
+    const FLOOR = -5.5
 
-    for (let i = 0; i < GALAXY_N; i++) {
-      const arm    = i % ARMS
-      const armOff = (arm / ARMS) * Math.PI * 2
-      const t      = i / GALAXY_N
-      const radius = 0.3 + t * MAX_R
-      const spin   = radius * 1.4
-      const angle  = t * Math.PI * 14 + armOff + spin
-      const sc     = radius * 0.22
+    type Candle = {
+      body: THREE.Mesh
+      bMat: THREE.MeshPhongMaterial
+      edgeMat: THREE.LineBasicMaterial
+      wT: THREE.Mesh
+      wB: THREE.Mesh
+      isGreen: boolean
+      h: number
+      phase: number
+      col: number
+      row: number
+    }
 
-      gPos[i*3]   = Math.cos(angle) * radius + (Math.random()-0.5)*sc
-      gPos[i*3+1] = (Math.random()-0.5) * radius * 0.06
-      gPos[i*3+2] = Math.sin(angle) * radius + (Math.random()-0.5)*sc
+    const candleGroup = new THREE.Group()
+    scene.add(candleGroup)
+    const candles: Candle[] = []
 
-      const ct = radius / MAX_R
-      if (ct < 0.15) {
-        // Core: bright white-teal
-        gClr[i*3]=1; gClr[i*3+1]=1; gClr[i*3+2]=1
-      } else if (ct < 0.45) {
-        const b = (ct-0.15)/0.3
-        gClr[i*3]=0*(1-b)+0.1*b; gClr[i*3+1]=0.9-b*0.3; gClr[i*3+2]=1
-      } else {
-        const b = (ct-0.45)/0.55
-        gClr[i*3]=0.45+b*0.5; gClr[i*3+1]=0.05; gClr[i*3+2]=1-b*0.25
+    for (let c = 0; c < COLS; c++) {
+      for (let r = 0; r < ROWS; r++) {
+        const isGreen = Math.random() > 0.44
+        const h = 0.6 + Math.random() * 3.8
+        const x = (c - COLS / 2) * SP
+        const z = (r - ROWS / 2) * SP - 1
+
+        // Body
+        const bGeo = new THREE.BoxGeometry(1.05, h, 1.05)
+        const bMat = new THREE.MeshPhongMaterial({
+          color: isGreen ? 0x00d4aa : 0xff2d78,
+          emissive: isGreen ? 0x002218 : 0x200008,
+          shininess: 90,
+          transparent: true, opacity: 0.94,
+        })
+        const body = new THREE.Mesh(bGeo, bMat)
+        body.position.set(x, FLOOR + h / 2, z)
+
+        // Edge glow (child of body so it scales with it)
+        const edgeGeo = new THREE.EdgesGeometry(bGeo)
+        const edgeMat = new THREE.LineBasicMaterial({
+          color: isGreen ? 0x00ff88 : 0xff2d78,
+          transparent: true, opacity: 0.55,
+          blending: THREE.AdditiveBlending,
+        })
+        body.add(new THREE.LineSegments(edgeGeo, edgeMat))
+        candleGroup.add(body)
+
+        // Top wick
+        const wtH = 0.25 + Math.random() * 0.9
+        const wGeo = new THREE.CylinderGeometry(0.055, 0.055, wtH, 6)
+        const wMat = new THREE.MeshBasicMaterial({
+          color: isGreen ? 0x00ff88 : 0xff2d78,
+          transparent: true, opacity: 0.75,
+        })
+        const wT = new THREE.Mesh(wGeo, wMat)
+        wT.position.set(x, FLOOR + h + wtH / 2, z)
+        candleGroup.add(wT)
+
+        // Bottom wick
+        const wbH = 0.15 + Math.random() * 0.35
+        const wBMat = new THREE.MeshBasicMaterial({
+          color: isGreen ? 0x00d4aa : 0xff2d78,
+          transparent: true, opacity: 0.6,
+        })
+        const wB = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, wbH, 6), wBMat)
+        wB.position.set(x, FLOOR - wbH / 2, z)
+        candleGroup.add(wB)
+
+        candles.push({ body, bMat, edgeMat, wT, wB, isGreen, h, phase: Math.random() * Math.PI * 2, col: c, row: r })
       }
     }
 
-    const galaxyGeo = new THREE.BufferGeometry()
-    galaxyGeo.setAttribute('position', new THREE.BufferAttribute(gPos, 3))
-    galaxyGeo.setAttribute('color',    new THREE.BufferAttribute(gClr, 3))
-    const galaxyMat = new THREE.PointsMaterial({
-      size: 0.07, vertexColors: true, transparent: true, opacity: 0.88,
-      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
-    })
-    const galaxy = new THREE.Points(galaxyGeo, galaxyMat)
-    galaxy.rotation.x = 0.12
-    scene.add(galaxy)
-
-    // ── TORUS KNOT (HERO SHAPE) ───────────────────────────────────────────────
-    const knotGroup = new THREE.Group()
-    scene.add(knotGroup)
-
-    const knotGeo = new THREE.TorusKnotGeometry(3.0, 0.75, 280, 32, 2, 3)
-
-    // Solid glassy core
-    const knotMatSolid = new THREE.MeshPhongMaterial({
-      color: 0x00d4aa, emissive: 0x003a28, shininess: 120,
-      transparent: true, opacity: 0.1,
-    })
-    knotGroup.add(new THREE.Mesh(knotGeo, knotMatSolid))
-
-    // Primary wireframe — teal
-    knotGroup.add(new THREE.Mesh(knotGeo, new THREE.MeshBasicMaterial({
-      color: 0x00d4aa, wireframe: true, transparent: true, opacity: 0.38,
-    })))
-
-    // Second tighter knot — purple
-    const knotGeo2 = new THREE.TorusKnotGeometry(2.1, 0.38, 200, 24, 3, 5)
-    knotGroup.add(new THREE.Mesh(knotGeo2, new THREE.MeshBasicMaterial({
-      color: 0xa855f7, wireframe: true, transparent: true, opacity: 0.28,
-    })))
-
-    // Third knot — blue accent
-    const knotGeo3 = new THREE.TorusKnotGeometry(1.5, 0.22, 160, 20, 4, 7)
-    knotGroup.add(new THREE.Mesh(knotGeo3, new THREE.MeshBasicMaterial({
-      color: 0x3b8eea, wireframe: true, transparent: true, opacity: 0.2,
-    })))
-
-    // ── CORE GLOW ONION LAYERS ────────────────────────────────────────────────
-    const glowGroup = new THREE.Group()
-    scene.add(glowGroup)
-    const glowLayers = [
-      { r:0.28, c:0xffffff, op:0.95 },
-      { r:0.65, c:0x00d4aa, op:0.45 },
-      { r:1.2,  c:0x00d4aa, op:0.18 },
-      { r:2.2,  c:0x3b8eea, op:0.07 },
-      { r:4.0,  c:0xa855f7, op:0.035 },
-    ]
-    const glowMeshes = glowLayers.map(({ r, c, op }) => {
-      const m = new THREE.Mesh(
-        new THREE.SphereGeometry(r, 16, 16),
-        new THREE.MeshBasicMaterial({ color:c, transparent:true, opacity:op, depthWrite:false, blending:THREE.AdditiveBlending })
-      )
-      glowGroup.add(m)
-      return { m, baseOp: op }
-    })
-
-    // ── ORBITAL RINGS ─────────────────────────────────────────────────────────
-    const ringData = [
-      { r:5.2,  tube:0.045, c:0x00d4aa, tx:0.35,  tz:0,   spd: 0.007 },
-      { r:7.0,  tube:0.032, c:0x3b8eea, tx:1.05,  tz:0.5, spd:-0.0045 },
-      { r:9.0,  tube:0.028, c:0xa855f7, tx:0.65,  tz:1.2, spd: 0.0032 },
-      { r:11.2, tube:0.02,  c:0xff2d78, tx:1.45,  tz:0.8, spd:-0.0028 },
-      { r:6.0,  tube:0.038, c:0x00ff88, tx:-0.85, tz:0.3, spd: 0.0065 },
-      { r:8.2,  tube:0.022, c:0xf59e0b, tx:1.75,  tz:1.6, spd:-0.003  },
-    ]
-    const orbRings = ringData.map(d => {
-      const geo = new THREE.TorusGeometry(d.r, d.tube, 16, 140)
-      const mat = new THREE.MeshBasicMaterial({ color:d.c, transparent:true, opacity:0.75, blending:THREE.AdditiveBlending })
-      const mesh = new THREE.Mesh(geo, mat)
-      mesh.rotation.x = d.tx; mesh.rotation.z = d.tz
-      scene.add(mesh)
-      return { mesh, spd: d.spd }
-    })
-
-    // ── EXPANDING SHOCKWAVE RINGS ─────────────────────────────────────────────
-    const shockCount = 4
-    const shockRings = Array.from({ length: shockCount }, (_, i) => {
-      const geo  = new THREE.RingGeometry(0.05, 0.1, 64)
-      const mat  = new THREE.MeshBasicMaterial({ color:0x00d4aa, transparent:true, opacity:0, side:THREE.DoubleSide, blending:THREE.AdditiveBlending, depthWrite:false })
-      const mesh = new THREE.Mesh(geo, mat)
-      mesh.rotation.x = Math.PI / 2
-      scene.add(mesh)
-      return { mesh, mat, progress: i / shockCount }
-    })
-
-    // ── FLOATING ICOSAHEDRA (data nodes) ──────────────────────────────────────
-    const icoGeo = new THREE.IcosahedronGeometry(0.25, 0)
-    const dataNodes: { mesh: THREE.Mesh; theta: number; phi: number; r: number; spd: number }[] = []
-    const nodeColors = [0x00d4aa, 0x3b8eea, 0xa855f7, 0xf59e0b, 0xff2d78, 0x00ff88]
-    for (let i = 0; i < 24; i++) {
-      const mat   = new THREE.MeshBasicMaterial({ color: nodeColors[i%6], wireframe: true, transparent: true, opacity: 0.7 })
-      const mesh  = new THREE.Mesh(icoGeo, mat)
-      const theta = (i/24)*Math.PI*2
-      const phi   = Math.acos(2*Math.random()-1)
-      const r     = 7 + Math.random()*9
-      mesh.position.set(r*Math.sin(phi)*Math.cos(theta), r*Math.cos(phi)*0.45, r*Math.sin(phi)*Math.sin(theta))
-      scene.add(mesh)
-      dataNodes.push({ mesh, theta, phi, r, spd: 0.004+Math.random()*0.007 })
+    // ── LIVE PRICE CHART LINE ──────────────────────────────────────────────────
+    // Generate realistic-looking OHLC-style path
+    const CHART_N = 90
+    const chartXs: number[] = []
+    const chartYs: number[] = []
+    let cy = 0
+    for (let i = 0; i < CHART_N; i++) {
+      cy += (Math.random() - 0.46) * 0.9
+      cy = Math.max(-3.5, Math.min(3.5, cy))
+      chartXs.push((i / (CHART_N - 1)) * 28 - 14)
+      chartYs.push(cy)
     }
 
-    // ── AMBIENT PARTICLES (halo cloud) ────────────────────────────────────────
-    const haloN   = 800
-    const haloGeo = new THREE.BufferGeometry()
-    const haloPos = new Float32Array(haloN * 3)
-    const haloClr = new Float32Array(haloN * 3)
-    const hColors = [[0,0.83,0.67],[0.23,0.55,0.92],[0.66,0.33,0.97],[0.96,0.62,0.04],[1,0.18,0.47],[0,1,0.53]]
-    for (let i = 0; i < haloN; i++) {
-      const theta = Math.random()*Math.PI*2
-      const phi   = Math.acos(2*Math.random()-1)
-      const r     = 3.5+Math.random()*9
-      haloPos[i*3]  = Math.sin(phi)*Math.cos(theta)*r
-      haloPos[i*3+1]= Math.cos(phi)*r*0.55
-      haloPos[i*3+2]= Math.sin(phi)*Math.sin(theta)*r
-      const hc = hColors[i%hColors.length]
-      haloClr[i*3]=hc[0]; haloClr[i*3+1]=hc[1]; haloClr[i*3+2]=hc[2]
+    const chartBuf = new Float32Array(CHART_N * 3)
+    for (let i = 0; i < CHART_N; i++) {
+      chartBuf[i * 3]     = chartXs[i]
+      chartBuf[i * 3 + 1] = chartYs[i] + 0.5
+      chartBuf[i * 3 + 2] = -7
     }
-    haloGeo.setAttribute('position', new THREE.BufferAttribute(haloPos, 3))
-    haloGeo.setAttribute('color',    new THREE.BufferAttribute(haloClr, 3))
-    const haloMat = new THREE.PointsMaterial({ size:0.055, vertexColors:true, transparent:true, opacity:0.65, blending:THREE.AdditiveBlending, depthWrite:false })
-    scene.add(new THREE.Points(haloGeo, haloMat))
 
-    // ── GRID ──────────────────────────────────────────────────────────────────
-    const grid = new THREE.GridHelper(200, 90, 0x00d4aa, 0x0a1a24)
-    ;(grid.material as THREE.Material).opacity = 0.16
+    // Main line
+    const chartGeo = new THREE.BufferGeometry()
+    chartGeo.setAttribute('position', new THREE.BufferAttribute(chartBuf.slice(), 3))
+    chartGeo.setDrawRange(0, 0)
+    const chartLine = new THREE.Line(chartGeo,
+      new THREE.LineBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.95 })
+    )
+    scene.add(chartLine)
+
+    // Glow layer (thicker, dimmer)
+    const chartGlowGeo = new THREE.BufferGeometry()
+    chartGlowGeo.setAttribute('position', new THREE.BufferAttribute(chartBuf.slice(), 3))
+    chartGlowGeo.setDrawRange(0, 0)
+    const chartGlow = new THREE.Line(chartGlowGeo,
+      new THREE.LineBasicMaterial({ color: 0x00d4aa, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending })
+    )
+    scene.add(chartGlow)
+
+    // Trailing dot at chart tip
+    const tipGeo = new THREE.SphereGeometry(0.18, 8, 8)
+    const tipMesh = new THREE.Mesh(tipGeo,
+      new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0, blending: THREE.AdditiveBlending })
+    )
+    scene.add(tipMesh)
+
+    let chartProg = 0 // 0..CHART_N, resets
+
+    // ── CURRENCY SYMBOL SPRITES ────────────────────────────────────────────────
+    const makeSymTex = (sym: string, color: string) => {
+      const cv = document.createElement('canvas')
+      cv.width = 128; cv.height = 128
+      const ctx = cv.getContext('2d')!
+      ctx.clearRect(0, 0, 128, 128)
+      ctx.font = `900 76px -apple-system,BlinkMacSystemFont,system-ui,sans-serif`
+      ctx.fillStyle = color
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.globalAlpha = 0.9
+      ctx.fillText(sym, 64, 66)
+      return new THREE.CanvasTexture(cv)
+    }
+
+    const SYM_CONFIG = [
+      { s:'$', c:'#00d4aa', r:14, sp:0.004,  y: 1.5, sc:3.5 },
+      { s:'₿', c:'#f59e0b', r:17, sp:-0.003, y: 3.0, sc:3.0 },
+      { s:'€', c:'#3b8eea', r:12, sp:0.005,  y: 2.0, sc:2.8 },
+      { s:'$', c:'#00ff88', r:16, sp:-0.006, y:-0.5, sc:4.0 },
+      { s:'%', c:'#a855f7', r:13, sp:0.007,  y: 4.5, sc:2.5 },
+      { s:'¥', c:'#ec4899', r:15, sp:-0.004, y: 1.0, sc:2.8 },
+      { s:'₿', c:'#f59e0b', r:11, sp:0.006,  y: 5.5, sc:2.2 },
+      { s:'$', c:'#00d4aa', r:18, sp:-0.002, y:-1.5, sc:3.2 },
+      { s:'£', c:'#00d4ff', r:10, sp:0.008,  y: 3.5, sc:2.5 },
+    ]
+
+    const symSprites = SYM_CONFIG.map((cfg, i) => {
+      const mat = new THREE.SpriteMaterial({
+        map: makeSymTex(cfg.s, cfg.c),
+        transparent: true, opacity: 0.28,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      })
+      const sprite = new THREE.Sprite(mat)
+      const angle = (i / SYM_CONFIG.length) * Math.PI * 2
+      sprite.position.set(Math.cos(angle) * cfg.r, cfg.y, Math.sin(angle) * cfg.r)
+      sprite.scale.set(cfg.sc, cfg.sc, 1)
+      scene.add(sprite)
+      return { sprite, mat, angle, ...cfg }
+    })
+
+    // ── VOLUME BARS (behind candles) ───────────────────────────────────────────
+    for (let c = 0; c < COLS; c++) {
+      const volH = 0.2 + Math.random() * 1.5
+      const x = (c - COLS / 2) * SP
+      const z = (ROWS / 2) * SP + 2
+      const isPos = Math.random() > 0.4
+      const geo = new THREE.BoxGeometry(0.8, volH, 0.5)
+      const mat = new THREE.MeshBasicMaterial({
+        color: isPos ? 0x00d4aa : 0xff2d78,
+        transparent: true, opacity: 0.18,
+        blending: THREE.AdditiveBlending,
+      })
+      const m = new THREE.Mesh(geo, mat)
+      m.position.set(x, FLOOR + volH / 2, z)
+      scene.add(m)
+    }
+
+    // ── DATA RAIN PARTICLES ────────────────────────────────────────────────────
+    const RAIN_N = 600
+    const rainGeo = new THREE.BufferGeometry()
+    const rainPos = new Float32Array(RAIN_N * 3)
+    const rainClr = new Float32Array(RAIN_N * 3)
+    const rainSpd = new Float32Array(RAIN_N)
+    for (let i = 0; i < RAIN_N; i++) {
+      rainPos[i * 3]     = (Math.random() - 0.5) * 50
+      rainPos[i * 3 + 1] = Math.random() * 20 - 5
+      rainPos[i * 3 + 2] = (Math.random() - 0.5) * 40
+      rainSpd[i] = 0.03 + Math.random() * 0.07
+      const green = Math.random() > 0.32
+      rainClr[i * 3]     = green ? 0 : 1
+      rainClr[i * 3 + 1] = green ? 0.83 : 0.18
+      rainClr[i * 3 + 2] = green ? 0.42 : 0.47
+    }
+    rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3))
+    rainGeo.setAttribute('color',    new THREE.BufferAttribute(rainClr, 3))
+    const rainMat = new THREE.PointsMaterial({
+      size: 0.065, vertexColors: true,
+      transparent: true, opacity: 0.65,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    })
+    const rain = new THREE.Points(rainGeo, rainMat)
+    scene.add(rain)
+
+    // ── GRID FLOOR ────────────────────────────────────────────────────────────
+    const grid = new THREE.GridHelper(70, 50, 0x00d4aa, 0x061810)
+    ;(grid.material as THREE.Material).opacity = 0.2
     ;(grid.material as THREE.Material).transparent = true
-    grid.position.y = -9
+    grid.position.y = FLOOR
     scene.add(grid)
 
     // ── LIGHTS ────────────────────────────────────────────────────────────────
-    scene.add(new THREE.AmbientLight(0x081020, 2.5))
-    const coreLight  = new THREE.PointLight(0x00d4aa, 5, 22)
-    coreLight.position.set(0, 0, 0)
-    scene.add(coreLight)
-    const orbitL1 = new THREE.PointLight(0xa855f7, 2.5, 35)
-    scene.add(orbitL1)
-    const orbitL2 = new THREE.PointLight(0x3b8eea, 2, 30)
-    scene.add(orbitL2)
-    const orbitL3 = new THREE.PointLight(0xff2d78, 1.5, 28)
-    scene.add(orbitL3)
+    scene.add(new THREE.AmbientLight(0x041008, 2.5))
 
-    // ── MOUSE / SCROLL ────────────────────────────────────────────────────────
+    const keyLight  = new THREE.PointLight(0x00d4aa, 5, 35)
+    keyLight.position.set(0, 6, 6)
+    scene.add(keyLight)
+
+    const redLight  = new THREE.PointLight(0xff2d78, 3, 28)
+    redLight.position.set(-10, 0, 0)
+    scene.add(redLight)
+
+    const goldLight = new THREE.PointLight(0xf59e0b, 2, 22)
+    scene.add(goldLight)
+
+    const blueLight = new THREE.PointLight(0x3b8eea, 1.5, 25)
+    scene.add(blueLight)
+
+    // ── MOUSE ─────────────────────────────────────────────────────────────────
     const onMouse = (e: MouseEvent) => {
-      mouseRef.current.x = (e.clientX/window.innerWidth - 0.5) * 2
-      mouseRef.current.y = (e.clientY/window.innerHeight - 0.5) * 2
+      mouseRef.current.x = (e.clientX / window.innerWidth  - 0.5) * 2
+      mouseRef.current.y = (e.clientY / window.innerHeight - 0.5) * 2
     }
     window.addEventListener('mousemove', onMouse)
 
     // ── ANIMATION LOOP ────────────────────────────────────────────────────────
     let t = 0, raf: number
-    const baseY = scene.rotation.y
-    const baseX = scene.rotation.x
 
     function animate() {
       raf = requestAnimationFrame(animate)
-      t += 0.007
+      t += 0.009
 
-      // Knot rotation
-      knotGroup.rotation.x += 0.004
-      knotGroup.rotation.y += 0.007
+      // ── Candle wave animation ────────────────────────────────────────────
+      candles.forEach(cd => {
+        const wave = Math.sin(t * 1.6 + cd.phase + cd.col * 0.45 + cd.row * 0.55) * 0.32
+        const sy = Math.max(0.15, 1 + wave)
+        const nh = cd.h * sy
 
-      // Galaxy slow spin
-      galaxy.rotation.y += 0.0008
+        cd.body.scale.y = sy
+        cd.body.position.y = FLOOR + nh / 2
 
-      // Rings orbit
-      orbRings.forEach(({ mesh, spd }) => {
-        mesh.rotation.z += spd
-        mesh.rotation.y += spd * 0.25
+        cd.wT.position.y = FLOOR + nh + 0.22
+        cd.wB.position.y = FLOOR - 0.12
+
+        // Emissive glow pulse
+        cd.bMat.emissiveIntensity = 0.08 + Math.sin(t * 2.5 + cd.phase) * 0.05
+
+        // Occasional flip (1 in 1000 per frame)
+        if (Math.random() < 0.0008) {
+          cd.isGreen = !cd.isGreen
+          cd.bMat.color.setHex(cd.isGreen ? 0x00d4aa : 0xff2d78)
+          cd.bMat.emissive.setHex(cd.isGreen ? 0x002218 : 0x200008)
+          cd.edgeMat.color.setHex(cd.isGreen ? 0x00ff88 : 0xff2d78)
+          ;(cd.wT.material as THREE.MeshBasicMaterial).color.setHex(cd.isGreen ? 0x00ff88 : 0xff2d78)
+        }
       })
 
-      // Shockwave rings expand outward from core
-      shockRings.forEach(sh => {
-        sh.progress += 0.004
-        if (sh.progress >= 1) sh.progress = 0
-        const s = sh.progress * 14
-        sh.mesh.scale.setScalar(s)
-        sh.mat.opacity = Math.max(0, (1-sh.progress) * 0.45)
-        // Color pulse between teal and purple
-        const hue = sh.progress < 0.5 ? 0x00d4aa : 0xa855f7
-        sh.mat.color.setHex(hue)
+      // ── Chart line draws then resets ─────────────────────────────────────
+      chartProg += 0.55
+      if (chartProg > CHART_N) chartProg = 0
+      const pts = Math.min(CHART_N, Math.floor(chartProg))
+      chartGeo.setDrawRange(0, pts)
+      chartGlowGeo.setDrawRange(0, pts)
+
+      // Tip dot follows chart
+      if (pts > 0) {
+        const ti = (pts - 1) * 3
+        tipMesh.position.set(chartBuf[ti], chartBuf[ti + 1], chartBuf[ti + 2])
+        ;(tipMesh.material as THREE.MeshBasicMaterial).opacity = 0.9
+      }
+
+      // ── Currency symbols orbit ───────────────────────────────────────────
+      symSprites.forEach(s => {
+        s.angle += s.sp
+        s.sprite.position.x = Math.cos(s.angle) * s.r
+        s.sprite.position.z = Math.sin(s.angle) * s.r
+        s.sprite.position.y = s.y + Math.sin(t * 0.7 + s.angle) * 1.2
+        s.mat.opacity = 0.2 + Math.sin(t * 0.9 + s.angle) * 0.1
       })
 
-      // Glow layers pulse
-      glowMeshes.forEach(({ m, baseOp }, i) => {
-        ;(m.material as THREE.MeshBasicMaterial).opacity = baseOp * (0.8+Math.sin(t*2.5+i)*0.2)
-      })
+      // ── Rain particles fall ──────────────────────────────────────────────
+      const rp = rainGeo.attributes.position.array as Float32Array
+      for (let i = 0; i < RAIN_N; i++) {
+        rp[i * 3 + 1] -= rainSpd[i]
+        if (rp[i * 3 + 1] < -6) rp[i * 3 + 1] = 14
+      }
+      rainGeo.attributes.position.needsUpdate = true
 
-      // Core light pulse + hue shift
-      coreLight.intensity = 4 + Math.sin(t*1.8) * 2
-      const hue = (Math.sin(t*0.4)+1)*0.5
-      coreLight.color.setRGB(hue*0.2, 0.83*(1-hue*0.3), 0.67)
+      // ── Lights animate ───────────────────────────────────────────────────
+      keyLight.intensity  = 4.5 + Math.sin(t * 1.4) * 1.5
+      goldLight.position.set(Math.cos(t * 0.35) * 12, -2, Math.sin(t * 0.35) * 10)
+      blueLight.position.set(Math.cos(t * 0.25 + 2) * 14, 3, Math.sin(t * 0.25 + 2) * 10)
+      redLight.position.x = -10 + Math.sin(t * 0.5) * 4
 
-      // Orbit lights circle
-      orbitL1.position.set(Math.cos(t*0.25)*12, 5, Math.sin(t*0.25)*12)
-      orbitL2.position.set(Math.cos(t*0.18+2)*11, -4, Math.sin(t*0.18+2)*11)
-      orbitL3.position.set(Math.cos(t*0.32+4)*10, 2, Math.sin(t*0.32+4)*10)
-
-      // Data nodes orbit
-      dataNodes.forEach(d => {
-        d.theta += d.spd
-        d.mesh.position.x = d.r * Math.sin(d.phi) * Math.cos(d.theta)
-        d.mesh.position.z = d.r * Math.sin(d.phi) * Math.sin(d.theta)
-        d.mesh.rotation.x += 0.02; d.mesh.rotation.y += 0.015
-      })
-
-      // Grid pulse — move toward camera for warp effect
-      grid.position.z = ((t * 2) % 3) - 1
-
-      // Mouse parallax — smooth scene rotation
+      // ── Mouse parallax ───────────────────────────────────────────────────
       const mx = mouseRef.current.x, my = mouseRef.current.y
-      scene.rotation.y += (mx * 0.18 - (scene.rotation.y - baseY)) * 0.025
-      scene.rotation.x += (-my * 0.1  - (scene.rotation.x - baseX)) * 0.025
+      candleGroup.rotation.y += (mx * 0.14 - candleGroup.rotation.y) * 0.035
+      candleGroup.rotation.x += (-my * 0.07 - candleGroup.rotation.x) * 0.035
 
-      // Scroll: camera pulls back, knot shrinks slightly
+      // ── Scroll ───────────────────────────────────────────────────────────
       const sc = scrollRef.current
-      camera.position.z = 20 + sc * 0.014
-      camera.position.y = 4  - sc * 0.006
-      knotGroup.scale.setScalar(Math.max(0.4, 1 - sc * 0.0008))
+      camera.position.z = 22 + sc * 0.013
+      camera.position.y = 9  - sc * 0.007
 
       renderer.render(scene, camera)
     }
@@ -306,5 +366,5 @@ export default function ThreeScene({ scrollY }: { scrollY: number }) {
 
   useEffect(() => { scrollRef.current = scrollY }, [scrollY])
 
-  return <div ref={mountRef} style={{ position:'fixed', inset:0, zIndex:0, pointerEvents:'none' }} />
+  return <div ref={mountRef} style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }} />
 }
