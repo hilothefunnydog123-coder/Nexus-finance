@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import { YNMark } from '@/components/YNLogo'
 
 const ThreeScene = dynamic(() => import('@/components/ThreeScene'), { ssr: false })
 
@@ -606,7 +607,7 @@ export default function HomePage() {
 
         {/* Logo */}
         <Link href="/" style={{ display:'flex', alignItems:'center', gap:10, textDecoration:'none', flexShrink:0 }}>
-          <div style={{ width:32, height:32, borderRadius:9, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:12, color:'#030a10', letterSpacing:'-0.5px', boxShadow:'0 0 24px #00d4aa35' }}>YN</div>
+          <YNMark size={32}/>
           <div>
             <div style={{ fontWeight:900, fontSize:15, letterSpacing:'-.3px', lineHeight:1.1 }}>YN Finance</div>
             <div style={{ fontSize:8, color:'#00d4aa', letterSpacing:'2px', opacity:.6 }}>LEARN TO TRADE</div>
@@ -1344,7 +1345,7 @@ export default function HomePage() {
           {/* Brand column */}
           <div>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
-              <div style={{ width:34, height:34, borderRadius:10, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:12, color:'#030a10', boxShadow:'0 0 20px #00d4aa30' }}>YN</div>
+              <YNMark size={34}/>
               <div>
                 <div style={{ fontWeight:900, fontSize:16, letterSpacing:'-.3px' }}>YN Finance</div>
                 <div style={{ fontSize:10, color:'#1a3550', letterSpacing:'1px' }}>LEARN TO TRADE</div>

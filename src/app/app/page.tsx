@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, MessageSquare, Newspaper, ChevronRight, Zap, CandlestickChart, Users, Home, Share2, BarChart2, ScanLine, BookOpen, FlaskConical, Trophy } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Newspaper, ChevronRight, CandlestickChart, Users, Home, Share2, BarChart2, ScanLine, BookOpen, FlaskConical, Trophy } from 'lucide-react'
+import { YNMark } from '@/components/YNLogo'
 import PreMarketScanner from '@/components/scanner/PreMarketScanner'
 import TradeJournal from '@/components/journal/TradeJournal'
 import Onboarding from '@/components/ui-overlay/Onboarding'
@@ -120,9 +121,7 @@ export default function NexusDashboard() {
 
         {/* Logo */}
         <div className="flex items-center gap-2 px-4 border-r border-[#1a2d4a] h-full shrink-0">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background:'linear-gradient(135deg,#00d4aa,#1e90ff)', boxShadow:'0 0 16px rgba(0,212,170,.25)' }}>
-            <Zap size={14} className="text-[#030d18]" fill="currentColor" />
-          </div>
+          <YNMark size={28}/>
           <div className="yn-logo-subtitle">
             <div className="text-sm font-black tracking-tight text-white leading-none">YN</div>
             <div className="text-[7px] tracking-[3px] leading-none" style={{ color:'#00d4aa', opacity:.55 }}>FINANCE</div>

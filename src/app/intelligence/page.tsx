@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { YNMark } from '@/components/YNLogo'
 
 const MODULES = [
   { id:'lockup',      name:'Lock-Up Assassin', icon:'🔫', clr:'#ff2d78', bg:'radial-gradient(ellipse at 30% 50%,rgba(255,45,120,.12),transparent 70%)', tag:'SCHEDULED DESTRUCTION',     classif:'SECRET',     needsInput:true,  placeholder:'Recent IPO ticker...', example:'RDDT', desc:'Insiders are about to dump. You know before they do.', hook:'Every IPO has a 180-day lock-up. When it expires, insiders sell. This is guaranteed, dated, and sized.' },
@@ -558,7 +559,7 @@ export default function IntelligencePage() {
       {/* NAV */}
       <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:100,height:56,display:'flex',alignItems:'center',padding:'0 28px',gap:24,background:'rgba(3,10,16,.88)',backdropFilter:'blur(24px)',borderBottom:`1px solid ${acl}12`,transition:'border-color .4s'}}>
         <Link href="/" style={{display:'flex',alignItems:'center',gap:8,textDecoration:'none',flexShrink:0}}>
-          <div style={{width:28,height:28,borderRadius:7,background:'linear-gradient(135deg,#00d4aa,#1e90ff)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:10,color:'#030a10',boxShadow:'0 0 16px #00d4aa35'}}>YN</div>
+          <YNMark size={28}/>
           <span style={{fontWeight:900,fontSize:14,letterSpacing:'-.3px'}}>YN Finance</span>
         </Link>
         <div style={{display:'flex',alignItems:'center',gap:6,fontSize:10,color:acl,fontWeight:700,letterSpacing:'.8px',transition:'color .4s'}}>
