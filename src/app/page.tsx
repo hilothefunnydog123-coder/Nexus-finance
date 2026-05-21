@@ -599,20 +599,45 @@ export default function HomePage() {
       <HeroHUD />
 
       {/* NAV */}
-      <nav style={{ position:'fixed', top:0, left:0, right:0, zIndex:100, height:58, display:'flex', alignItems:'center', padding:'0 28px', gap:28, background:'rgba(3,10,16,0.7)', backdropFilter:'blur(24px)', borderBottom:'1px solid rgba(255,255,255,0.04)' }}
+      <nav style={{ position:'fixed', top:0, left:0, right:0, zIndex:100, height:62, display:'flex', alignItems:'center', padding:'0 32px', gap:32, background:'rgba(2,6,10,.88)', backdropFilter:'blur(28px)', borderBottom:'1px solid rgba(255,255,255,.05)' }}
         onMouseEnter={() => setCursorBig(true)} onMouseLeave={() => setCursorBig(false)}>
-        <Link href="/" style={{ display:'flex', alignItems:'center', gap:9, textDecoration:'none', flexShrink:0 }}>
-          <div style={{ width:30, height:30, borderRadius:9, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:11, color:'#030a10', letterSpacing:'-0.5px', boxShadow:'0 0 20px #00d4aa40' }}>YN</div>
-          <span style={{ fontWeight:900, fontSize:15, letterSpacing:'-0.5px' }}>YN Finance</span>
+        {/* Bottom accent line */}
+        <div style={{ position:'absolute', bottom:0, left:0, right:0, height:1, background:'linear-gradient(90deg,transparent,rgba(0,212,170,.25),rgba(168,85,247,.15),transparent)', pointerEvents:'none' }}/>
+
+        {/* Logo */}
+        <Link href="/" style={{ display:'flex', alignItems:'center', gap:10, textDecoration:'none', flexShrink:0 }}>
+          <div style={{ width:32, height:32, borderRadius:9, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:12, color:'#030a10', letterSpacing:'-0.5px', boxShadow:'0 0 24px #00d4aa35' }}>YN</div>
+          <div>
+            <div style={{ fontWeight:900, fontSize:15, letterSpacing:'-.3px', lineHeight:1.1 }}>YN Finance</div>
+            <div style={{ fontSize:8, color:'#00d4aa', letterSpacing:'2px', opacity:.6 }}>LEARN TO TRADE</div>
+          </div>
         </Link>
-        <div className="hide-sm" style={{ display:'flex', gap:24 }}>
-          {[['AI Analyzer','/ai-stocks'],['Intelligence','/intelligence'],['Daily Intel','/daily'],['Performance','/performance'],['Courses','/courses'],['Terminal','/app']].map(([l,h])=>(
-            <Link key={l} href={h} className="nav-link">{l}</Link>
+
+        {/* Nav links */}
+        <div className="hide-sm" style={{ display:'flex', gap:4, marginLeft:8 }}>
+          {([['AI Analyzer','/ai-stocks','#a855f7'],['Intelligence','/intelligence','#ff2d78'],['Daily Intel','/daily',null],['Performance','/performance',null],['Courses','/courses',null],['Arena','/arena','#ffa502'],['Terminal','/app',null]] as [string,string,string|null][]).map(([l,h,badge])=>(
+            <Link key={l} href={h} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:7, fontSize:12, color:'#4a6a78', textDecoration:'none', fontWeight:600, transition:'all .2s', letterSpacing:'-.1px' }}
+              onMouseEnter={e=>{e.currentTarget.style.color='#dce8f0';e.currentTarget.style.background='rgba(255,255,255,.05)'}}
+              onMouseLeave={e=>{e.currentTarget.style.color='#4a6a78';e.currentTarget.style.background='transparent'}}>
+              {l}
+              {badge && <span style={{ fontSize:7, fontWeight:800, color:badge, background:`${badge}18`, border:`1px solid ${badge}30`, borderRadius:3, padding:'1px 5px', letterSpacing:'1px' }}>
+                {l==='AI Analyzer'?'AI':l==='Intelligence'?'NEW':l==='Arena'?'LIVE':''}
+              </span>}
+            </Link>
           ))}
         </div>
-        <div style={{ marginLeft:'auto', display:'flex', gap:10 }}>
-          <Link href="/ai-stocks" style={{ background:'linear-gradient(135deg,#a855f7,#3b8eea)', color:'#fff', padding:'8px 18px', borderRadius:8, fontSize:13, fontWeight:800, textDecoration:'none', boxShadow:'0 0 20px #a855f740' }}>AI Analyzer</Link>
-          <Link href="/app"       style={{ background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#030a10', padding:'8px 18px', borderRadius:8, fontSize:13, fontWeight:900, textDecoration:'none', boxShadow:'0 0 20px #00d4aa40' }}>Launch →</Link>
+
+        {/* CTAs */}
+        <div style={{ marginLeft:'auto', display:'flex', gap:8, alignItems:'center' }}>
+          <Link href="/intelligence" style={{ display:'none' }} className="hide-sm"/>
+          <Link href="/app" style={{ background:'rgba(0,212,170,.08)', border:'1px solid rgba(0,212,170,.2)', color:'#00d4aa', padding:'7px 16px', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none', transition:'all .2s', letterSpacing:'-.1px' }}
+            onMouseEnter={e=>{e.currentTarget.style.background='rgba(0,212,170,.15)';e.currentTarget.style.borderColor='rgba(0,212,170,.4)'}}
+            onMouseLeave={e=>{e.currentTarget.style.background='rgba(0,212,170,.08)';e.currentTarget.style.borderColor='rgba(0,212,170,.2)'}}>
+            Terminal
+          </Link>
+          <Link href="/ai-stocks" style={{ background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#030a10', padding:'8px 20px', borderRadius:8, fontSize:13, fontWeight:900, textDecoration:'none', boxShadow:'0 0 24px #00d4aa35', letterSpacing:'-.2px' }}>
+            Try Free →
+          </Link>
         </div>
       </nav>
 
@@ -1015,8 +1040,11 @@ export default function HomePage() {
       </section>
 
 
+      {/* Section divider */}
+      <div style={{ position:'relative', zIndex:1, height:1, background:'linear-gradient(90deg,transparent,rgba(0,212,170,.15),rgba(168,85,247,.15),transparent)' }}/>
+
       {/* ══ POWERED BY ══════════════════════════════════════════════════════════ */}
-      <section style={{ padding:'130px 0', position:'relative', zIndex:1 }}>
+      <section style={{ padding:'100px 0', position:'relative', zIndex:1 }}>
         <div className="section">
           <div ref={powers.ref} className={`vis${powers.v?' show':''}`}>
             <div className="item i0" style={{ textAlign:'center', marginBottom:64 }}>
@@ -1045,8 +1073,11 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Section divider */}
+      <div style={{ position:'relative', zIndex:1, height:1, background:'linear-gradient(90deg,transparent,rgba(245,158,11,.15),rgba(236,72,153,.15),transparent)' }}/>
+
       {/* ══ FOUNDERS ════════════════════════════════════════════════════════════ */}
-      <section style={{ padding:'140px 0', position:'relative', zIndex:1 }}>
+      <section style={{ padding:'110px 0', position:'relative', zIndex:1 }}>
         {/* bg decoration */}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg,transparent,rgba(6,13,20,.6),transparent)', pointerEvents:'none' }}/>
         <div style={{ position:'absolute', top:'30%', left:'50%', transform:'translateX(-50%)', width:800, height:800, borderRadius:'50%', background:'radial-gradient(circle,rgba(245,158,11,.04) 0%,transparent 70%)', pointerEvents:'none' }}/>
@@ -1173,8 +1204,11 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Section divider */}
+      <div style={{ position:'relative', zIndex:1, height:1, background:'linear-gradient(90deg,transparent,rgba(0,212,170,.2),transparent)' }}/>
+
       {/* ══ FINAL CTA ═══════════════════════════════════════════════════════════ */}
-      <section style={{ padding:'150px 0', position:'relative', zIndex:1, textAlign:'center' }}>
+      <section style={{ padding:'120px 0', position:'relative', zIndex:1, textAlign:'center' }}>
         <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse at center,rgba(0,212,170,.06) 0%,transparent 70%)', pointerEvents:'none' }} />
         <div className="section" style={{ position:'relative' }}>
           <div style={{ fontSize:11, color:'#00d4aa', letterSpacing:'2px', fontWeight:700, marginBottom:20 }}>START FREE · NO CREDIT CARD</div>
@@ -1209,19 +1243,108 @@ export default function HomePage() {
       </section>
 
       {/* FOOTER */}
-      <footer style={{ borderTop:'1px solid rgba(255,255,255,.04)', padding:'36px 24px', position:'relative', zIndex:1, background:'rgba(3,10,16,.9)', backdropFilter:'blur(20px)' }}>
-        <div className="section" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ width:26, height:26, borderRadius:7, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:10, color:'#030a10' }}>YN</div>
-            <span style={{ fontWeight:800, fontSize:14 }}>YN Finance</span>
-            <span style={{ fontSize:11, color:'#1a3550', marginLeft:8 }}>© 2026</span>
+      <footer style={{ borderTop:'1px solid rgba(255,255,255,.05)', position:'relative', zIndex:1, background:'rgba(2,6,10,.97)', backdropFilter:'blur(24px)' }}>
+        {/* Top accent line */}
+        <div style={{ height:1, background:'linear-gradient(90deg,transparent,#00d4aa,#a855f7,#1e90ff,transparent)' }}/>
+
+        {/* Main grid */}
+        <div className="section" style={{ padding:'72px 24px 48px', display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:48 }}>
+
+          {/* Brand column */}
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
+              <div style={{ width:34, height:34, borderRadius:10, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:12, color:'#030a10', boxShadow:'0 0 20px #00d4aa30' }}>YN</div>
+              <div>
+                <div style={{ fontWeight:900, fontSize:16, letterSpacing:'-.3px' }}>YN Finance</div>
+                <div style={{ fontSize:10, color:'#1a3550', letterSpacing:'1px' }}>LEARN TO TRADE</div>
+              </div>
+            </div>
+            <p style={{ fontSize:13, color:'#2a4a62', lineHeight:1.75, marginBottom:24, maxWidth:300 }}>
+              The intelligence that hedge funds pay analysts $500K/year to produce. We automated all of it. Free for every retail trader.
+            </p>
+            {/* Social links */}
+            <div style={{ display:'flex', gap:10 }}>
+              {[
+                { href:'https://twitter.com', label:'X / Twitter', svg:<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> },
+                { href:'https://github.com/hilothefunnydog123-coder/Nexus-finance', label:'GitHub', svg:<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg> },
+              ].map(s=>(
+                <a key={s.label} href={s.href} target="_blank" rel="noreferrer" aria-label={s.label}
+                  style={{ width:34, height:34, borderRadius:8, border:'1px solid rgba(255,255,255,.06)', background:'rgba(255,255,255,.03)', display:'flex', alignItems:'center', justifyContent:'center', color:'#2a4a62', textDecoration:'none', transition:'all .2s' }}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(0,212,170,.3)';e.currentTarget.style.color='#00d4aa';e.currentTarget.style.background='rgba(0,212,170,.06)'}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.06)';e.currentTarget.style.color='#2a4a62';e.currentTarget.style.background='rgba(255,255,255,.03)'}}>
+                  {s.svg}
+                </a>
+              ))}
+            </div>
           </div>
-          <div style={{ display:'flex', gap:22 }}>
-            {[['Privacy','/privacy'],['Terms','/terms'],['AI Analyzer','/ai-stocks'],['Intelligence','/intelligence'],['Daily Intel','/daily'],['Performance','/performance'],['Courses','/courses']].map(([l,h])=>(
-              <Link key={l} href={h} style={{ fontSize:12, color:'#2a4a62', textDecoration:'none', transition:'color .2s' }}>{l}</Link>
+
+          {/* Products column */}
+          <div>
+            <div style={{ fontSize:9, color:'#00d4aa', letterSpacing:'2px', fontWeight:700, marginBottom:20 }}>PRODUCTS</div>
+            {[
+              ['AI Analyzer','/ai-stocks'],
+              ['Intelligence Suite','/intelligence'],
+              ['Daily Intel','/daily'],
+              ['YN Arena','/arena'],
+              ['Courses','/courses'],
+              ['Performance','/performance'],
+              ['Trade Terminal','/app'],
+            ].map(([l,h])=>(
+              <Link key={l} href={h} style={{ display:'block', fontSize:13, color:'#3a5a6a', textDecoration:'none', marginBottom:11, transition:'color .2s' }}
+                onMouseEnter={e=>(e.currentTarget.style.color='#dce8f0')}
+                onMouseLeave={e=>(e.currentTarget.style.color='#3a5a6a')}>{l}</Link>
             ))}
           </div>
-          <div style={{ fontSize:11, color:'#1a3550' }}>Not financial advice. Educational purposes only.</div>
+
+          {/* Resources column */}
+          <div>
+            <div style={{ fontSize:9, color:'#a855f7', letterSpacing:'2px', fontWeight:700, marginBottom:20 }}>RESOURCES</div>
+            {[
+              ['Trade Analyzer','/analyzer'],
+              ['Trading Quiz','/quiz'],
+              ['Verify Certificate','/verify/demo'],
+              ['Referral Program','/ref/demo'],
+              ['Prop Challenge','/app'],
+              ['AI Newspaper','/app'],
+            ].map(([l,h])=>(
+              <Link key={l} href={h} style={{ display:'block', fontSize:13, color:'#3a5a6a', textDecoration:'none', marginBottom:11, transition:'color .2s' }}
+                onMouseEnter={e=>(e.currentTarget.style.color='#dce8f0')}
+                onMouseLeave={e=>(e.currentTarget.style.color='#3a5a6a')}>{l}</Link>
+            ))}
+          </div>
+
+          {/* Legal column */}
+          <div>
+            <div style={{ fontSize:9, color:'#3b8eea', letterSpacing:'2px', fontWeight:700, marginBottom:20 }}>LEGAL</div>
+            {[
+              ['Privacy Policy','/privacy'],
+              ['Terms of Service','/terms'],
+            ].map(([l,h])=>(
+              <Link key={l} href={h} style={{ display:'block', fontSize:13, color:'#3a5a6a', textDecoration:'none', marginBottom:11, transition:'color .2s' }}
+                onMouseEnter={e=>(e.currentTarget.style.color='#dce8f0')}
+                onMouseLeave={e=>(e.currentTarget.style.color='#3a5a6a')}>{l}</Link>
+            ))}
+
+            <div style={{ marginTop:28, padding:'16px', background:'rgba(0,212,170,.04)', border:'1px solid rgba(0,212,170,.12)', borderRadius:10 }}>
+              <div style={{ fontSize:10, color:'#00d4aa', fontWeight:700, letterSpacing:'1px', marginBottom:8 }}>START FREE</div>
+              <Link href="/app" style={{ display:'block', background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#030a10', padding:'10px 16px', borderRadius:7, fontSize:12, fontWeight:900, textDecoration:'none', textAlign:'center', boxShadow:'0 0 20px #00d4aa25' }}>
+                Launch Terminal →
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div style={{ borderTop:'1px solid rgba(255,255,255,.04)' }}>
+          <div className="section" style={{ padding:'20px 24px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
+            <div style={{ fontSize:11, color:'#0f2030' }}>© 2026 YN Finance Corp. All rights reserved.</div>
+            <div style={{ display:'flex', gap:20, flexWrap:'wrap' }}>
+              {['Not financial advice','Educational purposes only','Past performance ≠ future results'].map(d=>(
+                <span key={d} style={{ fontSize:10, color:'#0f2030' }}>{d}</span>
+              ))}
+            </div>
+            <div style={{ fontSize:10, color:'#0f2030', fontFamily:'monospace' }}>v2.6 · Built with ♥ in NYC</div>
+          </div>
         </div>
       </footer>
     </div>

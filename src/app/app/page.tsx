@@ -114,56 +114,66 @@ export default function NexusDashboard() {
       {showShare && <ShareCard onClose={() => setShowShare(false)} />}
 
       {/* Nav */}
-      <nav className="flex items-center h-10 border-b border-[#1a2d4a] bg-[#040c14] shrink-0 overflow-hidden">
-        <div className="flex items-center gap-2 px-3 border-r border-[#1a2d4a] h-full shrink-0">
-          <div className="w-6 h-6 rounded bg-gradient-to-br from-[#00d4aa] to-[#1e90ff] flex items-center justify-center">
-            <Zap size={13} className="text-[#040c14]" fill="currentColor" />
+      <nav className="flex items-center h-11 border-b border-[#1a2d4a] bg-[#030d18] shrink-0 overflow-hidden relative">
+        {/* Bottom glow line */}
+        <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background:'linear-gradient(90deg,transparent,rgba(0,212,170,.18),rgba(168,85,247,.12),transparent)', pointerEvents:'none' }}/>
+
+        {/* Logo */}
+        <div className="flex items-center gap-2 px-4 border-r border-[#1a2d4a] h-full shrink-0">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background:'linear-gradient(135deg,#00d4aa,#1e90ff)', boxShadow:'0 0 16px rgba(0,212,170,.25)' }}>
+            <Zap size={14} className="text-[#030d18]" fill="currentColor" />
           </div>
-          <span className="text-base font-black tracking-tight text-white">YN</span>
-          <span className="text-base font-light text-[#00d4aa] tracking-widest yn-logo-subtitle">FINANCE</span>
+          <div className="yn-logo-subtitle">
+            <div className="text-sm font-black tracking-tight text-white leading-none">YN</div>
+            <div className="text-[7px] tracking-[3px] leading-none" style={{ color:'#00d4aa', opacity:.55 }}>FINANCE</div>
+          </div>
         </div>
 
+        {/* Tabs */}
         <div className="yn-nav-tabs flex h-full flex-1 min-w-0">
           {NAV.map(item => (
             <button key={item.id} onClick={() => setActiveTab(item.id)}
-              className={`yn-nav-btn flex items-center gap-1.5 px-4 h-full text-[11px] font-semibold uppercase tracking-wider border-r border-[#1a2d4a] transition-colors shrink-0 ${
+              className={`yn-nav-btn relative flex items-center gap-1.5 px-3.5 h-full text-[10.5px] font-semibold uppercase tracking-wider border-r border-[#1a2d4a] transition-all shrink-0 ${
                 activeTab === item.id
-                  ? 'text-[#00d4aa] border-b-2 border-b-[#00d4aa] bg-[#071220]'
-                  : 'text-[#7f93b5] hover:text-[#cdd6f4] hover:bg-[#071220]'
+                  ? 'text-[#00d4aa] bg-[#041424]'
+                  : 'text-[#4a6070] hover:text-[#8aaabb] hover:bg-[#041018]'
               }`}>
+              {/* Active indicator line */}
+              {activeTab === item.id && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background:'linear-gradient(90deg,transparent,#00d4aa,transparent)' }}/>
+              )}
               {item.icon}
               <span className="yn-nav-label">{item.label}</span>
               {item.id === 'arena' && (
-                <span className="ml-1 text-[8px] bg-[#ffa502]/20 text-[#ffa502] px-1 rounded font-mono">LIVE</span>
+                <span className="ml-0.5 text-[7px] bg-[#ffa502]/15 text-[#ffa502] px-1.5 py-px rounded-sm font-mono tracking-wider">LIVE</span>
               )}
               {item.id === 'scanner' && (
-                <span className="ml-1 text-[8px] bg-[#ffa502]/20 text-[#ffa502] px-1 rounded font-mono">EDGE</span>
+                <span className="ml-0.5 text-[7px] bg-[#ffa502]/15 text-[#ffa502] px-1.5 py-px rounded-sm font-mono tracking-wider">EDGE</span>
               )}
               {(item.id === 'ai' || item.id === 'analyzer') && (
-                <span className="ml-1 text-[8px] bg-[#a855f7]/20 text-[#a855f7] px-1 rounded font-mono">AI</span>
+                <span className="ml-0.5 text-[7px] bg-[#a855f7]/15 text-[#a855f7] px-1.5 py-px rounded-sm font-mono tracking-wider">AI</span>
               )}
             </button>
           ))}
         </div>
 
-        <div className="yn-nav-right ml-auto flex items-center gap-3 px-4 border-l border-[#1a2d4a] h-full shrink-0">
+        {/* Right controls */}
+        <div className="yn-nav-right ml-auto flex items-center gap-2.5 px-3 border-l border-[#1a2d4a] h-full shrink-0">
           {isDemo && (
-            <div className="yn-hide-mobile flex items-center gap-1.5 px-2 py-0.5 bg-[#ffa502]/10 border border-[#ffa502]/30 rounded">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#ffa502] animate-pulse" />
-              <span className="text-[10px] text-[#ffa502] font-mono uppercase">Demo</span>
-              <ChevronRight size={9} className="text-[#ffa502]" />
-              <span className="text-[10px] text-[#7f93b5]">Add Finnhub key for live data</span>
+            <div className="yn-hide-mobile flex items-center gap-1.5 px-2 py-1 bg-[#ffa502]/08 border border-[#ffa502]/20 rounded-md">
+              <span className="w-1 h-1 rounded-full bg-[#ffa502] animate-pulse" />
+              <span className="text-[9px] text-[#ffa502] font-mono uppercase tracking-wider">Demo Mode</span>
             </div>
           )}
           <AIChartVision />
-          <button onClick={() => setShowShare(true)} className="yn-hide-mobile flex items-center gap-1 text-[10px] text-[#4a5e7a] hover:text-[#00d4aa] transition-colors">
-            <Share2 size={11} /> Share P&L
+          <button onClick={() => setShowShare(true)} className="yn-hide-mobile flex items-center gap-1 text-[9px] text-[#2a4a62] hover:text-[#00d4aa] transition-colors font-medium">
+            <Share2 size={10} /> <span>Share</span>
           </button>
-          <Link href="/courses" className="flex items-center gap-1.5 text-[10px] font-bold text-[#00d4aa] border border-[#00d4aa30] bg-[#00d4aa10] hover:bg-[#00d4aa20] rounded px-2.5 py-1 transition-colors whitespace-nowrap">
-            <BookOpen size={11} /> <span className="yn-hide-mobile">Courses</span>
+          <Link href="/courses" className="flex items-center gap-1 text-[9px] font-bold text-[#00d4aa] border border-[#00d4aa]/20 bg-[#00d4aa]/06 hover:bg-[#00d4aa]/12 rounded-md px-2.5 py-1 transition-colors whitespace-nowrap">
+            <BookOpen size={10} /> <span className="yn-hide-mobile">Courses</span>
           </Link>
-          <Link href="/" className="flex items-center gap-1 text-[10px] text-[#4a5e7a] hover:text-[#7f93b5] transition-colors">
-            <Home size={11} />
+          <Link href="/" className="flex items-center justify-center w-7 h-7 text-[#2a4a62] hover:text-[#4a6a78] transition-colors rounded-md hover:bg-[#1a2d4a]/30">
+            <Home size={12} />
           </Link>
         </div>
       </nav>
