@@ -268,6 +268,140 @@ const AGENT_STEPS = [
 
 const CHART_POINTS = [42,45,43,48,52,50,55,58,54,60,63,61,67,65,70,68,72,75,71,78,82,79,85,88,84,90]
 
+// ── HERO HUD OVERLAY ──────────────────────────────────────────────────────────
+function HeroHUD() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const c = ref.current; if (!c) return
+    const ctx = c.getContext('2d')!
+    let W = c.width = window.innerWidth
+    let H = c.height = window.innerHeight
+    let raf: number, t = 0
+
+    // Floating data markers
+    const markers: { x: number; y: number; vy: number; label: string; alpha: number; clr: string }[] = []
+    const LABELS = ['+0.47%','$184.20','VOL 2.3M','RSI 67','MACD ↑','$0.0032','73%','SIGNAL','12.4K','ENTRY','Δ+0.8σ']
+    const MCLRS  = ['#00d4aa','#3b8eea','#a855f7','#f59e0b','#00ff88']
+    const spawnMarker = () => {
+      if (markers.length < 18) {
+        markers.push({
+          x: 60 + Math.random() * (W - 120),
+          y: H * 0.3 + Math.random() * H * 0.4,
+          vy: -0.18 - Math.random() * 0.25,
+          label: LABELS[Math.floor(Math.random()*LABELS.length)],
+          alpha: 0,
+          clr: MCLRS[Math.floor(Math.random()*MCLRS.length)],
+        })
+      }
+    }
+    const mi = setInterval(spawnMarker, 600)
+
+    // Corner bracket size
+    const B = 28
+
+    let scanY = -20
+
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H)
+
+      // ── CORNER BRACKETS ──────────────────────────────────────
+      const brackets = [[20,20,1,1],[W-20,20,-1,1],[20,H-20,1,-1],[W-20,H-20,-1,-1]]
+      brackets.forEach(([x,y,sx,sy]) => {
+        ctx.strokeStyle = 'rgba(0,212,170,0.45)'
+        ctx.lineWidth = 1.5
+        ctx.shadowBlur = 8; ctx.shadowColor = '#00d4aa'
+        ctx.beginPath(); ctx.moveTo(x+sx*B,y); ctx.lineTo(x,y); ctx.lineTo(x,y+sy*B); ctx.stroke()
+        ctx.shadowBlur = 0
+      })
+
+      // ── HORIZONTAL SCAN LINE ──────────────────────────────────
+      scanY += 0.8
+      if (scanY > H + 20) scanY = -20
+      const scanGrad = ctx.createLinearGradient(0, scanY-6, 0, scanY+6)
+      scanGrad.addColorStop(0, 'rgba(0,212,170,0)')
+      scanGrad.addColorStop(0.5, 'rgba(0,212,170,0.18)')
+      scanGrad.addColorStop(1, 'rgba(0,212,170,0)')
+      ctx.fillStyle = scanGrad
+      ctx.fillRect(0, scanY - 6, W, 12)
+
+      // ── CROSSHAIR at center ───────────────────────────────────
+      const cx = W/2, cy = H/2
+      const crossAlpha = 0.06 + Math.sin(t*2)*0.02
+      ctx.strokeStyle = `rgba(0,212,170,${crossAlpha})`
+      ctx.lineWidth = 1
+      ctx.setLineDash([4,8])
+      ctx.beginPath(); ctx.moveTo(cx-60, cy); ctx.lineTo(cx+60, cy); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(cx, cy-60); ctx.lineTo(cx, cy+60); ctx.stroke()
+      ctx.setLineDash([])
+      // Center dot
+      ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI*2)
+      ctx.fillStyle = `rgba(0,212,170,${crossAlpha*4})`; ctx.fill()
+
+      // ── HUD LABELS ────────────────────────────────────────────
+      const hudLabels = [
+        { x:32, y:H-36, text:'SIGNAL ACTIVE', clr:'rgba(0,212,170,0.35)' },
+        { x:W-32, y:H-36, text:'AI ONLINE', clr:'rgba(0,212,170,0.35)', right:true },
+        { x:32, y:60, text:'YN INTELLIGENCE', clr:'rgba(0,212,170,0.2)' },
+        { x:W-32, y:60, text:`${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} EST`, clr:'rgba(0,212,170,0.2)', right:true },
+      ]
+      ctx.font = '9px monospace'
+      ctx.letterSpacing = '2px'
+      hudLabels.forEach(l => {
+        ctx.fillStyle = l.clr
+        ctx.textAlign = l.right ? 'right' : 'left'
+        ctx.fillText(l.text, l.x, l.y)
+      })
+      ctx.textAlign = 'left'
+
+      // ── FLOATING DATA MARKERS ─────────────────────────────────
+      for (let i = markers.length-1; i >= 0; i--) {
+        const m = markers[i]
+        m.y += m.vy
+        m.alpha = m.alpha < 1 ? m.alpha + 0.04 : Math.max(0, m.alpha - 0.008)
+        if (m.alpha <= 0 || m.y < 80) { markers.splice(i, 1); continue }
+        ctx.font = '9px monospace'
+        ctx.fillStyle = m.clr.replace(')', `,${m.alpha*0.5})`).replace('rgb','rgba').replace('#','rgba(').replace('00d4aa','0,212,170,').replace('3b8eea','59,142,234,').replace('a855f7','168,85,247,').replace('f59e0b','245,158,11,').replace('00ff88','0,255,136,')
+        // simpler: use direct rgba
+        const alpha = m.alpha * 0.45
+        ctx.fillStyle = `rgba(0,212,170,${alpha})`
+        if (m.clr === '#3b8eea') ctx.fillStyle = `rgba(59,142,234,${alpha})`
+        if (m.clr === '#a855f7') ctx.fillStyle = `rgba(168,85,247,${alpha})`
+        if (m.clr === '#f59e0b') ctx.fillStyle = `rgba(245,158,11,${alpha})`
+        if (m.clr === '#00ff88') ctx.fillStyle = `rgba(0,255,136,${alpha})`
+        ctx.fillText(m.label, m.x, m.y)
+      }
+
+      // ── SIDE PROGRESS BARS ────────────────────────────────────
+      const barH = 80, barW = 2
+      const bars = [
+        { x:18, y:H/2-barH/2, fill:(Math.sin(t*0.8)+1)/2 },
+        { x:W-20, y:H/2-barH/2, fill:(Math.cos(t*0.6)+1)/2 },
+      ]
+      bars.forEach(b => {
+        ctx.fillStyle = 'rgba(0,212,170,0.08)'
+        ctx.fillRect(b.x, b.y, barW, barH)
+        ctx.fillStyle = 'rgba(0,212,170,0.4)'
+        ctx.fillRect(b.x, b.y + barH*(1-b.fill), barW, barH*b.fill)
+      })
+
+      t += 0.016
+      raf = requestAnimationFrame(draw)
+    }
+    draw()
+
+    const onResize = () => { W = c.width = window.innerWidth; H = c.height = window.innerHeight }
+    window.addEventListener('resize', onResize)
+    return () => { cancelAnimationFrame(raf); clearInterval(mi); window.removeEventListener('resize', onResize) }
+  }, [])
+
+  return (
+    <canvas ref={ref} style={{
+      position:'fixed', inset:0, zIndex:2, pointerEvents:'none',
+      width:'100%', height:'100%'
+    }}/>
+  )
+}
+
 function useInView(th = 0.12) {
   const ref = useRef<HTMLDivElement>(null)
   const [v, setV] = useState(false)
@@ -423,7 +557,15 @@ export default function HomePage() {
         @keyframes border-flow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
         @keyframes spin-halo {to{transform:rotate(360deg)}}
         @keyframes scanline  {0%{top:-10%}100%{top:110%}}
+        @keyframes chromaR   {0%,100%{transform:none;opacity:0}10%{transform:translateX(3px);opacity:.5}12%{transform:none;opacity:0}50%{transform:translateX(-2px);opacity:.4}52%{transform:none;opacity:0}}
+        @keyframes chromaB   {0%,100%{transform:none;opacity:0}10%{transform:translateX(-3px);opacity:.4}12%{transform:none;opacity:0}50%{transform:translateX(2px);opacity:.35}52%{transform:none;opacity:0}}
+        @keyframes revealWord{from{opacity:0;transform:translateY(30px) skewY(4deg)}to{opacity:1;transform:none}}
+        @keyframes zoomPulse {0%,100%{transform:scale(1)}50%{transform:scale(1.008)}}
+        @keyframes dataStream{0%{transform:translateY(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-60px);opacity:0}}
 
+        .hero-title-wrap{position:relative;display:inline-block}
+        .hero-title-wrap::before{content:attr(data-text);position:absolute;inset:0;background:linear-gradient(135deg,#00d4aa 0%,#3b8eea 40%,#a855f7 70%,#f59e0b 100%);WebkitBackgroundClip:text;WebkitTextFillColor:transparent;backgroundSize:'200% 200%';animation:chromaR 4s ease-in-out infinite;zIndex:-1;pointerEvents:none}
+        .glitch-word{display:inline-block;animation:revealWord .9s cubic-bezier(.22,1,.36,1) both}
         .nav-link{color:#6a90a8;text-decoration:none;font-size:13px;transition:color .2s}
         .nav-link:hover{color:#00d4aa}
         .section{max-width:1100px;margin:0 auto;padding:0 24px}
@@ -452,6 +594,9 @@ export default function HomePage() {
 
       {/* THREE.JS BACKGROUND */}
       <ThreeScene scrollY={scrollY} />
+
+      {/* HUD OVERLAY */}
+      <HeroHUD />
 
       {/* NAV */}
       <nav style={{ position:'fixed', top:0, left:0, right:0, zIndex:100, height:58, display:'flex', alignItems:'center', padding:'0 28px', gap:28, background:'rgba(3,10,16,0.7)', backdropFilter:'blur(24px)', borderBottom:'1px solid rgba(255,255,255,0.04)' }}
@@ -482,12 +627,23 @@ export default function HomePage() {
 
           {/* Glitch title */}
           <div style={{ position:'relative', marginBottom:24 }}>
-            <h1 style={{ fontSize:'clamp(48px,9vw,100px)', fontWeight:900, lineHeight:.95, letterSpacing:'-4px', color:'#dce8f0' }}>
-              The Smartest{' '}
+            {/* Chromatic aberration red layer */}
+            <h1 aria-hidden="true" style={{ fontSize:'clamp(48px,9vw,100px)', fontWeight:900, lineHeight:.95, letterSpacing:'-4px', color:'#ff2d78', position:'absolute', inset:0, animation:'chromaR 4s ease-in-out infinite', pointerEvents:'none', opacity:0, zIndex:-1 }}>
+              The Smartest <span style={{ display:'block' }}>Trading AI</span> Ever Built.
+            </h1>
+            {/* Chromatic aberration blue layer */}
+            <h1 aria-hidden="true" style={{ fontSize:'clamp(48px,9vw,100px)', fontWeight:900, lineHeight:.95, letterSpacing:'-4px', color:'#3b8eea', position:'absolute', inset:0, animation:'chromaB 4s ease-in-out infinite', pointerEvents:'none', opacity:0, zIndex:-1 }}>
+              The Smartest <span style={{ display:'block' }}>Trading AI</span> Ever Built.
+            </h1>
+            <h1 style={{ fontSize:'clamp(48px,9vw,100px)', fontWeight:900, lineHeight:.95, letterSpacing:'-4px', color:'#dce8f0', animation:'zoomPulse 6s ease-in-out infinite' }}>
+              <span className="glitch-word" style={{ animationDelay:'.1s' }}>The </span>
+              <span className="glitch-word" style={{ animationDelay:'.22s' }}>Smartest</span>{' '}
               <span style={{ display:'block', background:'linear-gradient(135deg,#00d4aa 0%,#3b8eea 40%,#a855f7 70%,#f59e0b 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundSize:'200% 200%', animation:'holo 4s linear infinite' }}>
-                Trading AI
+                <span className="glitch-word" style={{ animationDelay:'.38s' }}>Trading</span>{' '}
+                <span className="glitch-word" style={{ animationDelay:'.5s' }}>AI</span>
               </span>
-              Ever Built.
+              <span className="glitch-word" style={{ animationDelay:'.65s' }}>Ever </span>
+              <span className="glitch-word" style={{ animationDelay:'.78s' }}>Built.</span>
             </h1>
           </div>
 
