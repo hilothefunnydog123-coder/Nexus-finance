@@ -136,12 +136,11 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
   const verdictBorderColor = verdictClass === 'bull' ? '#00ff88' : verdictClass === 'bear' ? '#ff3366' : '#ffcc00'
 
   return (
-    <div style={{ background: '#0a0a0f', color: '#e8e8f0', fontFamily: "'Syne', sans-serif", minHeight: '100vh', padding: '2rem',
+    <div style={{ background: '#0a0a0f', color: '#e8e8f0', fontFamily: '"Inter", system-ui, -apple-system, sans-serif', minHeight: '100vh', padding: '2rem',
       backgroundImage: 'radial-gradient(ellipse at 20% 20%, rgba(0,255,136,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, rgba(255,51,102,0.04) 0%, transparent 60%)' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        input, select { background: #111118; border: 1px solid #1e1e2e; color: #e8e8f0; padding: 0.75rem 1rem; font-family: 'Space Mono', monospace; font-size: 0.9rem; border-radius: 4px; outline: none; transition: border-color 0.2s; width: 100%; }
+        input, select { background: #111118; border: 1px solid #1e1e2e; color: #e8e8f0; padding: 0.75rem 1rem; font-family: "SF Mono","Fira Code","JetBrains Mono",ui-monospace,monospace; font-size: 0.9rem; border-radius: 4px; outline: none; transition: border-color 0.2s; width: 100%; }
         input:focus, select:focus { border-color: #00ff88; }
         @keyframes bar { 0%,100% { transform: scaleY(0.3); opacity: 0.3; } 50% { transform: scaleY(1); opacity: 1; } }
         @keyframes pulse { 0%,100% { opacity:0.5; } 50% { opacity:1; } }
@@ -153,7 +152,7 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2.5rem', borderBottom: '1px solid #1e1e2e', paddingBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
             <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: -1, color: '#e8e8f0' }}>Trade Analyzer</h1>
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.7rem', color: '#00ff88', border: '1px solid #00ff88', padding: '2px 8px', borderRadius: 2, letterSpacing: 2 }}>AI POWERED</span>
+            <span style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.7rem', color: '#00ff88', border: '1px solid #00ff88', padding: '2px 8px', borderRadius: 2, letterSpacing: 2 }}>AI POWERED</span>
           </div>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#555570', textDecoration: 'none' }}>
             <Home size={14} /> Home
@@ -163,15 +162,15 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
         {/* Form */}
         <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <label style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.65rem', color: '#555570', letterSpacing: 2, textTransform: 'uppercase' }}>Ticker / Pair</label>
+            <label style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.65rem', color: '#555570', letterSpacing: 2, textTransform: 'uppercase' }}>Ticker / Pair</label>
             <input type="text" placeholder="e.g. XAU/USD, BTC/USD, AAPL" value={ticker} onChange={e => setTicker(e.target.value)} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <label style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.65rem', color: '#555570', letterSpacing: 2, textTransform: 'uppercase' }}>Direction</label>
+            <label style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.65rem', color: '#555570', letterSpacing: 2, textTransform: 'uppercase' }}>Direction</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: '1px solid #1e1e2e', borderRadius: 4, overflow: 'hidden' }}>
               {(['long', 'short'] as const).map(d => (
                 <button key={d} onClick={() => setDirection(d)} style={{
-                  padding: '0.75rem', fontFamily: "'Space Mono', monospace", fontSize: '0.85rem', fontWeight: 700, letterSpacing: 2,
+                  padding: '0.75rem', fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.85rem', fontWeight: 700, letterSpacing: 2,
                   cursor: 'pointer', border: 'none', transition: 'all 0.2s',
                   background: direction === d ? (d === 'long' ? 'rgba(0,255,136,0.15)' : 'rgba(255,51,102,0.15)') : '#111118',
                   color: direction === d ? (d === 'long' ? '#00ff88' : '#ff3366') : '#555570'
@@ -186,12 +185,12 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
             { label: 'Take Profit', val: tp, set: setTp, ph: '0.00' },
           ].map(({ label, val, set, ph }) => (
             <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <label style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.65rem', color: '#555570', letterSpacing: 2, textTransform: 'uppercase' }}>{label}</label>
+              <label style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.65rem', color: '#555570', letterSpacing: 2, textTransform: 'uppercase' }}>{label}</label>
               <input type={label.includes('Size') ? 'text' : 'number'} placeholder={ph} value={val} onChange={e => set(e.target.value)} step="any" />
             </div>
           ))}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', gridColumn: '1 / -1' }}>
-            <label style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.65rem', color: '#555570', letterSpacing: 2, textTransform: 'uppercase' }}>Additional Context (optional)</label>
+            <label style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.65rem', color: '#555570', letterSpacing: 2, textTransform: 'uppercase' }}>Additional Context (optional)</label>
             <input type="text" placeholder="e.g. Holding overnight, news event tomorrow, key level bounce..." value={context} onChange={e => setContext(e.target.value)} />
           </div>
         </div>
@@ -204,7 +203,7 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
         }}>ANALYZE TRADE</button>
 
         {error && (
-          <div style={{ background: 'rgba(255,51,102,0.1)', border: '1px solid #ff3366', color: '#ff3366', padding: '1rem', borderRadius: 4, fontFamily: "'Space Mono', monospace", fontSize: '0.8rem', marginTop: '1rem' }}>
+          <div style={{ background: 'rgba(255,51,102,0.1)', border: '1px solid #ff3366', color: '#ff3366', padding: '1rem', borderRadius: 4, fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.8rem', marginTop: '1rem' }}>
             {error}
           </div>
         )}
@@ -217,7 +216,7 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
                 <div key={i} style={{ width: 3, height: 32, background: '#00ff88', borderRadius: 2, animation: `bar 1s ease-in-out ${delay}s infinite` }} />
               ))}
             </div>
-            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.75rem', color: '#555570', letterSpacing: 2, animation: 'pulse 2s ease-in-out infinite' }}>
+            <div style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.75rem', color: '#555570', letterSpacing: 2, animation: 'pulse 2s ease-in-out infinite' }}>
               {loadingText}
             </div>
           </div>
@@ -231,10 +230,10 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
             <div style={{ background: '#111118', border: `1px solid #1e1e2e`, borderRadius: 6, padding: '1.5rem', marginBottom: '1.5rem', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: verdictBorderColor }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.75rem', color: '#555570', letterSpacing: 2 }}>
+                <span style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.75rem', color: '#555570', letterSpacing: 2 }}>
                   {tradeInfo.ticker.toUpperCase()} · {tradeInfo.direction.toUpperCase()} @ {tradeInfo.entry}
                 </span>
-                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.75rem', fontWeight: 700, padding: '4px 12px', borderRadius: 2, letterSpacing: 2,
+                <span style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.75rem', fontWeight: 700, padding: '4px 12px', borderRadius: 2, letterSpacing: 2,
                   background: verdictClass === 'bull' ? 'rgba(0,255,136,0.15)' : verdictClass === 'bear' ? 'rgba(255,51,102,0.15)' : 'rgba(255,204,0,0.15)',
                   color: verdictBorderColor }}>
                   {analysis.verdict || analysis.overall_sentiment}
@@ -251,8 +250,8 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
                 { label: 'SENTIMENT SCORE', value: `${sentScore > 0 ? '+' : ''}${sentScore}`, color: sentColor },
               ].map(({ label, value, color }) => (
                 <div key={label} style={{ background: '#111118', border: '1px solid #1e1e2e', borderRadius: 6, padding: '1.25rem' }}>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.6rem', color: '#555570', letterSpacing: 2, marginBottom: '0.5rem' }}>{label}</div>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: '1.25rem', fontWeight: 700, color }}>{value}</div>
+                  <div style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.6rem', color: '#555570', letterSpacing: 2, marginBottom: '0.5rem' }}>{label}</div>
+                  <div style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '1.25rem', fontWeight: 700, color }}>{value}</div>
                 </div>
               ))}
             </div>
@@ -267,7 +266,7 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
                     <div style={{ width: 6, minWidth: 6, height: 6, borderRadius: '50%', marginTop: 6, background: sc === 'bull' ? '#00ff88' : sc === 'bear' ? '#ff3366' : '#ffcc00' }} />
                     <div>
                       <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.25rem', lineHeight: 1.4 }}>{n.title}</div>
-                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.65rem', color: '#555570', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                      <div style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.65rem', color: '#555570', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                         <span style={{ color: '#00ff88' }}>{n.source}</span>
                         <span>{n.date || 'Recent'}</span>
                         <span>{n.impact || 'MEDIUM'} IMPACT</span>
@@ -302,16 +301,16 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
                 <div>
                   {[['STRONG SUPPORT', analysis.key_levels?.strong_support, '#00ff88'], ['SUPPORT', analysis.key_levels?.support, '#00ff88']].map(([name, val, color]) => (
                     <div key={String(name)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 0', borderBottom: '1px solid #1e1e2e' }}>
-                      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.7rem', color: '#555570', letterSpacing: 1 }}>{String(name)}</span>
-                      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.85rem', fontWeight: 700, color: String(color) }}>{String(val ?? 'N/A')}</span>
+                      <span style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.7rem', color: '#555570', letterSpacing: 1 }}>{String(name)}</span>
+                      <span style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.85rem', fontWeight: 700, color: String(color) }}>{String(val ?? 'N/A')}</span>
                     </div>
                   ))}
                 </div>
                 <div>
                   {[['RESISTANCE', analysis.key_levels?.resistance, '#ff3366'], ['STRONG RESISTANCE', analysis.key_levels?.strong_resistance, '#ff3366']].map(([name, val, color]) => (
                     <div key={String(name)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 0', borderBottom: '1px solid #1e1e2e' }}>
-                      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.7rem', color: '#555570', letterSpacing: 1 }}>{String(name)}</span>
-                      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.85rem', fontWeight: 700, color: String(color) }}>{String(val ?? 'N/A')}</span>
+                      <span style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.7rem', color: '#555570', letterSpacing: 1 }}>{String(name)}</span>
+                      <span style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.85rem', fontWeight: 700, color: String(color) }}>{String(val ?? 'N/A')}</span>
                     </div>
                   ))}
                 </div>
@@ -333,7 +332,7 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.65rem', color: '#555570', letterSpacing: 3, textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+    <div style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.65rem', color: '#555570', letterSpacing: 3, textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
       {children}
       <div style={{ flex: 1, height: 1, background: '#1e1e2e' }} />
     </div>
@@ -343,7 +342,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 function AnalysisBlock({ title, children, style = {} }: { title: string; children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div style={{ background: '#111118', border: '1px solid #1e1e2e', borderRadius: 6, padding: '1.5rem', marginBottom: '1.5rem', ...style }}>
-      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: '#00ff88', fontFamily: "'Space Mono', monospace", letterSpacing: 1 }}>{title}</h3>
+      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: '#00ff88', fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", letterSpacing: 1 }}>{title}</h3>
       {typeof children === 'string' ? <p style={{ fontSize: '0.9rem', lineHeight: 1.7 }}>{children}</p> : children}
     </div>
   )

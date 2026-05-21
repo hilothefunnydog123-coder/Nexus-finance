@@ -690,11 +690,27 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div style={{ marginTop:32, display:'flex', gap:28, justifyContent:'center', flexWrap:'wrap' }}>
-            {[['3,000+','Active Traders'],['$0','To Start'],['15s','Analysis Time'],['5','AI Agents']].map(([n,l])=>(
+          {/* Trust signals row */}
+          <div style={{ marginTop:24, display:'flex', gap:0, justifyContent:'center', flexWrap:'wrap', border:'1px solid rgba(255,255,255,.05)', borderRadius:12, overflow:'hidden', backdropFilter:'blur(12px)', background:'rgba(4,10,18,.6)', maxWidth:640, margin:'24px auto 0' }}>
+            {([
+              ['🔒','Stripe Secured',  '#635bff'],
+              ['⚡','Real-Time Data',  '#f59e0b'],
+              ['🤖','Gemini 2.0 AI',   '#4285f4'],
+              ['✓', 'Always Free',     '#00d4aa'],
+            ] as [string,string,string][]).map(([icon,label,clr],i,arr)=>(
+              <div key={label} style={{ flex:1, padding:'12px 16px', textAlign:'center', borderRight:i<arr.length-1?'1px solid rgba(255,255,255,.05)':'none', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                <span style={{ fontSize:14 }}>{icon}</span>
+                <span style={{ fontSize:10, fontWeight:700, color:'#3a5a6a', letterSpacing:'.3px' }}>{label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Live stats */}
+          <div style={{ marginTop:32, display:'flex', gap:32, justifyContent:'center', flexWrap:'wrap' }}>
+            {([['3,247+','Active Traders','#00d4aa'],['$0','To Start','#00ff88'],['15s','Analysis Time','#3b8eea'],['5','AI Agents','#a855f7']] as [string,string,string][]).map(([n,l,clr])=>(
               <div key={l} style={{ textAlign:'center' }}>
-                <div style={{ fontSize:22, fontWeight:900, color:'#00d4aa', fontFamily:'monospace' }}>{n}</div>
-                <div style={{ fontSize:11, color:'#6a90a8', letterSpacing:'.5px' }}>{l}</div>
+                <div style={{ fontSize:22, fontWeight:900, color:clr, fontFamily:'"SF Mono",ui-monospace,monospace', letterSpacing:'-1px', textShadow:`0 0 20px ${clr}40` }}>{n}</div>
+                <div style={{ fontSize:10, color:'#3a5a6a', letterSpacing:'1px', marginTop:2, fontWeight:600 }}>{l.toUpperCase()}</div>
               </div>
             ))}
           </div>
@@ -714,6 +730,78 @@ export default function HomePage() {
               {t} <span style={{ opacity:.2, marginLeft:12 }}>✦</span>
             </span>
           )))}
+        </div>
+      </div>
+
+      {/* ══ TRUST STRIP ══════════════════════════════════════════════════════════ */}
+      <div style={{ position:'relative', zIndex:1, background:'rgba(3,8,14,.92)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,.04)' }}>
+
+        {/* Row 1 — Infrastructure logos */}
+        <div className="section" style={{ padding:'18px 24px 14px', display:'flex', alignItems:'center', gap:0, flexWrap:'wrap', rowGap:10 }}>
+          <div style={{ fontSize:8, color:'#1a3040', letterSpacing:'2.5px', fontWeight:700, marginRight:24, whiteSpace:'nowrap', fontFamily:'monospace' }}>BUILT ON</div>
+          <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', flex:1 }}>
+            {([
+              ['Stripe',       '#635bff', 'Payments'],
+              ['Google Gemini','#4285f4', 'AI Engine'],
+              ['TradingView',  '#2196f3', 'Charts'],
+              ['Finnhub',      '#f59e0b', 'Live Data'],
+              ['Supabase',     '#3ecf8e', 'Database'],
+              ['Netlify Edge', '#00ad9f', 'CDN'],
+            ] as [string,string,string][]).map(([name,clr,tag])=>(
+              <div key={name} style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 11px', border:`1px solid ${clr}1a`, borderRadius:6, background:`${clr}08`, transition:'border-color .2s' }}
+                onMouseEnter={e=>e.currentTarget.style.borderColor=`${clr}40`}
+                onMouseLeave={e=>e.currentTarget.style.borderColor=`${clr}1a`}>
+                <span style={{ width:5, height:5, borderRadius:'50%', background:clr, flexShrink:0, boxShadow:`0 0 6px ${clr}` }}/>
+                <span style={{ fontSize:11, fontWeight:700, color:'#4a6a78', letterSpacing:'-.2px' }}>{name}</span>
+                <span style={{ fontSize:8, color:`${clr}99`, borderLeft:`1px solid ${clr}25`, paddingLeft:7, letterSpacing:'.5px', fontFamily:'monospace' }}>{tag}</span>
+              </div>
+            ))}
+          </div>
+          {/* Verified badges */}
+          <div style={{ display:'flex', gap:8, alignItems:'center', marginLeft:'auto', paddingLeft:20 }}>
+            {[
+              { icon:'🔒', label:'Stripe Secured' },
+              { icon:'✓', label:'SSL / TLS' },
+              { icon:'⚡', label:'99.9% Uptime' },
+            ].map(b=>(
+              <div key={b.label} style={{ display:'flex', alignItems:'center', gap:5, fontSize:10, color:'#2a4050', fontWeight:600, padding:'4px 10px', border:'1px solid rgba(255,255,255,.04)', borderRadius:5, background:'rgba(255,255,255,.02)', whiteSpace:'nowrap' }}>
+                <span style={{ fontSize:9 }}>{b.icon}</span>{b.label}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height:1, background:'linear-gradient(90deg,transparent,rgba(255,255,255,.04),transparent)', margin:'0 24px' }}/>
+
+        {/* Row 2 — Instructor authority bar */}
+        <div className="section" style={{ padding:'13px 24px 16px', display:'flex', alignItems:'center', gap:0, flexWrap:'wrap', rowGap:8 }}>
+          <div style={{ fontSize:8, color:'#1a3040', letterSpacing:'2.5px', fontWeight:700, marginRight:24, whiteSpace:'nowrap', fontFamily:'monospace' }}>9 VERIFIED INSTRUCTORS</div>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center', flex:1 }}>
+            {([
+              ['Ross Cameron',    '#00d4aa', 'Warrior Trading'],
+              ['ICT',            '#f59e0b', 'Inner Circle Trader'],
+              ['Rayner Teo',     '#3b8eea', 'TradingwithRayner'],
+              ['Graham Stephan', '#a855f7', '5M+ Subscribers'],
+              ['Anton Kreil',    '#ec4899', 'ITPM'],
+              ['Kevin O\'Leary', '#00ff88', 'Shark Tank'],
+              ['Wall St. Trapper','#ff2d78','NYSE Floor'],
+              ['Humbled Trader',  '#f59e0b', 'Day Trader'],
+              ['InTheMoney Adam', '#00d4ff', 'Options Expert'],
+            ] as [string,string,string][]).map(([name,clr,cred])=>(
+              <div key={name} style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', border:`1px solid rgba(255,255,255,.05)`, borderRadius:5, background:'rgba(255,255,255,.02)', transition:'all .2s' }}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=`${clr}30`;e.currentTarget.style.background=`${clr}06`}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.05)';e.currentTarget.style.background='rgba(255,255,255,.02)'}}>
+                <span style={{ width:14, height:14, borderRadius:'50%', background:`linear-gradient(135deg,${clr},${clr}80)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:7, fontWeight:900, color:'#030a10', flexShrink:0 }}>✓</span>
+                <span style={{ fontSize:11, fontWeight:700, color:'#4a6a78', letterSpacing:'-.2px' }}>{name}</span>
+                <span style={{ fontSize:8, color:'#1a3040', borderLeft:'1px solid rgba(255,255,255,.06)', paddingLeft:7, letterSpacing:'.3px', whiteSpace:'nowrap' }}>{cred}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginLeft:'auto', paddingLeft:20, display:'flex', alignItems:'center', gap:6, fontSize:10, color:'#00d4aa', fontWeight:700, whiteSpace:'nowrap' }}>
+            <span style={{ width:5, height:5, borderRadius:'50%', background:'#00d4aa', animation:'pulse-dot 1.5s infinite' }}/>
+            70% instructor revenue share
+          </div>
         </div>
       </div>
 
@@ -1058,13 +1146,16 @@ export default function HomePage() {
               {POWERS.map((p,i) => (
                 <div key={p.name} className={`power-card i${i+1}`} style={{ '--clr': p.clr } as React.CSSProperties}>
                   <div className="power-inner">
-                    <div style={{ fontSize:40, marginBottom:16 }}>{p.icon}</div>
-                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
-                      <span style={{ fontSize:17, fontWeight:900 }}>{p.name}</span>
-                      <span style={{ fontSize:9, color: p.clr, background:`${p.clr}18`, border:`1px solid ${p.clr}30`, borderRadius:6, padding:'2px 8px', fontWeight:800, letterSpacing:'.5px' }}>{p.label}</span>
+                    {/* Brand logo block */}
+                    <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'8px 14px', background:`${p.clr}10`, border:`1px solid ${p.clr}25`, borderRadius:9, marginBottom:18 }}>
+                      <span style={{ fontSize:18 }}>{p.icon}</span>
+                      <span style={{ fontSize:15, fontWeight:900, color:p.clr, letterSpacing:'-.3px' }}>{p.name}</span>
                     </div>
-                    <p style={{ fontSize:13, color:'#6a90a8', lineHeight:1.65 }}>{p.desc}</p>
-                    <div style={{ marginTop:18, height:2, background:`linear-gradient(90deg,${p.clr},transparent)`, borderRadius:1 }} />
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                      <span style={{ fontSize:9, color:p.clr, background:`${p.clr}18`, border:`1px solid ${p.clr}30`, borderRadius:4, padding:'2px 8px', fontWeight:800, letterSpacing:'1.5px', fontFamily:'monospace' }}>{p.label.toUpperCase()}</span>
+                    </div>
+                    <p style={{ fontSize:13, color:'#6a90a8', lineHeight:1.7 }}>{p.desc}</p>
+                    <div style={{ marginTop:18, height:1, background:`linear-gradient(90deg,${p.clr}60,transparent)`, borderRadius:1 }} />
                   </div>
                 </div>
               ))}
