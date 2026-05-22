@@ -2,20 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-const GEMINI_KEY = 'AIzaSyACZjdcSbccKMVF-aYhW-XN5C_w-_gSrj8'
-
-const SYSTEM_PROMPT = `You are an elite trading assistant for YN Finance — think of yourself as a top-tier analyst sitting right next to the trader.
-
-Rules:
-- Respond conversationally, like talking to a fellow trader over comms — no bullet points, no markdown asterisks, no headers, just clean natural sentences
-- Be specific, direct, analytical — give actual levels, actual reasoning, actual opinions
-- If asked about a ticker, mention key price levels, trend direction, what to watch, and how to approach it
-- If asked about a concept (FVG, liquidity sweep, R:R, EMA cloud, etc.), explain it simply with a real market application
-- Keep responses to 3-5 sentences unless the complexity genuinely demands more
-- Never hedge with "this is not financial advice" — give the professional read like a desk analyst would
-- If you don't know current real-time prices, say so briefly and give the analytical framework instead
-- Sound confident, calm, and specific — like the smartest trader in the room who happens to be generous with their knowledge`
-
 type Msg = { role: 'user' | 'ai'; text: string; id: number }
 
 const SUGGESTIONS = [
@@ -74,36 +60,24 @@ export default function WidgetPage() {
     setMsgs(newMsgs)
     setLoading(true)
 
-    // Build full prompt as a single string — same pattern as the working analyzer
+    // Build conversation history for context (skip initial greeting)
     const history = msgs
-      .filter((_, i) => i > 0)   // skip the initial greeting
-      .slice(-8)                   // keep last 4 exchanges max
-      .map(m => `${m.role === 'user' ? 'Trader' : 'Assistant'}: ${m.text}`)
-      .join('\n')
-
-    const fullPrompt = history
-      ? `${SYSTEM_PROMPT}\n\n--- Previous conversation ---\n${history}\n\nTrader: ${q}`
-      : `${SYSTEM_PROMPT}\n\nTrader: ${q}`
+      .filter((_, i) => i > 0)
+      .slice(-8)
+      .map(m => ({ role: m.role === 'user' ? 'user' : 'ai', text: m.text }))
 
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: fullPrompt }] }],
-            generationConfig: { temperature: 0.75, maxOutputTokens: 512 },
-          }),
-        }
-      )
+      const res = await fetch('/api/widget-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q, history }),
+      })
       const data = await res.json()
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
-      const aid   = counter + 1
+      const aid = counter + 1
       setCounter(p => p + 1)
       setMsgs(p => [...p, {
         role: 'ai',
-        text: reply || (data.error?.message ? `API error: ${data.error.message}` : 'No response — try again.'),
+        text: data.reply || (data.error ? `Error: ${data.error}` : 'No response — try again.'),
         id: aid,
       }])
     } catch (err: unknown) {
