@@ -1132,6 +1132,91 @@ export default function HomePage() {
       {/* Section divider */}
       <div style={{ position:'relative', zIndex:1, height:1, background:'linear-gradient(90deg,transparent,rgba(0,212,170,.15),rgba(168,85,247,.15),transparent)' }}/>
 
+      {/* ══ COURSES ═════════════════════════════════════════════════════════════ */}
+      <section style={{ padding:'100px 0', position:'relative', zIndex:1 }}>
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg,transparent,rgba(6,13,20,.5),transparent)', pointerEvents:'none' }}/>
+        <div className="section" style={{ position:'relative' }}>
+
+          {/* Header */}
+          <div style={{ textAlign:'center', marginBottom:60 }}>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(0,212,170,.08)', border:'1px solid rgba(0,212,170,.2)', borderRadius:20, padding:'6px 18px', marginBottom:18, fontSize:10, color:'#00d4aa', fontWeight:700, letterSpacing:'1.5px' }}>
+              <span style={{ width:5, height:5, borderRadius:'50%', background:'#00d4aa', display:'inline-block', animation:'pulse-dot 1.5s infinite' }}/>
+              9 VERIFIED INSTRUCTORS · FROM $0.99 PER COURSE
+            </div>
+            <h2 style={{ fontSize:'clamp(32px,5vw,60px)', fontWeight:900, letterSpacing:'-2.5px', lineHeight:1.05, marginBottom:14 }}>
+              Learn from{' '}
+              <span style={{ background:'linear-gradient(135deg,#00d4aa,#f59e0b)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>legends.</span>
+            </h2>
+            <p style={{ fontSize:17, color:'#3a5a6a', maxWidth:520, margin:'0 auto', lineHeight:1.65 }}>
+              The same educators with millions of students online — now teaching directly inside YN Finance. One platform, every style.
+            </p>
+          </div>
+
+          {/* Instructor cards */}
+          <div className="g3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:48 }}>
+            {([
+              { name:'Ross Cameron',    init:'RC', grad:'linear-gradient(135deg,#00d4aa,#3b8eea)', spec:'Day Trading', tag:'Warrior Trading Founder',   courses:4, price:'$2.99', clr:'#00d4aa' },
+              { name:'ICT',             init:'IC', grad:'linear-gradient(135deg,#f59e0b,#ff2d78)', spec:'Smart Money Concepts', tag:'Inner Circle Trader',courses:6, price:'$1.99', clr:'#f59e0b' },
+              { name:'Rayner Teo',      init:'RT', grad:'linear-gradient(135deg,#3b8eea,#a855f7)', spec:'Technical Analysis', tag:'TradingwithRayner',    courses:3, price:'$0.99', clr:'#3b8eea' },
+              { name:'Graham Stephan', init:'GS', grad:'linear-gradient(135deg,#a855f7,#ec4899)', spec:'Investing & Wealth', tag:'5M+ Subscribers',        courses:3, price:'$1.99', clr:'#a855f7' },
+              { name:'Anton Kreil',    init:'AK', grad:'linear-gradient(135deg,#ec4899,#ff2d78)', spec:'Professional Trading', tag:'ITPM · Ex-Goldman',   courses:5, price:'$4.99', clr:'#ec4899' },
+              { name:'Kevin O\'Leary', init:'KO', grad:'linear-gradient(135deg,#00ff88,#00d4aa)', spec:'Business & Finance', tag:'Shark Tank Investor',   courses:2, price:'$2.99', clr:'#00ff88' },
+            ] as {name:string;init:string;grad:string;spec:string;tag:string;courses:number;price:string;clr:string}[]).map(ins=>(
+              <div key={ins.name}
+                style={{ background:'rgba(6,13,20,.85)', border:`1px solid ${ins.clr}18`, borderRadius:14, padding:'24px', backdropFilter:'blur(12px)', transition:'all .3s cubic-bezier(.22,1,.36,1)', position:'relative', overflow:'hidden' }}
+                onMouseEnter={e=>{const el=e.currentTarget;el.style.transform='translateY(-6px)';el.style.borderColor=`${ins.clr}45`;el.style.boxShadow=`0 24px 60px rgba(0,0,0,.4),0 0 40px ${ins.clr}12`}}
+                onMouseLeave={e=>{const el=e.currentTarget;el.style.transform='none';el.style.borderColor=`${ins.clr}18`;el.style.boxShadow='none'}}>
+                <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:ins.grad }}/>
+                <div style={{ position:'absolute', top:-30, right:-30, width:100, height:100, borderRadius:'50%', background:`radial-gradient(circle,${ins.clr}08,transparent 70%)`, pointerEvents:'none' }}/>
+
+                <div style={{ display:'flex', alignItems:'flex-start', gap:14, marginBottom:16 }}>
+                  {/* Avatar */}
+                  <div style={{ width:48, height:48, borderRadius:13, background:ins.grad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'#030a10', flexShrink:0, boxShadow:`0 0 20px ${ins.clr}35` }}>
+                    {ins.init}
+                  </div>
+                  <div>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2 }}>
+                      <span style={{ fontSize:14, fontWeight:800, color:'#dce8f0', letterSpacing:'-.2px' }}>{ins.name}</span>
+                      <span style={{ fontSize:'7px', color:'#00d4aa', background:'rgba(0,212,170,.1)', border:'1px solid rgba(0,212,170,.2)', borderRadius:3, padding:'1px 6px', fontWeight:800, letterSpacing:'1px' }}>VERIFIED</span>
+                    </div>
+                    <div style={{ fontSize:10, color:ins.clr, fontWeight:700, letterSpacing:'.3px' }}>{ins.spec}</div>
+                    <div style={{ fontSize:10, color:'#1a3040', marginTop:1 }}>{ins.tag}</div>
+                  </div>
+                </div>
+
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 12px', background:'rgba(255,255,255,.03)', borderRadius:8, marginBottom:14 }}>
+                  <div style={{ fontSize:11, color:'#2a4050' }}>{ins.courses} courses available</div>
+                  <div style={{ display:'flex', alignItems:'baseline', gap:3 }}>
+                    <span style={{ fontSize:11, color:'#1a3040' }}>from</span>
+                    <span style={{ fontSize:18, fontWeight:900, color:ins.clr, fontFamily:'monospace', letterSpacing:'-1px' }}>{ins.price}</span>
+                  </div>
+                </div>
+
+                <Link href="/courses" style={{ display:'block', textAlign:'center', background:`${ins.clr}12`, border:`1px solid ${ins.clr}28`, color:ins.clr, padding:'9px', borderRadius:7, fontSize:12, fontWeight:700, textDecoration:'none', transition:'all .2s', letterSpacing:'.3px' }}
+                  onMouseEnter={e=>{e.currentTarget.style.background=`${ins.clr}22`}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=`${ins.clr}12`}}>
+                  Browse Courses →
+                </Link>
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom strip */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'24px 36px', background:'rgba(6,13,20,.7)', border:'1px solid rgba(255,255,255,.05)', borderRadius:14, backdropFilter:'blur(12px)', flexWrap:'wrap', gap:16 }}>
+            <div>
+              <div style={{ fontSize:20, fontWeight:900, color:'#dce8f0', letterSpacing:'-.5px', marginBottom:4 }}>9 world-class instructors. Every trading style.</div>
+              <div style={{ fontSize:13, color:'#2a4a62' }}>Ross Cameron · ICT · Rayner Teo · Graham Stephan · Anton Kreil · Kevin O&apos;Leary · Wall St. Trapper · Humbled Trader · InTheMoney Adam</div>
+            </div>
+            <Link href="/courses" style={{ flexShrink:0, background:'linear-gradient(135deg,#00d4aa,#3b8eea)', color:'#030a10', padding:'14px 32px', borderRadius:10, fontSize:14, fontWeight:900, textDecoration:'none', boxShadow:'0 0 30px #00d4aa30', letterSpacing:'-.2px', whiteSpace:'nowrap' }}>
+              Browse All Courses →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Section divider */}
+      <div style={{ position:'relative', zIndex:1, height:1, background:'linear-gradient(90deg,transparent,rgba(59,142,234,.12),rgba(168,85,247,.12),transparent)' }}/>
+
       {/* ══ POWERED BY ══════════════════════════════════════════════════════════ */}
       <section style={{ padding:'100px 0', position:'relative', zIndex:1 }}>
         <div className="section">

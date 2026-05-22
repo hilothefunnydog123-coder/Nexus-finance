@@ -5,12 +5,12 @@ import Link from 'next/link'
 import { YNMark } from '@/components/YNLogo'
 
 const MODULES = [
-  { id:'lockup',      name:'Lock-Up Assassin', icon:'🔫', clr:'#ff2d78', bg:'radial-gradient(ellipse at 30% 50%,rgba(255,45,120,.12),transparent 70%)', tag:'SCHEDULED DESTRUCTION',     classif:'SECRET',     needsInput:true,  placeholder:'Recent IPO ticker...', example:'RDDT', desc:'Insiders are about to dump. You know before they do.', hook:'Every IPO has a 180-day lock-up. When it expires, insiders sell. This is guaranteed, dated, and sized.' },
-  { id:'liedetector', name:'Lie Detector',     icon:'🧪', clr:'#f59e0b', bg:'radial-gradient(ellipse at 70% 30%,rgba(245,158,11,.12),transparent 70%)', tag:'FORENSIC EARNINGS ANALYSIS', classif:'SECRET',     needsInput:true,  placeholder:'Ticker to analyze...',   example:'TSLA', desc:'Management is lying. Find the gap before analysts do.', hook:'AI reads the earnings narrative vs the actual numbers. Divergence score 0-100.' },
-  { id:'galaxybrain', name:'Galaxy Brain',     icon:'🧠', clr:'#a855f7', bg:'radial-gradient(ellipse at 50% 20%,rgba(168,85,247,.12),transparent 70%)', tag:'MACRO DOMINO TRACER',       classif:'TOP SECRET', needsInput:true,  placeholder:'Enter macro scenario...',  example:'Fed holds rates, dollar weakens', desc:'Trace the 5-step chain. Find trades nobody else sees.', hook:'One macro event triggers a chain. AI finds the non-obvious end of the chain.' },
-  { id:'flow',        name:'Forced Flow',      icon:'🌊', clr:'#00d4ff', bg:'radial-gradient(ellipse at 80% 60%,rgba(0,212,255,.12),transparent 70%)', tag:'MECHANICAL MONEY MOVEMENTS', classif:'TOP SECRET', needsInput:false, placeholder:'',                         example:'',   desc:'Guaranteed buying is coming. You know when and where.', hook:'Billions HAVE to move into specific stocks this month. Front-run the mechanical flow.' },
-  { id:'signals',     name:'Signal Radar',     icon:'⚡', clr:'#00ff88', bg:'radial-gradient(ellipse at 20% 70%,rgba(0,255,136,.12),transparent 70%)', tag:'CROSS-ASSET CORRELATION',   classif:'SECRET',     needsInput:false, placeholder:'',                         example:'',   desc:'8 correlations. 73-91% hit rates. Live right now.', hook:'Korean Won weakens → Qualcomm drops 72h later. 7/8 times.' },
-  { id:'filing',      name:'Filing X-Ray',     icon:'📄', clr:'#ec4899', bg:'radial-gradient(ellipse at 60% 80%,rgba(236,72,153,.12),transparent 70%)', tag:'SEC DOCUMENT INTELLIGENCE',  classif:'TOP SECRET', needsInput:true,  placeholder:'Ticker to X-Ray...',       example:'NVDA', desc:'They buried it on page 47. You found it first.', hook:'AI reads SEC filings the second they drop. Extracts what management buried.' },
+  { id:'lockup',      name:'Lock-Up Assassin', icon:'🔫', clr:'#ff2d78', bg:'radial-gradient(ellipse at 30% 50%,rgba(255,45,120,.12),transparent 70%)', tag:'SCHEDULED DESTRUCTION',     classif:'SECRET',     needsInput:true,  placeholder:'Recent IPO ticker...', example:'RDDT', desc:'Insiders are about to dump. You know before they do.', hook:'Every IPO has a 180-day lock-up. When it expires, insiders sell. This is guaranteed, dated, and sized.', isPro:false },
+  { id:'liedetector', name:'Lie Detector',     icon:'🧪', clr:'#f59e0b', bg:'radial-gradient(ellipse at 70% 30%,rgba(245,158,11,.12),transparent 70%)', tag:'FORENSIC EARNINGS ANALYSIS', classif:'SECRET',     needsInput:true,  placeholder:'Ticker to analyze...',   example:'TSLA', desc:'Management is lying. Find the gap before analysts do.', hook:'AI reads the earnings narrative vs the actual numbers. Divergence score 0-100.', isPro:false },
+  { id:'galaxybrain', name:'Galaxy Brain',     icon:'🧠', clr:'#a855f7', bg:'radial-gradient(ellipse at 50% 20%,rgba(168,85,247,.12),transparent 70%)', tag:'MACRO DOMINO TRACER',       classif:'TOP SECRET', needsInput:true,  placeholder:'Enter macro scenario...',  example:'Fed holds rates, dollar weakens', desc:'Trace the 5-step chain. Find trades nobody else sees.', hook:'One macro event triggers a chain. AI finds the non-obvious end of the chain.', isPro:true },
+  { id:'flow',        name:'Forced Flow',      icon:'🌊', clr:'#00d4ff', bg:'radial-gradient(ellipse at 80% 60%,rgba(0,212,255,.12),transparent 70%)', tag:'MECHANICAL MONEY MOVEMENTS', classif:'TOP SECRET', needsInput:false, placeholder:'',                         example:'',   desc:'Guaranteed buying is coming. You know when and where.', hook:'Billions HAVE to move into specific stocks this month. Front-run the mechanical flow.', isPro:true },
+  { id:'signals',     name:'Signal Radar',     icon:'⚡', clr:'#00ff88', bg:'radial-gradient(ellipse at 20% 70%,rgba(0,255,136,.12),transparent 70%)', tag:'CROSS-ASSET CORRELATION',   classif:'SECRET',     needsInput:false, placeholder:'',                         example:'',   desc:'8 correlations. 73-91% hit rates. Live right now.', hook:'Korean Won weakens → Qualcomm drops 72h later. 7/8 times.', isPro:true },
+  { id:'filing',      name:'Filing X-Ray',     icon:'📄', clr:'#ec4899', bg:'radial-gradient(ellipse at 60% 80%,rgba(236,72,153,.12),transparent 70%)', tag:'SEC DOCUMENT INTELLIGENCE',  classif:'TOP SECRET', needsInput:true,  placeholder:'Ticker to X-Ray...',       example:'NVDA', desc:'They buried it on page 47. You found it first.', hook:'AI reads SEC filings the second they drop. Extracts what management buried.', isPro:true },
 ]
 
 const VERDICT_CLR: Record<string,string> = {
@@ -425,10 +425,22 @@ function WeaponCard({ mod, onClick, delay }: { mod:typeof MODULES[0]; onClick:()
       {/* Corner scan */}
       {hov&&<div style={{position:'absolute',top:0,right:0,width:60,height:1,background:`linear-gradient(90deg,transparent,${mod.clr}60)`,transition:'opacity .3s'}}/>}
 
-      <div style={{position:'relative',zIndex:1}}>
+      {/* PRO lock overlay */}
+      {mod.isPro&&(
+        <div style={{position:'absolute',inset:0,zIndex:4,borderRadius:12,backdropFilter:'blur(2px)',background:'rgba(1,4,8,.45)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,opacity:hov?1:0,transition:'opacity .25s',pointerEvents:'none'}}>
+          <div style={{fontSize:26,filter:'drop-shadow(0 0 12px #a855f7)'}}>🔐</div>
+          <div style={{fontSize:11,fontWeight:800,color:'#fff',letterSpacing:'.5px'}}>Intelligence Pro</div>
+          <div style={{fontSize:9,color:'#a855f7',letterSpacing:'1.5px',fontFamily:'monospace'}}>$22/MONTH</div>
+        </div>
+      )}
+
+      <div style={{position:'relative',zIndex:1,filter:mod.isPro?'brightness(.65)':'none',transition:'filter .25s'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}}>
-          <span style={{fontSize:34,filter:`drop-shadow(0 0 16px ${mod.clr})`,display:'inline-block',animation:hov?'float 2s ease-in-out infinite':'none'}}>{mod.icon}</span>
-          <span style={{fontSize:'8px',color:mod.clr,background:`${mod.clr}14`,border:`1px solid ${mod.clr}30`,borderRadius:3,padding:'3px 8px',fontWeight:800,letterSpacing:'1.2px'}}>{mod.classif}</span>
+          <span style={{fontSize:34,filter:`drop-shadow(0 0 16px ${mod.clr})`,display:'inline-block',animation:hov&&!mod.isPro?'float 2s ease-in-out infinite':'none'}}>{mod.icon}</span>
+          <div style={{display:'flex',gap:5,alignItems:'center'}}>
+            {mod.isPro&&<span style={{fontSize:'7px',color:'#a855f7',background:'rgba(168,85,247,.15)',border:'1px solid rgba(168,85,247,.3)',borderRadius:3,padding:'2px 7px',fontWeight:900,letterSpacing:'1.5px'}}>PRO</span>}
+            <span style={{fontSize:'8px',color:mod.clr,background:`${mod.clr}14`,border:`1px solid ${mod.clr}30`,borderRadius:3,padding:'3px 8px',fontWeight:800,letterSpacing:'1.2px'}}>{mod.classif}</span>
+          </div>
         </div>
         <div style={{fontSize:'8px',color:'#2a4050',letterSpacing:'1.5px',marginBottom:6,fontFamily:'monospace'}}>{mod.tag}</div>
         <h3 style={{fontSize:20,fontWeight:900,letterSpacing:'-.4px',color:'#fff',marginBottom:10}}>{mod.name}</h3>
@@ -436,7 +448,7 @@ function WeaponCard({ mod, onClick, delay }: { mod:typeof MODULES[0]; onClick:()
         <p style={{fontSize:12,color:mod.clr,lineHeight:1.6,marginBottom:20,opacity:.8}}>{mod.desc}</p>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',paddingTop:14,borderTop:`1px solid ${mod.clr}14`}}>
           <span style={{fontSize:10,color:'#1a3040',fontFamily:'monospace'}}>{mod.needsInput?'Requires input':'Auto-detects live data'}</span>
-          <span style={{fontSize:12,color:mod.clr,fontWeight:700,letterSpacing:'.5px'}}>DEPLOY →</span>
+          <span style={{fontSize:12,color:mod.isPro?'#a855f7':mod.clr,fontWeight:700,letterSpacing:'.5px'}}>{mod.isPro?'UNLOCK →':'DEPLOY →'}</span>
         </div>
       </div>
     </div>
@@ -450,6 +462,8 @@ export default function IntelligencePage() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<Record<string,unknown>|null>(null)
+  const [paywallOpen, setPaywallOpen] = useState(false)
+  const [paywallMod, setPaywallMod] = useState<typeof MODULES[0]|null>(null)
   const [error, setError] = useState('')
   const [phase, setPhase] = useState<'select'|'activate'|'input'|'analyzing'|'result'>('select')
   const [cursorX, setCursorX] = useState(-100)
@@ -467,6 +481,7 @@ export default function IntelligencePage() {
   },[])
 
   const activateWeapon = useCallback((mod:typeof MODULES[0]) => {
+    if (mod.isPro) { setPaywallMod(mod); setPaywallOpen(true); return }
     setActivating(mod); setPhase('activate'); setResult(null); setError('')
     setInput(mod.example||'')
     setTimeout(()=>{setActive(mod);setActivating(null);setPhase(mod.needsInput?'input':'analyzing');if(!mod.needsInput)runAnalysis(mod,'')},1900)
@@ -520,6 +535,82 @@ export default function IntelligencePage() {
       {/* Custom cursor */}
       <div style={{position:'fixed',zIndex:9999,pointerEvents:'none',left:cursorX-5,top:cursorY-5,width:10,height:10,borderRadius:'50%',background:acl,mixBlendMode:'difference',transition:'background .4s'}}/>
       <div style={{position:'fixed',zIndex:9998,pointerEvents:'none',left:cursorX-18,top:cursorY-18,width:36,height:36,borderRadius:'50%',border:`1px solid ${acl}45`,transition:'left .08s,top .08s,border-color .4s'}}/>
+
+      {/* ── PAYWALL MODAL ────────────────────────────────────────────────────── */}
+      {paywallOpen&&(
+        <div style={{position:'fixed',inset:0,zIndex:300,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(1,4,8,.94)',backdropFilter:'blur(28px)',animation:'fadeIn .2s ease'}}
+          onClick={e=>{if(e.target===e.currentTarget)setPaywallOpen(false)}}>
+          {/* Rotating accent rings */}
+          <div style={{position:'absolute',width:500,height:500,borderRadius:'50%',border:'1px solid rgba(0,212,170,.08)',animation:'spinSlow 14s linear infinite',pointerEvents:'none'}}/>
+          <div style={{position:'absolute',width:380,height:380,borderRadius:'50%',border:'1px solid rgba(168,85,247,.07)',animation:'spinSlow 10s linear infinite reverse',pointerEvents:'none'}}/>
+
+          <div style={{maxWidth:520,width:'90%',background:'rgba(4,10,18,.95)',border:'1px solid rgba(0,212,170,.2)',borderRadius:18,overflow:'hidden',position:'relative',boxShadow:'0 60px 120px rgba(0,0,0,.8),0 0 80px rgba(0,212,170,.08)'}}>
+            {/* Top gradient bar */}
+            <div style={{height:2,background:'linear-gradient(90deg,#00d4aa,#1e90ff,#a855f7)'}}/>
+
+            {/* Scan line */}
+            <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(0,212,170,.5),transparent)',animation:'scan 3s linear infinite',zIndex:1,pointerEvents:'none'}}/>
+
+            <div style={{padding:'36px 40px 40px'}}>
+              {/* Header */}
+              <div style={{textAlign:'center',marginBottom:28}}>
+                <div style={{fontSize:44,marginBottom:12,filter:`drop-shadow(0 0 24px ${paywallMod?.clr??'#a855f7'})`}}>{paywallMod?.icon??'🔐'}</div>
+                <div style={{fontSize:'8px',color:'#a855f7',letterSpacing:'3px',fontFamily:'monospace',marginBottom:10}}>CLEARANCE REQUIRED · INTELLIGENCE PRO</div>
+                <h2 style={{fontSize:26,fontWeight:900,letterSpacing:'-1px',marginBottom:10,color:'#fff'}}>
+                  Unlock <span style={{background:'linear-gradient(135deg,#a855f7,#00d4ff)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{paywallMod?.name}</span>
+                </h2>
+                <p style={{fontSize:14,color:'#3a5a6a',lineHeight:1.65}}>
+                  This weapon requires an Intelligence Pro clearance. Get all 4 pro weapons, unlimited runs, and priority AI analysis.
+                </p>
+              </div>
+
+              {/* Feature list */}
+              <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:28}}>
+                {[
+                  ['🧠','Galaxy Brain','Trace macro domino chains 5 steps deep'],
+                  ['🌊','Forced Flow','Front-run $BN mechanical money movements'],
+                  ['⚡','Signal Radar','8 live correlations, 73-91% hit rates'],
+                  ['📄','Filing X-Ray','AI reads SEC filings the second they drop'],
+                ].map(([icon,name,desc])=>(
+                  <div key={name} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)',borderRadius:8}}>
+                    <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                    <div>
+                      <div style={{fontSize:12,fontWeight:700,color:'#dce8f0'}}>{name}</div>
+                      <div style={{fontSize:11,color:'#2a4050'}}>{desc}</div>
+                    </div>
+                    <div style={{marginLeft:'auto',fontSize:'8px',color:'#00d4aa',background:'rgba(0,212,170,.1)',border:'1px solid rgba(0,212,170,.2)',borderRadius:3,padding:'2px 7px',fontWeight:800,letterSpacing:'1px',flexShrink:0}}>PRO</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pricing */}
+              <div style={{textAlign:'center',marginBottom:20,padding:'16px',background:'rgba(0,212,170,.04)',border:'1px solid rgba(0,212,170,.15)',borderRadius:10}}>
+                <div style={{fontSize:11,color:'#2a4a62',letterSpacing:'1px',marginBottom:6}}>INTELLIGENCE PRO · MONTHLY</div>
+                <div style={{display:'flex',alignItems:'baseline',justifyContent:'center',gap:4}}>
+                  <span style={{fontSize:44,fontWeight:900,color:'#00d4aa',fontFamily:'monospace',letterSpacing:'-2px',textShadow:'0 0 30px #00d4aa50'}}>$22</span>
+                  <span style={{fontSize:14,color:'#2a4a62',fontWeight:600}}>/month</span>
+                </div>
+                <div style={{fontSize:11,color:'#00d4aa',marginTop:4,opacity:.7}}>Cancel anytime · 7-day free trial</div>
+              </div>
+
+              {/* Free tier reminder */}
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:20,fontSize:11,color:'#1a3040',justifyContent:'center'}}>
+                <span style={{color:'#00ff88'}}>✓</span> Lock-Up Assassin &amp; Lie Detector remain free forever
+              </div>
+
+              {/* CTA */}
+              <a href="/api/stripe/subscription/checkout?product=intelligence&price=pro"
+                style={{display:'block',textAlign:'center',background:'linear-gradient(135deg,#00d4aa,#1e90ff)',color:'#030a10',padding:'15px',borderRadius:9,fontSize:14,fontWeight:900,textDecoration:'none',letterSpacing:'-.2px',boxShadow:'0 0 40px rgba(0,212,170,.3)',marginBottom:10}}>
+                Start 7-Day Free Trial →
+              </a>
+              <button onClick={()=>setPaywallOpen(false)}
+                style={{display:'block',width:'100%',background:'transparent',border:'none',color:'#1a3040',fontSize:12,cursor:'pointer',fontFamily:'inherit',padding:'6px'}}>
+                Maybe later — stay with free weapons
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cosmic canvas (selection) / Weapon canvas (active) */}
       {phase==='select' ? <CosmicCanvas/> : (active&&<WeaponCanvas moduleId={active.id} clr={active.clr}/>)}
