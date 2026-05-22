@@ -540,6 +540,616 @@ export const SEED_COURSES = [
         content: { instructions: 'Open the Trade tab. Select any liquid instrument on the 15-minute chart and establish HTF bias. Then zoom to the 5-minute chart. Run the checklist: (1) Is there a swing low? (2) Is there a swing high? (3) Did price create a lower low? (4) Was it a sweep (immediate snap-back)? If all four: identify the FVG and set a limit entry at its midpoint with stop below the sweep wick. Journal your HTF bias and why you think all four conditions are met.', symbol: 'NQ', tab: 'trade' } },
     ],
   },
+
+  // ── FOUNDER COURSES ───────────────────────────────────────────────────────
+
+  {
+    id: 'f1',
+    slug: 'neil-gilani-ema-cloud-fvg-continuation',
+    title: 'EMA Cloud + FVG Continuation: The Setup That Keeps Paying',
+    description: 'The 20/50 EMA cloud defines trend. Fair Value Gaps define entry. When they align, you have one of the cleanest continuation setups in trading. Neil built this into his personal playbook — now it\'s yours.',
+    trader_name: 'Neil Gilani',
+    trader_handle: '@NeilGilani_YN',
+    trader_avatar_color: '#00d4aa',
+    trader_bio: 'Co-Founder & CEO of YN Finance. Built the entire platform from scratch — AI pipeline, real-time data infrastructure, and the trading systems behind it. Trades the EMA Cloud + FVG setup daily on NASDAQ futures.',
+    strategy_type: 'Smart Money Concepts',
+    difficulty: 'Intermediate',
+    price_cents: 499,
+    is_free: false,
+    thumbnail_color: '#00d4aa',
+    rating: 4.9,
+    enrollment_count: 1840,
+    tags: ['ema-cloud', 'fvg', 'fair-value-gap', 'continuation', 'trend-trading', 'nasdaq'],
+    sections: [
+      {
+        order_index: 0,
+        title: 'The 20 and 50 EMA: More Than Just Lines',
+        type: 'text',
+        is_free_preview: true,
+        duration_mins: 7,
+        content: { text: `# The 20 and 50 EMA: Why These Two Numbers
+
+Most traders slap EMAs on a chart without understanding what they actually represent. Here's the real picture.
+
+## What an EMA Actually Is
+The Exponential Moving Average weights recent prices more heavily than older prices. The 20 EMA responds quickly — it reflects roughly the last month of trading sessions. The 50 EMA moves slower — it reflects about two months. Together they create a *zone* between them, not just two lines.
+
+## The Cloud Between Them
+When the 20 EMA is above the 50 EMA, the space between them is your **bullish cloud**. Price above the cloud = trend up. Price inside the cloud = transition / retest zone. Price below the cloud = trend down (or retest from below in a bearish continuation).
+
+## Why the Cloud Works as a Retest Zone
+Institutional algorithms are programmed to buy dips back to moving averages. The 20 and 50 EMAs are the two most watched EMAs by institutions and algos. When price pulls back into the cloud during a bullish trend, you're often seeing:
+- Retail traders panic-selling the dip
+- Institutions quietly accumulating at discounted prices
+
+**This is where we want to be entering — not selling.**
+
+## On What Timeframe?
+Neil uses this setup primarily on the 15-minute and 1-hour charts for NQ (Nasdaq futures) and SPY. It works on any liquid instrument but performs best where volume is consistent and manipulation is lower (large-caps, major indices).` },
+        quiz: [
+          { q: 'What does the "cloud" refer to in the EMA Cloud setup?', options: ['The area above both EMAs where price should trade', 'The zone between the 20 EMA and 50 EMA', 'A volatility band around a single moving average', 'The space below both EMAs in a downtrend'], answer: 1 },
+          { q: 'When the 20 EMA is above the 50 EMA and price pulls back into the cloud, what does this typically represent?', options: ['A trend reversal signal to go short', 'A breakdown that should be sold aggressively', 'Institutions buying the dip at a discounted price', 'A failed breakout that negates the bullish trend'], answer: 2 },
+        ],
+      },
+      {
+        order_index: 1,
+        title: 'Fair Value Gaps: Where Price Wants to Return',
+        type: 'text',
+        is_free_preview: true,
+        duration_mins: 9,
+        content: { text: `# Fair Value Gaps (FVGs): The Setup Within the Setup
+
+A Fair Value Gap is the single most powerful entry tool in Neil's playbook. Here's exactly what it is and why it works.
+
+## What is an FVG?
+An FVG forms when price moves so aggressively in one direction that it skips over prices — leaving a "gap" of unfilled orders between three consecutive candles.
+
+**Bullish FVG:**
+- Candle 1 closes
+- Candle 2 is a strong bullish candle (the impulse)
+- Candle 3 opens above Candle 1's high
+- The gap between Candle 1's HIGH and Candle 3's LOW = the FVG zone
+
+**Why Does Price Return to FVGs?**
+Markets are efficient. When price moves too fast, orders don't get filled. Those unfilled orders sit at those price levels waiting. When price eventually revisits, those orders execute — creating a natural magnet.
+
+## FVGs in the Context of the EMA Cloud
+When price is in a bullish trend (above the EMA cloud) and creates an FVG *inside* the cloud on a pullback, you have two powerful forces aligning:
+1. The EMA cloud supporting price (institutional mean-reversion)
+2. Unfilled orders at the FVG (natural price magnet)
+
+Neil's rule: **An FVG that forms inside the EMA cloud during a pullback is the highest-probability long entry he takes.**
+
+## How to Draw the FVG Zone
+- Mark Candle 1's HIGH
+- Mark Candle 3's LOW
+- That rectangle is your entry zone
+- Enter at the top of the zone for aggressive entry, midpoint for confirmation` },
+        quiz: [
+          { q: 'In a bullish FVG, which price levels define the gap zone?', options: ['Candle 2 open to Candle 2 close', 'Candle 1 high to Candle 3 low', 'Candle 1 low to Candle 3 high', 'Candle 2 high to Candle 3 low'], answer: 1 },
+          { q: 'Why does price tend to "return" to FVG zones?', options: ['Because EMAs force price back to those levels', 'Because unfilled orders sit at those prices, creating a natural magnet', 'Because retail traders always buy there', 'Because the FVG represents a high-volume node'], answer: 1 },
+        ],
+      },
+      {
+        order_index: 2,
+        title: 'The Full Setup: Cloud + FVG Aligned',
+        type: 'text',
+        is_free_preview: false,
+        duration_mins: 12,
+        content: { text: `# The Complete EMA Cloud + FVG Continuation Setup
+
+Here is Neil's full checklist — the setup he runs every single trading day.
+
+## Step 1: Establish Trend on Higher Timeframe (1H or 4H)
+- Is the 20 EMA above the 50 EMA? ✓ Bullish trend
+- Is price above the cloud? ✓ Trend confirmed
+- Has price been making higher highs and higher lows? ✓ Trend intact
+
+**If not all three, do not look for longs.**
+
+## Step 2: Zoom to Entry Timeframe (15M or 5M)
+- Watch for price to pull back INTO the EMA cloud
+- This pullback is natural and expected — you want it
+
+## Step 3: Find the FVG Inside the Cloud
+- As price pulls back, look for a bullish FVG that formed on the way DOWN
+- This FVG will often sit right inside the 20/50 cloud zone
+- The overlapping of these two zones is your target entry area
+
+## Step 4: Entry Parameters
+- **Entry**: Limit order at the midpoint of the FVG (50% of the gap)
+- **Stop**: Below the 50 EMA (if the 50 EMA breaks, trend is compromised)
+- **Target 1**: Previous swing high (50% of position)
+- **Target 2**: Next major resistance / liquidity pool (remaining 50%)
+
+## Step 5: Invalidation Rules
+The trade is invalid if:
+- Price closes a 15M candle BELOW the 50 EMA before entry triggers
+- The FVG gets violated by more than 50% of its range (suggests weakness, not just retest)
+- Higher timeframe structure has broken (lower lows forming on 1H)
+
+## Neil's Personal Risk Rule
+"I never risk more than 0.5% of account on an FVG continuation entry. The setup is high probability but no setup is 100%. Position size respects that."` },
+        quiz: [
+          { q: 'In the EMA Cloud + FVG setup, where is the stop loss placed?', options: ['Below the FVG low', 'Below the 50 EMA', 'Below the 20 EMA', 'At the bottom of the EMA cloud'], answer: 1 },
+          { q: 'What makes this a "continuation" setup rather than a reversal?', options: ['Price is pulling back against an established trend, then re-entering in the trend direction', 'Price has broken trend and is reversing', 'FVGs only form at reversals', 'The setup requires a breakout above resistance'], answer: 0 },
+        ],
+      },
+      {
+        order_index: 3,
+        title: 'Reading the Entry in Real Time',
+        type: 'text',
+        is_free_preview: false,
+        duration_mins: 8,
+        content: { text: `# Executing the Entry in Real Time
+
+Knowing the setup is one thing. Pulling the trigger when price actually hits your level is another. Here's how Neil executes.
+
+## The Mental Checklist at Entry
+When price enters the FVG zone inside the cloud:
+1. **Is the FVG fresh?** (was it formed in the last 1-3 sessions?)
+2. **Is the 20 EMA below price?** (acting as immediate support)
+3. **Is there momentum slowing?** (look for smaller candles as price enters the zone — sellers losing strength)
+4. **Is volume declining on the pullback?** (weak sellers = strong setup)
+
+## The Confirmation Candle (Optional but Preferred)
+If you want confirmation: wait for price to enter the FVG zone and then print a bullish candle (close above its midpoint) on the 5-minute chart before entering. This reduces entries but improves win rate.
+
+Neil's rule: **"I'll take the FVG entry on the first touch if the higher timeframe is clean. I wait for confirmation if it's messy."**
+
+## Managing the Trade
+- Once in, do not touch the stop unless price structure demands it
+- Scale out at Target 1 to reduce emotional pressure
+- Move stop to break-even after Target 1 is hit
+- Let the remainder run to Target 2
+
+## What to Do When the Setup Fails
+Roughly 25-30% of FVG entries will fail (stop-out below 50 EMA). This is normal and expected. The setup's positive expectancy comes from wins being 2-3x the size of losses. Log every trade in the Journal tab.` },
+        quiz: [
+          { q: 'Which volume pattern on the pullback strengthens the FVG continuation entry?', options: ['Volume increasing as price pulls back (sellers getting stronger)', 'Volume declining as price pulls back (sellers losing strength)', 'Volume staying constant throughout the pullback', 'Volume spiking at the FVG zone itself'], answer: 1 },
+          { q: 'After Target 1 is hit, what should you do with your stop loss?', options: ['Leave it at the original stop below the 50 EMA', 'Move it to break-even (your entry price)', 'Tighten it to below the 20 EMA', 'Remove it entirely and let the trade run'], answer: 1 },
+        ],
+      },
+      {
+        order_index: 4,
+        title: 'Practice: Find the Cloud + FVG on NQ',
+        type: 'practice',
+        is_free_preview: false,
+        duration_mins: 25,
+        content: { instructions: 'Open the Trade tab and select NQ (Nasdaq futures). Set the chart to the 15-minute timeframe. Add the 20 EMA and 50 EMA. Identify the current trend direction. If bullish (20 EMA above 50 EMA), scroll back and find the last time price pulled into the cloud zone. Can you spot a bullish FVG that formed inside or near the cloud during that pullback? Mark the zone. Where would your entry, stop, and targets have been? Journal your analysis.', symbol: 'NQ', tab: 'trade' },
+      },
+      {
+        order_index: 5,
+        title: 'Trader Sim: Think Like Neil Gilani',
+        type: 'trader_sim',
+        is_free_preview: false,
+        duration_mins: 15,
+        content: {},
+        questions: [
+          { trader: 'Neil Gilani', context: 'It is 10:15 AM ET. NQ is in a clear bullish trend on the 1-hour chart — 20 EMA well above 50 EMA, series of higher highs and higher lows. On the 15-minute chart, price has pulled back 0.8% into the EMA cloud over the last 6 candles on declining volume. A bullish FVG formed at 18,420-18,450 on the pullback leg. Price is currently trading at 18,435 — right in the middle of the FVG. The 50 EMA on the 15M is at 18,380.', question: 'Walk through whether you take this entry, and if so: exact entry price, stop placement, and your two profit targets. What would invalidate this setup?' },
+          { trader: 'Neil Gilani', context: 'You entered an NQ long at the FVG midpoint at 18,435. Stop is at 18,375 (below the 50 EMA). Price ran to 18,520 (your Target 1) and you scaled out 50% of the position. You moved stop to break-even. Price is now at 18,495 — it has pulled back slightly from Target 1 and the 1-hour chart now shows a small bearish FVG forming at 18,510-18,525.', question: 'How do you manage the remaining 50% position? Do you hold for Target 2, exit here, or make an adjustment based on the new bearish FVG? Walk through your thinking.' },
+        ] as any,
+      },
+    ],
+  },
+
+  {
+    id: 'f2',
+    slug: 'yannai-richter-liquidity-sweeps-futures-forex',
+    title: 'Liquidity Sweeps: Trading the Stop Hunt in Futures & Forex',
+    description: 'Every time your stop gets hit right before price moves the way you expected — that was a liquidity sweep. Yannai teaches you to stop being the victim and start being the predator. Works on ES, NQ, EUR/USD, GBP/USD.',
+    trader_name: 'Yannai Richter',
+    trader_handle: '@YannaiRichter_YN',
+    trader_avatar_color: '#1e90ff',
+    trader_bio: 'Co-Founder & CTO of YN Finance. Co-architected the platform tech stack. Specializes in understanding institutional order flow in futures and forex markets — particularly how liquidity engineering creates high-probability trade setups.',
+    strategy_type: 'Smart Money Concepts',
+    difficulty: 'Intermediate',
+    price_cents: 399,
+    is_free: false,
+    thumbnail_color: '#1e90ff',
+    rating: 4.8,
+    enrollment_count: 1420,
+    tags: ['liquidity-sweep', 'stop-hunt', 'smart-money', 'futures', 'forex', 'bsl', 'ssl'],
+    sections: [
+      {
+        order_index: 0,
+        title: 'What Is Liquidity and Why Do Institutions Need It?',
+        type: 'text',
+        is_free_preview: true,
+        duration_mins: 7,
+        content: { text: `# Why "Liquidity" Is the Most Important Word in Trading
+
+Most retail traders think of liquidity as "can I get filled?" Institutions think of it as the fuel they need to enter and exit massive positions without moving the market against themselves.
+
+## The Problem With Being Big
+If a hedge fund wants to buy 10,000 ES contracts, they can't just market-buy. That order alone would push price up by tens of points before they're filled. They need a pool of sellers on the other side. Where do sellers naturally cluster? **Where retail traders put their stop losses.**
+
+## Where Stop Losses Accumulate
+Retail traders follow the same playbooks:
+- Put stops just below "obvious" swing lows (Buy-Side Liquidity victims)
+- Put stops just above "obvious" swing highs (Sell-Side Liquidity victims)
+- Put stops at round numbers ($4,500, $5,000, $18,000 on NQ)
+- Put stops at previous day highs/lows
+
+These clusters of stop orders are **pools of liquidity**. Institutions know they're there because retail patterns are predictable.
+
+## The Sweep: Engineering a Fill
+To buy 10,000 contracts, an institution needs 10,000 sellers. The most efficient way to manufacture sellers: push price DOWN below a key support level, trigger all the stop losses (which are sell orders — exactly what they need), accumulate at that low price, then reverse aggressively higher.
+
+**The retail trader experienced this as: "My stop got hit perfectly right before it went up."**
+**The institution experienced this as: "We filled our entire position at a discount."**
+
+This is not manipulation — it's market mechanics. And once you see it, you can trade it.` },
+        quiz: [
+          { q: 'Why do large institutions need to "sweep" liquidity before entering positions?', options: ['To trigger stop losses for entertainment', 'They need a pool of sellers/buyers to fill large orders without moving price against themselves', 'To signal to other institutions where they are trading', 'Regulatory rules require them to sweep liquidity first'], answer: 1 },
+          { q: 'Where does Buy-Side Liquidity (BSL) accumulate?', options: ['Below obvious swing lows where retail traders place buy stops', 'Above obvious swing highs where retail traders place stop losses on short positions', 'At round numbers where all traders place orders', 'At the midpoint between the high and low of the day'], answer: 1 },
+        ],
+      },
+      {
+        order_index: 1,
+        title: 'Buy-Side and Sell-Side Liquidity: How to Map Them',
+        type: 'text',
+        is_free_preview: true,
+        duration_mins: 9,
+        content: { text: `# Mapping Liquidity: Where Are the Stop Clusters?
+
+Before you can trade sweeps, you need to identify the pools. Here's Yannai's systematic approach.
+
+## Buy-Side Liquidity (BSL)
+BSL sits ABOVE price. These are stop losses from traders who are SHORT and placed stops above highs.
+
+**Where to mark BSL:**
+- Previous day high (PDH) — the #1 most watched level
+- Equal highs (two or more highs at the same price level)
+- Swing highs on the chart — especially ones that retail would draw as "resistance"
+- Round numbers above current price
+
+**Mark them with a horizontal line.** Price will eventually go grab this liquidity before a major move down (or after a sweep, continue higher).
+
+## Sell-Side Liquidity (SSL)
+SSL sits BELOW price. These are stop losses from traders who are LONG and placed stops below lows.
+
+**Where to mark SSL:**
+- Previous day low (PDL)
+- Equal lows
+- Swing lows that retail would call "support"
+- Round numbers below current price
+
+## The Concept of "Relative Equal Highs/Lows"
+When you see two or more highs or lows at nearly the same price level, that's the most powerful liquidity cluster of all. Retail traders see this as "double top" or "double bottom" — they short/buy there. Institutions see it as a dense pool of stops to harvest.
+
+## Yannai's NQ Mapping Routine
+Every morning before the open on ES/NQ:
+1. Mark PDH and PDL
+2. Mark any equal highs or equal lows from the last 3 sessions
+3. Mark the week's high and low
+4. These become your "liquidity magnets" for the day` },
+        quiz: [
+          { q: 'Where does Sell-Side Liquidity (SSL) accumulate?', options: ['Above price where short sellers place stops', 'Below price where long traders place stop losses', 'At the exact midpoint of the daily range', 'At round number resistance levels above price'], answer: 1 },
+          { q: 'Why are "relative equal highs" considered the most powerful liquidity clusters?', options: ['Because they are the easiest for retail traders to see and place stops above/below', 'Because they always result in breakouts', 'Because equal highs represent institutional accumulation zones', 'Because they only appear on daily charts'], answer: 0 },
+        ],
+      },
+      {
+        order_index: 2,
+        title: 'The Sweep Pattern: Identifying It in Real Time',
+        type: 'text',
+        is_free_preview: false,
+        duration_mins: 11,
+        content: { text: `# The Sweep Pattern: What It Looks Like in Real Time
+
+Now you can map liquidity pools. Here's how to recognize when a sweep is actually happening.
+
+## The Classic Sweep Signature
+A sweep has 4 components in sequence:
+
+1. **Run into the level** — Price approaches the BSL or SSL zone you've marked
+2. **Violation** — Price breaks through the level (stop losses start triggering)
+3. **Immediate Reversal** — Within 1-3 candles on your timeframe, price snaps back the opposite direction
+4. **Displacement** — Price moves aggressively away from the sweep level (institutions are now positioned and running it)
+
+**The key word is IMMEDIATE.** A legitimate sweep reverses quickly. If price breaks above BSL and just keeps grinding higher without reversal, that's a breakout — not a sweep.
+
+## How to Distinguish a Sweep from a Real Breakout
+| Sweep | Breakout |
+|-------|---------|
+| Spikes through level, quick reversal | Clean close above/below level |
+| Volume spike at the sweep wick | Volume builds on consolidation above |
+| Immediate return to origin | Price holds above level and builds |
+| Leaves a long wick (upper or lower) | Candle body closes through level |
+
+## Forex-Specific: The Asia Session Sweep
+The Asia session (7 PM - 2 AM ET) on pairs like EUR/USD and GBP/USD has lower volume. Institutions often use this session to sweep SSL/BSL while liquidity is thin, positioning for the London or New York session move.
+
+**Yannai's Forex Rule:** If the Asia session swept below the previous day's low and reversed, the London session is likely to run higher. Map the Asia sweep zone as your long entry area.
+
+## Futures-Specific: Pre-Market Sweeps on ES/NQ
+Between 4 AM and 9:30 AM ET, ES and NQ futures often sweep overnight levels — particularly the overnight high (ONH) or overnight low (ONL). A pre-market sweep of the ONL followed by reversal = bullish bias for the regular session.` },
+        quiz: [
+          { q: 'What is the KEY characteristic that distinguishes a sweep from a real breakout?', options: ['The size of the candle that breaks the level', 'An immediate reversal within 1-3 candles after violating the level', 'The time of day when the break occurs', 'Whether volume is above average at the break'], answer: 1 },
+          { q: 'In forex markets, Yannai uses the Asia session sweep for what purpose?', options: ['To avoid trading during volatile hours', 'To identify stops being hunted and position for the London/NY session move', 'To find liquidity for large position entries only', 'As a signal that the trend has reversed permanently'], answer: 1 },
+        ],
+      },
+      {
+        order_index: 3,
+        title: 'Trading the Reversal After the Sweep',
+        type: 'text',
+        is_free_preview: false,
+        duration_mins: 10,
+        content: { text: `# Entering After the Sweep: The Full Trade Plan
+
+You've identified a sweep. Now what?
+
+## Entry Mechanics
+**Do not enter at the sweep wick low (or high).** That's still too close to the sweep zone and price may re-test. Instead:
+
+**Method 1: FVG Entry (Yannai's Primary Method)**
+After the sweep reverses, the aggressive displacement move often leaves a Fair Value Gap. Wait for price to retrace back to that FVG after the initial reversal — this gives a cleaner entry with better risk.
+
+**Method 2: Order Block Entry**
+The last bearish candle before the sweep low (in a bullish setup) is often an order block. On a pullback after reversal, price may return to this candle's range. Enter at 50% of that candle.
+
+**Method 3: Break of Structure**
+Wait for price to create a higher high on the 5-minute chart after the sweep. This "Break of Structure" (BoS) confirms the reversal. Enter on the pullback to the BoS level.
+
+## Stop Placement
+Stop goes BELOW the sweep wick by 1-2 ticks (futures) or 3-5 pips (forex). If price returns below the sweep wick, the setup has failed.
+
+## Targets
+- Target 1: The liquidity pool on the OTHER side (swept SSL → target is BSL above)
+- Target 2: The next major swing point in the reversal direction
+
+## Risk:Reward
+Sweep setups often offer 3:1 to 6:1 R:R because your stop is very tight (just outside the sweep wick) and your target is the opposing liquidity pool which can be far away.
+
+## Yannai's Personal Stats on This Setup
+"On NQ and ES, I track roughly a 64% win rate on sweep entries when all three conditions are met: clear liquidity pool, immediate reversal candle, and a confirming FVG on the 5M. The losses are small because the stop is tight. The wins are large because targets are at opposing liquidity."` },
+        quiz: [
+          { q: 'Where does Yannai place his stop loss on a sweep entry?', options: ['Below the 50 EMA on the entry timeframe', 'Just below the sweep wick by 1-2 ticks / 3-5 pips', 'At the midpoint of the sweep range', 'Below the previous day\'s low'], answer: 1 },
+          { q: 'After sweeping Sell-Side Liquidity (below a swing low), what is the primary profit target?', options: ['The same swing low that was swept', 'The Buy-Side Liquidity above price (equal highs, PDH, swing highs)', 'A fixed 20-pip target regardless of structure', 'The 50% retracement of the sweep move'], answer: 1 },
+        ],
+      },
+      {
+        order_index: 4,
+        title: 'Practice: Map Liquidity on EUR/USD and ES',
+        type: 'practice',
+        is_free_preview: false,
+        duration_mins: 25,
+        content: { instructions: 'Open the Trade tab. Select EUR/USD. On the 1-hour chart, mark: (1) previous day high — this is BSL (2) previous day low — this is SSL (3) any equal highs or equal lows from the last 3 sessions. Then zoom to the 15-minute chart. Can you spot any recent wicks that swept one of these levels and immediately reversed? That was a liquidity sweep. Now switch to ES on the 15-minute chart and repeat the exercise. Journal: which liquidity pools look most "ripe" for a sweep in the next session?', symbol: 'ES', tab: 'trade' },
+      },
+      {
+        order_index: 5,
+        title: 'Trader Sim: Think Like Yannai Richter',
+        type: 'trader_sim',
+        is_free_preview: false,
+        duration_mins: 15,
+        content: {},
+        questions: [
+          { trader: 'Yannai Richter', context: 'It is 8:45 AM ET on a Tuesday, before the regular US session. NQ futures have been range-bound overnight between 18,320 and 18,480. The overnight low (ONL) at 18,320 was equal to Monday\'s low — creating "relative equal lows." At 8:30 AM, NQ briefly dropped to 18,295 on an economic data release — violating the ONL by 25 points — then snapped back above 18,340 within 2 candles. A bullish FVG now sits at 18,330-18,345.', question: 'Is this a liquidity sweep setup? If yes, walk through your full trade plan: where do you enter, where is your stop, and what are your targets for the regular session? What would cause you to skip this trade?' },
+          { trader: 'Yannai Richter', context: 'You\'re watching EUR/USD on the 1-hour chart. Yesterday\'s high was 1.0850. There are also equal highs at 1.0848 from two sessions ago — a clear BSL pool. During the London session, EUR/USD spikes to 1.0862 — above both equal highs and the PDH — then reverses sharply, closing back below 1.0850 within the same candle. A bearish displacement follows, creating a bearish FVG at 1.0845-1.0851.', question: 'This looks like a BSL sweep. How do you trade this in the short direction? Walk through entry, stop, and targets. What does the next major SSL pool look like and where would you expect price to reach?' },
+        ] as any,
+      },
+    ],
+  },
+
+  {
+    id: 'f3',
+    slug: 'arjun-bhattula-key-levels-identifying-trading',
+    title: 'Key Levels: How to Identify Them and Build Trades Around Them',
+    description: 'Every great trade starts with a great level. Arjun breaks down the exact framework he uses to identify levels that actually matter — and exactly how to build entries, stops, and targets around them across any market.',
+    trader_name: 'Arjun Bhattula',
+    trader_handle: '@ArjunBhattula_YN',
+    trader_avatar_color: '#a855f7',
+    trader_bio: 'Co-Founder & COO of YN Finance. Leads all partnerships and business operations. Personally recruited 9 world-class trading educators. Specializes in clean technical analysis — particularly in identifying the key levels that separate noise from signal.',
+    strategy_type: 'Swing Trading',
+    difficulty: 'Beginner',
+    price_cents: 299,
+    is_free: false,
+    thumbnail_color: '#a855f7',
+    rating: 4.9,
+    enrollment_count: 2650,
+    tags: ['key-levels', 'support', 'resistance', 'technical-analysis', 'swing-trading', 'price-action'],
+    sections: [
+      {
+        order_index: 0,
+        title: 'What Makes a Level "Key"?',
+        type: 'text',
+        is_free_preview: true,
+        duration_mins: 7,
+        content: { text: `# What Makes a Price Level Actually Matter?
+
+Every trader draws lines on charts. Very few traders draw the RIGHT lines. Here's the difference between a key level and random noise.
+
+## The Three Things That Make a Level Key
+
+**1. Price Memory**
+Price has memory. If a level stopped price before, it will "remember" that level and react to it again. The more times price has reacted at a level, the more market participants have it marked — and the more significant it becomes.
+
+**2. High-Timeframe Origin**
+A level that appears on the daily or weekly chart is known by millions of traders, institutions, and algorithms. A level on a 5-minute chart is known by almost nobody. **Higher timeframe = more significant level.**
+
+**3. Volume**
+Levels where large volume traded are significant because unfilled orders from that session still exist at those prices. When price returns, those orders re-engage — causing the reaction you can trade.
+
+## The Hierarchy of Key Levels (Most to Least Important)
+1. **Weekly High/Low** — The most watched levels globally
+2. **Previous Month High/Low**
+3. **Daily High/Low (Previous Session)**
+4. **Swing Highs and Swing Lows** — Clear turning points on daily chart
+5. **Round Numbers** — $100, $50, $5,000 on indices — psychological magnets
+6. **Gap Fills** — Where price gapped and left unfilled territory
+7. **VWAP** — Intraday for active day traders
+
+## What Is NOT a Key Level
+- A line drawn through the middle of a candle body (arbitrary)
+- Levels on timeframes below 15 minutes for swing trading
+- A level that price has only touched once and never returned to
+- Trend lines drawn subjectively (different traders draw them differently)
+
+**Arjun's Rule: If you can't explain exactly WHY this level matters in one sentence, don't trade it.**` },
+        quiz: [
+          { q: 'Which of these is the MOST significant key level according to the hierarchy?', options: ['A swing high on the 15-minute chart', 'A round number ($5,000 on NQ)', 'The weekly high from the previous week', 'The VWAP from yesterday\'s session'], answer: 2 },
+          { q: 'What is the primary reason "price memory" makes a level significant?', options: ['Technical indicators confirm levels from prior sessions', 'Market participants who traded at that level before will react there again', 'Price always returns to where it started each week', 'Volume is always higher at levels from previous sessions'], answer: 1 },
+        ],
+      },
+      {
+        order_index: 1,
+        title: 'How to Draw Levels That Actually Work',
+        type: 'text',
+        is_free_preview: true,
+        duration_mins: 9,
+        content: { text: `# Drawing Key Levels: The Right Way
+
+Most traders draw too many lines. Here's the discipline behind drawing only the ones that matter.
+
+## Start on the Weekly Chart
+Before opening a daily or intraday chart, mark these on the weekly:
+- Previous week's high (PWH)
+- Previous week's low (PWL)
+- Any obvious swing highs or lows that have caused multiple rejections
+
+These become your "major levels" — the ones price will react to most strongly.
+
+## Move to the Daily Chart
+Add these to your daily:
+- Previous day's high (PDH) and low (PDL)
+- Any swing highs or lows from the last 2-4 weeks that stand out
+- Round numbers within 5% of current price
+
+**Maximum 4-6 lines on your daily chart.** If you have more, you're drawing noise.
+
+## The Body vs. Wick Rule
+When drawing support and resistance:
+- **Use candle BODIES for the zone**, not wicks
+- Wicks represent temporary price exploration where price was rejected
+- The body shows where price accepted to trade
+- Draw your level through the body, and treat the wick area as a "noise zone" around the level
+
+## Zones, Not Lines
+Key levels are not laser-precise. They are ZONES — usually 5-20 points wide on NQ, or 3-8 pips wide on forex. When Arjun marks "support at 18,400 on NQ," he means 18,390-18,415 is the zone. Price entering the zone is not a guaranteed reversal — it's a high-probability area to watch.
+
+## Arjun's Weekly Level-Drawing Routine
+Every Sunday before the week starts:
+1. Open weekly chart, mark PWH and PWL
+2. Open daily chart, add 3-4 key swing levels
+3. Mark any major round numbers near price
+4. Delete any levels price has clearly broken through (they become the new support/resistance)` },
+        quiz: [
+          { q: 'When drawing a support level, should you use candle wicks or candle bodies to define the zone?', options: ['Wicks, because they show the true range of price', 'Bodies, because they show where price accepted to trade (not just temporarily explored)', 'Always the closing price of the candle', 'The midpoint between the wick and the body'], answer: 1 },
+          { q: 'How many lines/levels does Arjun recommend having on a daily chart maximum?', options: ['As many as you can identify — more is better', '10-12 for comprehensive coverage', '4-6 total to avoid drawing noise', '2 — only support and resistance'], answer: 2 },
+        ],
+      },
+      {
+        order_index: 2,
+        title: 'Support Turned Resistance (and Vice Versa)',
+        type: 'text',
+        is_free_preview: false,
+        duration_mins: 10,
+        content: { text: `# The Most Powerful Concept in Key Levels: Role Reversal
+
+Once you understand that levels flip their role when price breaks through them, your chart reading becomes dramatically more precise.
+
+## How Role Reversal Works
+**Support Turned Resistance (S/R Flip):**
+- A level held price up for weeks
+- Price breaks below it with momentum
+- On the first pullback back UP to that level, it now acts as resistance
+- Traders who were long at that level and got trapped will sell their positions when price returns there (glad to get out at breakeven)
+- New short sellers will see a "clean resistance" and short from there
+
+**Resistance Turned Support (R/S Flip):**
+- Same concept in reverse
+- A level that rejected price for weeks
+- Price breaks through with volume
+- On pullback to that level, it now holds as support
+- Breakout traders who entered on the break will defend their positions there
+
+## Why Role Reversals Are High-Probability
+When price returns to a flipped level:
+- Trapped traders from the original level are exiting (adding flow in your direction)
+- New traders are entering at the clean flipped level (adding flow in your direction)
+- Institutional algorithms recognize these levels and participate
+
+## Real Example: NQ 18,000
+NQ spent months bouncing off 18,000 as support. When it finally broke below with volume, the first rally back to 18,000 was a high-probability short — because 18,000 had just flipped from support to resistance. Traders who had been long and were underwater would use the return to 18,000 to exit. Institutional sellers would position for the next leg down.
+
+## How to Trade the Flip
+Entry: On the first or second touch of the flipped level (with confirmation candle)
+Stop: Just above the flipped resistance (or below the flipped support)
+Target: The previous low (for a flipped resistance short) or the previous high (for a flipped support long)
+
+**This setup alone — combined with patience — can be someone's entire strategy.**` },
+        quiz: [
+          { q: 'Why do "trapped traders" contribute to role reversals?', options: ['They panic and move the market away from the level', 'When price returns to where they got trapped, they exit at breakeven, adding pressure in the reversal direction', 'Trapped traders always hold their positions regardless of price', 'They place their stops at round numbers, not at the original level'], answer: 1 },
+          { q: 'When support flips to resistance, where should the stop loss be placed on a short trade?', options: ['Below the flipped level (below where it was old support)', 'Just above the flipped resistance (above the old support level)', 'At the previous day\'s high', 'Below the most recent swing low'], answer: 1 },
+        ],
+      },
+      {
+        order_index: 3,
+        title: 'Building the Full Trade: Entry, Stop, Target',
+        type: 'text',
+        is_free_preview: false,
+        duration_mins: 9,
+        content: { text: `# Building a Complete Trade From a Key Level
+
+Identifying a level is 40% of the work. The other 60% is knowing exactly how to trade it. Here is Arjun's complete framework.
+
+## The 3-Part Level Trade
+**Part 1: Identify the Level**
+Use the hierarchy from earlier. Is it a weekly level? PDH/PDL? S/R flip? The higher up the hierarchy, the more conviction you trade with.
+
+**Part 2: Wait for the Approach**
+Do NOT enter the moment price is near a level. Wait for one of these approach signals:
+- Price approaches on declining volume (sellers/buyers losing steam)
+- A long wick rejects the level on the touch (immediate sign of reaction)
+- A specific candlestick pattern at the level (pin bar, inside bar, engulfing)
+
+"The level is not the entry. The REACTION at the level is the entry." — Arjun
+
+**Part 3: Define the Trade Parameters Before Entry**
+
+Entry: Limit order within the level zone (or market on the confirmation candle)
+Stop: Just beyond the level by a comfortable margin (not so tight it gets picked off by noise)
+  - For a support level: stop 5-10 points below the zone bottom (NQ) or 5-8 pips below (forex)
+  - For resistance: stop above the zone top
+Target: The next key level in the trade direction
+
+## Position Sizing from the Level
+Arjun's personal rule: risk a maximum of 1% of account on any single key level trade. The reason is that even the best levels fail 25-30% of the time. Keeping position size consistent means no single loss damages the account.
+
+## The Patience Factor
+"Most traders would be profitable if they only traded their best 3 setups per week instead of every setup they saw. Key levels force you to be patient — there are only a finite number of truly key levels at any time. That's a feature, not a limitation."
+
+## What Invalidates a Key Level Trade
+- Price consolidates through the level (choppy price action = no clean entry)
+- Volume is extremely low at the level (no one is participating)
+- The higher timeframe trend is strongly against the direction of your trade` },
+        quiz: [
+          { q: 'In Arjun\'s framework, what is the actual "entry" at a key level?', options: ['Entering the moment price touches the level', 'A limit order placed days before price arrives', 'The REACTION at the level — a confirmation signal (wick, candle pattern, volume)', 'Always a market order right at the open'], answer: 2 },
+          { q: 'Arjun limits risk to what percentage of account per key level trade?', options: ['5% — to allow for meaningful position sizes', '0.25% — to be ultra-conservative', '1% — to stay consistent without risking significant capital', '2.5% — the standard professional risk rule'], answer: 2 },
+        ],
+      },
+      {
+        order_index: 4,
+        title: 'Practice: Map and Trade a Key Level This Week',
+        type: 'practice',
+        is_free_preview: false,
+        duration_mins: 30,
+        content: { instructions: 'Open the Trade tab. Select SPY on the Daily chart. Mark: (1) last week\'s high and low (2) any obvious swing highs or lows from the last 3 weeks (3) any round numbers near current price. Now zoom to the 1-hour chart. Is price approaching any of these levels now? If yes, watch it without trading. Note: does price show a reaction (wick, volume spike, engulfing candle) or does it push straight through? Journal your observations. This exercise is about developing the PATIENCE to wait for the level reaction before entering.', symbol: 'SPY', tab: 'trade' },
+      },
+      {
+        order_index: 5,
+        title: 'Trader Sim: Think Like Arjun Bhattula',
+        type: 'trader_sim',
+        is_free_preview: false,
+        duration_mins: 15,
+        content: {},
+        questions: [
+          { trader: 'Arjun Bhattula', context: 'It is Wednesday morning. SPY has been in an uptrend for 3 weeks. Last week\'s high was $512.40. This week, SPY has been rallying and is now at $512.15 — approaching last week\'s high. Volume has been declining over the last 3 sessions as price climbed. The daily RSI is at 72 (overbought). Yesterday\'s candle was an inside bar (smaller range, fully inside the prior candle).', question: 'You\'re approaching a key weekly resistance level. Is this a short setup, a wait-and-see situation, or is there a breakout long case? Walk through your complete decision process using the key level framework. Where would you enter short if taking that trade, where is your stop, and what\'s your target?' },
+          { trader: 'Arjun Bhattula', context: 'NQ futures broke below a key support level at 18,200 two weeks ago on heavy volume. Since then, NQ has been making lower lows, now trading around 17,850. Yesterday, NQ started to rally. Today it is pushing back up toward 18,200 — the level that was support and has now flipped to resistance. The rally has been on declining volume. There is a small bearish FVG at 18,190-18,210.', question: 'Is this an S/R flip trade? Walk through exactly how you would execute this: your entry, stop placement, target, and what level of conviction you have (1-10) and why. What would change your mind and make you step aside?' },
+        ] as any,
+      },
+    ],
+  },
 ]
 
 function getClient() {
