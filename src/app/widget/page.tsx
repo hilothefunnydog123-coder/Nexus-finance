@@ -17,18 +17,67 @@ export default function WidgetPage() {
   const [msgs, setMsgs] = useState<Msg[]>([
     { role: 'ai', text: "What's up — I'm your YN trading assistant. Ask me anything: ticker analysis, key levels, setups, strategy questions, R:R calculations. Voice or type, whatever works.", id: 0 },
   ])
-  const [input, setInput]       = useState('')
-  const [loading, setLoading]   = useState(false)
+  const [input, setInput]         = useState('')
+  const [loading, setLoading]     = useState(false)
   const [listening, setListening] = useState(false)
+  const [speaking, setSpeaking]   = useState(false)
+  const [ttsOn, setTtsOn]         = useState(true)
   const [interimText, setInterim] = useState('')
-  const [counter, setCounter]   = useState(1)
-  const [typingId, setTypingId] = useState<number | null>(null)
+  const [counter, setCounter]     = useState(1)
+  const [typingId, setTypingId]   = useState<number | null>(null)
   const [displayed, setDisplayed] = useState<Record<number, string>>({})
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLInputElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recRef    = useRef<any>(null)
+
+  // ── TTS helpers ──────────────────────────────────────────────────────────
+  const stopSpeech = useCallback(() => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel()
+      setSpeaking(false)
+    }
+  }, [])
+
+  const speak = useCallback((text: string) => {
+    if (!ttsOn || typeof window === 'undefined' || !window.speechSynthesis) return
+    stopSpeech()
+    const utter = new SpeechSynthesisUtterance(text)
+    utter.rate   = 1.05
+    utter.pitch  = 1.0
+    utter.volume = 1.0
+
+    // Pick best available voice — prefer natural US English
+    const pickVoice = () => {
+      const voices = window.speechSynthesis.getVoices()
+      const preferred = [
+        'Google US English', 'Microsoft Aria Online (Natural)', 'Samantha',
+        'Alex', 'Daniel', 'Google UK English Female',
+      ]
+      for (const name of preferred) {
+        const v = voices.find(v => v.name === name)
+        if (v) return v
+      }
+      return voices.find(v => v.lang.startsWith('en')) ?? null
+    }
+
+    const run = () => {
+      const v = pickVoice()
+      if (v) utter.voice = v
+      utter.onstart = () => setSpeaking(true)
+      utter.onend   = () => setSpeaking(false)
+      utter.onerror = () => setSpeaking(false)
+      window.speechSynthesis.speak(utter)
+    }
+
+    // voices may not be loaded yet on first call
+    if (window.speechSynthesis.getVoices().length) {
+      run()
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => { run(); window.speechSynthesis.onvoiceschanged = null }
+    }
+  }, [ttsOn, stopSpeech])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -56,6 +105,7 @@ export default function WidgetPage() {
 
     const uid = counter
     setCounter(p => p + 1)
+    stopSpeech()
     const newMsgs = [...msgs, { role: 'user' as const, text: q, id: uid }]
     setMsgs(newMsgs)
     setLoading(true)
@@ -75,11 +125,9 @@ export default function WidgetPage() {
       const data = await res.json()
       const aid = counter + 1
       setCounter(p => p + 1)
-      setMsgs(p => [...p, {
-        role: 'ai',
-        text: data.reply || (data.error ? `Error: ${data.error}` : 'No response — try again.'),
-        id: aid,
-      }])
+      const reply = data.reply || (data.error ? `Error: ${data.error}` : 'No response — try again.')
+      setMsgs(p => [...p, { role: 'ai', text: reply, id: aid }])
+      speak(reply)
     } catch (err: unknown) {
       const aid = counter + 1
       setCounter(p => p + 1)
@@ -92,7 +140,7 @@ export default function WidgetPage() {
       setLoading(false)
       setTimeout(() => inputRef.current?.focus(), 80)
     }
-  }, [loading, msgs, counter])
+  }, [loading, msgs, counter, speak, stopSpeech])
 
   const toggleVoice = useCallback(() => {
     if (listening) { recRef.current?.stop(); return }
@@ -139,6 +187,30 @@ export default function WidgetPage() {
           <div style={{ fontSize: 12, fontWeight: 800, color: '#dce8f0', letterSpacing: '-.2px', lineHeight: 1.1 }}>YN AI Assistant</div>
           <div style={{ fontSize: 9, color: '#00d4aa', letterSpacing: '.5px', opacity: .7 }}>TRADING INTELLIGENCE · GEMINI 2.0</div>
         </div>
+        {/* Speaking indicator */}
+        {speaking && (
+          <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 14, marginRight: 2 }}>
+            {[6, 10, 14, 10, 6].map((h, i) => (
+              <div key={i} style={{ width: 2, height: h, background: '#00d4aa', borderRadius: 2, animation: `wave 0.8s ease-in-out ${i * .09}s infinite` }}/>
+            ))}
+          </div>
+        )}
+
+        {/* TTS toggle */}
+        <button onClick={() => { setTtsOn(p => !p); stopSpeech() }}
+          title={ttsOn ? 'Mute voice' : 'Enable voice'}
+          style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${ttsOn ? 'rgba(0,212,170,.3)' : 'rgba(255,255,255,.08)'}`, background: ttsOn ? 'rgba(0,212,170,.1)' : 'rgba(255,255,255,.03)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .2s', flexShrink: 0 }}>
+          {ttsOn ? (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00d4aa" strokeWidth="2" strokeLinecap="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+          ) : (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4a6a78" strokeWidth="2" strokeLinecap="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          )}
+        </button>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#00d4aa', fontFamily: 'monospace' }}>
           <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#00d4aa', display: 'inline-block', animation: 'pulse-g 2s infinite' }}/>
           LIVE
