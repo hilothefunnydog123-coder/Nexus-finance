@@ -154,9 +154,24 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
             <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: -1, color: '#e8e8f0' }}>Trade Analyzer</h1>
             <span style={{ fontFamily: "'SF Mono','Fira Code',ui-monospace,monospace", fontSize: '0.7rem', color: '#00ff88', border: '1px solid #00ff88', padding: '2px 8px', borderRadius: 2, letterSpacing: 2 }}>AI POWERED</span>
           </div>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#555570', textDecoration: 'none' }}>
-            <Home size={14} /> Home
-          </Link>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <button
+              onClick={() => {
+                const w = 390, h = 620
+                const left = window.screen.width - w - 24
+                const top  = Math.max(0, window.screen.height - h - 60)
+                window.open('/widget','yn-ai-widget',`width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=no,resizable=yes,location=no,status=no`)
+              }}
+              style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 18px', background:'linear-gradient(135deg,#00d4aa,#1e90ff)', border:'none', borderRadius:8, cursor:'pointer', color:'#030a10', fontFamily:'inherit', fontSize:13, fontWeight:900, letterSpacing:'-.2px', boxShadow:'0 0 28px rgba(0,212,170,.35)', transition:'all .2s' }}
+              onMouseEnter={e=>(e.currentTarget.style.boxShadow='0 0 40px rgba(0,212,170,.55)')}
+              onMouseLeave={e=>(e.currentTarget.style.boxShadow='0 0 28px rgba(0,212,170,.35)')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 12a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              Open AI Widget
+            </button>
+            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#555570', textDecoration: 'none' }}>
+              <Home size={14} /> Home
+            </Link>
+          </div>
         </div>
 
         {/* Form */}

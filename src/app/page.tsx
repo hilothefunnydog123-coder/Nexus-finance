@@ -897,6 +897,142 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* ══ AI WIDGET PROMO ═════════════════════════════════════════════════════ */}
+      <section style={{ padding:'100px 0', position:'relative', zIndex:1, overflow:'hidden', background:'linear-gradient(180deg,#030a10,#020810,#030a10)' }}>
+        {/* Ambient */}
+        <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:900, height:900, borderRadius:'50%', background:'radial-gradient(circle,rgba(0,212,170,.04),transparent 70%)', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(0,212,170,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,170,.018) 1px,transparent 1px)', backgroundSize:'52px 52px', pointerEvents:'none' }}/>
+
+        <div className="section" style={{ position:'relative', display:'grid', gridTemplateColumns:'1fr 1fr', gap:72, alignItems:'center' }} >
+
+          {/* LEFT — copy */}
+          <div>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(0,212,170,.08)', border:'1px solid rgba(0,212,170,.22)', borderRadius:20, padding:'6px 16px', marginBottom:22, fontSize:10, color:'#00d4aa', fontWeight:700, letterSpacing:'1.5px' }}>
+              <span style={{ width:5, height:5, borderRadius:'50%', background:'#00d4aa', display:'inline-block', animation:'pulse-dot 1.4s infinite' }}/>
+              ALL NEW · AI TRADING WIDGET
+            </div>
+            <h2 style={{ fontSize:'clamp(30px,4.5vw,54px)', fontWeight:900, letterSpacing:'-2.5px', lineHeight:1.05, marginBottom:18 }}>
+              Your AI co-pilot.<br/>
+              <span style={{ background:'linear-gradient(135deg,#00d4aa,#1e90ff)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Floating.</span>{' '}
+              <span style={{ background:'linear-gradient(135deg,#a855f7,#ec4899)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Always on.</span>
+            </h2>
+            <p style={{ fontSize:16, color:'#3a5a6a', lineHeight:1.75, marginBottom:32, maxWidth:440 }}>
+              Open the AI Widget alongside your charts. Ask anything — live levels, setup analysis, R:R calculations, strategy questions. Voice or type. It remembers the conversation. No tab-switching, no losing context.
+            </p>
+
+            {/* Feature chips */}
+            <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:36 }}>
+              {[
+                { icon:'🎙', title:'Voice-Activated', desc:'Ask out loud — it transcribes and answers in seconds' },
+                { icon:'💬', title:'Conversational Memory', desc:'Remembers what you asked 3 questions ago — full context' },
+                { icon:'🖥', title:'Floats Next to Your Charts', desc:'Opens as a native popup — drag it anywhere on screen' },
+                { icon:'⚡', title:'Real-Time Trading Intelligence', desc:'Powered by Gemini 2.0 with a trading-specialist system prompt' },
+              ].map(f => (
+                <div key={f.title} style={{ display:'flex', gap:12, alignItems:'flex-start' }}>
+                  <span style={{ fontSize:18, flexShrink:0, marginTop:1 }}>{f.icon}</span>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#dce8f0', marginBottom:1 }}>{f.title}</div>
+                    <div style={{ fontSize:12, color:'#2a4050' }}>{f.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                const w = 390, h = 620
+                const left = window.screen.width - w - 24
+                const top  = Math.max(0, window.screen.height - h - 60)
+                window.open('/widget','yn-ai-widget',`width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=no,resizable=yes,location=no,status=no`)
+              }}
+              style={{ display:'inline-flex', alignItems:'center', gap:10, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', border:'none', color:'#030a10', padding:'16px 36px', borderRadius:12, fontSize:15, fontWeight:900, cursor:'pointer', fontFamily:'inherit', letterSpacing:'-.2px', boxShadow:'0 0 50px rgba(0,212,170,.3),0 16px 40px rgba(0,0,0,.4)', transition:'all .3s' }}
+              onMouseEnter={e=>(e.currentTarget.style.boxShadow='0 0 70px rgba(0,212,170,.45),0 20px 50px rgba(0,0,0,.5)')}
+              onMouseLeave={e=>(e.currentTarget.style.boxShadow='0 0 50px rgba(0,212,170,.3),0 16px 40px rgba(0,0,0,.4)')}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 12a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              Launch AI Widget →
+            </button>
+          </div>
+
+          {/* RIGHT — widget mockup */}
+          <div style={{ position:'relative', display:'flex', justifyContent:'center' }}>
+            {/* Glow behind widget */}
+            <div style={{ position:'absolute', width:320, height:400, borderRadius:'50%', background:'radial-gradient(circle,rgba(0,212,170,.12),transparent 70%)', top:'50%', left:'50%', transform:'translate(-50%,-50%)', pointerEvents:'none' }}/>
+
+            {/* Widget mock window */}
+            <div style={{ width:340, background:'rgba(3,10,16,.98)', border:'1px solid rgba(0,212,170,.22)', borderRadius:14, overflow:'hidden', boxShadow:'0 40px 100px rgba(0,0,0,.6),0 0 60px rgba(0,212,170,.1)', position:'relative', zIndex:1 }}>
+              {/* Title bar */}
+              <div style={{ height:44, background:'rgba(4,12,20,.98)', borderBottom:'1px solid #0d2030', display:'flex', alignItems:'center', padding:'0 14px', gap:8 }}>
+                <div style={{ display:'flex', gap:5 }}>{['#ff5f57','#febc2e','#28c840'].map(c=><div key={c} style={{ width:8, height:8, borderRadius:'50%', background:c }}/>)}</div>
+                <div style={{ flex:1, fontSize:11, fontWeight:700, color:'#dce8f0', letterSpacing:'-.2px' }}>YN AI Assistant</div>
+                <div style={{ display:'flex', alignItems:'center', gap:4, fontSize:8, color:'#00d4aa', fontFamily:'monospace' }}>
+                  <span style={{ width:4, height:4, borderRadius:'50%', background:'#00d4aa', display:'inline-block', animation:'pulse-dot 1.5s infinite' }}/>LIVE
+                </div>
+              </div>
+
+              {/* Mock messages */}
+              <div style={{ padding:'14px 12px', display:'flex', flexDirection:'column', gap:10 }}>
+                {/* AI greeting */}
+                <div style={{ display:'flex', gap:6 }}>
+                  <div style={{ width:20, height:20, borderRadius:5, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:900, color:'#030a10' }}>YN</div>
+                  <div style={{ fontSize:11, color:'#8aaabb', background:'rgba(13,30,44,.9)', border:'1px solid rgba(255,255,255,.05)', borderRadius:'8px 8px 8px 2px', padding:'8px 10px', maxWidth:220, lineHeight:1.6 }}>
+                    What&apos;s up — ask me anything about markets, setups, levels.
+                  </div>
+                </div>
+
+                {/* User message */}
+                <div style={{ display:'flex', flexDirection:'row-reverse', gap:6 }}>
+                  <div style={{ fontSize:11, color:'#030a10', background:'linear-gradient(135deg,#00d4aa,#1e90ff)', borderRadius:'8px 8px 2px 8px', padding:'8px 10px', maxWidth:200, fontWeight:600, lineHeight:1.6 }}>
+                    Is NQ setting up for a breakout above 19,500?
+                  </div>
+                </div>
+
+                {/* AI response */}
+                <div style={{ display:'flex', gap:6 }}>
+                  <div style={{ width:20, height:20, borderRadius:5, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:900, color:'#030a10' }}>YN</div>
+                  <div style={{ fontSize:11, color:'#8aaabb', background:'rgba(13,30,44,.9)', border:'1px solid rgba(255,255,255,.05)', borderRadius:'8px 8px 8px 2px', padding:'8px 10px', maxWidth:240, lineHeight:1.6 }}>
+                    NQ&apos;s been compressing under 19,500 for three sessions — that&apos;s a classic coil. Watch for a volume spike above with a clean close on the 15M...
+                  </div>
+                </div>
+
+                {/* User voice message */}
+                <div style={{ display:'flex', flexDirection:'row-reverse', gap:6, alignItems:'center' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'#030a10', background:'linear-gradient(135deg,#a855f7,#1e90ff)', borderRadius:'8px 8px 2px 8px', padding:'8px 10px', fontWeight:600 }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 12a7 7 0 0 0 14 0"/></svg>
+                    What&apos;s the R:R if I enter at 19,480?
+                  </div>
+                </div>
+
+                {/* Typing dots */}
+                <div style={{ display:'flex', gap:6 }}>
+                  <div style={{ width:20, height:20, borderRadius:5, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:900, color:'#030a10' }}>YN</div>
+                  <div style={{ background:'rgba(13,30,44,.9)', border:'1px solid rgba(255,255,255,.05)', borderRadius:'8px 8px 8px 2px', padding:'10px 12px', display:'flex', gap:3, alignItems:'center' }}>
+                    {[0,1,2].map(i => <span key={i} style={{ width:4, height:4, borderRadius:'50%', background:'#00d4aa', display:'inline-block', animation:`dot 1.4s ease-in-out ${i*.16}s infinite` }}/>)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Input bar mock */}
+              <div style={{ padding:'10px 12px', borderTop:'1px solid #0d2030', background:'rgba(4,12,20,.98)', display:'flex', gap:7, alignItems:'center' }}>
+                <div style={{ width:30, height:30, borderRadius:8, background:'rgba(0,212,170,.1)', border:'1px solid rgba(0,212,170,.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00d4aa" strokeWidth="2.5" strokeLinecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 12a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                </div>
+                <div style={{ flex:1, height:30, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.07)', borderRadius:8, padding:'0 10px', display:'flex', alignItems:'center' }}>
+                  <span style={{ fontSize:10, color:'#1a3050' }}>Ask about any trade, ticker, or setup...</span>
+                </div>
+                <div style={{ width:30, height:30, borderRadius:8, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#030a10" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Floating label */}
+            <div style={{ position:'absolute', top:-16, right:20, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#030a10', fontSize:10, fontWeight:900, padding:'4px 12px', borderRadius:20, letterSpacing:'.5px', zIndex:2 }}>
+              DRAG ANYWHERE
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ══ INTELLIGENCE SUITE — CINEMATIC ═══════════════════════════════════════ */}
       <section style={{ position:'relative', zIndex:1, overflow:'hidden', background:'#000' }}>
         {/* Grid + multi-glow bg */}
