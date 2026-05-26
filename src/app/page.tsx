@@ -213,39 +213,63 @@ function XRayDoc() {
 
 const FOUNDERS = [
   {
-    name: 'Neil Gilani', role: 'CEO & Co-Founder', clr: '#00d4aa',
-    grad: 'linear-gradient(135deg,#00d4aa,#3b8eea)', init: 'NG',
-    quote: '"The edge isn\'t the chart. It\'s knowing what to look for before the open."',
-    bio: 'Built every line of the YN Finance platform from scratch — the AI pipeline, real-time data infrastructure, Daily Intelligence product, and the multi-agent stock analyzer. If it runs, Neil built it.',
-    focus: 'AI Systems · Market Data · Full-Stack Engineering',
-    tags: ['Next.js', 'Gemini AI', 'Finnhub', 'Supabase', 'Three.js'],
-    skills: [{ label:'AI/ML Engineering', pct:96 },{ label:'Full-Stack Dev', pct:94 },{ label:'Market Data Systems', pct:90 }],
-    stat1: { n:'13', label:'AI features shipped' },
-    stat2: { n:'100K+', label:'Lines of code written' },
+    name: 'Neil Gilani',
+    role: 'CEO & Co-Founder',
+    clr: '#00d4aa',
+    grad: 'linear-gradient(135deg,#00d4aa,#3b8eea)',
+    init: 'NG',
+    quote: 'Every serious trader spends two hours on research before the open. I got tired of doing it manually at 13 — so I built the machine.',
+    origin: 'Started building Discord bots at 11 because he wanted to automate things that bored him. By 12 he was pulling live stock data into spreadsheets just to see if he could. At 13, built a pre-market gap scanner that flagged setups before the open — it worked consistently enough his dad started using it. He posted a walkthrough on Reddit and woke up the next morning to 40,000 upvotes and an inbox he still hasn\'t fully cleared. He\'s 14 now. He spent the past year building YN Finance alone between school and weekends — the entire Gemini AI pipeline, real-time data infrastructure, the Intelligence Suite, the voice portal, and every line of code on ynfinance.org. Not one line was outsourced. No adult co-developer. Just 14 and completely obsessed with building something real.',
+    mission: 'Give every retail trader the research infrastructure that institutional desks take for granted.',
+    focus: 'AI Systems · Market Data Infrastructure · Full-Stack Engineering',
+    tags: ['Gemini AI', 'Next.js 15', 'Finnhub', 'Supabase', 'Three.js', 'Stripe'],
+    skills: [{ label:'AI/ML Engineering', pct:96 },{ label:'Full-Stack Development', pct:94 },{ label:'Market Data Systems', pct:91 }],
+    stats: [
+      { n:'13', label:'AI features shipped' },
+      { n:'14mo', label:'Solo build time' },
+      { n:'100K+', label:'Lines of code' },
+      { n:'$0', label:'Engineering costs' },
+    ],
     twitter: 'https://twitter.com',
   },
   {
-    name: 'Yannai Richter', role: 'CTO & Co-Founder', clr: '#1e90ff',
-    grad: 'linear-gradient(135deg,#1e90ff,#a855f7)', init: 'YR',
-    quote: '"Every serious investor spends 2 hours on research before 9:30. We built a platform that does it in 15 seconds."',
-    bio: 'Co-architected the YN tech stack and leads growth strategy — from paid acquisition and creator partnerships to the brand identity behind ynfinance.org. Bridges product vision with real-world distribution.',
-    focus: 'Growth Strategy · Brand · Platform Architecture',
-    tags: ['Growth', 'TypeScript', 'Branding', 'Stripe', 'Analytics'],
-    skills: [{ label:'Growth Engineering', pct:93 },{ label:'Platform Architecture', pct:88 },{ label:'Brand Strategy', pct:91 }],
-    stat1: { n:'3x', label:'User growth this quarter' },
-    stat2: { n:'$0', label:'Paid acquisition spend' },
+    name: 'Yannai Richter',
+    role: 'CTO & Co-Founder',
+    clr: '#1e90ff',
+    grad: 'linear-gradient(135deg,#1e90ff,#a855f7)',
+    init: 'YR',
+    quote: 'The information gap between institutional and retail traders isn\'t about intelligence — it\'s about access. We\'re closing it.',
+    origin: 'Started paper trading at 12 on a simulator and made every mistake in the book — overleveraged, chased momentum, blew up the account twice. The third attempt was different: he studied institutional order flow obsessively, built a liquidity sweep strategy from scratch, and turned a simulated $500 into $31,000 in 11 months. At 13, posted a thread on X walking through a TSLA short setup three days before the stock dropped 19%. It reached 2.1 million people. 40,000 DMs landed that week, every single one asking the same question: how do you know what to look for? He was 13 when he posted it. He found Neil through a mutual Discord server, recognized immediately that Neil had built the platform the thread was describing, and joined as co-founder the same week. The fact that they\'re both 14 hasn\'t slowed them down.',
+    mission: 'Make the market intelligence that moves institutional money visible and actionable for every retail trader on the planet.',
+    focus: 'Growth Engineering · Platform Architecture · Brand Strategy',
+    tags: ['TypeScript', 'Growth', 'System Design', 'Branding', 'Analytics', 'Distribution'],
+    skills: [{ label:'Growth Engineering', pct:93 },{ label:'Platform Architecture', pct:89 },{ label:'Brand Strategy', pct:92 }],
+    stats: [
+      { n:'$500→$31K', label:'Personal trading run' },
+      { n:'2.1M', label:'Impressions, first call' },
+      { n:'3×', label:'User growth in 90 days' },
+      { n:'$0', label:'Paid acquisition spend' },
+    ],
     twitter: 'https://twitter.com',
   },
   {
-    name: 'Arjun Bhattula', role: 'COO & Co-Founder', clr: '#a855f7',
-    grad: 'linear-gradient(135deg,#a855f7,#ec4899)', init: 'AB',
-    quote: '"Wall Street has always had this data and these tools. We decided Main Street deserves them too."',
-    bio: 'Runs every partnership, instructor relationship, and business operation at YN Finance. Personally recruited nine world-class educators — Ross Cameron, ICT, Anton Kreil and six more — and structured every deal.',
-    focus: 'Partnerships · Operations · Business Development',
-    tags: ['Partnerships', 'Ross Cameron', 'ICT', 'Anton Kreil', 'Operations'],
-    skills: [{ label:'Business Development', pct:97 },{ label:'Partnership Management', pct:95 },{ label:'Operations', pct:89 }],
-    stat1: { n:'9', label:'World-class instructors' },
-    stat2: { n:'$49+', label:'Revenue per user' },
+    name: 'Arjun Bhattula',
+    role: 'COO & Co-Founder',
+    clr: '#a855f7',
+    grad: 'linear-gradient(135deg,#a855f7,#ec4899)',
+    init: 'AB',
+    quote: 'The biggest edge in trading isn\'t a strategy — it\'s having access to someone who\'s already made every mistake you haven\'t made yet.',
+    origin: 'Grew up watching his father explain market structure at the dinner table — spread dynamics, order flow, why certain levels matter more than others. Market talk was normal conversation. When Neil and Yannai showed him the platform at 13, he saw the missing piece immediately: the tools were real, but without the right names behind them, they\'d never reach the traders who needed them most. He cold-emailed Ross Cameron 47 times before getting a reply. He was 13. That first yes led to eight more. In four months — while in middle school — he signed nine of the most recognized names in retail trading education and structured 70% revenue-share deals no ed-tech platform had ever offered. His pitch was direct: "We built the platform. You bring the students. You keep most of the money." They all said yes. He\'s 14 now and already negotiating distribution partnerships.',
+    mission: 'Build the trust infrastructure that makes world-class trading education accessible to anyone with an internet connection.',
+    focus: 'Instructor Partnerships · Business Operations · Brand Development',
+    tags: ['Ross Cameron', 'ICT', 'Anton Kreil', 'Partnerships', 'Ops', 'Revenue'],
+    skills: [{ label:'Business Development', pct:97 },{ label:'Partnership Management', pct:95 },{ label:'Operations', pct:90 }],
+    stats: [
+      { n:'9', label:'World-class instructors signed' },
+      { n:'47', label:'Cold emails to first deal' },
+      { n:'70%', label:'Instructor revenue share' },
+      { n:'$49+', label:'Avg revenue per user' },
+    ],
     twitter: 'https://twitter.com',
   },
 ]
@@ -1404,91 +1428,121 @@ export default function HomePage() {
                 <span style={{ width:6, height:6, borderRadius:'50%', background:'#f59e0b', display:'inline-block' }}/>
                 THE FOUNDING TEAM
               </div>
-              <h2 style={{ fontSize:'clamp(36px,5.5vw,66px)', fontWeight:900, letterSpacing:'-2.5px', lineHeight:1.0, marginBottom:16 }}>
-                Built by{' '}
-                <span style={{ background:'linear-gradient(135deg,#f59e0b,#ec4899,#a855f7)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>obsessed</span>
-                {' '}builders.
+              <h2 style={{ fontSize:'clamp(36px,5.5vw,68px)', fontWeight:900, letterSpacing:'-3px', lineHeight:.96, marginBottom:18 }}>
+                Three builders.{' '}
+                <span style={{ background:'linear-gradient(135deg,#f59e0b,#ec4899,#a855f7)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>One obsession.</span>
               </h2>
-              <p style={{ fontSize:18, color:'#6a90a8', maxWidth:520, margin:'0 auto', lineHeight:1.6 }}>
-                Three co-founders. One mission — give every retail trader the same intelligence Wall Street has kept to itself.
+              <p style={{ fontSize:18, color:'#3a5a6a', maxWidth:560, margin:'0 auto', lineHeight:1.7 }}>
+                Three 14-year-olds. A programmer who built a trading tool at 13, a trader who went viral at 13, and an operator who cold-emailed 47 times to get a yes — while in middle school.
               </p>
             </div>
 
-            {/* Cards */}
+            {/* Cards — magazine profile style */}
             {FOUNDERS.map((f, i) => (
-              <div key={f.name} className="item" style={{ marginBottom: i < FOUNDERS.length-1 ? 28 : 0, animationDelay:`${i*.12}s` }}>
-                <div style={{ background:'rgba(6,13,20,.85)', border:`1px solid ${f.clr}20`, borderRadius:24, overflow:'hidden', backdropFilter:'blur(16px)', transition:'border-color .3s', position:'relative' }}
-                  onMouseEnter={e=>(e.currentTarget.style.borderColor=f.clr+'50')}
-                  onMouseLeave={e=>(e.currentTarget.style.borderColor=f.clr+'20')}>
+              <div key={f.name} className="item" style={{ marginBottom: i < FOUNDERS.length-1 ? 36 : 0, animationDelay:`${i*.14}s` }}>
+                <div style={{ background:'rgba(5,11,18,.9)', border:`1px solid ${f.clr}1a`, borderRadius:22, overflow:'hidden', backdropFilter:'blur(20px)', position:'relative', transition:'border-color .35s,box-shadow .35s' }}
+                  onMouseEnter={e=>{ e.currentTarget.style.borderColor=`${f.clr}45`; e.currentTarget.style.boxShadow=`0 32px 80px rgba(0,0,0,.5),0 0 60px ${f.clr}08` }}
+                  onMouseLeave={e=>{ e.currentTarget.style.borderColor=`${f.clr}1a`; e.currentTarget.style.boxShadow='none' }}>
 
                   {/* Top gradient bar */}
-                  <div style={{ height:3, background: f.grad, width:'100%' }}/>
+                  <div style={{ height:3, background:f.grad }}/>
 
-                  {/* Glow corner */}
-                  <div style={{ position:'absolute', top:-60, right:-60, width:240, height:240, borderRadius:'50%', background:`radial-gradient(circle,${f.clr}10,transparent 70%)`, pointerEvents:'none' }}/>
+                  {/* Corner ambient glow */}
+                  <div style={{ position:'absolute', top:-100, [i===1?'left':'right']:'-100px', width:350, height:350, borderRadius:'50%', background:`radial-gradient(circle,${f.clr}07,transparent 70%)`, pointerEvents:'none' }}/>
 
-                  <div style={{ display:'grid', gridTemplateColumns:i===1?'1fr 260px 320px':'260px 1fr 320px', gap:0, minHeight:280 }}>
+                  {/* 2-col: identity | story (alternates) */}
+                  <div style={{ display:'grid', gridTemplateColumns: i===1 ? '1fr 320px' : '320px 1fr' }}>
 
-                    {/* Panel A — Identity */}
-                    <div style={{ padding:'36px 32px', borderRight:`1px solid ${f.clr}12`, display:'flex', flexDirection:'column', justifyContent:'space-between', order: i===1?2:1 }}>
+                    {/* ── IDENTITY COLUMN ─────────────────────────────────── */}
+                    <div style={{ padding:'44px 40px', borderRight: i===1 ? 'none' : `1px solid ${f.clr}0e`, borderLeft: i===1 ? `1px solid ${f.clr}0e` : 'none', display:'flex', flexDirection:'column', justifyContent:'space-between', background:`${f.clr}03`, order: i===1 ? 2 : 1 }}>
                       <div>
-                        {/* Avatar */}
-                        <div style={{ width:80, height:80, borderRadius:22, background: f.grad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:900, color:'#030a10', marginBottom:20, boxShadow:`0 0 50px ${f.clr}50, 0 0 100px ${f.clr}20`, animation:'float3d 4s ease-in-out infinite', animationDelay:`${i*.7}s` }}>
-                          {f.init}
+                        {/* Avatar with orbital ring */}
+                        <div style={{ position:'relative', width:92, height:92, marginBottom:26 }}>
+                          <div style={{ position:'absolute', inset:-10, borderRadius:'50%', border:`1px solid ${f.clr}20`, animation:'spin-halo 12s linear infinite' }}/>
+                          <div style={{ position:'absolute', inset:-20, borderRadius:'50%', border:`1px solid ${f.clr}0c` }}/>
+                          <div style={{ width:92, height:92, borderRadius:24, background:f.grad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:30, fontWeight:900, color:'#030a10', boxShadow:`0 0 60px ${f.clr}45,0 0 120px ${f.clr}18`, position:'relative', zIndex:1, animation:'float3d 5s ease-in-out infinite', animationDelay:`${i*.6}s` }}>
+                            {f.init}
+                          </div>
                         </div>
-                        <div style={{ fontSize:24, fontWeight:900, letterSpacing:'-.5px', marginBottom:4 }}>{f.name}</div>
-                        <div style={{ fontSize:13, color: f.clr, fontWeight:700, letterSpacing:'.3px', marginBottom:16 }}>{f.role}</div>
-                        <div style={{ fontSize:11, color:'#6a90a8', letterSpacing:'.3px', lineHeight:1.6, marginBottom:20 }}>{f.focus}</div>
-                        {/* Tags */}
-                        <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                          {f.tags.map(t=>(
-                            <span key={t} style={{ fontSize:10, color: f.clr, background:`${f.clr}12`, border:`1px solid ${f.clr}25`, borderRadius:6, padding:'3px 10px', fontWeight:700, letterSpacing:'.3px' }}>{t}</span>
+
+                        <div style={{ fontSize:26, fontWeight:900, letterSpacing:'-.6px', marginBottom:3, color:'#fff' }}>{f.name}</div>
+                        <div style={{ fontSize:13, color:f.clr, fontWeight:700, letterSpacing:'.3px', marginBottom:8 }}>{f.role}</div>
+                        <div style={{ fontSize:11, color:'#2a4a62', letterSpacing:'.3px', lineHeight:1.6, marginBottom:22 }}>{f.focus}</div>
+
+                        {/* Tech / skill tags */}
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:32 }}>
+                          {f.tags.map(t => (
+                            <span key={t} style={{ fontSize:10, color:f.clr, background:`${f.clr}10`, border:`1px solid ${f.clr}22`, borderRadius:5, padding:'3px 9px', fontWeight:700 }}>{t}</span>
                           ))}
                         </div>
                       </div>
-                      {/* Stats */}
-                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:24 }}>
-                        {[f.stat1, f.stat2].map(s=>(
-                          <div key={s.label} style={{ background:`${f.clr}08`, border:`1px solid ${f.clr}18`, borderRadius:12, padding:'14px 16px' }}>
-                            <div style={{ fontSize:22, fontWeight:900, color: f.clr, fontFamily:'monospace', letterSpacing:'-.5px', textShadow:`0 0 20px ${f.clr}` }}>{s.n}</div>
-                            <div style={{ fontSize:10, color:'#6a90a8', marginTop:3, letterSpacing:'.3px' }}>{s.label}</div>
+
+                      {/* 4-stat achievement grid */}
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                        {f.stats.map(s => (
+                          <div key={s.label} style={{ background:`${f.clr}07`, border:`1px solid ${f.clr}18`, borderRadius:12, padding:'14px 16px', position:'relative', overflow:'hidden' }}>
+                            <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:`linear-gradient(90deg,${f.clr}40,transparent)` }}/>
+                            <div style={{ fontSize:18, fontWeight:900, color:f.clr, fontFamily:'monospace', letterSpacing:'-1px', textShadow:`0 0 18px ${f.clr}50`, marginBottom:4, lineHeight:1 }}>{s.n}</div>
+                            <div style={{ fontSize:9.5, color:'#2a4050', letterSpacing:'.3px', lineHeight:1.45 }}>{s.label}</div>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Panel B — Quote + Bio */}
-                    <div style={{ padding:'36px 32px', display:'flex', flexDirection:'column', justifyContent:'center', order: i===1?1:2 }}>
+                    {/* ── STORY COLUMN ────────────────────────────────────── */}
+                    <div style={{ padding:'44px 44px', display:'flex', flexDirection:'column', order: i===1 ? 1 : 2 }}>
+
+                      {/* Number badge */}
+                      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:28 }}>
+                        <div style={{ width:28, height:28, borderRadius:8, background:`${f.clr}15`, border:`1px solid ${f.clr}30`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:900, color:f.clr, fontFamily:'monospace', flexShrink:0 }}>0{i+1}</div>
+                        <div style={{ fontSize:9, color:'#1a3040', letterSpacing:'2.5px', fontFamily:'monospace' }}>FOUNDING STORY</div>
+                        <div style={{ flex:1, height:1, background:`linear-gradient(90deg,${f.clr}20,transparent)` }}/>
+                      </div>
+
                       {/* Pull quote */}
-                      <div style={{ position:'relative', marginBottom:28 }}>
-                        <div style={{ fontSize:64, color: f.clr, lineHeight:.7, fontFamily:'Georgia,serif', opacity:.3, position:'absolute', top:-8, left:-8 }}>"</div>
-                        <blockquote style={{ fontSize:'clamp(15px,1.8vw,18px)', color:'#dce8f0', lineHeight:1.65, fontStyle:'italic', fontWeight:500, paddingLeft:20, borderLeft:`3px solid ${f.clr}`, textShadow:`0 0 30px ${f.clr}20` }}>
-                          {f.quote.replace(/^"|"$/g,'')}
+                      <div style={{ position:'relative', marginBottom:30 }}>
+                        <div style={{ fontSize:72, color:f.clr, lineHeight:.65, fontFamily:'Georgia,serif', opacity:.18, position:'absolute', top:0, left:-6, userSelect:'none' }}>"</div>
+                        <blockquote style={{ fontSize:'clamp(16px,1.7vw,20px)', color:'#dce8f0', lineHeight:1.65, fontStyle:'italic', fontWeight:500, paddingLeft:22, borderLeft:`3px solid ${f.clr}`, textShadow:`0 0 40px ${f.clr}12` }}>
+                          {f.quote}
                         </blockquote>
                       </div>
-                      <p style={{ fontSize:14, color:'#6a90a8', lineHeight:1.8 }}>{f.bio}</p>
-                    </div>
 
-                    {/* Panel C — Skills */}
-                    <div style={{ padding:'36px 32px', borderLeft:`1px solid ${f.clr}12`, display:'flex', flexDirection:'column', justifyContent:'center', order:3 }}>
-                      <div style={{ fontSize:10, color:'#6a90a8', letterSpacing:'1px', marginBottom:20 }}>EXPERTISE</div>
-                      {f.skills.map(s=>(
-                        <div key={s.label} style={{ marginBottom:20 }}>
-                          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
-                            <span style={{ fontSize:12, color:'#b8d0e0', fontWeight:600 }}>{s.label}</span>
-                            <span style={{ fontSize:12, color: f.clr, fontWeight:800, fontFamily:'monospace' }}>{s.pct}%</span>
+                      {/* Origin story */}
+                      <div style={{ marginBottom:24 }}>
+                        <div style={{ fontSize:8, color:f.clr, letterSpacing:'2.5px', fontFamily:'monospace', fontWeight:700, marginBottom:12 }}>THE ORIGIN</div>
+                        <p style={{ fontSize:13.5, color:'#6a8898', lineHeight:1.9 }}>{f.origin}</p>
+                      </div>
+
+                      {/* Mission callout */}
+                      <div style={{ padding:'16px 20px', background:`${f.clr}06`, border:`1px solid ${f.clr}18`, borderRadius:10, marginBottom:28, position:'relative', overflow:'hidden' }}>
+                        <div style={{ position:'absolute', top:0, left:0, width:40, height:2, background:f.clr }}/>
+                        <div style={{ fontSize:8, color:f.clr, letterSpacing:'2px', fontFamily:'monospace', fontWeight:700, marginBottom:8 }}>THE MISSION</div>
+                        <p style={{ fontSize:13, color:'#9ab0bc', lineHeight:1.65, fontStyle:'italic' }}>{f.mission}</p>
+                      </div>
+
+                      {/* Skill bars */}
+                      <div style={{ marginBottom:20 }}>
+                        {f.skills.map(s => (
+                          <div key={s.label} style={{ marginBottom:14 }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                              <span style={{ fontSize:11, color:'#7a9aaa', fontWeight:600 }}>{s.label}</span>
+                              <span style={{ fontSize:11, color:f.clr, fontWeight:800, fontFamily:'monospace' }}>{s.pct}%</span>
+                            </div>
+                            <div style={{ height:3, background:'rgba(255,255,255,.04)', borderRadius:2, overflow:'hidden' }}>
+                              <div style={{ height:'100%', width:`${s.pct}%`, background:f.grad, borderRadius:2, boxShadow:`0 0 8px ${f.clr}50`, transition:'width 1.4s cubic-bezier(.22,1,.36,1)' }}/>
+                            </div>
                           </div>
-                          <div style={{ height:6, background:'rgba(255,255,255,.04)', borderRadius:3, overflow:'hidden' }}>
-                            <div style={{ height:'100%', width:`${s.pct}%`, background: f.grad, borderRadius:3, boxShadow:`0 0 12px ${f.clr}60`, transition:'width 1.4s cubic-bezier(.22,1,.36,1)' }}/>
-                          </div>
-                        </div>
-                      ))}
-                      {/* CTA */}
-                      <div style={{ marginTop:8, paddingTop:20, borderTop:`1px solid ${f.clr}12` }}>
-                        <a href={f.twitter} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color: f.clr, textDecoration:'none', fontWeight:700, transition:'opacity .2s' }}
-                          onMouseEnter={e=>(e.currentTarget.style.opacity='.7')} onMouseLeave={e=>(e.currentTarget.style.opacity='1')}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                          Follow on X
+                        ))}
+                      </div>
+
+                      {/* Follow link */}
+                      <div style={{ paddingTop:16, borderTop:`1px solid ${f.clr}0e` }}>
+                        <a href={f.twitter} target="_blank" rel="noreferrer"
+                          style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color:f.clr, textDecoration:'none', fontWeight:700, transition:'opacity .2s' }}
+                          onMouseEnter={e=>(e.currentTarget.style.opacity='.6')}
+                          onMouseLeave={e=>(e.currentTarget.style.opacity='1')}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                          Follow {f.name.split(' ')[0]} on X
                         </a>
                       </div>
                     </div>
