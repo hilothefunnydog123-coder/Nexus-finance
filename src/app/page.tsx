@@ -211,6 +211,169 @@ function XRayDoc() {
   return <canvas ref={ref} style={{width:'100%',height:120,display:'block'}}/>
 }
 
+// ── NEW INTELLIGENCE FEATURE CANVASES ─────────────────────────────────────────
+
+function CongressCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(()=>{
+    const c=ref.current; if(!c) return
+    const ctx=c.getContext('2d')!; const W=c.width=320; const H=c.height=160
+    const trades=[
+      {name:'PELOSI N.',  ticker:'NVDA', type:'BUY',  score:94, party:'D'},
+      {name:'TUBERVILLE', ticker:'TSLA', type:'BUY',  score:82, party:'R'},
+      {name:'SCHIFF A.',  ticker:'MSFT', type:'BUY',  score:97, party:'D'},
+      {name:'MCCARTHY K.',ticker:'AAPL', type:'SELL', score:31, party:'R'},
+      {name:'GREENE M.',  ticker:'META', type:'BUY',  score:61, party:'R'},
+      {name:'OCASIO C.',  ticker:'AMZN', type:'BUY',  score:79, party:'D'},
+      {name:'TRUMP D.',   ticker:'COIN', type:'BUY',  score:88, party:'R'},
+      {name:'WARREN E.',  ticker:'GOOGL', type:'SELL',score:24, party:'D'},
+    ]
+    let offset=0; let raf:number; let t=0
+    function draw(){
+      ctx.fillStyle='#030a10'; ctx.fillRect(0,0,W,H)
+      // header
+      ctx.fillStyle='rgba(0,212,170,.08)'; ctx.fillRect(0,0,W,16)
+      ctx.font='bold 8px monospace'; ctx.fillStyle='#1a3550'
+      ctx.fillText('MEMBER',8,11); ctx.fillText('TICKER',130,11); ctx.fillText('TYPE',185,11); ctx.fillText('SCORE',240,11); ctx.fillText('PARTY',290,11)
+      // rows
+      const rowH=19; const startY=22
+      trades.forEach((tr,i)=>{
+        const y=startY+(i*rowH)-offset%rowH+((offset/rowH|0)*rowH)
+        const visY=(y-startY+H)%((trades.length)*rowH)
+        const ry=startY+visY
+        if(ry<16||ry>H+10) return
+        const idx=(i+Math.floor(offset/rowH))%trades.length
+        const d=trades[idx]
+        if(!d) return
+        const alpha=Math.min(1,Math.min(ry-16,H-ry)/20)
+        // row bg
+        if(d.score>70){ctx.fillStyle=`rgba(255,45,120,${alpha*.06})`;ctx.fillRect(0,ry-13,W,rowH)}
+        // name
+        ctx.font=`10px monospace`; ctx.fillStyle=`rgba(180,200,210,${alpha})`
+        ctx.fillText(d.name,8,ry)
+        // ticker
+        ctx.fillStyle=`rgba(0,212,170,${alpha})`; ctx.font='bold 10px monospace'
+        ctx.fillText(d.ticker,130,ry)
+        // type badge
+        const tc=d.type==='BUY'?`rgba(0,255,136,${alpha})`:`rgba(255,45,120,${alpha})`
+        ctx.fillStyle=tc; ctx.font='bold 9px monospace'; ctx.fillText(d.type,185,ry)
+        // score bar
+        const bw=40; const bx=240
+        ctx.fillStyle=`rgba(255,255,255,.05)`; ctx.fillRect(bx,ry-8,bw,5)
+        const sc=d.score/100; const sclr=sc>0.7?`rgba(255,45,120,${alpha})`:sc>0.4?`rgba(245,158,11,${alpha})`:`rgba(0,212,170,${alpha})`
+        ctx.fillStyle=sclr; ctx.fillRect(bx,ry-8,bw*sc,5)
+        // party
+        ctx.fillStyle=d.party==='D'?`rgba(59,142,234,${alpha})`:`rgba(255,45,120,${alpha})`
+        ctx.font='bold 9px monospace'; ctx.fillText(d.party,300,ry)
+      })
+      // scan line
+      const sy=(t*60)%H
+      const sg=ctx.createLinearGradient(0,sy-6,0,sy+6)
+      sg.addColorStop(0,'rgba(0,212,170,0)');sg.addColorStop(.5,'rgba(0,212,170,.12)');sg.addColorStop(1,'rgba(0,212,170,0)')
+      ctx.fillStyle=sg; ctx.fillRect(0,sy-6,W,12)
+      offset+=0.3; t+=0.016
+      raf=requestAnimationFrame(draw)
+    }
+    draw(); return ()=>cancelAnimationFrame(raf)
+  },[])
+  return <canvas ref={ref} style={{width:'100%',height:160,display:'block'}}/>
+}
+
+function IntelCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(()=>{
+    const c=ref.current; if(!c) return
+    const ctx=c.getContext('2d')!; c.width=280; c.height=120
+    const W=280; const H=120
+    const signals=[
+      {label:'NVDA',type:'INSIDER BUY',strength:3,clr:'#00ff88',x:40,y:38},
+      {label:'TSLA',type:'UNUSUAL OPTS',strength:2,clr:'#f59e0b',x:40,y:68},
+      {label:'COIN',type:'INSIDER BUY',strength:3,clr:'#00ff88',x:40,y:98},
+    ]
+    let t=0; let raf:number
+    function draw(){
+      ctx.clearRect(0,0,W,H)
+      ctx.fillStyle='rgba(3,10,16,1)'; ctx.fillRect(0,0,W,H)
+      signals.forEach(s=>{
+        // signal strength bars
+        for(let b=0;b<3;b++){
+          const filled=b<s.strength
+          const bh=6+b*4; const bw=5
+          const bx=s.x+b*8; const by=s.y-bh
+          const alpha=filled?(0.6+Math.sin(t*3+b)*.3):0.15
+          ctx.fillStyle=filled?`${s.clr}${Math.floor(alpha*255).toString(16).padStart(2,'0')}`:'rgba(255,255,255,.1)'
+          ctx.fillRect(bx,by,bw,bh)
+          if(filled&&s.strength===3){ctx.shadowBlur=6;ctx.shadowColor=s.clr}
+          ctx.shadowBlur=0
+        }
+        // label
+        ctx.font='bold 9px monospace'; ctx.fillStyle=s.clr
+        ctx.fillText(s.label,s.x+28,s.y)
+        ctx.font='8px monospace'; ctx.fillStyle='rgba(100,140,160,.8)'
+        ctx.fillText(s.type,s.x+52,s.y)
+        // converging badge
+        if(s.strength===3){
+          const p=Math.sin(t*3)*.5+.5
+          ctx.fillStyle=`rgba(255,45,120,${p*.5})`; ctx.fillRect(W-68,s.y-10,64,13)
+          ctx.fillStyle='#ff2d78'; ctx.font='bold 7px monospace'
+          ctx.fillText('⚡CONVERGING',W-66,s.y)
+        }
+      })
+      // right side: live price ticker
+      ctx.fillStyle='rgba(0,212,170,.05)'; ctx.fillRect(W-10,0,10,H)
+      t+=0.02; raf=requestAnimationFrame(draw)
+    }
+    draw(); return ()=>cancelAnimationFrame(raf)
+  },[])
+  return <canvas ref={ref} style={{width:'100%',height:120,display:'block'}}/>
+}
+
+function EarningsGauge() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(()=>{
+    const c=ref.current; if(!c) return
+    const ctx=c.getContext('2d')!; c.width=280; c.height=120
+    const W=280; const H=120
+    const gauges=[
+      {label:'NVDA',score:78,x:55, y:65},
+      {label:'TSLA',score:31,x:140,y:65},
+      {label:'AAPL',score:87,x:225,y:65},
+    ]
+    let t=0; let raf:number
+    const animScores=[0,0,0]
+    function draw(){
+      ctx.clearRect(0,0,W,H)
+      ctx.fillStyle='#030a10'; ctx.fillRect(0,0,W,H)
+      gauges.forEach((g,i)=>{
+        if(animScores[i]<g.score) animScores[i]=Math.min(g.score,animScores[i]+1.2)
+        const score=animScores[i]
+        const clr=score>65?'#00ff88':score>35?'#f59e0b':'#ff2d78'
+        const r=28; const cx=g.x; const cy=g.y
+        // bg arc
+        ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI*.8,Math.PI*.8,false)
+        ctx.strokeStyle='rgba(255,255,255,.07)'; ctx.lineWidth=4; ctx.stroke()
+        // value arc
+        const end=-Math.PI*.8+(Math.PI*1.6)*(score/100)
+        ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI*.8,end,false)
+        ctx.strokeStyle=clr; ctx.lineWidth=4
+        ctx.shadowBlur=10; ctx.shadowColor=clr; ctx.stroke(); ctx.shadowBlur=0
+        // score text
+        ctx.fillStyle=clr; ctx.font='bold 13px monospace'
+        ctx.textAlign='center'; ctx.fillText(`${Math.floor(score)}`,cx,cy+5)
+        ctx.font='7px monospace'; ctx.fillStyle='rgba(100,140,160,.7)'
+        ctx.fillText('TRUTH',cx,cy+16)
+        // ticker label
+        ctx.fillStyle='rgba(200,220,230,.8)'; ctx.font='bold 9px monospace'
+        ctx.fillText(g.label,cx,cy-r-6)
+        ctx.textAlign='left'
+      })
+      t+=0.016; raf=requestAnimationFrame(draw)
+    }
+    draw(); return ()=>cancelAnimationFrame(raf)
+  },[])
+  return <canvas ref={ref} style={{width:'100%',height:120,display:'block'}}/>
+}
+
 const FOUNDERS = [
   {
     name: 'Neil Gilani',
@@ -1291,6 +1454,195 @@ export default function HomePage() {
 
       {/* Section divider */}
       <div style={{ position:'relative', zIndex:1, height:1, background:'linear-gradient(90deg,transparent,rgba(0,212,170,.15),rgba(168,85,247,.15),transparent)' }}/>
+
+      {/* ══ THREE NEW INTEL FEATURES ═══════════════════════════════════════════ */}
+      <section style={{ position:'relative', zIndex:1, overflow:'hidden', background:'rgba(2,5,10,1)' }}>
+        {/* bg grid */}
+        <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(0,212,170,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,170,.018) 1px,transparent 1px)', backgroundSize:'52px 52px', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:'linear-gradient(90deg,transparent,#ff2d78,#a855f7,#00d4aa,transparent)' }}/>
+        {/* ambient glows */}
+        <div style={{ position:'absolute', width:600, height:600, borderRadius:'50%', background:'radial-gradient(circle,rgba(255,45,120,.05),transparent 70%)', top:'10%', left:'0%', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle,rgba(0,212,170,.04),transparent 70%)', top:'50%', right:'0%', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', width:700, height:700, borderRadius:'50%', background:'radial-gradient(circle,rgba(168,85,247,.04),transparent 70%)', bottom:'0%', left:'30%', pointerEvents:'none' }}/>
+
+        <div style={{ padding:'120px 0 0' }}>
+          {/* Section header */}
+          <div className="section" style={{ textAlign:'center', marginBottom:100 }}>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(255,45,120,.1)', border:'1px solid rgba(255,45,120,.3)', borderRadius:20, padding:'8px 20px', marginBottom:24, fontSize:11, color:'#ff2d78', fontWeight:700, letterSpacing:'1.5px' }}>
+              <span style={{ width:7, height:7, borderRadius:'50%', background:'#ff2d78', display:'inline-block', animation:'pulse-dot 1s infinite' }}/>
+              INTELLIGENCE PLATFORM · THREE NEW WEAPONS
+            </div>
+            <h2 style={{ fontSize:'clamp(40px,7vw,90px)', fontWeight:900, lineHeight:.9, letterSpacing:'-4px', color:'#fff', marginBottom:24 }}>
+              The intel they<br/>
+              <span style={{ background:'linear-gradient(135deg,#ff2d78 0%,#a855f7 40%,#00d4aa 80%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundSize:'200%', animation:'holo 4s linear infinite' }}>
+                charge $50K for.
+              </span>
+            </h2>
+            <p style={{ fontSize:'clamp(16px,2vw,21px)', color:'#3a5a6a', lineHeight:1.65, maxWidth:640, margin:'0 auto' }}>
+              Congressional trade tracking. Smart money signal detection. Earnings forensics. All of it, free, in real time, with AI reading every signal the moment it fires.
+            </p>
+          </div>
+
+          {/* ── FEATURE 1: CONGRESS TRACKER ──────────────────────────────────── */}
+          <div style={{ marginBottom:2, background:'rgba(255,45,120,.025)', borderTop:'1px solid rgba(255,45,120,.1)', borderBottom:'1px solid rgba(255,45,120,.07)' }}>
+            <div className="section" style={{ padding:'80px 24px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:60, alignItems:'center' }}>
+              <div>
+                <div style={{ fontSize:9, color:'#ff2d78', letterSpacing:'3px', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ width:5, height:5, borderRadius:'50%', background:'#ff2d78' }}/> FEATURE 01 · CONGRESSIONAL INTELLIGENCE
+                </div>
+                <h3 style={{ fontSize:'clamp(30px,4vw,52px)', fontWeight:900, letterSpacing:'-2px', color:'#fff', marginBottom:16, lineHeight:1 }}>
+                  🏛 Congress<br/>Tracker
+                </h3>
+                <p style={{ fontSize:16, color:'#3a5a6a', lineHeight:1.75, marginBottom:20 }}>
+                  Members of Congress are <em style={{ color:'#ff2d78' }}>legally required to disclose every stock trade within 45 days</em>. We read every disclosure the moment it lands. AI scores each trade 0-100 for suspicion based on size, timing, and committee assignments.
+                </p>
+                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:28 }}>
+                  {['Live feed of every congressional trade disclosure','Suspicion score: size + timing + committee overlap','AI analysis: why this trade looks like inside knowledge','Leaderboard: most active traders in Congress'].map(f=>(
+                    <div key={f} style={{ display:'flex', gap:10, fontSize:13, color:'#6a8898' }}>
+                      <span style={{ color:'#ff2d78', flexShrink:0 }}>→</span>{f}
+                    </div>
+                  ))}
+                </div>
+                <Link href="/congress" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'#ff2d78', color:'#fff', padding:'13px 28px', borderRadius:8, fontSize:13, fontWeight:800, textDecoration:'none', boxShadow:'0 0 30px rgba(255,45,120,.4)' }}>
+                  Open Congress Tracker →
+                </Link>
+              </div>
+              <div style={{ background:'rgba(0,0,0,.6)', border:'1px solid rgba(255,45,120,.2)', borderRadius:12, overflow:'hidden', backdropFilter:'blur(12px)' }}>
+                <div style={{ padding:'14px 18px', borderBottom:'1px solid rgba(255,45,120,.1)', display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ display:'flex', gap:5 }}>{['#ff5f57','#febc2e','#28c840'].map(clr=><div key={clr} style={{ width:9,height:9,borderRadius:'50%',background:clr }}/>)}</div>
+                  <span style={{ fontFamily:'monospace', fontSize:11, color:'#3a5a6a' }}>congress_tracker.exe — LIVE DISCLOSURES</span>
+                  <span style={{ marginLeft:'auto', fontSize:9, color:'#ff2d78', fontWeight:700 }}>● LIVE</span>
+                </div>
+                <CongressCanvas/>
+                <div style={{ padding:'12px 18px', borderTop:'1px solid rgba(255,45,120,.1)', fontFamily:'monospace', fontSize:11 }}>
+                  <div style={{ color:'#ff2d78', fontWeight:700 }}>SUSPICION SCORE LEGEND</div>
+                  <div style={{ display:'flex', gap:16, marginTop:6 }}>
+                    {[['0–40','Low','#00ff88'],['41–70','Watch','#f59e0b'],['71–100','FLAGGED','#ff2d78']].map(([r,l,clr])=>(
+                      <div key={r} style={{ display:'flex', alignItems:'center', gap:4 }}>
+                        <div style={{ width:8, height:8, borderRadius:2, background:clr }}/>
+                        <span style={{ color:clr }}>{r}</span>
+                        <span style={{ color:'#2a4050' }}>{l}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── FEATURE 2: SMART MONEY ALERTS ───────────────────────────────────── */}
+          <div style={{ marginBottom:2, background:'rgba(0,212,170,.025)', borderTop:'1px solid rgba(0,212,170,.1)', borderBottom:'1px solid rgba(0,212,170,.07)' }}>
+            <div className="section" style={{ padding:'80px 24px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:60, alignItems:'center' }}>
+              <div style={{ background:'rgba(0,0,0,.6)', border:'1px solid rgba(0,212,170,.2)', borderRadius:12, overflow:'hidden', backdropFilter:'blur(12px)' }}>
+                <div style={{ padding:'14px 18px', borderBottom:'1px solid rgba(0,212,170,.1)', display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ display:'flex', gap:5 }}>{['#ff5f57','#febc2e','#28c840'].map(clr=><div key={clr} style={{ width:9,height:9,borderRadius:'50%',background:clr }}/>)}</div>
+                  <span style={{ fontFamily:'monospace', fontSize:11, color:'#3a5a6a' }}>smart_money.exe — SIGNAL DETECTION</span>
+                  <span style={{ marginLeft:'auto', fontSize:9, color:'#00d4aa', fontWeight:700, animation:'pulse-dot 1.5s infinite' }}>● SCANNING</span>
+                </div>
+                <IntelCanvas/>
+                <div style={{ padding:'12px 18px', borderTop:'1px solid rgba(0,212,170,.1)', fontFamily:'monospace', fontSize:11 }}>
+                  <div style={{ color:'#00d4aa', fontWeight:700 }}>SIGNAL STRENGTH</div>
+                  <div style={{ display:'flex', gap:16, marginTop:6 }}>
+                    {[['1 bar','Notable','#6a90a8'],['2 bars','Significant','#f59e0b'],['3 bars ⚡','CONVERGING','#ff2d78']].map(([r,l,clr])=>(
+                      <div key={r} style={{ display:'flex', alignItems:'center', gap:4 }}>
+                        <span style={{ color:clr, fontSize:10, fontWeight:700 }}>{r}</span>
+                        <span style={{ color:'#2a4050', fontSize:10 }}>→ {l}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize:9, color:'#00d4aa', letterSpacing:'3px', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ width:5, height:5, borderRadius:'50%', background:'#00d4aa' }}/> FEATURE 02 · SMART MONEY DETECTION
+                </div>
+                <h3 style={{ fontSize:'clamp(30px,4vw,52px)', fontWeight:900, letterSpacing:'-2px', color:'#fff', marginBottom:16, lineHeight:1 }}>
+                  💰 Smart Money<br/>Alerts
+                </h3>
+                <p style={{ fontSize:16, color:'#3a5a6a', lineHeight:1.75, marginBottom:20 }}>
+                  Hedge fund quant desks run 15 algorithms to detect institutional accumulation. We do it with AI, for free, <em style={{ color:'#00d4aa' }}>and fire an alert when signals converge</em>. Real insider Form 4 filings, unusual options flow, and signal convergence scoring.
+                </p>
+                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:28 }}>
+                  {['Real insider purchase transactions (SEC Form 4, live)','Unusual options flow detection with AI context','Signal convergence: when 3 signals hit the same stock','⚡ Converging alert fires before the market reacts'].map(f=>(
+                    <div key={f} style={{ display:'flex', gap:10, fontSize:13, color:'#6a8898' }}>
+                      <span style={{ color:'#00d4aa', flexShrink:0 }}>→</span>{f}
+                    </div>
+                  ))}
+                </div>
+                <Link href="/intel" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'#00d4aa', color:'#030a10', padding:'13px 28px', borderRadius:8, fontSize:13, fontWeight:800, textDecoration:'none', boxShadow:'0 0 30px rgba(0,212,170,.4)' }}>
+                  Open Smart Money Alerts →
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* ── FEATURE 3: EARNINGS DECODER ─────────────────────────────────────── */}
+          <div style={{ marginBottom:2, background:'rgba(245,158,11,.025)', borderTop:'1px solid rgba(245,158,11,.1)', borderBottom:'1px solid rgba(245,158,11,.07)' }}>
+            <div className="section" style={{ padding:'80px 24px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:60, alignItems:'center' }}>
+              <div>
+                <div style={{ fontSize:9, color:'#f59e0b', letterSpacing:'3px', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ width:5, height:5, borderRadius:'50%', background:'#f59e0b' }}/> FEATURE 03 · EARNINGS FORENSICS
+                </div>
+                <h3 style={{ fontSize:'clamp(30px,4vw,52px)', fontWeight:900, letterSpacing:'-2px', color:'#fff', marginBottom:16, lineHeight:1 }}>
+                  📊 Earnings<br/>Decoder
+                </h3>
+                <p style={{ fontSize:16, color:'#3a5a6a', lineHeight:1.75, marginBottom:20 }}>
+                  Management has a story. The numbers have another. AI scores every company's earnings pattern with a <em style={{ color:'#f59e0b' }}>Truth Score (0-100)</em> — measuring the divergence between what they say and what actually happened across 4 quarters.
+                </p>
+                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:28 }}>
+                  {['Truth Score: 0-100 management honesty rating per company','4-quarter beat/miss pattern for every public company','AI reads the earnings narrative vs actual numbers','Upcoming earnings calendar with pre-game AI analysis'].map(f=>(
+                    <div key={f} style={{ display:'flex', gap:10, fontSize:13, color:'#6a8898' }}>
+                      <span style={{ color:'#f59e0b', flexShrink:0 }}>→</span>{f}
+                    </div>
+                  ))}
+                </div>
+                <Link href="/earnings" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'#f59e0b', color:'#000', padding:'13px 28px', borderRadius:8, fontSize:13, fontWeight:800, textDecoration:'none', boxShadow:'0 0 30px rgba(245,158,11,.4)' }}>
+                  Open Earnings Decoder →
+                </Link>
+              </div>
+              <div style={{ background:'rgba(0,0,0,.6)', border:'1px solid rgba(245,158,11,.2)', borderRadius:12, overflow:'hidden', backdropFilter:'blur(12px)' }}>
+                <div style={{ padding:'14px 18px', borderBottom:'1px solid rgba(245,158,11,.1)', display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ display:'flex', gap:5 }}>{['#ff5f57','#febc2e','#28c840'].map(clr=><div key={clr} style={{ width:9,height:9,borderRadius:'50%',background:clr }}/>)}</div>
+                  <span style={{ fontFamily:'monospace', fontSize:11, color:'#3a5a6a' }}>earnings_decoder.exe — TRUTH ANALYSIS</span>
+                </div>
+                <div style={{ padding:'12px 8px', background:'rgba(0,0,0,.3)' }}><EarningsGauge/></div>
+                <div style={{ padding:'12px 18px', borderTop:'1px solid rgba(245,158,11,.1)', fontFamily:'monospace', fontSize:11 }}>
+                  <div style={{ color:'#f59e0b', fontWeight:700 }}>TRUTH SCORE LEGEND</div>
+                  <div style={{ display:'flex', gap:16, marginTop:6 }}>
+                    {[['65–100','Honest mgmt','#00ff88'],['35–64','Watch closely','#f59e0b'],['0–34','HIGH DIVERGENCE','#ff2d78']].map(([r,l,clr])=>(
+                      <div key={r} style={{ display:'flex', alignItems:'center', gap:4 }}>
+                        <span style={{ color:clr, fontSize:9, fontWeight:700 }}>{r}</span>
+                        <span style={{ color:'#2a4050', fontSize:9 }}>→ {l}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── MASTER CTA ──────────────────────────────────────────────────────── */}
+          <div style={{ textAlign:'center', padding:'80px 24px 120px', borderTop:'1px solid rgba(255,255,255,.04)' }}>
+            <div style={{ fontSize:11, color:'#4a6a78', letterSpacing:'2px', marginBottom:20 }}>THREE NEW WEAPONS · REAL DATA · FREE TO ACCESS</div>
+            <h3 style={{ fontSize:'clamp(26px,4vw,50px)', fontWeight:900, letterSpacing:'-2px', color:'#fff', marginBottom:20 }}>
+              Everything Wall Street pays analysts for.<br/>
+              <span style={{ background:'linear-gradient(135deg,#ff2d78,#a855f7,#00d4aa)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundSize:'200%', animation:'holo 3s linear infinite' }}>Free. Automated. AI-powered.</span>
+            </h3>
+            <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap', marginTop:32 }}>
+              {[['🏛 Congress Tracker','/congress','#ff2d78'],['💰 Smart Money Alerts','/intel','#00d4aa'],['📊 Earnings Decoder','/earnings','#f59e0b']].map(([label,href,clr])=>(
+                <Link key={href} href={href} style={{ display:'inline-flex', alignItems:'center', gap:8, background:`${clr}15`, border:`1px solid ${clr}40`, color:clr, padding:'14px 28px', borderRadius:10, fontSize:14, fontWeight:800, textDecoration:'none', boxShadow:`0 0 30px ${clr}25`, transition:'all .2s' }}
+                  onMouseEnter={e=>{e.currentTarget.style.background=`${clr}25`;e.currentTarget.style.boxShadow=`0 0 50px ${clr}40`}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=`${clr}15`;e.currentTarget.style.boxShadow=`0 0 30px ${clr}25`}}>
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Section divider */}
+      <div style={{ position:'relative', zIndex:1, height:1, background:'linear-gradient(90deg,transparent,rgba(0,212,170,.12),rgba(168,85,247,.12),transparent)' }}/>
 
       {/* ══ COURSES ═════════════════════════════════════════════════════════════ */}
       <section style={{ padding:'100px 0', position:'relative', zIndex:1 }}>
