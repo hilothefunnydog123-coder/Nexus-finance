@@ -831,80 +831,85 @@ export default function HomePage() {
 
       {/* ══ HERO ═══════════════════════════════════════════════════════════════ */}
       <section style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', zIndex:1, paddingTop:58 }}>
-        <div style={{ textAlign:'center', padding:'0 24px', maxWidth:900, opacity: heroOp, transform: heroTrans }}>
+        <div style={{ textAlign:'center', padding:'0 24px', maxWidth:960, opacity: heroOp, transform: heroTrans }}>
 
-          <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(0,212,170,0.1)', border:'1px solid rgba(0,212,170,0.25)', borderRadius:24, padding:'7px 20px', marginBottom:32, fontSize:11, color:'#00d4aa', fontWeight:700, letterSpacing:'1px' }}>
-            <span style={{ width:7, height:7, borderRadius:'50%', background:'#00d4aa', display:'inline-block', animation:'pulse-dot 1.5s infinite' }} />
-            MULTI-AGENT AI · REAL-TIME DATA · FREE
+          {/* Founder badge — the hook */}
+          <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(245,158,11,.08)', border:'1px solid rgba(245,158,11,.25)', borderRadius:24, padding:'7px 20px', marginBottom:20, fontSize:11, color:'#f59e0b', fontWeight:700, letterSpacing:'1px' }}>
+            <span style={{ width:7, height:7, borderRadius:'50%', background:'#f59e0b', display:'inline-block', animation:'pulse-dot 1.5s infinite' }} />
+            BUILT BY THREE 14-YEAR-OLDS · YNFINANCE.ORG
           </div>
 
-          {/* Glitch title */}
-          <div style={{ position:'relative', marginBottom:24 }}>
-            {/* Chromatic aberration red layer */}
-            <h1 aria-hidden="true" style={{ fontSize:'clamp(48px,9vw,100px)', fontWeight:900, lineHeight:.95, letterSpacing:'-4px', color:'#ff2d78', position:'absolute', inset:0, animation:'chromaR 4s ease-in-out infinite', pointerEvents:'none', opacity:0, zIndex:-1 }}>
-              The Smartest <span style={{ display:'block' }}>Trading AI</span> Ever Built.
-            </h1>
-            {/* Chromatic aberration blue layer */}
-            <h1 aria-hidden="true" style={{ fontSize:'clamp(48px,9vw,100px)', fontWeight:900, lineHeight:.95, letterSpacing:'-4px', color:'#3b8eea', position:'absolute', inset:0, animation:'chromaB 4s ease-in-out infinite', pointerEvents:'none', opacity:0, zIndex:-1 }}>
-              The Smartest <span style={{ display:'block' }}>Trading AI</span> Ever Built.
-            </h1>
-            <h1 style={{ fontSize:'clamp(48px,9vw,100px)', fontWeight:900, lineHeight:.95, letterSpacing:'-4px', color:'#dce8f0', animation:'zoomPulse 6s ease-in-out infinite' }}>
-              <span className="glitch-word" style={{ animationDelay:'.1s' }}>The </span>
-              <span className="glitch-word" style={{ animationDelay:'.22s' }}>Smartest</span>{' '}
-              <span style={{ display:'block', background:'linear-gradient(135deg,#00d4aa 0%,#3b8eea 40%,#a855f7 70%,#f59e0b 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundSize:'200% 200%', animation:'holo 4s linear infinite' }}>
-                <span className="glitch-word" style={{ animationDelay:'.38s' }}>Trading</span>{' '}
-                <span className="glitch-word" style={{ animationDelay:'.5s' }}>AI</span>
-              </span>
-              <span className="glitch-word" style={{ animationDelay:'.65s' }}>Ever </span>
-              <span className="glitch-word" style={{ animationDelay:'.78s' }}>Built.</span>
-            </h1>
-          </div>
-
-          <p style={{ fontSize:'clamp(16px,2.2vw,21px)', color:'#6a90a8', lineHeight:1.65, marginBottom:48, maxWidth:640, margin:'0 auto 48px' }}>
-            5 AI agents analyze any stock in seconds. Entry zones. Stop loss. Price targets. Options strategy. Catalysts. The research that took analysts 4 hours — done before your coffee.
+          {/* The setup — what exists */}
+          <p style={{ fontSize:'clamp(13px,1.4vw,16px)', color:'#2a4a62', fontFamily:'monospace', letterSpacing:'.5px', marginBottom:20, lineHeight:1.8 }}>
+            Bloomberg Terminal: <span style={{ color:'#ff2d78' }}>$25,000/year</span> &nbsp;·&nbsp;
+            Goldman analyst: <span style={{ color:'#ff2d78' }}>$500,000/year</span> &nbsp;·&nbsp;
+            Congressional intel: <span style={{ color:'#ff2d78' }}>private</span> &nbsp;·&nbsp;
+            Institutional AI: <span style={{ color:'#ff2d78' }}>invite only</span>
           </p>
 
-          {/* Mini chart preview */}
-          <div style={{ maxWidth:500, margin:'0 auto 40px', height:80, background:'rgba(6,13,20,0.7)', border:'1px solid rgba(0,212,170,0.15)', borderRadius:16, overflow:'hidden', backdropFilter:'blur(10px)', padding:'8px' }}>
-            <AnimChart />
+          {/* Main headline */}
+          <div style={{ position:'relative', marginBottom:28 }}>
+            <h1 aria-hidden="true" style={{ fontSize:'clamp(52px,9.5vw,108px)', fontWeight:900, lineHeight:.9, letterSpacing:'-5px', color:'#ff2d78', position:'absolute', inset:0, animation:'chromaR 4s ease-in-out infinite', pointerEvents:'none', opacity:0, zIndex:-1 }}>
+              We automated<br/>all of it.<br/>For free.
+            </h1>
+            <h1 aria-hidden="true" style={{ fontSize:'clamp(52px,9.5vw,108px)', fontWeight:900, lineHeight:.9, letterSpacing:'-5px', color:'#3b8eea', position:'absolute', inset:0, animation:'chromaB 4s ease-in-out infinite', pointerEvents:'none', opacity:0, zIndex:-1 }}>
+              We automated<br/>all of it.<br/>For free.
+            </h1>
+            <h1 style={{ fontSize:'clamp(52px,9.5vw,108px)', fontWeight:900, lineHeight:.9, letterSpacing:'-5px', color:'#dce8f0', animation:'zoomPulse 8s ease-in-out infinite' }}>
+              <span className="glitch-word" style={{ animationDelay:'.05s' }}>We </span>
+              <span className="glitch-word" style={{ animationDelay:'.15s' }}>automated</span>
+              <br/>
+              <span style={{ background:'linear-gradient(135deg,#00d4aa 0%,#1e90ff 45%,#a855f7 80%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundSize:'200%', animation:'holo 4s linear infinite' }}>
+                <span className="glitch-word" style={{ animationDelay:'.3s' }}>all of it.</span>
+              </span>
+              <br/>
+              <span className="glitch-word" style={{ animationDelay:'.5s', color:'#dce8f0' }}>For </span>
+              <span className="glitch-word" style={{ animationDelay:'.62s', color:'#00ff88' }}>free.</span>
+            </h1>
           </div>
 
-          <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap' }}>
-            <Link href="/ai-stocks" className="mag-btn" style={{ background:'linear-gradient(135deg,#00d4aa,#3b8eea)', color:'#030a10', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:900, textDecoration:'none', boxShadow:'0 0 60px #00d4aa50,0 20px 40px rgba(0,0,0,.4)', letterSpacing:'-.3px', display:'inline-block' }}>
-              Analyze Any Stock Free →
+          {/* The pitch */}
+          <p style={{ fontSize:'clamp(17px,2vw,22px)', color:'#4a6a78', lineHeight:1.7, marginBottom:44, maxWidth:700, margin:'0 auto 44px' }}>
+            AI stock analysis. Congressional trade tracking. Smart money detection. Earnings forensics. The exact intelligence that hedge funds pay analysts half a million dollars a year to produce.{' '}
+            <strong style={{ color:'#dce8f0', fontWeight:700 }}>Free. For every trader. Starting now.</strong>
+          </p>
+
+          {/* CTAs */}
+          <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap', marginBottom:32 }}>
+            <Link href="/ai-stocks" className="mag-btn" style={{ background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#030a10', padding:'20px 44px', borderRadius:14, fontSize:16, fontWeight:900, textDecoration:'none', boxShadow:'0 0 70px #00d4aa50,0 24px 48px rgba(0,0,0,.5)', letterSpacing:'-.3px', display:'inline-block' }}>
+              Start for Free →
             </Link>
-            <Link href="/intelligence" style={{ background:'linear-gradient(135deg,rgba(255,45,120,.15),rgba(168,85,247,.15))', border:'1px solid rgba(168,85,247,.3)', color:'#dce8f0', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(12px)' }}>
-              🔫 Intelligence Suite
+            <Link href="/congress" style={{ background:'rgba(255,45,120,.12)', border:'1px solid rgba(255,45,120,.35)', color:'#ff6b9d', padding:'20px 44px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(12px)' }}>
+              🏛 Congress Tracker
+            </Link>
+            <Link href="/intel" style={{ background:'rgba(0,212,170,.08)', border:'1px solid rgba(0,212,170,.22)', color:'#00d4aa', padding:'20px 44px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(12px)' }}>
+              💰 Smart Money
             </Link>
           </div>
 
-          {/* Trust signals row */}
-          <div style={{ marginTop:24, display:'flex', gap:0, justifyContent:'center', flexWrap:'wrap', border:'1px solid rgba(255,255,255,.05)', borderRadius:12, overflow:'hidden', backdropFilter:'blur(12px)', background:'rgba(4,10,18,.6)', maxWidth:640, margin:'24px auto 0' }}>
+          {/* The proof strip */}
+          <div style={{ display:'flex', gap:0, justifyContent:'center', border:'1px solid rgba(255,255,255,.05)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', background:'rgba(4,10,18,.7)', maxWidth:720, margin:'0 auto 32px' }}>
             {([
-              ['🔒','Stripe Secured',  '#635bff'],
-              ['⚡','Real-Time Data',  '#f59e0b'],
-              ['🤖','Gemini 2.0 AI',   '#4285f4'],
-              ['✓', 'Always Free',     '#00d4aa'],
-            ] as [string,string,string][]).map(([icon,label,clr],i,arr)=>(
-              <div key={label} style={{ flex:1, padding:'12px 16px', textAlign:'center', borderRight:i<arr.length-1?'1px solid rgba(255,255,255,.05)':'none', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-                <span style={{ fontSize:14 }}>{icon}</span>
-                <span style={{ fontSize:10, fontWeight:700, color:'#3a5a6a', letterSpacing:'.3px' }}>{label}</span>
+              ['9','World-Class Instructors','#f59e0b'],
+              ['$0.99','Courses from','#00d4aa'],
+              ['3,247+','Active Traders','#3b8eea'],
+              ['9','Intelligence Tools','#a855f7'],
+              ['$0','To Start','#00ff88'],
+            ] as [string,string,string][]).map(([n,l,clr],i,arr)=>(
+              <div key={l} style={{ flex:1, padding:'16px 12px', textAlign:'center', borderRight:i<arr.length-1?'1px solid rgba(255,255,255,.04)':'none' }}>
+                <div style={{ fontSize:'clamp(16px,2vw,22px)', fontWeight:900, color:clr, fontFamily:'"SF Mono",ui-monospace,monospace', letterSpacing:'-1px', textShadow:`0 0 16px ${clr}40` }}>{n}</div>
+                <div style={{ fontSize:9, color:'#1a3040', letterSpacing:'1px', marginTop:3, fontWeight:600 }}>{l.toUpperCase()}</div>
               </div>
             ))}
           </div>
 
-          {/* Live stats */}
-          <div style={{ marginTop:32, display:'flex', gap:32, justifyContent:'center', flexWrap:'wrap' }}>
-            {([['3,247+','Active Traders','#00d4aa'],['$0','To Start','#00ff88'],['15s','Analysis Time','#3b8eea'],['5','AI Agents','#a855f7']] as [string,string,string][]).map(([n,l,clr])=>(
-              <div key={l} style={{ textAlign:'center' }}>
-                <div style={{ fontSize:22, fontWeight:900, color:clr, fontFamily:'"SF Mono",ui-monospace,monospace', letterSpacing:'-1px', textShadow:`0 0 20px ${clr}40` }}>{n}</div>
-                <div style={{ fontSize:10, color:'#3a5a6a', letterSpacing:'1px', marginTop:2, fontWeight:600 }}>{l.toUpperCase()}</div>
-              </div>
-            ))}
+          {/* Mini chart */}
+          <div style={{ maxWidth:500, margin:'0 auto', height:72, background:'rgba(6,13,20,0.7)', border:'1px solid rgba(0,212,170,0.12)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(10px)', padding:'6px' }}>
+            <AnimChart />
           </div>
         </div>
 
-        <div style={{ position:'absolute', bottom:32, left:'50%', transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', gap:8, opacity:.35, zIndex:2 }}>
+        <div style={{ position:'absolute', bottom:32, left:'50%', transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', gap:8, opacity:.3, zIndex:2 }}>
           <span style={{ fontSize:9, letterSpacing:'3px', color:'#6a90a8' }}>SCROLL</span>
           <div style={{ width:1, height:44, background:'linear-gradient(#00d4aa,transparent)', animation:'float3d 2s ease-in-out infinite' }} />
         </div>
@@ -913,7 +918,7 @@ export default function HomePage() {
       {/* TICKER */}
       <div style={{ borderTop:'1px solid rgba(255,255,255,.04)', borderBottom:'1px solid rgba(255,255,255,.04)', height:38, overflow:'hidden', position:'relative', zIndex:1, background:'rgba(4,10,16,.8)', backdropFilter:'blur(12px)' }}>
         <div style={{ display:'inline-flex', animation:'ticker3d 28s linear infinite', whiteSpace:'nowrap', height:'100%', alignItems:'center' }}>
-          {[...Array(2)].flatMap(() => ['🤖 AI Stock Analyzer — 5 agents, 15 seconds','🔫 Lock-Up Assassin — Predict the dump','🧪 Lie Detector — Find what they buried','🧠 Galaxy Brain — Trace the domino chain','🌊 Forced Flow — Front-run guaranteed money','⚡ Signal Radar — 73-91% hit rates','📄 Filing X-Ray — Read SEC before analysts','📰 Daily Intelligence — Free every morning'].map((t,i)=>(
+          {[...Array(2)].flatMap(() => ['🏛 Congress Tracker — They trade on inside knowledge. You can see every move.','💰 Smart Money — $4.2M in calls just hit NVDA. Who knows something?','📊 Earnings Decoder — Management\'s honesty score: 31/100. Fade the narrative.','🔫 Lock-Up Assassin — 84M shares unlock in 14 days. Buy the put now.','🧪 Lie Detector — FCF miss $400M. They buried it. AI found it first.','🧠 Galaxy Brain — Fed holds → Dollar weakens → KWEB calls. Follow the chain.','⚡ Signal Radar — Korean Won weakened. Qualcomm drops 72h later. 7/8 times.','🤖 AI Analyzer — 5 agents. 15 seconds. Entry, stop, target, options play.'].map((t,i)=>(
             <span key={t+i} style={{ padding:'0 28px', fontSize:11, fontWeight:700, letterSpacing:'.5px', color:['#00d4aa','#3b8eea','#a855f7','#f59e0b','#ec4899'][i%5] }}>
               {t} <span style={{ opacity:.2, marginLeft:12 }}>✦</span>
             </span>
