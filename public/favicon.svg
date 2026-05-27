@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#00d4aa"/>
+      <stop offset="52%"  stop-color="#1e90ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="14" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
+  <!-- Inner top sheen for depth -->
+  <rect width="32" height="16" rx="7" fill="url(#shine)"/>
+
+  <!-- Y mark — left arm (upper-left → center pivot) -->
+  <line x1="8.5"  y1="6.5"  x2="16" y2="16" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <!-- Y mark — right arm (upper-right → center pivot) -->
+  <line x1="23.5" y1="6.5"  x2="16" y2="16" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <!-- Y mark — stem (pivot → bottom) -->
+  <line x1="16"   y1="16"   x2="16" y2="26" stroke="white" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Candlestick body rect at the pivot (open/close indicator) -->
+  <rect x="13.5" y="14.8" width="5" height="2.5" rx="0.7" fill="white" fill-opacity="0.5"/>
+
+  <!-- Pivot node -->
+  <circle cx="16" cy="16" r="1.9" fill="white" fill-opacity="0.95"/>
+
+  <!-- Arm tip dots (candle wick ends) -->
+  <circle cx="8.5"  cy="6.5" r="1.7" fill="white" fill-opacity="0.8"/>
+  <circle cx="23.5" cy="6.5" r="1.7" fill="white" fill-opacity="0.8"/>
+
+  <!-- Stem bottom tick (take-profit level) -->
+  <line x1="13.5" y1="25.5" x2="18.5" y2="25.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.4"/>
+</svg>
