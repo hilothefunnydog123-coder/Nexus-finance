@@ -32,11 +32,6 @@ export const metadata: Metadata = {
     description: 'Ross Cameron. ICT. Graham Stephan. 9 world-class traders. $0.99 per course. Practice immediately on real charts.',
     images: ['/opengraph-image'],
   },
-  icons: {
-    icon:      [{ url: '/favicon.svg', type: 'image/svg+xml' }],
-    shortcut:  '/favicon.svg',
-    apple:     '/favicon.svg',
-  },
   robots: { index: true, follow: true },
   alternates: { canonical: BASE_URL },
 }
@@ -46,11 +41,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${inter.variable} h-full`} style={{ background: '#040c14' }}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-
-        {/* ── Favicon / browser tab icon ── */}
-        <link rel="icon"            type="image/svg+xml" href="/favicon.svg" />
-        <link rel="shortcut icon"   type="image/svg+xml" href="/favicon.svg" />
-        <link rel="apple-touch-icon"                     href="/favicon.svg" />
 
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#22c55e" />
