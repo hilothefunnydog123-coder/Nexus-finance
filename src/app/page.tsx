@@ -998,6 +998,143 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* ══ PLATFORM MAP ═════════════════════════════════════════════════════════ */}
+      <section style={{ padding:'80px 0 90px', position:'relative', zIndex:1, background:'rgba(3,6,12,1)' }}>
+        <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(0,212,170,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,170,.016) 1px,transparent 1px)', backgroundSize:'56px 56px', pointerEvents:'none' }}/>
+        <div className="section" style={{ position:'relative' }}>
+
+          {/* Header */}
+          <div style={{ textAlign:'center', marginBottom:52 }}>
+            <div style={{ fontSize:9, color:'#1a3040', letterSpacing:'3px', fontFamily:'monospace', marginBottom:14 }}>THE COMPLETE PLATFORM</div>
+            <h2 style={{ fontSize:'clamp(28px,4vw,48px)', fontWeight:900, letterSpacing:'-2px', color:'#dce8f0', marginBottom:12 }}>
+              Everything lives here. This is how it fits together.
+            </h2>
+            <p style={{ fontSize:16, color:'#2a4050', maxWidth:520, margin:'0 auto', lineHeight:1.7 }}>
+              YN Finance is one platform with three layers. Use one, use all three — each makes the next more powerful.
+            </p>
+          </div>
+
+          {/* Three pillars */}
+          <div className="g3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:3, borderRadius:16, overflow:'hidden', border:'1px solid rgba(255,255,255,.05)' }}>
+
+            {/* PILLAR 1 — ANALYZE */}
+            <div style={{ background:'rgba(5,12,20,.9)', padding:'36px 32px', position:'relative', backdropFilter:'blur(16px)' }}>
+              <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:'linear-gradient(90deg,#00d4aa,#1e90ff)' }}/>
+              <div style={{ fontSize:9, color:'#00d4aa', letterSpacing:'2.5px', fontFamily:'monospace', fontWeight:700, marginBottom:16 }}>LAYER 01 · ANALYZE</div>
+              <div style={{ fontSize:26, marginBottom:12 }}>🔬</div>
+              <h3 style={{ fontSize:20, fontWeight:900, letterSpacing:'-.4px', color:'#dce8f0', marginBottom:10 }}>The Intelligence Layer</h3>
+              <p style={{ fontSize:13, color:'#2a4050', lineHeight:1.7, marginBottom:24 }}>
+                Nine tools that find what the market doesn&apos;t know yet — before you place a trade.
+              </p>
+              <div style={{ display:'flex', flexDirection:'column', gap:7, marginBottom:28 }}>
+                {[
+                  ['🤖','AI Stock Analyzer','5 agents, 15 seconds'],
+                  ['🔫','Intelligence Suite','6 classified weapons'],
+                  ['🏛','Congress Tracker','Live trade disclosures'],
+                  ['💰','Smart Money Alerts','Insider + options flow'],
+                  ['📊','Earnings Decoder','Management truth score'],
+                  ['📰','Daily Intel','AI market briefing'],
+                ].map(([icon,name,desc])=>(
+                  <div key={name} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <span style={{ fontSize:13, flexShrink:0 }}>{icon}</span>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:700, color:'#7a9aaa' }}>{name}</div>
+                      <div style={{ fontSize:10, color:'#1a3040' }}>{desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Link href="/ai-stocks" style={{ display:'block', textAlign:'center', background:'rgba(0,212,170,.1)', border:'1px solid rgba(0,212,170,.25)', color:'#00d4aa', padding:'10px', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none', transition:'all .2s' }}
+                onMouseEnter={e=>{e.currentTarget.style.background='rgba(0,212,170,.18)'}}
+                onMouseLeave={e=>{e.currentTarget.style.background='rgba(0,212,170,.1)'}}>
+                Start Analyzing →
+              </Link>
+            </div>
+
+            {/* PILLAR 2 — LEARN */}
+            <div style={{ background:'rgba(6,10,18,.95)', padding:'36px 32px', position:'relative', backdropFilter:'blur(16px)', borderLeft:'1px solid rgba(255,255,255,.04)', borderRight:'1px solid rgba(255,255,255,.04)' }}>
+              <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:'linear-gradient(90deg,#f59e0b,#ec4899)' }}/>
+              <div style={{ fontSize:9, color:'#f59e0b', letterSpacing:'2.5px', fontFamily:'monospace', fontWeight:700, marginBottom:16 }}>LAYER 02 · LEARN</div>
+              <div style={{ fontSize:26, marginBottom:12 }}>🎓</div>
+              <h3 style={{ fontSize:20, fontWeight:900, letterSpacing:'-.4px', color:'#dce8f0', marginBottom:10 }}>The Education Layer</h3>
+              <p style={{ fontSize:13, color:'#2a4050', lineHeight:1.7, marginBottom:24 }}>
+                Nine of the most followed trading educators in the world. Their exact methods. From $0.99.
+              </p>
+              <div style={{ display:'flex', flexDirection:'column', gap:7, marginBottom:28 }}>
+                {[
+                  ['🔴','Ross Cameron','Gap & Go, small-cap momentum'],
+                  ['🟡','ICT','Smart money concepts'],
+                  ['🔵','Rayner Teo','Technical analysis'],
+                  ['🟣','Graham Stephan','Investing & wealth'],
+                  ['🌹','Anton Kreil','Professional trading (ITPM)'],
+                  ['🟢','+4 more instructors','Kevin O\'Leary, Wall St. Trapper...'],
+                ].map(([icon,name,desc])=>(
+                  <div key={name} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <span style={{ fontSize:11, flexShrink:0 }}>{icon}</span>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:700, color:'#7a9aaa' }}>{name}</div>
+                      <div style={{ fontSize:10, color:'#1a3040' }}>{desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Link href="/courses" style={{ display:'block', textAlign:'center', background:'rgba(245,158,11,.1)', border:'1px solid rgba(245,158,11,.25)', color:'#f59e0b', padding:'10px', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none', transition:'all .2s' }}
+                onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,158,11,.18)'}}
+                onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,158,11,.1)'}}>
+                Browse Courses →
+              </Link>
+            </div>
+
+            {/* PILLAR 3 — TRADE */}
+            <div style={{ background:'rgba(5,12,20,.9)', padding:'36px 32px', position:'relative', backdropFilter:'blur(16px)' }}>
+              <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:'linear-gradient(90deg,#a855f7,#ff2d78)' }}/>
+              <div style={{ fontSize:9, color:'#a855f7', letterSpacing:'2.5px', fontFamily:'monospace', fontWeight:700, marginBottom:16 }}>LAYER 03 · COMPETE</div>
+              <div style={{ fontSize:26, marginBottom:12 }}>⚔️</div>
+              <h3 style={{ fontSize:20, fontWeight:900, letterSpacing:'-.4px', color:'#dce8f0', marginBottom:10 }}>The Execution Layer</h3>
+              <p style={{ fontSize:13, color:'#2a4050', lineHeight:1.7, marginBottom:24 }}>
+                Apply what you analyzed and learned. Paper trade, take a prop challenge, compete in live tournaments.
+              </p>
+              <div style={{ display:'flex', flexDirection:'column', gap:7, marginBottom:28 }}>
+                {[
+                  ['📈','Paper Trading Terminal','$100K sim account, real data'],
+                  ['🏆','YN Capital Challenges','$49–$299 prop firm sim'],
+                  ['🎯','YN Arena Tournaments','DraftKings-style trading contests'],
+                  ['🤖','AI Voice Assistant','Your co-pilot, floats next to charts'],
+                  ['📜','Certificates','Printable on challenge pass'],
+                  ['🎖️','16 Achievement Badges','Track your progression'],
+                ].map(([icon,name,desc])=>(
+                  <div key={name} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <span style={{ fontSize:13, flexShrink:0 }}>{icon}</span>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:700, color:'#7a9aaa' }}>{name}</div>
+                      <div style={{ fontSize:10, color:'#1a3040' }}>{desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Link href="/app" style={{ display:'block', textAlign:'center', background:'rgba(168,85,247,.1)', border:'1px solid rgba(168,85,247,.25)', color:'#a855f7', padding:'10px', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none', transition:'all .2s' }}
+                onMouseEnter={e=>{e.currentTarget.style.background='rgba(168,85,247,.18)'}}
+                onMouseLeave={e=>{e.currentTarget.style.background='rgba(168,85,247,.1)'}}>
+                Open Terminal →
+              </Link>
+            </div>
+          </div>
+
+          {/* Flow connector */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:0, marginTop:24 }}>
+            {['Analyze the market','→ Learn from legends','→ Compete with edge'].map((s,i)=>(
+              <div key={s} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 20px', background:i===1?'rgba(245,158,11,.06)':'rgba(0,212,170,.05)', borderRadius:20, marginRight:i<2?8:0 }}>
+                <span style={{ width:6, height:6, borderRadius:'50%', background:i===0?'#00d4aa':i===1?'#f59e0b':'#a855f7', flexShrink:0 }}/>
+                <span style={{ fontSize:11, color:'#2a4050', fontWeight:600 }}>{s}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Section divider */}
+      <div style={{ height:1, background:'linear-gradient(90deg,transparent,rgba(0,212,170,.12),rgba(30,144,255,.12),transparent)', position:'relative', zIndex:1 }}/>
+
       {/* ══ ANALYZER PITCH ══════════════════════════════════════════════════════ */}
       <section style={{ padding:'130px 0', position:'relative', zIndex:1 }}>
         <div className="section">
@@ -1005,7 +1142,10 @@ export default function HomePage() {
 
             {/* Left: pitch */}
             <div ref={analyzer.ref} className={`vis${analyzer.v?' show':''}`}>
-              <div className="item i0" style={{ fontSize:11, color:'#00d4aa', letterSpacing:'2px', fontWeight:700, marginBottom:16 }}>THE ANALYZER</div>
+              <div className="item i0" style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+                <span style={{ fontSize:9, color:'#00d4aa', letterSpacing:'2px', fontWeight:700, background:'rgba(0,212,170,.08)', border:'1px solid rgba(0,212,170,.18)', borderRadius:4, padding:'3px 9px', fontFamily:'monospace' }}>LAYER 01 · ANALYZE</span>
+                <span style={{ fontSize:9, color:'#1a3040', letterSpacing:'1px', fontFamily:'monospace' }}>AI STOCK ANALYZER</span>
+              </div>
               <h2 className="item i1" style={{ fontSize:'clamp(30px,4vw,52px)', fontWeight:900, letterSpacing:'-2px', lineHeight:1.1, marginBottom:20 }}>
                 Five Agents.<br />
                 <span style={{ background:'linear-gradient(135deg,#00d4aa,#a855f7)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>One Decision.</span><br />
@@ -1243,7 +1383,7 @@ export default function HomePage() {
           <div className="section item i0" style={{ textAlign:'center', marginBottom:100 }}>
             <div style={{ display:'inline-flex', alignItems:'center', gap:10, background:'rgba(255,45,120,.1)', border:'1px solid rgba(255,45,120,.3)', borderRadius:20, padding:'8px 20px', marginBottom:24, fontSize:11, color:'#ff2d78', fontWeight:700, letterSpacing:'1.5px' }}>
               <span style={{ width:7, height:7, borderRadius:'50%', background:'#ff2d78', display:'inline-block', animation:'pulse-dot 1s infinite' }}/>
-              CLASSIFIED · INTELLIGENCE SUITE · CLEARANCE REQUIRED
+              LAYER 01 · ANALYZE — INTELLIGENCE SUITE
             </div>
             <h2 style={{ fontSize:'clamp(44px,7.5vw,96px)', fontWeight:900, lineHeight:.88, letterSpacing:'-4px', color:'#fff', marginBottom:24 }}>
               Six Weapons.<br/>
@@ -1475,7 +1615,7 @@ export default function HomePage() {
           <div className="section" style={{ textAlign:'center', marginBottom:100 }}>
             <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(255,45,120,.1)', border:'1px solid rgba(255,45,120,.3)', borderRadius:20, padding:'8px 20px', marginBottom:24, fontSize:11, color:'#ff2d78', fontWeight:700, letterSpacing:'1.5px' }}>
               <span style={{ width:7, height:7, borderRadius:'50%', background:'#ff2d78', display:'inline-block', animation:'pulse-dot 1s infinite' }}/>
-              INTELLIGENCE PLATFORM · THREE NEW WEAPONS
+              LAYER 01 · ANALYZE — LIVE INTELLIGENCE TOOLS
             </div>
             <h2 style={{ fontSize:'clamp(40px,7vw,90px)', fontWeight:900, lineHeight:.9, letterSpacing:'-4px', color:'#fff', marginBottom:24 }}>
               The intel they<br/>
@@ -1658,7 +1798,7 @@ export default function HomePage() {
           <div style={{ textAlign:'center', marginBottom:60 }}>
             <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(0,212,170,.08)', border:'1px solid rgba(0,212,170,.2)', borderRadius:20, padding:'6px 18px', marginBottom:18, fontSize:10, color:'#00d4aa', fontWeight:700, letterSpacing:'1.5px' }}>
               <span style={{ width:5, height:5, borderRadius:'50%', background:'#00d4aa', display:'inline-block', animation:'pulse-dot 1.5s infinite' }}/>
-              9 VERIFIED INSTRUCTORS · FROM $0.99 PER COURSE
+              LAYER 02 · LEARN — 9 VERIFIED INSTRUCTORS · FROM $0.99
             </div>
             <h2 style={{ fontSize:'clamp(32px,5vw,60px)', fontWeight:900, letterSpacing:'-2.5px', lineHeight:1.05, marginBottom:14 }}>
               Learn from{' '}
@@ -1739,7 +1879,7 @@ export default function HomePage() {
         <div className="section">
           <div ref={powers.ref} className={`vis${powers.v?' show':''}`}>
             <div className="item i0" style={{ textAlign:'center', marginBottom:64 }}>
-              <div style={{ fontSize:11, color:'#3b8eea', letterSpacing:'2px', fontWeight:700, marginBottom:14 }}>THE STACK</div>
+              <div style={{ fontSize:11, color:'#3b8eea', letterSpacing:'2px', fontWeight:700, marginBottom:14 }}>LAYER 03 · COMPETE — THE TECH STACK BEHIND IT</div>
               <h2 style={{ fontSize:'clamp(32px,5vw,58px)', fontWeight:900, letterSpacing:'-2px', lineHeight:1.05 }}>
                 Powered by the World&apos;s{' '}
                 <span style={{ background:'linear-gradient(135deg,#3b8eea,#a855f7)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Best Tech</span>
@@ -1783,7 +1923,7 @@ export default function HomePage() {
             <div className="item i0" style={{ textAlign:'center', marginBottom:80 }}>
               <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(245,158,11,.1)', border:'1px solid rgba(245,158,11,.25)', borderRadius:20, padding:'6px 18px', marginBottom:20, fontSize:11, color:'#f59e0b', fontWeight:700, letterSpacing:'1px' }}>
                 <span style={{ width:6, height:6, borderRadius:'50%', background:'#f59e0b', display:'inline-block' }}/>
-                THE FOUNDING TEAM
+                THE PEOPLE WHO BUILT IT
               </div>
               <h2 style={{ fontSize:'clamp(36px,5.5vw,68px)', fontWeight:900, letterSpacing:'-3px', lineHeight:.96, marginBottom:18 }}>
                 Three builders.{' '}
