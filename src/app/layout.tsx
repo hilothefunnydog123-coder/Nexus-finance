@@ -42,6 +42,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
+        {/* Favicon — ?v= busts the per-domain browser favicon cache */}
+        <link rel="icon"          type="image/png" href="/icon.png?v=3" sizes="32x32" />
+        <link rel="shortcut icon" type="image/png" href="/icon.png?v=3" />
+
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#22c55e" />
         <meta name="mobile-web-app-capable" content="yes" />
