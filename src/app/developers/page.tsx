@@ -187,16 +187,17 @@ export default function DevelopersPage() {
 
   async function handleMagicLink() {
     setAuthErr(''); setAuthSucc('')
-    if (!supabase) return
     if (!authEmail) { setAuthErr('Email required'); return }
     setAuthBusy(true)
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: authEmail,
-        options: { emailRedirectTo: `${window.location.origin}/developers`, shouldCreateUser: true },
+      const r = await fetch('/api/developers/auth/magic', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: authEmail.trim().toLowerCase() }),
       })
-      if (error) { setAuthErr(error.message); return }
-      setAuthSucc(`Magic link sent to ${authEmail} — check your inbox.`)
+      const d = await r.json()
+      if (!r.ok) { setAuthErr(d.error ?? 'Could not send link'); return }
+      setAuthSucc(`Magic link sent to ${authEmail} — check your inbox and spam folder.`)
     } finally { setAuthBusy(false) }
   }
 

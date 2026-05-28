@@ -271,3 +271,157 @@ export async function sendPaymentFailedEmail(email: string) {
     console.error('[email] payment failed email error:', err)
   }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DEVELOPER API — MAGIC LINK LOGIN EMAIL
+// ════════════════════════════════════════════════════════════════════════════
+export async function sendApiMagicLinkEmail(email: string, magicLink: string) {
+  if (!RESEND_OK) { console.warn('[email] Resend not configured'); return }
+
+  const html = wrap(`
+    <tr><td style="background:${K.surface};border:1px solid #3b8eea20;border-radius:12px;padding:36px 32px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:#3b8eea10;border:1px solid #3b8eea30;border-radius:100px;padding:5px 14px;margin-bottom:24px;">
+        <span style="width:6px;height:6px;border-radius:50%;background:#3b8eea;display:inline-block;"></span>
+        <span style="font-size:11px;font-weight:700;color:#3b8eea;letter-spacing:.1em;">DEVELOPER PORTAL &middot; SIGN IN</span>
+      </div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:900;color:${K.text};line-height:1.2;letter-spacing:-.5px;">Your sign-in link is ready.</h1>
+      <p style="margin:0 0 28px;font-size:14px;color:${K.muted};line-height:1.7;">
+        Click below to sign in to your YN Finance developer dashboard. Manage API keys, track usage, and upgrade your plan.
+      </p>
+      <div style="text-align:center;margin-bottom:28px;">
+        <a href="${magicLink}" style="display:inline-block;background:linear-gradient(135deg,#3b8eea,#a855f7);color:#fff;font-weight:800;font-size:14px;padding:15px 40px;border-radius:8px;text-decoration:none;">Sign In to Dashboard &rarr;</a>
+      </div>
+      <p style="margin:0 0 6px;font-size:12px;color:#1a3040;">&#9201; This link expires in <strong style="color:#2a4050;">60 minutes</strong> and can only be used once.</p>
+      <p style="margin:0;font-size:12px;color:#1a3040;">If you did not request this, ignore this email.</p>
+    </td></tr>
+  `)
+
+  try {
+    await resend.emails.send({
+      from:    FROM,
+      to:      [email],
+      subject: '⚡ Sign in to YN Finance Developer Portal',
+      html,
+    })
+    console.log('[email] magic link sent to', email)
+  } catch (err) {
+    console.error('[email] magic link failed:', err)
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DEVELOPER API — KEY CLAIMED EMAIL
+// ════════════════════════════════════════════════════════════════════════════
+export async function sendApiKeyClaimedEmail(email: string, keyPrefix: string, tier: string) {
+  if (!RESEND_OK || !email) return
+
+  const tierClr = tier === 'pro' ? '#3b8eea' : '#00d4aa'
+  const limit   = tier === 'pro' ? '10,000' : '100'
+
+  const html = wrap(`
+    <tr><td style="background:${K.surface};border:1px solid #00d4aa20;border-radius:12px;padding:36px 32px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:#00d4aa10;border:1px solid #00d4aa30;border-radius:100px;padding:5px 14px;margin-bottom:24px;">
+        <span style="font-size:11px;font-weight:700;color:#00d4aa;letter-spacing:.1em;">&#128273; API KEY ACTIVATED</span>
+      </div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:900;color:${K.text};line-height:1.2;letter-spacing:-.5px;">Your API key is live.</h1>
+      <p style="margin:0 0 24px;font-size:14px;color:${K.muted};line-height:1.7;">
+        You now have access to congressional trade data, smart money signals, earnings forensics, and AI trade analysis.
+      </p>
+      <div style="background:#0a1825;border:1px solid ${K.border};border-radius:10px;padding:20px;margin-bottom:24px;">
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:8px 0;border-bottom:1px solid ${K.border};font-size:12px;color:${K.muted};">Key prefix</td>
+            <td style="padding:8px 0;border-bottom:1px solid ${K.border};text-align:right;font-family:monospace;font-size:12px;color:#00d4aa;">${keyPrefix}&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;border-bottom:1px solid ${K.border};font-size:12px;color:${K.muted};">Tier</td>
+            <td style="padding:8px 0;border-bottom:1px solid ${K.border};text-align:right;font-family:monospace;font-size:12px;font-weight:800;color:${tierClr};">${tier.toUpperCase()}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;font-size:12px;color:${K.muted};">Monthly calls</td>
+            <td style="padding:8px 0;text-align:right;font-family:monospace;font-size:12px;color:${K.text};">${limit} / month</td>
+          </tr>
+        </table>
+      </div>
+      <div style="background:#050e17;border:1px solid ${K.border};border-radius:8px;padding:14px;margin-bottom:24px;">
+        <pre style="margin:0;font-family:monospace;font-size:11px;color:#6a9aaa;white-space:pre-wrap;">curl "https://ynfinance.org/api/v1/congress/trades" \\
+  -H "Authorization: Bearer YOUR_FULL_KEY"</pre>
+      </div>
+      <div style="text-align:center;margin-bottom:16px;">${ctaBtn('Open Developer Dashboard &rarr;', BASE_URL + '/developers')}</div>
+      <p style="margin:0;font-size:11px;color:#1a3040;">
+        &#128274; Your full key was shown once on the dashboard and is not stored in plaintext. If lost, generate a new one from the dashboard.
+      </p>
+    </td></tr>
+  `)
+
+  try {
+    await resend.emails.send({
+      from:    FROM,
+      to:      [email],
+      subject: '🔑 Your YN Finance API key is ready',
+      html,
+    })
+    console.log('[email] api key claimed sent to', email)
+  } catch (err) {
+    console.error('[email] api key claimed failed:', err)
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DEVELOPER API — PRO UPGRADE CONFIRMATION
+// ════════════════════════════════════════════════════════════════════════════
+export async function sendApiProUpgradedEmail(email: string, keyPrefix: string) {
+  if (!RESEND_OK || !email) return
+
+  const html = wrap(`
+    <tr><td style="background:${K.surface};border:1px solid #3b8eea20;border-radius:12px;padding:36px 32px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:#3b8eea10;border:1px solid #3b8eea30;border-radius:100px;padding:5px 14px;margin-bottom:24px;">
+        <span style="font-size:11px;font-weight:700;color:#3b8eea;letter-spacing:.1em;">&#128640; API PRO ACTIVATED</span>
+      </div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:900;color:${K.text};line-height:1.2;letter-spacing:-.5px;">You&apos;re on Pro. Build without limits.</h1>
+      <p style="margin:0 0 24px;font-size:14px;color:${K.muted};line-height:1.7;">
+        Your YN Finance API key has been upgraded to Pro. 10,000 calls per month, all endpoints, and priority support &mdash; starting now.
+      </p>
+      <div style="background:#0a1825;border:1px solid ${K.border};border-radius:10px;padding:20px;margin-bottom:24px;">
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:8px 0;border-bottom:1px solid ${K.border};font-size:12px;color:${K.muted};">Key prefix</td>
+            <td style="padding:8px 0;border-bottom:1px solid ${K.border};text-align:right;font-family:monospace;font-size:12px;color:#3b8eea;">${keyPrefix}&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;border-bottom:1px solid ${K.border};font-size:12px;color:${K.muted};">Tier</td>
+            <td style="padding:8px 0;border-bottom:1px solid ${K.border};text-align:right;font-family:monospace;font-size:12px;font-weight:800;color:#3b8eea;">PRO &#10003;</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;border-bottom:1px solid ${K.border};font-size:12px;color:${K.muted};">Monthly calls</td>
+            <td style="padding:8px 0;border-bottom:1px solid ${K.border};text-align:right;font-family:monospace;font-size:12px;color:${K.text};">10,000 / month</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;border-bottom:1px solid ${K.border};font-size:12px;color:${K.muted};">Rate limit</td>
+            <td style="padding:8px 0;border-bottom:1px solid ${K.border};text-align:right;font-family:monospace;font-size:12px;color:${K.text};">60 req / min</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;font-size:12px;color:${K.muted};">Billing</td>
+            <td style="padding:8px 0;text-align:right;font-size:12px;color:${K.text};">$49/month &middot; Cancel anytime</td>
+          </tr>
+        </table>
+      </div>
+      <div style="text-align:center;margin-bottom:16px;">${ctaBtn('Open Developer Dashboard &rarr;', BASE_URL + '/developers')}</div>
+      <p style="margin:0;font-size:12px;color:#1a3040;text-align:center;">
+        Manage or cancel: <a href="mailto:api@ynfinance.org?subject=Manage+Pro" style="color:#2a4060;">api@ynfinance.org</a>
+      </p>
+    </td></tr>
+  `)
+
+  try {
+    await resend.emails.send({
+      from:    FROM,
+      to:      [email],
+      subject: '🚀 YN Finance API Pro — you\'re in',
+      html,
+    })
+    console.log('[email] api pro upgraded sent to', email)
+  } catch (err) {
+    console.error('[email] api pro upgraded failed:', err)
+  }
+}

@@ -31,3 +31,24 @@ create index if not exists idx_api_keys_active   on api_keys(is_active);
 
 alter table public.api_keys enable row level security;
 -- All access goes through server-side service_role key — no direct client policies needed.
+
+-- ─── Developer signups / contacts table ──────────────────────────────────────
+-- Tracks every developer who registers for the API. Used for email marketing
+-- and analytics. Updated on magic link requests and key claims.
+
+create table if not exists public.developer_signups (
+  id                  uuid        primary key default gen_random_uuid(),
+  email               text        not null unique,
+  user_id             uuid        references auth.users on delete set null,
+  tier                text        not null default 'free',
+  key_prefix          text,
+  source              text        default 'developers_page',
+  last_magic_link_at  timestamptz,
+  signed_up_at        timestamptz default now()
+);
+
+create index if not exists idx_dev_signups_email   on developer_signups(email);
+create index if not exists idx_dev_signups_user_id on developer_signups(user_id);
+
+alter table public.developer_signups enable row level security;
+-- Service-role key only — no direct client access.

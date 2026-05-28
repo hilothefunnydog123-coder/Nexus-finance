@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createApiKey, extractKey, validateApiKey, TIER_LIMITS } from '@/lib/apiKeys'
 import { createClient } from '@supabase/supabase-js'
+import { sendApiKeyClaimedEmail } from '@/lib/email'
 
 const CORS: Record<string, string> = {
   'Access-Control-Allow-Origin':  '*',
@@ -73,6 +74,14 @@ export async function POST(req: NextRequest) {
       name,
       tier:   'free',
     })
+
+    // Send branded confirmation email via Resend (non-blocking)
+    sendApiKeyClaimedEmail(user.email, prefix, 'free').catch(() => {})
+
+    // Track in developer_signups (non-blocking)
+    sb.from('developer_signups')
+      .upsert({ email: user.email, user_id: user.id, tier: 'free', key_prefix: prefix }, { onConflict: 'email' })
+      .then(() => {}, () => {})
 
     return NextResponse.json({
       source:    'ynfinance-api',

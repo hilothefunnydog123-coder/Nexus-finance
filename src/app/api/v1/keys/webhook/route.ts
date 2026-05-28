@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { sendApiProUpgradedEmail } from '@/lib/email'
 
 // ── Stripe webhook for API key Pro upgrades ────────────────────────────────────
 // Stripe sends POST here when checkout.session.completed fires.
@@ -71,6 +72,20 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('[api-key webhook] Upgraded key to Pro:', keyId)
+
+    // Send Pro upgrade email via Resend (non-blocking)
+    const keyPrefix = session.metadata?.key_prefix ?? ''
+    const custEmail = typeof session.customer_details === 'object' && session.customer_details !== null
+      ? (session.customer_details as { email?: string }).email ?? ''
+      : ''
+    if (custEmail && keyPrefix) {
+      sendApiProUpgradedEmail(custEmail, keyPrefix).catch(() => {})
+      // Update developer_signups tier
+      sb.from('developer_signups')
+        .update({ tier: 'pro' })
+        .eq('email', custEmail)
+        .then(() => {}, () => {})
+    }
   }
 
   if (event.type === 'customer.subscription.deleted') {
