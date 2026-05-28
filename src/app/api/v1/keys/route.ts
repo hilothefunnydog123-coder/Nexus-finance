@@ -12,30 +12,75 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS })
 }
 
-// ── POST /api/v1/keys — generate a new free API key ───────────────────────────
+function getServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  )
+}
+
+// ── POST /api/v1/keys — claim a free API key (requires Supabase auth) ─────────
 export async function POST(req: NextRequest) {
-  let body: Record<string, unknown>
-  try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400, headers: CORS })
+  const authHeader = req.headers.get('authorization') ?? ''
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+
+  if (!token) {
+    return NextResponse.json(
+      { error: 'Sign in at ynfinance.org/developers to generate an API key.' },
+      { status: 401, headers: CORS }
+    )
   }
 
-  const email = String(body.email ?? '').trim().toLowerCase()
-  const name  = String(body.name  ?? 'My App').trim().slice(0, 64)
+  const sb = getServiceClient()
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ error: 'Valid email required' }, { status: 400, headers: CORS })
+  // Verify Supabase JWT and get the user
+  const { data: { user }, error: authErr } = await sb.auth.getUser(token)
+  if (authErr || !user?.email) {
+    return NextResponse.json(
+      { error: 'Invalid or expired session. Please sign in again.' },
+      { status: 401, headers: CORS }
+    )
+  }
+
+  // Parse optional name from body
+  let name = 'My App'
+  try {
+    const body = await req.json()
+    if (body?.name) name = String(body.name).trim().slice(0, 64)
+  } catch { /* body is optional */ }
+
+  // Check if user already has an active key
+  const { data: existing } = await sb
+    .from('api_keys')
+    .select('key_prefix, tier')
+    .eq('user_email', user.email)
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle()
+
+  if (existing) {
+    return NextResponse.json(
+      { error: 'You already have an API key. Check your dashboard above.' },
+      { status: 409, headers: CORS }
+    )
   }
 
   try {
-    const { raw, prefix, id } = await createApiKey({ email, name, tier: 'free' })
+    const { raw, prefix, id } = await createApiKey({
+      email:  user.email,
+      userId: user.id,
+      name,
+      tier:   'free',
+    })
 
     return NextResponse.json({
       source:    'ynfinance-api',
       version:   '1.0',
       timestamp: new Date().toISOString(),
       message:   'API key created. Copy it now — this is the only time it will be shown.',
-      key:       raw,       // ← shown ONCE
-      prefix,               // ← for display after this (yn_live_a1b2c3d4...)
+      key:       raw,
+      prefix,
       id,
       tier:      'free',
       limit:     TIER_LIMITS.free,
@@ -43,10 +88,9 @@ export async function POST(req: NextRequest) {
     }, { status: 201, headers: CORS })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
-    // If email already has a key, give a helpful message
     if (msg.includes('unique') || msg.includes('duplicate')) {
       return NextResponse.json(
-        { error: 'An API key for this email already exists. Email api@ynfinance.org to retrieve or rotate it.' },
+        { error: 'You already have an API key. Check your dashboard above.' },
         { status: 409, headers: CORS }
       )
     }
@@ -54,7 +98,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ── GET /api/v1/keys — check your own key usage ───────────────────────────────
+// ── GET /api/v1/keys — check usage for a given API key ────────────────────────
 export async function GET(req: NextRequest) {
   const raw = extractKey(req.headers)
   if (!raw) {
@@ -69,13 +113,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid or expired API key' }, { status: 401, headers: CORS })
   }
 
-  // Fetch current usage stats
   try {
-    const sb = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { persistSession: false } }
-    )
+    const sb = getServiceClient()
     const { data } = await sb
       .from('api_keys')
       .select('key_prefix, tier, name, calls_month, calls_total, created_at, last_used_at')

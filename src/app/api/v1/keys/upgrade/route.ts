@@ -13,10 +13,10 @@ export async function OPTIONS() {
 }
 
 // ── POST /api/v1/keys/upgrade ──────────────────────────────────────────────────
-// Body: { key_prefix: "yn_live_xxxx", email }
-// Creates a Stripe checkout session for the Pro API tier ($49/month).
-// On success Stripe redirects to /developers?upgraded=true
-// Webhook upgrades the key tier to 'pro'.
+// Body: { key_prefix: "yn_live_xxxx", email?: string }
+// Authorization: Bearer <supabase_access_token>   (preferred — email auto-filled)
+// On success redirects to /developers?upgraded=true
+// Stripe webhook at /api/v1/keys/webhook upgrades the tier to 'pro'.
 export async function POST(req: NextRequest) {
   const stripeKey = process.env.STRIPE_SECRET_KEY
   if (!stripeKey) {
@@ -29,24 +29,31 @@ export async function POST(req: NextRequest) {
   }
 
   const prefix = String(body.key_prefix ?? '').trim()
-  const email  = String(body.email      ?? '').trim().toLowerCase()
-
   if (!prefix.startsWith('yn_live_') || prefix.length < 16) {
     return NextResponse.json(
-      { error: 'Invalid key prefix. Provide the first 16+ characters of your free API key.' },
+      { error: 'Invalid key prefix. Provide the first 16+ characters of your API key.' },
       { status: 400, headers: CORS }
     )
   }
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ error: 'Valid email required' }, { status: 400, headers: CORS })
-  }
 
-  // Verify the key prefix exists and is on the free tier
   const sb = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } }
   )
+
+  // Try to get email from JWT first, fall back to body email
+  let email = String(body.email ?? '').trim().toLowerCase()
+  const authHeader = req.headers.get('authorization') ?? ''
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+  if (token && !token.startsWith('yn_')) {
+    const { data: { user } } = await sb.auth.getUser(token)
+    if (user?.email) email = user.email
+  }
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: 'Valid billing email required' }, { status: 400, headers: CORS })
+  }
 
   const { data: keyRecord, error: dbErr } = await sb
     .from('api_keys')
@@ -70,22 +77,19 @@ export async function POST(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const stripe = new (Stripe as any)(stripeKey)
 
-  // Get or create the Pro API price
   let priceId = process.env.STRIPE_API_PRO_PRICE_ID
-
   if (!priceId) {
-    // Auto-create the price on first use and log it so it can be pinned in env
     const price = await stripe.prices.create({
-      currency:      'usd',
-      unit_amount:   4900, // $49.00
-      recurring:     { interval: 'month' },
-      product_data:  {
+      currency:     'usd',
+      unit_amount:  4900,
+      recurring:    { interval: 'month' },
+      product_data: {
         name:     'YN Finance API — Pro',
         metadata: { product_type: 'api_pro' },
       },
     })
     priceId = price.id
-    console.log('[API upgrade] Created Stripe price:', priceId, '— set STRIPE_API_PRO_PRICE_ID in env to skip this on future requests')
+    console.log('[API upgrade] Created Stripe price:', priceId, '— pin STRIPE_API_PRO_PRICE_ID in env')
   }
 
   const host     = req.headers.get('host') ?? 'ynfinance.org'
@@ -93,21 +97,21 @@ export async function POST(req: NextRequest) {
   const base     = `${protocol}://${host}`
 
   const session = await stripe.checkout.sessions.create({
-    mode:                'subscription',
-    customer_email:      email,
-    line_items:          [{ price: priceId, quantity: 1 }],
-    success_url:         `${base}/developers?upgraded=true&prefix=${encodeURIComponent(prefix)}`,
-    cancel_url:          `${base}/developers?cancelled=true`,
-    metadata:            { key_id: keyRecord.id, key_prefix: prefix, product: 'api_pro' },
-    subscription_data:   { metadata: { key_id: keyRecord.id, key_prefix: prefix } },
+    mode:                 'subscription',
+    customer_email:       email,
+    line_items:           [{ price: priceId, quantity: 1 }],
+    success_url:          `${base}/developers?upgraded=true&prefix=${encodeURIComponent(prefix)}`,
+    cancel_url:           `${base}/developers?cancelled=true`,
+    metadata:             { key_id: keyRecord.id, key_prefix: prefix, product: 'api_pro' },
+    subscription_data:    { metadata: { key_id: keyRecord.id, key_prefix: prefix } },
     allow_promotion_codes: true,
   })
 
   return NextResponse.json({
-    source:      'ynfinance-api',
-    version:     '1.0',
-    timestamp:   new Date().toISOString(),
+    source:       'ynfinance-api',
+    version:      '1.0',
+    timestamp:    new Date().toISOString(),
     checkout_url: session.url,
-    session_id:  session.id,
+    session_id:   session.id,
   }, { headers: CORS })
 }

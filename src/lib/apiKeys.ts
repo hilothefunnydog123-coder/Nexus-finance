@@ -30,9 +30,10 @@ export function generateRawKey(): string {
 
 // ── Create and persist a new key ──────────────────────────────────────────────
 export async function createApiKey(opts: {
-  email: string
-  name:  string
-  tier?: string
+  email:   string
+  name:    string
+  tier?:   string
+  userId?: string
 }): Promise<{ raw: string; prefix: string; id: string }> {
   const raw    = generateRawKey()
   const prefix = raw.slice(0, 16)  // e.g. "yn_live_a1b2c3d4"
@@ -42,7 +43,14 @@ export async function createApiKey(opts: {
   const sb = getServiceClient()
   const { data, error } = await sb
     .from('api_keys')
-    .insert({ user_email: opts.email, key_hash: hash, key_prefix: prefix, tier, name: opts.name })
+    .insert({
+      user_email: opts.email,
+      user_id:    opts.userId ?? null,
+      key_hash:   hash,
+      key_prefix: prefix,
+      tier,
+      name:       opts.name,
+    })
     .select('id')
     .single()
 
@@ -66,7 +74,7 @@ export async function validateApiKey(rawKey: string): Promise<{
 
   const { data, error } = await sb
     .from('api_keys')
-    .select('id, tier, user_email, calls_month, is_active')
+    .select('id, tier, user_email, calls_month, calls_total, is_active')
     .eq('key_hash', hash)
     .single()
 
@@ -80,7 +88,7 @@ export async function validateApiKey(rawKey: string): Promise<{
   sb.from('api_keys')
     .update({
       calls_month:  data.calls_month + 1,
-      calls_total:  data.calls_month + 1,   // approximate, server handles exact
+      calls_total:  data.calls_total + 1,
       last_used_at: new Date().toISOString(),
     })
     .eq('id', data.id)
