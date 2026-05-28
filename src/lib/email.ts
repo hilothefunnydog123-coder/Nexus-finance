@@ -273,6 +273,52 @@ export async function sendPaymentFailedEmail(email: string) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+//  DEVELOPER API — SIGNUP CONFIRMATION EMAIL
+// ════════════════════════════════════════════════════════════════════════════
+export async function sendApiSignupConfirmationEmail(email: string) {
+  if (!RESEND_OK || !email) return
+
+  const html = wrap(`
+    <tr><td style="background:${K.surface};border:1px solid #00d4aa20;border-radius:12px;padding:36px 32px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:#00d4aa10;border:1px solid #00d4aa30;border-radius:100px;padding:5px 14px;margin-bottom:24px;">
+        <span style="width:6px;height:6px;border-radius:50%;background:#00d4aa;display:inline-block;"></span>
+        <span style="font-size:11px;font-weight:700;color:#00d4aa;letter-spacing:.1em;">ACCOUNT CONFIRMED</span>
+      </div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:900;color:${K.text};line-height:1.2;letter-spacing:-.5px;">
+        Welcome to YN Finance Developer Portal.
+      </h1>
+      <p style="margin:0 0 24px;font-size:14px;color:${K.muted};line-height:1.7;">
+        Your account is confirmed and ready. Sign in and claim your free API key &mdash; no credit card required.
+      </p>
+      <div style="text-align:center;margin-bottom:28px;">
+        <a href="${BASE_URL}/developers" style="display:inline-block;background:linear-gradient(135deg,#00d4aa,#1e90ff);color:#040d14;font-weight:800;font-size:14px;padding:15px 40px;border-radius:8px;text-decoration:none;">Go to Developer Dashboard &rarr;</a>
+      </div>
+      <div style="background:#0a1825;border:1px solid ${K.border};border-radius:8px;padding:16px 18px;margin-bottom:16px;">
+        <p style="margin:0 0 10px;font-size:11px;font-weight:700;color:#2a4050;letter-spacing:.1em;">WHAT YOU GET FOR FREE</p>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:6px 0;border-bottom:1px solid ${K.border};font-size:12px;color:${K.muted};">Monthly API calls</td><td style="padding:6px 0;border-bottom:1px solid ${K.border};text-align:right;font-family:monospace;font-size:12px;color:#00d4aa;">100 / month</td></tr>
+          <tr><td style="padding:6px 0;border-bottom:1px solid ${K.border};font-size:12px;color:${K.muted};">Endpoints</td><td style="padding:6px 0;border-bottom:1px solid ${K.border};text-align:right;font-size:12px;color:${K.text};">5 endpoints</td></tr>
+          <tr><td style="padding:6px 0;font-size:12px;color:${K.muted};">Credit card</td><td style="padding:6px 0;text-align:right;font-size:12px;color:#00d4aa;">Not required</td></tr>
+        </table>
+      </div>
+      <p style="margin:0;font-size:12px;color:#1a3040;">Need more? Upgrade to Pro for 10,000 calls/month at $49/mo anytime from the dashboard.</p>
+    </td></tr>
+  `)
+
+  try {
+    await resend.emails.send({
+      from:    FROM,
+      to:      [email],
+      subject: '⚡ Welcome to YN Finance Developer Portal — account confirmed',
+      html,
+    })
+    console.log('[email] signup confirmation sent to', email)
+  } catch (err) {
+    console.error('[email] signup confirmation failed:', err)
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  DEVELOPER API — MAGIC LINK LOGIN EMAIL
 // ════════════════════════════════════════════════════════════════════════════
 export async function sendApiMagicLinkEmail(email: string, magicLink: string) {

@@ -168,18 +168,32 @@ export default function DevelopersPage() {
   async function handleAuth(e: React.FormEvent) {
     e.preventDefault()
     setAuthErr(''); setAuthSucc('')
-    if (!supabase) { setAuthErr('Auth not configured — add Supabase env vars'); return }
     if (!authEmail) { setAuthErr('Email required'); return }
     if (!authPass)  { setAuthErr('Password required'); return }
     setAuthBusy(true)
     try {
       if (authTab === 'signup') {
-        const { error } = await supabase.auth.signUp({ email: authEmail, password: authPass })
-        if (error) { setAuthErr(error.message); return }
-        setAuthSucc('Account created! Check your email to confirm, then sign in.')
+        // Server-side signup via admin API — marks email confirmed instantly,
+        // sends welcome email via Resend, no Supabase confirmation email needed.
+        const r = await fetch('/api/developers/auth/signup', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email: authEmail.trim().toLowerCase(), password: authPass }),
+        })
+        const d = await r.json()
+        if (!r.ok) {
+          if (r.status === 409) {
+            setAuthErr(d.error); setAuthTab('signin')
+          } else {
+            setAuthErr(d.error ?? 'Sign up failed')
+          }
+          return
+        }
+        setAuthSucc('Account created! Check your email, then sign in below.')
         setAuthTab('signin')
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPass })
+        if (!supabase) { setAuthErr('Auth not configured'); return }
+        const { error } = await supabase.auth.signInWithPassword({ email: authEmail.trim().toLowerCase(), password: authPass })
         if (error) { setAuthErr(error.message); return }
       }
     } finally { setAuthBusy(false) }
