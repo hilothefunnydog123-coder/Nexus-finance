@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateApiKey, extractKey } from '@/lib/apiKeys'
 
 // ── CORS headers ───────────────────────────────────────────────────────────────
 const CORS: Record<string, string> = {
@@ -8,12 +9,7 @@ const CORS: Record<string, string> = {
 }
 
 // ── API key validation ─────────────────────────────────────────────────────────
-function validateKey(req: NextRequest): boolean {
-  const auth = req.headers.get('authorization') ?? ''
-  const key  = auth.replace(/^Bearer\s+/i, '') || req.headers.get('x-api-key') || ''
-  // Accept any key starting with 'yn_' — real validation would check Supabase
-  return key.startsWith('yn_') || key === process.env.YN_INTERNAL_API_KEY
-}
+// Real validation delegated to lib/apiKeys — checks Supabase, enforces tier limits
 
 // ── Response envelope helper ───────────────────────────────────────────────────
 function envelope(data: Record<string, unknown>) {
@@ -34,9 +30,10 @@ export async function OPTIONS() {
 // Returns: { verdict, confidence, sentiment_score, key_levels, recommendation }
 export async function POST(req: NextRequest) {
   // Auth check
-  if (!validateKey(req)) {
+  const keyResult = await validateApiKey(extractKey(req.headers))
+  if (!keyResult) {
     return NextResponse.json(
-      envelope({ error: 'Unauthorized — provide a valid API key via Authorization: Bearer yn_xxxx or x-api-key header', docs: 'https://ynfinance.org/developers#auth' }),
+      envelope({ error: 'Unauthorized — invalid key, rate limit exceeded, or key not found. Get a key at https://ynfinance.org/developers', docs: 'https://ynfinance.org/developers#auth' }),
       { status: 401, headers: CORS }
     )
   }

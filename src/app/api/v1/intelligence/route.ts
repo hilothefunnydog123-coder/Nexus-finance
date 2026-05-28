@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateApiKey, extractKey } from '@/lib/apiKeys'
 
 const CORS: Record<string, string> = {
   'Access-Control-Allow-Origin':  '*',
@@ -9,11 +10,6 @@ const CORS: Record<string, string> = {
 const VALID_WEAPONS = ['lockup', 'liedetector', 'galaxybrain', 'flow', 'signals', 'filing'] as const
 type Weapon = typeof VALID_WEAPONS[number]
 
-function validateKey(req: NextRequest): boolean {
-  const auth = req.headers.get('authorization') ?? ''
-  const key  = auth.replace(/^Bearer\s+/i, '') || req.headers.get('x-api-key') || ''
-  return key.startsWith('yn_') || key === process.env.YN_INTERNAL_API_KEY
-}
 
 function envelope(data: Record<string, unknown>) {
   return { source: 'ynfinance-api', version: '1.0', timestamp: new Date().toISOString(), ...data }
@@ -27,7 +23,7 @@ export async function OPTIONS() {
 // Body: { weapon: "lockup"|"liedetector"|"galaxybrain"|"flow"|"signals"|"filing", input: string }
 // Returns: { result: {...} }
 export async function POST(req: NextRequest) {
-  if (!validateKey(req)) {
+  if (!await validateApiKey(extractKey(req.headers))) {
     return NextResponse.json(
       envelope({ error: 'Unauthorized', docs: 'https://ynfinance.org/developers#auth' }),
       { status: 401, headers: CORS }
