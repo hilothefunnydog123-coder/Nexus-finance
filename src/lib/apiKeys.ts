@@ -96,3 +96,16 @@ export function extractKey(headers: Headers): string {
       || headers.get('x-api-key')?.trim()
       || ''
 }
+
+// ── Get key stats by prefix (for dashboard) ───────────────────────────────────
+export async function getKeyStatsByPrefix(prefix: string) {
+  if (!prefix?.startsWith('yn_')) return null
+  const sb = getServiceClient()
+  const { data, error } = await sb
+    .from('api_keys')
+    .select('id, tier, name, user_email, calls_month, calls_total, is_active, created_at, last_used_at')
+    .eq('key_prefix', prefix)
+    .single()
+  if (error || !data) return null
+  return data
+}
