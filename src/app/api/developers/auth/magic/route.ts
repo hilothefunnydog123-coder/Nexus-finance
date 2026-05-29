@@ -35,8 +35,6 @@ export async function POST(req: NextRequest) {
 
   const sb = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } })
 
-  const redirectTo = 'https://ynfinance.org/developers'
-
   // If user already exists but has unconfirmed email, confirm them now
   // so the magic link actually works after clicking.
   try {
@@ -47,11 +45,12 @@ export async function POST(req: NextRequest) {
     }
   } catch { /* non-blocking */ }
 
-  // Generate the real Supabase magic link server-side
+  // Generate the real Supabase magic link server-side.
+  // No redirectTo — Supabase uses its configured Site URL (set to ynfinance.org
+  // in Supabase dashboard → Authentication → URL Configuration → Site URL).
   const { data, error } = await sb.auth.admin.generateLink({
-    type:    'magiclink',
+    type:  'magiclink',
     email,
-    options: { redirectTo },
   })
 
   if (error || !data?.properties?.action_link) {
