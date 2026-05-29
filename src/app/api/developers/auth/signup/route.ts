@@ -28,37 +28,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400, headers: CORS })
   }
 
-  const sb = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  )
+  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, '')
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
 
-  // Admin API creates user with email already confirmed — no Supabase email sent,
-  // we send our own via Resend so user can sign in immediately.
-  const { data, error } = await sb.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
+  if (!supabaseUrl || !serviceKey) {
+    return NextResponse.json({ error: 'Server not configured' }, { status: 500, headers: CORS })
+  }
+
+  // Call Supabase GoTrue admin API directly — bypasses SDK path issues.
+  // email_confirm:true means the user can sign in immediately, no confirmation email from Supabase.
+  const res = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'apikey':        serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+    body: JSON.stringify({ email, password, email_confirm: true }),
   })
 
-  if (error) {
-    const msg = error.message.toLowerCase()
-    if (msg.includes('already') || msg.includes('exist') || error.status === 422) {
+  const data = await res.json()
+
+  if (!res.ok) {
+    const msg: string = data?.msg ?? data?.message ?? data?.error_description ?? 'Sign up failed'
+    if (res.status === 422 || msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exist')) {
       return NextResponse.json(
         { error: 'Account already exists — sign in instead.' },
         { status: 409, headers: CORS }
       )
     }
-    return NextResponse.json({ error: error.message }, { status: 400, headers: CORS })
+    return NextResponse.json({ error: msg }, { status: res.status, headers: CORS })
   }
 
-  if (data.user) {
+  const userId: string = data?.id ?? ''
+
+  // Track in developer_signups (best-effort)
+  if (userId) {
+    const sb = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } })
     sb.from('developer_signups')
-      .upsert({ email, user_id: data.user.id }, { onConflict: 'email' })
+      .upsert({ email, user_id: userId }, { onConflict: 'email' })
       .then(() => {}, () => {})
   }
 
+  // Send branded welcome email via Resend
   sendApiSignupConfirmationEmail(email).catch(() => {})
 
   return NextResponse.json({ created: true }, { headers: CORS })
