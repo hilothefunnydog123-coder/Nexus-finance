@@ -166,7 +166,7 @@ export default function DevelopersPage() {
     setAuthErr('')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options:  { redirectTo: 'https://ynfinance.org/developers' },
+      options:  { redirectTo: 'https://nexusmoney.netlify.app/developers' },
     })
     if (error) { setAuthErr(error.message); setAuthBusy(false) }
     // On success browser redirects to Google — no need to setAuthBusy(false)
