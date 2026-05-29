@@ -194,39 +194,8 @@ export default function DevelopersPage() {
       } else {
         if (!supabase) { setAuthErr('Auth not configured'); return }
         const { error } = await supabase.auth.signInWithPassword({ email: authEmail.trim().toLowerCase(), password: authPass })
-        if (error) {
-          // Password wrong or account unconfirmed — send a magic link so they can always get in
-          setAuthErr('')
-          setAuthSucc('Sending a sign-in link to your email — click it to log in instantly.')
-          const r = await fetch('/api/developers/auth/magic', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ email: authEmail.trim().toLowerCase() }),
-          })
-          const d = await r.json()
-          if (!r.ok) {
-            setAuthSucc('')
-            setAuthErr(d.error ?? error.message)
-          }
-          return
-        }
+        if (error) { setAuthErr('Invalid email or password.'); return }
       }
-    } finally { setAuthBusy(false) }
-  }
-
-  async function handleMagicLink() {
-    setAuthErr(''); setAuthSucc('')
-    if (!authEmail) { setAuthErr('Email required'); return }
-    setAuthBusy(true)
-    try {
-      const r = await fetch('/api/developers/auth/magic', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ email: authEmail.trim().toLowerCase() }),
-      })
-      const d = await r.json()
-      if (!r.ok) { setAuthErr(d.error ?? 'Could not send link'); return }
-      setAuthSucc(`Magic link sent to ${authEmail} — check your inbox and spam folder.`)
     } finally { setAuthBusy(false) }
   }
 
@@ -413,18 +382,6 @@ export default function DevelopersPage() {
                       </button>
                     </form>
 
-                    <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.06)' }}/>
-                      <span style={{ fontSize: 10, color: '#1a3040', letterSpacing: '1px' }}>OR</span>
-                      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.06)' }}/>
-                    </div>
-
-                    <button onClick={handleMagicLink} disabled={authBusy}
-                      style={{ marginTop: 12, width: '100%', padding: '11px', background: 'rgba(0,212,170,.06)', border: '1px solid rgba(0,212,170,.18)', borderRadius: 8, color: '#00d4aa', fontWeight: 700, fontSize: 12, cursor: authBusy ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all .2s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,212,170,.12)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,212,170,.06)'}>
-                      ✉ Send Magic Link
-                    </button>
                   </div>
                 </div>
 
