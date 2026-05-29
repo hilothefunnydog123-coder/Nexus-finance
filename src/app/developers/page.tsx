@@ -173,23 +173,19 @@ export default function DevelopersPage() {
     setAuthBusy(true)
     try {
       if (authTab === 'signup') {
-        // Server-side signup via admin API — marks email confirmed instantly,
-        // sends welcome email via Resend, no Supabase confirmation email needed.
-        const r = await fetch('/api/developers/auth/signup', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ email: authEmail.trim().toLowerCase(), password: authPass }),
-        })
-        const d = await r.json()
-        if (!r.ok) {
-          if (r.status === 409) {
-            setAuthErr(d.error); setAuthTab('signin')
-          } else {
-            setAuthErr(d.error ?? 'Sign up failed')
-          }
+        if (!supabase) { setAuthErr('Auth not configured'); return }
+        const { error } = await supabase.auth.signUp({ email: authEmail.trim().toLowerCase(), password: authPass })
+        if (error) {
+          setAuthErr(error.message)
           return
         }
-        setAuthSucc('Account created! Check your email, then sign in below.')
+        // Send our own welcome email via Resend (non-blocking)
+        fetch('/api/developers/auth/welcome', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: authEmail.trim().toLowerCase() }),
+        }).catch(() => {})
+        setAuthSucc('Account created! Sign in below.')
         setAuthTab('signin')
       } else {
         if (!supabase) { setAuthErr('Auth not configured'); return }
