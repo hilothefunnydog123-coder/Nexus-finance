@@ -95,13 +95,8 @@ export default function DevelopersPage() {
   // ── Auth state ──────────────────────────────────────────────────────────────
   const [user,        setUser]        = useState<User | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
-  const [authTab,     setAuthTab]     = useState<'signin' | 'signup'>('signin')
-  const [authEmail,   setAuthEmail]   = useState('')
-  const [authPass,    setAuthPass]    = useState('')
-  const [showPass,    setShowPass]    = useState(false)
   const [authBusy,    setAuthBusy]    = useState(false)
   const [authErr,     setAuthErr]     = useState('')
-  const [authSucc,    setAuthSucc]    = useState('')
 
   // ── Key state ───────────────────────────────────────────────────────────────
   const [keyLoading, setKeyLoading] = useState(false)
@@ -165,34 +160,16 @@ export default function DevelopersPage() {
   }, [user, authLoading, fetchMyKey])
 
   // ── Auth handlers ───────────────────────────────────────────────────────────
-  async function handleAuth(e: React.FormEvent) {
-    e.preventDefault()
-    setAuthErr(''); setAuthSucc('')
-    if (!authEmail) { setAuthErr('Email required'); return }
-    if (!authPass)  { setAuthErr('Password required'); return }
+  async function handleGoogleSignIn() {
+    if (!supabase) { setAuthErr('Auth not configured'); return }
     setAuthBusy(true)
-    try {
-      if (authTab === 'signup') {
-        if (!supabase) { setAuthErr('Auth not configured'); return }
-        const { error } = await supabase.auth.signUp({ email: authEmail.trim().toLowerCase(), password: authPass })
-        if (error) {
-          setAuthErr(error.message)
-          return
-        }
-        // Send our own welcome email via Resend (non-blocking)
-        fetch('/api/developers/auth/welcome', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: authEmail.trim().toLowerCase() }),
-        }).catch(() => {})
-        setAuthSucc('Account created! Sign in below.')
-        setAuthTab('signin')
-      } else {
-        if (!supabase) { setAuthErr('Auth not configured'); return }
-        const { error } = await supabase.auth.signInWithPassword({ email: authEmail.trim().toLowerCase(), password: authPass })
-        if (error) { setAuthErr('Invalid email or password.'); return }
-      }
-    } finally { setAuthBusy(false) }
+    setAuthErr('')
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options:  { redirectTo: 'https://ynfinance.org/developers' },
+    })
+    if (error) { setAuthErr(error.message); setAuthBusy(false) }
+    // On success browser redirects to Google — no need to setAuthBusy(false)
   }
 
   async function handleSignOut() {
@@ -334,73 +311,36 @@ export default function DevelopersPage() {
 
           {/* ── NOT LOGGED IN ── */}
           {!authLoading && !user && (
-            <div style={{ animation: 'fadeUp .5s ease' }}>
-              <div className="auth-split" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 860, margin: '0 auto' }}>
-
-                {/* Sign in / up form */}
-                <div style={{ ...s.card, border: '1px solid rgba(59,142,234,.25)', boxShadow: '0 0 40px rgba(59,142,234,.05)' }}>
-                  <div style={{ height: 3, background: 'linear-gradient(90deg,#3b8eea,#a855f7)' }}/>
-                  <div style={{ padding: '28px 26px' }}>
-                    <div style={{ ...s.label, color: '#3b8eea' }}>GET STARTED</div>
-
-                    {/* Tabs */}
-                    <div style={{ display: 'flex', gap: 0, marginBottom: 22, background: 'rgba(0,0,0,.3)', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,.06)' }}>
-                      {(['signin', 'signup'] as const).map(t => (
-                        <button key={t} onClick={() => { setAuthTab(t); setAuthErr(''); setAuthSucc('') }}
-                          style={{ flex: 1, padding: '10px', background: authTab === t ? 'rgba(59,142,234,.15)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, color: authTab === t ? '#3b8eea' : '#2a4050', transition: 'all .2s' }}>
-                          {t === 'signin' ? 'Sign In' : 'Sign Up'}
-                        </button>
-                      ))}
-                    </div>
-
-                    <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <input
-                        type="email" placeholder="your@email.com"
-                        value={authEmail} onChange={e => setAuthEmail(e.target.value)}
-                        style={s.input}/>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type={showPass ? 'text' : 'password'} placeholder="Password (min 6 chars)"
-                          value={authPass} onChange={e => setAuthPass(e.target.value)}
-                          style={{ ...s.input, paddingRight: 44 }}/>
-                        <button type="button" onClick={() => setShowPass(x => !x)}
-                          style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#2a4050', fontSize: 12, padding: 0, fontFamily: 'inherit' }}>
-                          {showPass ? '🙈' : '👁'}
-                        </button>
-                      </div>
-
-                      {authErr  && <div style={{ color: '#ff2d78', fontSize: 11, fontFamily: 'monospace' }}>{authErr}</div>}
-                      {authSucc && <div style={{ color: '#00d4aa', fontSize: 11, fontFamily: 'monospace' }}>{authSucc}</div>}
-
-                      <button type="submit" disabled={authBusy}
-                        style={{ padding: '12px', background: 'linear-gradient(135deg,#3b8eea,#a855f7)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: 13, cursor: authBusy ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: authBusy ? .7 : 1, boxShadow: '0 0 24px rgba(59,142,234,.18)', marginTop: 2 }}>
-                        {authBusy ? 'Loading...' : authTab === 'signin' ? 'Sign In →' : 'Create Account →'}
-                      </button>
-                    </form>
-
+            <div style={{ animation: 'fadeUp .5s ease', maxWidth: 480, margin: '0 auto' }}>
+              <div style={{ ...s.card, border: '1px solid rgba(59,142,234,.25)', boxShadow: '0 0 50px rgba(59,142,234,.06)', textAlign: 'center' }}>
+                <div style={{ height: 3, background: 'linear-gradient(90deg,#3b8eea,#a855f7)' }}/>
+                <div style={{ padding: '40px 36px' }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: '#dce8f0', letterSpacing: '-.5px', marginBottom: 8 }}>Get your API key</div>
+                  <div style={{ fontSize: 13, color: '#3a5a6a', marginBottom: 32, lineHeight: 1.6 }}>
+                    Free tier · 100 calls/month · No credit card
                   </div>
-                </div>
 
-                {/* What you get */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {[
-                    { clr: '#00d4aa', icon: '⚡', tier: 'FREE',       price: '$0/mo',    desc: '100 calls/month · 5 endpoints · No card required' },
-                    { clr: '#3b8eea', icon: '🚀', tier: 'PRO',        price: '$49/mo',   desc: '10,000 calls/month · All endpoints · Priority support' },
-                    { clr: '#a855f7', icon: '🏢', tier: 'ENTERPRISE', price: 'Custom',   desc: 'Unlimited calls · SLA · Dedicated Slack channel' },
-                  ].map(({ clr, icon, tier, price, desc }) => (
-                    <div key={tier} style={{ background: 'rgba(4,10,18,.9)', border: `1px solid ${clr}18`, borderRadius: 12, padding: '16px 18px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${clr}15`, border: `1px solid ${clr}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{icon}</div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-                          <span style={{ fontSize: 9, fontWeight: 800, color: clr, letterSpacing: '1.5px', fontFamily: 'monospace' }}>{tier}</span>
-                          <span style={{ fontSize: 18, fontWeight: 900, color: '#dce8f0', fontFamily: 'monospace', letterSpacing: '-1px' }}>{price}</span>
-                        </div>
-                        <div style={{ fontSize: 12, color: '#3a5a6a' }}>{desc}</div>
-                      </div>
-                    </div>
-                  ))}
-                  <div style={{ fontSize: 11, color: '#1a3040', textAlign: 'center', marginTop: 4 }}>
-                    Sign in above to get your free key instantly — no card required.
+                  {authErr && <div style={{ color: '#ff2d78', fontSize: 12, fontFamily: 'monospace', marginBottom: 16 }}>{authErr}</div>}
+
+                  <button onClick={handleGoogleSignIn} disabled={authBusy}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '14px 24px', background: '#fff', border: 'none', borderRadius: 10, cursor: authBusy ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontWeight: 700, fontSize: 15, color: '#1a1a1a', opacity: authBusy ? .7 : 1, boxShadow: '0 2px 20px rgba(0,0,0,.3)', transition: 'all .2s' }}
+                    onMouseEnter={e => { if (!authBusy) e.currentTarget.style.transform = 'translateY(-1px)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'none' }}>
+                    {authBusy ? (
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid #ccc', borderTop: '2px solid #333', animation: 'spin 1s linear infinite' }}/>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                      </svg>
+                    )}
+                    {authBusy ? 'Redirecting...' : 'Continue with Google'}
+                  </button>
+
+                  <div style={{ marginTop: 20, fontSize: 11, color: '#1a3040' }}>
+                    New users get a free key instantly after signing in.
                   </div>
                 </div>
               </div>
