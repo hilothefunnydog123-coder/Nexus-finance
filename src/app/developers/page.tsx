@@ -195,20 +195,19 @@ export default function DevelopersPage() {
         if (!supabase) { setAuthErr('Auth not configured'); return }
         const { error } = await supabase.auth.signInWithPassword({ email: authEmail.trim().toLowerCase(), password: authPass })
         if (error) {
-          // Account exists but was created before email-confirm fix — send magic link to let them in
-          if (error.message.toLowerCase().includes('not confirmed') || error.message.toLowerCase().includes('email')) {
-            setAuthErr('')
-            setAuthSucc('Your email needs confirming. Sending a magic sign-in link now — check your inbox.')
-            const r = await fetch('/api/developers/auth/magic', {
-              method:  'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body:    JSON.stringify({ email: authEmail.trim().toLowerCase() }),
-            })
-            const d = await r.json()
-            if (!r.ok) setAuthErr(d.error ?? 'Could not send link')
-            return
+          // Password wrong or account unconfirmed — send a magic link so they can always get in
+          setAuthErr('')
+          setAuthSucc('Sending a sign-in link to your email — click it to log in instantly.')
+          const r = await fetch('/api/developers/auth/magic', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ email: authEmail.trim().toLowerCase() }),
+          })
+          const d = await r.json()
+          if (!r.ok) {
+            setAuthSucc('')
+            setAuthErr(d.error ?? error.message)
           }
-          setAuthErr(error.message)
           return
         }
       }
