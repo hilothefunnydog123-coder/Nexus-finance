@@ -35,12 +35,7 @@ export async function POST(req: NextRequest) {
 
   const sb = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } })
 
-  // Always redirect back to the canonical site URL, not the request host.
-  // Set NEXT_PUBLIC_SITE_URL=https://ynfinance.org in Netlify env vars.
-  const host    = req.headers.get('host') ?? ''
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
-    ?? (host.startsWith('localhost') ? `http://${host}` : 'https://ynfinance.org')
-  const redirectTo = `${siteUrl}/developers`
+  const redirectTo = 'https://ynfinance.org/developers'
 
   // If user already exists but has unconfirmed email, confirm them now
   // so the magic link actually works after clicking.
