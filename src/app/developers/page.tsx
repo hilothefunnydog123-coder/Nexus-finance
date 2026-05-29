@@ -166,6 +166,7 @@ export default function DevelopersPage() {
     setAuthErr('')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
+      options:  { redirectTo: 'https://nexusmoney.netlify.app/auth/callback' },
     })
     if (error) { setAuthErr(error.message); setAuthBusy(false) }
     // On success browser redirects to Google — no need to setAuthBusy(false)
