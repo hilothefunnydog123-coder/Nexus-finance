@@ -58,39 +58,245 @@ function TierBadge({ tier }: { tier: string }) {
   )
 }
 
-const CODE: Record<string, string> = {
-  curl: `curl -X GET "https://ynfinance.org/api/v1/congress/trades?limit=10" \\
-  -H "Authorization: Bearer yn_live_YOUR_KEY_HERE"`,
+const BASE = 'https://ynfinance.org'
 
-  javascript: `const res = await fetch(
-  'https://ynfinance.org/api/v1/congress/trades?limit=10',
-  { headers: { 'Authorization': 'Bearer yn_live_YOUR_KEY_HERE' } }
+const ENDPOINTS: {
+  method: string; path: string; clr: string; desc: string
+  params: string; body: string | null
+  response: string; dataSource: string
+  example: Record<string, string>
+}[] = [
+  {
+    method: 'GET', path: '/api/v1/congress/trades', clr: '#ff2d78',
+    desc: 'Live congressional stock trades — fetched from House disclosure filings, enriched with real-time Finnhub prices and AI suspicion scoring.',
+    params: '?limit=20  (max 100)\n?days=30   (max 365)', body: null,
+    response: `{
+  "trades": [{
+    "representative": "Nancy Pelosi",
+    "party": "D", "state": "CA",
+    "ticker": "NVDA",
+    "type": "purchase",
+    "amount": "$250,001 - $500,000",
+    "transaction_date": "2026-05-20",
+    "current_price": 878.20,
+    "price_change_pct": 2.4,
+    "suspicion_score": 97   // 0-100
+  }],
+  "stats": {
+    "total_this_year": 847,
+    "most_active_rep": "Adam Schiff",
+    "biggest_trade": "$500,001+",
+    "total_reps": 73
+  }
+}`,
+    dataSource: 'House Stock Watcher filings + Finnhub live prices + Gemini AI',
+    example: {
+      curl: `curl "${BASE}/api/v1/congress/trades?limit=10&days=30" \\
+  -H "Authorization: Bearer yn_live_YOUR_KEY"`,
+      javascript: `const res = await fetch(
+  '${BASE}/api/v1/congress/trades?limit=10&days=30',
+  { headers: { Authorization: 'Bearer yn_live_YOUR_KEY' } }
 )
-const { trades } = await res.json()
-console.log(trades)`,
-
-  python: `import requests
-
-data = requests.get(
-  'https://ynfinance.org/api/v1/congress/trades',
-  params={'limit': 10},
-  headers={'Authorization': 'Bearer yn_live_YOUR_KEY_HERE'}
+const { trades, stats } = await res.json()
+// trades[0].representative, .ticker, .suspicion_score`,
+      python: `import requests
+r = requests.get(
+  '${BASE}/api/v1/congress/trades',
+  params={'limit': 10, 'days': 30},
+  headers={'Authorization': 'Bearer yn_live_YOUR_KEY'}
 ).json()
-print(data['trades'])`,
-}
-
-const ENDPOINTS = [
-  { method: 'POST', path: '/api/v1/analyze',             clr: '#3b8eea', desc: 'AI trade analysis — verdict, key levels, recommendation', req: '{ ticker, direction, entry, sl, tp }',   res: '{ verdict, confidence, key_levels, recommendation }' },
-  { method: 'GET',  path: '/api/v1/congress/trades',     clr: '#ff2d78', desc: 'Congressional trade disclosures with suspicion scores',    req: '?limit=20&days=30',                     res: '{ trades: [{ representative, ticker, type, suspicion_score }] }' },
-  { method: 'POST', path: '/api/v1/earnings/decode',     clr: '#f59e0b', desc: 'Earnings forensics — management honesty score',            req: '{ symbol }',                            res: '{ truth_score, beat_rate, verdict }' },
-  { method: 'GET',  path: '/api/v1/smart-money/signals', clr: '#00d4aa', desc: 'Insider purchases + unusual options activity',             req: '?type=all|insider|options',             res: '{ signals: [{ ticker, signal_type, signal_strength }] }' },
-  { method: 'POST', path: '/api/v1/intelligence/run',    clr: '#a855f7', desc: 'Run any of the 6 YN Intelligence weapons',                req: '{ weapon, input }',                     res: '{ result: { ... } }' },
+for t in r['trades']:
+    print(t['representative'], t['ticker'], t['suspicion_score'])`,
+    }
+  },
+  {
+    method: 'POST', path: '/api/v1/analyze', clr: '#3b8eea',
+    desc: 'Full AI trade analysis — sends your setup to Gemini which pulls live Finnhub data (price, news, earnings, analyst ratings) and returns a hedge-fund style verdict.',
+    params: '', body: `{
+  "ticker":    "AAPL",
+  "direction": "long",   // "long" | "short"
+  "entry":     189.50,
+  "sl":        183.00,
+  "tp":        205.00
+}`,
+    response: `{
+  "ticker": "AAPL",
+  "verdict": "Buy",
+  "confidence": 72,
+  "sentiment_score": 7,
+  "key_levels": {
+    "strong_support": 182.40,
+    "support": 185.60,
+    "resistance": 193.20,
+    "strong_resistance": 198.50
+  },
+  "recommendation": "Apple shows strong institutional accumulation
+    near 52W support. R:R of 2.4 is favorable given earnings beat
+    last quarter. Hold with stop at 183."
+}`,
+    dataSource: 'Finnhub (quote, news, earnings, analyst recs) + Gemini 2.0 Flash',
+    example: {
+      curl: `curl -X POST "${BASE}/api/v1/analyze" \\
+  -H "Authorization: Bearer yn_live_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"ticker":"AAPL","direction":"long","entry":189.50,"sl":183,"tp":205}'`,
+      javascript: `const res = await fetch('${BASE}/api/v1/analyze', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer yn_live_YOUR_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    ticker: 'AAPL', direction: 'long',
+    entry: 189.50, sl: 183, tp: 205
+  })
+})
+const { verdict, confidence, key_levels, recommendation } = await res.json()`,
+      python: `import requests
+data = requests.post(
+  '${BASE}/api/v1/analyze',
+  headers={'Authorization': 'Bearer yn_live_YOUR_KEY'},
+  json={'ticker':'AAPL','direction':'long','entry':189.50,'sl':183,'tp':205}
+).json()
+print(data['verdict'], data['confidence'])`,
+    }
+  },
+  {
+    method: 'POST', path: '/api/v1/earnings/decode', clr: '#f59e0b',
+    desc: 'Earnings forensics — Gemini reads Finnhub earnings history and scores management honesty. Detects when guidance diverges from actual numbers.',
+    params: '', body: `{ "symbol": "TSLA" }`,
+    response: `{
+  "symbol": "TSLA",
+  "truth_score": 68,       // 0-100, higher = more honest
+  "verdict": "MIXED",      // HONEST | MIXED | DECEPTIVE
+  "confidence": 74,
+  "analysis": "Management revenue guidance consistently
+    runs 8% above actuals. EPS beats are real but driven
+    by one-time items not operating leverage.",
+  "red_flags": ["Revenue recognition timing"],
+  "green_flags": ["Consecutive EPS beats"],
+  "the_trade": "Fade the post-earnings gap if guidance
+    comes in above consensus"
+}`,
+    dataSource: 'Finnhub earnings history + Gemini 2.0 Flash lie detection',
+    example: {
+      curl: `curl -X POST "${BASE}/api/v1/earnings/decode" \\
+  -H "Authorization: Bearer yn_live_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"symbol":"TSLA"}'`,
+      javascript: `const res = await fetch('${BASE}/api/v1/earnings/decode', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer yn_live_YOUR_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ symbol: 'TSLA' })
+})
+const { truth_score, verdict, red_flags } = await res.json()`,
+      python: `import requests
+data = requests.post(
+  '${BASE}/api/v1/earnings/decode',
+  headers={'Authorization': 'Bearer yn_live_YOUR_KEY'},
+  json={'symbol': 'TSLA'}
+).json()
+print(data['truth_score'], data['verdict'])`,
+    }
+  },
+  {
+    method: 'GET', path: '/api/v1/smart-money/signals', clr: '#00d4aa',
+    desc: 'Smart money signals — Gemini analyzes cross-asset correlations and forced institutional flows to surface high-conviction trade setups.',
+    params: '?type=all      (default)\n?type=insider\n?type=options', body: null,
+    response: `{
+  "signals": [{
+    "type": "forced-flow",
+    "ticker": "SPY",
+    "direction": "BUY",
+    "conviction": "HIGH",
+    "event_type": "Fed decision",
+    "magnitude": "Large",
+    "edge": "Institutions front-running rate cut",
+    "affected_tickers": ["SPY","QQQ","TLT"]
+  }],
+  "summary": {
+    "signal_count": 4,
+    "market_regime": "Risk-On",
+    "biggest_edge": "Rate-sensitive positioning"
+  }
+}`,
+    dataSource: 'Finnhub market data + Gemini 2.0 Flash signal analysis',
+    example: {
+      curl: `curl "${BASE}/api/v1/smart-money/signals?type=all" \\
+  -H "Authorization: Bearer yn_live_YOUR_KEY"`,
+      javascript: `const res = await fetch(
+  '${BASE}/api/v1/smart-money/signals?type=all',
+  { headers: { Authorization: 'Bearer yn_live_YOUR_KEY' } }
+)
+const { signals, summary } = await res.json()
+signals.forEach(s => console.log(s.ticker, s.direction, s.conviction))`,
+      python: `import requests
+data = requests.get(
+  '${BASE}/api/v1/smart-money/signals',
+  params={'type': 'all'},
+  headers={'Authorization': 'Bearer yn_live_YOUR_KEY'}
+).json()
+for s in data['signals']:
+    print(s['direction'], s['conviction'], s['edge'])`,
+    }
+  },
+  {
+    method: 'POST', path: '/api/v1/intelligence/run', clr: '#a855f7',
+    desc: 'Run any of the 6 YN Intelligence weapons — each uses live Finnhub data + Gemini AI to produce actionable intelligence.',
+    params: '', body: `{
+  "weapon": "lockup",      // see weapons list below
+  "input":  "NVDA"         // ticker or scenario
+}`,
+    response: `{
+  "weapon": "lockup",
+  "input": "NVDA",
+  "result": {
+    "verdict": "SELL",
+    "lockup_expires": "2026-06-15",
+    "shares_at_risk": "12M shares",
+    "expected_pressure": "HIGH",
+    "the_trade": "Buy puts expiring after lockup date",
+    "catalyst": "Insider selling pressure post-lockup"
+  }
+}`,
+    dataSource: 'Finnhub (quote, profile, news) + Gemini 2.0 Flash per weapon',
+    example: {
+      curl: `# Weapons: lockup | liedetector | galaxybrain | flow | signals | filing
+curl -X POST "${BASE}/api/v1/intelligence/run" \\
+  -H "Authorization: Bearer yn_live_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"weapon":"lockup","input":"NVDA"}'`,
+      javascript: `// Weapons: lockup | liedetector | galaxybrain | flow | signals | filing
+const res = await fetch('${BASE}/api/v1/intelligence/run', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer yn_live_YOUR_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ weapon: 'lockup', input: 'NVDA' })
+})
+const { result } = await res.json()
+console.log(result.verdict, result.the_trade)`,
+      python: `import requests
+# Weapons: lockup | liedetector | galaxybrain | flow | signals | filing
+data = requests.post(
+  '${BASE}/api/v1/intelligence/run',
+  headers={'Authorization': 'Bearer yn_live_YOUR_KEY'},
+  json={'weapon': 'lockup', 'input': 'NVDA'}
+).json()
+print(data['result']['verdict'], data['result']['the_trade'])`,
+    }
+  },
 ]
 
 export default function DevelopersPage() {
   const [cursorX, setCursorX] = useState(-100)
   const [cursorY, setCursorY] = useState(-100)
-  const [codeTab, setCodeTab] = useState<'curl' | 'javascript' | 'python'>('curl')
+  const [codeTab,      setCodeTab]      = useState<'curl' | 'javascript' | 'python'>('javascript')
+  const [expandedEp,   setExpandedEp]   = useState<string | null>('/api/v1/congress/trades')
 
   // ── Auth state ──────────────────────────────────────────────────────────────
   const [user,        setUser]        = useState<User | null>(null)
@@ -546,43 +752,74 @@ export default function DevelopersPage() {
 
         {/* ── ENDPOINTS ──────────────────────────────────────────────────────── */}
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px 72px' }}>
-          <div style={{ fontSize: 9, color: '#3b8eea', letterSpacing: '2.5px', fontFamily: 'monospace', fontWeight: 700, marginBottom: 22 }}>ENDPOINTS</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {ENDPOINTS.map(ep => (
-              <div key={ep.path} style={{ background: 'rgba(4,10,18,.92)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 11, overflow: 'hidden' }}>
-                <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,.04)' }}>
-                  <span style={{ fontSize: 9, fontWeight: 800, color: ep.clr, background: `${ep.clr}12`, border: `1px solid ${ep.clr}25`, borderRadius: 4, padding: '3px 8px', fontFamily: 'monospace', flexShrink: 0 }}>{ep.method}</span>
-                  <code style={{ fontSize: 13, color: '#dce8f0', fontFamily: 'monospace', fontWeight: 600 }}>{ep.path}</code>
-                  <span className="hsm" style={{ fontSize: 11, color: '#2a4050', marginLeft: 'auto' }}>{ep.desc}</span>
-                </div>
-                <div className="pg2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-                  <div style={{ padding: '12px 20px', borderRight: '1px solid rgba(255,255,255,.04)' }}>
-                    <div style={{ fontSize: 8, color: '#1a3040', letterSpacing: '2px', fontFamily: 'monospace', marginBottom: 6 }}>REQUEST</div>
-                    <pre style={{ fontFamily: 'monospace', fontSize: 11, color: '#6a9aaa', lineHeight: 1.5 }}>{ep.req}</pre>
-                  </div>
-                  <div style={{ padding: '12px 20px' }}>
-                    <div style={{ fontSize: 8, color: '#1a3040', letterSpacing: '2px', fontFamily: 'monospace', marginBottom: 6 }}>RESPONSE</div>
-                    <pre style={{ fontFamily: 'monospace', fontSize: 11, color: '#00d4aa', lineHeight: 1.5 }}>{ep.res}</pre>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          <div style={{ fontSize: 9, color: '#3b8eea', letterSpacing: '2.5px', fontFamily: 'monospace', fontWeight: 700, marginBottom: 6 }}>ENDPOINTS</div>
+          <div style={{ fontSize: 12, color: '#2a4050', marginBottom: 22 }}>All endpoints return real data from Finnhub and Gemini AI. Replace <code style={{ color: '#00d4aa', fontFamily: 'monospace', fontSize: 11 }}>yn_live_YOUR_KEY</code> with your actual key.</div>
 
-        {/* ── CODE EXAMPLES ──────────────────────────────────────────────────── */}
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px 80px' }}>
-          <div style={{ fontSize: 9, color: '#3b8eea', letterSpacing: '2.5px', fontFamily: 'monospace', fontWeight: 700, marginBottom: 18 }}>CODE EXAMPLES</div>
-          <div style={{ background: 'rgba(4,10,18,.95)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 13, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,.05)', background: 'rgba(0,0,0,.2)' }}>
-              {(['curl', 'javascript', 'python'] as const).map(t => (
-                <button key={t} onClick={() => setCodeTab(t)}
-                  style={{ padding: '11px 20px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: codeTab === t ? '#3b8eea' : '#2a4050', borderBottom: codeTab === t ? '2px solid #3b8eea' : '2px solid transparent', transition: 'all .2s' }}>
-                  {t}
-                </button>
-              ))}
-            </div>
-            <pre style={{ padding: '22px', fontFamily: 'monospace', lineHeight: 1.8, color: '#c8d8e0', overflowX: 'auto' }}>{CODE[codeTab]}</pre>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {ENDPOINTS.map(ep => {
+              const isOpen = expandedEp === ep.path
+              return (
+                <div key={ep.path} style={{ background: 'rgba(4,10,18,.95)', border: `1px solid ${isOpen ? ep.clr + '40' : 'rgba(255,255,255,.06)'}`, borderRadius: 12, overflow: 'hidden', transition: 'border-color .2s' }}>
+
+                  {/* Header — click to expand */}
+                  <button onClick={() => setExpandedEp(isOpen ? null : ep.path)}
+                    style={{ width: '100%', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12, background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: ep.clr, background: `${ep.clr}15`, border: `1px solid ${ep.clr}30`, borderRadius: 4, padding: '3px 8px', fontFamily: 'monospace', flexShrink: 0 }}>{ep.method}</span>
+                    <code style={{ fontSize: 13, color: '#dce8f0', fontFamily: 'monospace', fontWeight: 600 }}>{ep.path}</code>
+                    <span style={{ fontSize: 11, color: '#3a5a6a', marginLeft: 8, flex: 1, textAlign: 'left' }} className="hsm">{ep.desc}</span>
+                    <span style={{ fontSize: 10, color: ep.clr, fontFamily: 'monospace', flexShrink: 0 }}>{isOpen ? '▲ collapse' : '▼ expand'}</span>
+                  </button>
+
+                  {/* Expanded content */}
+                  {isOpen && (
+                    <div style={{ borderTop: `1px solid ${ep.clr}20` }}>
+
+                      {/* Description + data source */}
+                      <div style={{ padding: '16px 20px 0', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                        <div style={{ flex: '2 1 300px' }}>
+                          <div style={{ fontSize: 8, color: '#1a3040', letterSpacing: '2px', fontFamily: 'monospace', marginBottom: 6 }}>DESCRIPTION</div>
+                          <div style={{ fontSize: 12, color: '#4a6a78', lineHeight: 1.6 }}>{ep.desc}</div>
+                        </div>
+                        <div style={{ flex: '1 1 200px' }}>
+                          <div style={{ fontSize: 8, color: '#1a3040', letterSpacing: '2px', fontFamily: 'monospace', marginBottom: 6 }}>DATA SOURCE</div>
+                          <div style={{ fontSize: 11, color: '#00d4aa', lineHeight: 1.6 }}>{ep.dataSource}</div>
+                        </div>
+                      </div>
+
+                      {/* Request + Response */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }} className="pg2">
+                        <div style={{ padding: '16px 20px', borderRight: '1px solid rgba(255,255,255,.04)' }}>
+                          <div style={{ fontSize: 8, color: '#1a3040', letterSpacing: '2px', fontFamily: 'monospace', marginBottom: 8 }}>{ep.body ? 'REQUEST BODY' : 'QUERY PARAMS'}</div>
+                          <pre style={{ fontFamily: 'monospace', fontSize: 11, color: '#6a9aaa', lineHeight: 1.6, background: 'rgba(0,0,0,.3)', padding: '12px', borderRadius: 8, overflowX: 'auto' }}>{ep.body ?? (ep.params || '(none)')}</pre>
+                        </div>
+                        <div style={{ padding: '16px 20px' }}>
+                          <div style={{ fontSize: 8, color: '#1a3040', letterSpacing: '2px', fontFamily: 'monospace', marginBottom: 8 }}>RESPONSE (real example)</div>
+                          <pre style={{ fontFamily: 'monospace', fontSize: 11, color: '#00d4aa', lineHeight: 1.6, background: 'rgba(0,0,0,.3)', padding: '12px', borderRadius: 8, overflowX: 'auto' }}>{ep.response}</pre>
+                        </div>
+                      </div>
+
+                      {/* Code examples */}
+                      <div style={{ borderTop: '1px solid rgba(255,255,255,.04)', padding: '16px 20px' }}>
+                        <div style={{ display: 'flex', gap: 0, marginBottom: 12, background: 'rgba(0,0,0,.3)', borderRadius: 8, overflow: 'hidden', width: 'fit-content', border: '1px solid rgba(255,255,255,.06)' }}>
+                          {(['curl', 'javascript', 'python'] as const).map(t => (
+                            <button key={t} onClick={() => setCodeTab(t)}
+                              style={{ padding: '8px 16px', background: codeTab === t ? `${ep.clr}20` : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: codeTab === t ? ep.clr : '#2a4050', transition: 'all .2s' }}>
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ position: 'relative' }}>
+                          <pre style={{ fontFamily: 'monospace', fontSize: 12, color: '#c8d8e0', lineHeight: 1.7, background: 'rgba(0,0,0,.4)', padding: '16px 18px', borderRadius: 8, overflowX: 'auto', border: '1px solid rgba(255,255,255,.05)' }}>{ep.example[codeTab]}</pre>
+                          <div style={{ position: 'absolute', top: 10, right: 10 }}>
+                            <CopyBtn text={ep.example[codeTab]}/>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -591,10 +828,13 @@ export default function DevelopersPage() {
           <div>
             <div style={{ fontSize: 9, color: '#3b8eea', letterSpacing: '2.5px', fontFamily: 'monospace', fontWeight: 700, marginBottom: 16 }}>AUTHENTICATION</div>
             <div style={{ background: 'rgba(4,10,18,.92)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 11, padding: '20px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#dce8f0', marginBottom: 10 }}>Bearer Token</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#dce8f0', marginBottom: 10 }}>Header (every request)</div>
               <pre style={{ fontFamily: 'monospace', fontSize: 11, color: '#00d4aa', background: 'rgba(0,0,0,.4)', padding: '12px', borderRadius: 7, border: '1px solid rgba(0,212,170,.1)', marginBottom: 14 }}>{`Authorization: Bearer yn_live_xxxx`}</pre>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#dce8f0', marginBottom: 10 }}>Header Alternative</div>
-              <pre style={{ fontFamily: 'monospace', fontSize: 11, color: '#00d4aa', background: 'rgba(0,0,0,.4)', padding: '12px', borderRadius: 7, border: '1px solid rgba(0,212,170,.1)' }}>{`x-api-key: yn_live_xxxx`}</pre>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#dce8f0', marginBottom: 10 }}>Alternative header</div>
+              <pre style={{ fontFamily: 'monospace', fontSize: 11, color: '#00d4aa', background: 'rgba(0,0,0,.4)', padding: '12px', borderRadius: 7, border: '1px solid rgba(0,212,170,.1)', marginBottom: 14 }}>{`x-api-key: yn_live_xxxx`}</pre>
+              <div style={{ fontSize: 11, color: '#2a4050', lineHeight: 1.6 }}>
+                Every response includes <code style={{ color: '#3b8eea', fontFamily: 'monospace', fontSize: 10 }}>source</code>, <code style={{ color: '#3b8eea', fontFamily: 'monospace', fontSize: 10 }}>version</code>, and <code style={{ color: '#3b8eea', fontFamily: 'monospace', fontSize: 10 }}>timestamp</code> fields. On error, check the <code style={{ color: '#ff2d78', fontFamily: 'monospace', fontSize: 10 }}>error</code> field and HTTP status code.
+              </div>
             </div>
           </div>
           <div>
@@ -611,6 +851,11 @@ export default function DevelopersPage() {
                   {[m, r, p].map(v => <div key={v} style={{ fontFamily: 'monospace', fontSize: 12, color: '#6a8a9a' }}>{v}</div>)}
                 </div>
               ))}
+            </div>
+            <div style={{ marginTop: 12, padding: '12px 16px', background: 'rgba(0,0,0,.2)', border: '1px solid rgba(255,255,255,.05)', borderRadius: 8 }}>
+              <div style={{ fontSize: 11, color: '#2a4050', lineHeight: 1.7 }}>
+                Exceeded limit → <code style={{ color: '#ff2d78', fontFamily: 'monospace', fontSize: 10 }}>401 Unauthorized</code>. Resets on the 1st of each month. Upgrade anytime from your dashboard above.
+              </div>
             </div>
           </div>
         </div>
