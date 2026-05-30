@@ -54,17 +54,25 @@ export async function POST(req: NextRequest) {
   // Check if user already has an active key
   const { data: existing } = await sb
     .from('api_keys')
-    .select('key_prefix, tier')
+    .select('key_prefix, tier, calls_month, calls_total, created_at, last_used_at, stripe_subscription_id')
     .eq('user_email', user.email)
     .eq('is_active', true)
     .limit(1)
     .maybeSingle()
 
   if (existing) {
-    return NextResponse.json(
-      { error: 'You already have an API key. Check your dashboard above.' },
-      { status: 409, headers: CORS }
-    )
+    // Return key dashboard data so the client can show the dashboard without a second fetch
+    return NextResponse.json({
+      already_exists:  true,
+      key_prefix:      existing.key_prefix,
+      tier:            existing.tier,
+      calls_month:     existing.calls_month    ?? 0,
+      calls_total:     existing.calls_total    ?? 0,
+      limit_month:     TIER_LIMITS[existing.tier] ?? 100,
+      created_at:      existing.created_at,
+      last_used_at:    existing.last_used_at,
+      has_subscription: !!existing.stripe_subscription_id,
+    }, { status: 409, headers: CORS })
   }
 
   try {

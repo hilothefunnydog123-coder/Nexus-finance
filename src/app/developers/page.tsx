@@ -193,11 +193,37 @@ export default function DevelopersPage() {
         body:    JSON.stringify({ name: 'My App' }),
       })
       const d = await r.json()
-      // 409 = already has a key — just load and show it
-      if (r.status === 409) { await fetchMyKey(user); return }
+
+      if (r.status === 409 && d.key_prefix) {
+        // Already has a key — set dashboard state directly from response, no extra fetch needed
+        setMyKey({
+          key_prefix:       d.key_prefix,
+          tier:             d.tier             ?? 'free',
+          name:             'My App',
+          calls_month:      d.calls_month      ?? 0,
+          limit_month:      d.limit_month      ?? 100,
+          calls_total:      d.calls_total      ?? 0,
+          created_at:       d.created_at       ?? new Date().toISOString(),
+          last_used_at:     d.last_used_at     ?? null,
+          has_subscription: d.has_subscription ?? false,
+        })
+        return
+      }
       if (!r.ok) { setClaimErr(d.error ?? 'Failed to generate key'); return }
+
+      // Success — show key once and populate dashboard
       setNewKey(d.key)
-      await fetchMyKey(user)
+      setMyKey({
+        key_prefix:       d.prefix,
+        tier:             'free',
+        name:             'My App',
+        calls_month:      0,
+        limit_month:      d.limit ?? 100,
+        calls_total:      0,
+        created_at:       d.timestamp ?? new Date().toISOString(),
+        last_used_at:     null,
+        has_subscription: false,
+      })
     } finally { setClaiming(false) }
   }
 
