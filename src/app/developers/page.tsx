@@ -193,6 +193,8 @@ export default function DevelopersPage() {
         body:    JSON.stringify({ name: 'My App' }),
       })
       const d = await r.json()
+      // 409 = already has a key — just load and show it
+      if (r.status === 409) { await fetchMyKey(user); return }
       if (!r.ok) { setClaimErr(d.error ?? 'Failed to generate key'); return }
       setNewKey(d.key)
       await fetchMyKey(user)
@@ -391,15 +393,23 @@ export default function DevelopersPage() {
 
                   {/* One-time key reveal */}
                   {newKey && (
-                    <div style={{ ...s.card, border: '1px solid rgba(0,212,170,.3)', marginBottom: 16, animation: 'fadeUp .3s ease', boxShadow: '0 0 40px rgba(0,212,170,.06)' }}>
-                      <div style={{ height: 3, background: 'linear-gradient(90deg,#00d4aa,#1e90ff)' }}/>
-                      <div style={{ padding: '20px 24px' }}>
-                        <div style={{ fontSize: 9, color: '#ff2d78', letterSpacing: '2px', fontFamily: 'monospace', fontWeight: 700, marginBottom: 12 }}>⚠ COPY YOUR KEY NOW — SHOWN ONLY ONCE</div>
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 10 }}>
-                          <code style={{ flex: 1, fontFamily: 'monospace', fontSize: 11, color: '#00d4aa', background: 'rgba(0,0,0,.5)', padding: '10px 12px', borderRadius: 7, wordBreak: 'break-all', border: '1px solid rgba(0,212,170,.15)', lineHeight: 1.6 }}>{newKey}</code>
-                          <CopyBtn text={newKey} size="md"/>
+                    <div style={{ maxWidth: 860, margin: '0 auto 20px', animation: 'fadeUp .3s ease' }}>
+                      <div style={{ background: 'rgba(0,212,170,.04)', border: '2px solid rgba(0,212,170,.4)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 0 60px rgba(0,212,170,.08)' }}>
+                        <div style={{ height: 4, background: 'linear-gradient(90deg,#00d4aa,#1e90ff)' }}/>
+                        <div style={{ padding: '32px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                            <span style={{ fontSize: 22 }}>🔑</span>
+                            <div>
+                              <div style={{ fontSize: 16, fontWeight: 900, color: '#00d4aa', letterSpacing: '-.3px' }}>Your API Key is Ready</div>
+                              <div style={{ fontSize: 12, color: '#ff2d78', marginTop: 2, fontWeight: 700 }}>⚠ Copy it now — this is the only time it will be shown</div>
+                            </div>
+                          </div>
+                          <div style={{ background: 'rgba(0,0,0,.6)', border: '1px solid rgba(0,212,170,.25)', borderRadius: 10, padding: '16px 18px', marginBottom: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
+                            <code style={{ flex: 1, fontFamily: 'monospace', fontSize: 13, color: '#00d4aa', wordBreak: 'break-all', lineHeight: 1.6 }}>{newKey}</code>
+                            <CopyBtn text={newKey} size="md"/>
+                          </div>
+                          <div style={{ fontSize: 12, color: '#3a5a6a' }}>Use it as: <code style={{ color: '#3b8eea', fontFamily: 'monospace' }}>Authorization: Bearer {newKey}</code></div>
                         </div>
-                        <div style={{ fontSize: 11, color: '#2a4050' }}>Free tier · 100 calls/month · Use as <code style={{ color: '#3b8eea', fontFamily: 'monospace', fontSize: 10 }}>Authorization: Bearer {newKey.slice(0, 20)}...</code></div>
                       </div>
                     </div>
                   )}
