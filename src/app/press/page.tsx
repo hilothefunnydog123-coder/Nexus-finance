@@ -237,7 +237,7 @@ export default function PressPage() {
           <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.08)', borderRadius:14, padding:'28px 32px' }}>
             <div style={{ fontSize:10, color:'#5a7a8a', letterSpacing:'0.14em', fontFamily:'monospace', marginBottom:16 }}>APPROVED COMPANY DESCRIPTION</div>
             <p style={{ fontSize:15, color:'#c8d8e8', lineHeight:1.85 }}>
-              YN Finance Corp. is an AI-powered trading intelligence platform founded in 2024 by three 14-year-olds — Neil Gilani (CEO), Yannai Richter (CTO), and Arjun Bhattula (COO) — with a mission to give every retail trader access to the institutional-grade tools previously reserved for hedge funds and Wall Street banks. The platform offers nine intelligence tools including an AI stock analyzer, a congressional trade tracker, smart money alerts, earnings forensics, and a course marketplace with nine world-class instructors, serving 3,247+ active traders with no outside investment and a starting price of $0.
+              YN Finance Corp. is an AI-powered trading intelligence platform founded in 2024 by two 14-year-olds — Neil Gilani (CEO) and Yannai Richter (CTO) — with a mission to give every retail trader access to the institutional-grade tools previously reserved for hedge funds and Wall Street banks. The platform offers nine intelligence tools including an AI stock analyzer, a congressional trade tracker, smart money alerts, earnings forensics, and a course marketplace with nine world-class instructors, serving 3,247+ active traders with no outside investment and a starting price of $0.
             </p>
           </div>
         </div>

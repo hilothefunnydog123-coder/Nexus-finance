@@ -245,8 +245,8 @@ export default function InvestorsPage() {
             <OpportunityCard
               number="03"
               accent="#ff2d78"
-              title="Three founders. 14 years old. Zero outside capital. 3,247 users."
-              desc="This traction wasn't bought with ad spend or VC dollars. It was earned through product quality. Neil built the entire platform solo. Yannai's track record attracted traders. Arjun cold-emailed 47 times to land world-class instructors on 70% revenue share. This team executes."
+              title="Two founders. 14 years old. Zero outside capital. 3,247 users."
+              desc="This traction wasn't bought with ad spend or VC dollars. It was earned through product quality. Neil built the entire platform solo. Yannai's track record attracted traders and he cold-emailed 47 times to land world-class instructors on 70% revenue share. This team executes."
             />
           </div>
         </div>

@@ -933,11 +933,11 @@ Sweep setups often offer 3:1 to 6:1 R:R because your stop is very tight (just ou
 
   {
     id: 'f3',
-    slug: 'arjun-bhattula-key-levels-identifying-trading',
+    slug: 'yannai-richter-key-levels-identifying-trading',
     title: 'Key Levels: How to Identify Them and Build Trades Around Them',
-    description: 'Every great trade starts with a great level. Arjun breaks down the exact framework he uses to identify levels that actually matter — and exactly how to build entries, stops, and targets around them across any market.',
-    trader_name: 'Arjun Bhattula',
-    trader_handle: '@ArjunBhattula_YN',
+    description: 'Every great trade starts with a great level. Yannai breaks down the exact framework he uses to identify levels that actually matter — and exactly how to build entries, stops, and targets around them across any market.',
+    trader_name: 'Yannai Richter',
+    trader_handle: '@YannaiRichter_YN',
     trader_avatar_color: '#a855f7',
     trader_bio: 'Co-Founder & COO of YN Finance. Leads all partnerships and business operations. Personally recruited 9 world-class trading educators. Specializes in clean technical analysis — particularly in identifying the key levels that separate noise from signal.',
     strategy_type: 'Swing Trading',
@@ -985,7 +985,7 @@ Levels where large volume traded are significant because unfilled orders from th
 - A level that price has only touched once and never returned to
 - Trend lines drawn subjectively (different traders draw them differently)
 
-**Arjun's Rule: If you can't explain exactly WHY this level matters in one sentence, don't trade it.**` },
+**Yannai's Rule: If you can't explain exactly WHY this level matters in one sentence, don't trade it.**` },
         quiz: [
           { q: 'Which of these is the MOST significant key level according to the hierarchy?', options: ['A swing high on the 15-minute chart', 'A round number ($5,000 on NQ)', 'The weekly high from the previous week', 'The VWAP from yesterday\'s session'], answer: 2 },
           { q: 'What is the primary reason "price memory" makes a level significant?', options: ['Technical indicators confirm levels from prior sessions', 'Market participants who traded at that level before will react there again', 'Price always returns to where it started each week', 'Volume is always higher at levels from previous sessions'], answer: 1 },
@@ -1025,9 +1025,9 @@ When drawing support and resistance:
 - Draw your level through the body, and treat the wick area as a "noise zone" around the level
 
 ## Zones, Not Lines
-Key levels are not laser-precise. They are ZONES — usually 5-20 points wide on NQ, or 3-8 pips wide on forex. When Arjun marks "support at 18,400 on NQ," he means 18,390-18,415 is the zone. Price entering the zone is not a guaranteed reversal — it's a high-probability area to watch.
+Key levels are not laser-precise. They are ZONES — usually 5-20 points wide on NQ, or 3-8 pips wide on forex. When Yannai marks "support at 18,400 on NQ," he means 18,390-18,415 is the zone. Price entering the zone is not a guaranteed reversal — it's a high-probability area to watch.
 
-## Arjun's Weekly Level-Drawing Routine
+## Yannai's Weekly Level-Drawing Routine
 Every Sunday before the week starts:
 1. Open weekly chart, mark PWH and PWL
 2. Open daily chart, add 3-4 key swing levels
@@ -1035,7 +1035,7 @@ Every Sunday before the week starts:
 4. Delete any levels price has clearly broken through (they become the new support/resistance)` },
         quiz: [
           { q: 'When drawing a support level, should you use candle wicks or candle bodies to define the zone?', options: ['Wicks, because they show the true range of price', 'Bodies, because they show where price accepted to trade (not just temporarily explored)', 'Always the closing price of the candle', 'The midpoint between the wick and the body'], answer: 1 },
-          { q: 'How many lines/levels does Arjun recommend having on a daily chart maximum?', options: ['As many as you can identify — more is better', '10-12 for comprehensive coverage', '4-6 total to avoid drawing noise', '2 — only support and resistance'], answer: 2 },
+          { q: 'How many lines/levels does Yannai recommend having on a daily chart maximum?', options: ['As many as you can identify — more is better', '10-12 for comprehensive coverage', '4-6 total to avoid drawing noise', '2 — only support and resistance'], answer: 2 },
         ],
       },
       {
@@ -1091,7 +1091,7 @@ Target: The previous low (for a flipped resistance short) or the previous high (
         duration_mins: 9,
         content: { text: `# Building a Complete Trade From a Key Level
 
-Identifying a level is 40% of the work. The other 60% is knowing exactly how to trade it. Here is Arjun's complete framework.
+Identifying a level is 40% of the work. The other 60% is knowing exactly how to trade it. Here is Yannai's complete framework.
 
 ## The 3-Part Level Trade
 **Part 1: Identify the Level**
@@ -1103,7 +1103,7 @@ Do NOT enter the moment price is near a level. Wait for one of these approach si
 - A long wick rejects the level on the touch (immediate sign of reaction)
 - A specific candlestick pattern at the level (pin bar, inside bar, engulfing)
 
-"The level is not the entry. The REACTION at the level is the entry." — Arjun
+"The level is not the entry. The REACTION at the level is the entry." — Yannai
 
 **Part 3: Define the Trade Parameters Before Entry**
 
@@ -1114,7 +1114,7 @@ Stop: Just beyond the level by a comfortable margin (not so tight it gets picked
 Target: The next key level in the trade direction
 
 ## Position Sizing from the Level
-Arjun's personal rule: risk a maximum of 1% of account on any single key level trade. The reason is that even the best levels fail 25-30% of the time. Keeping position size consistent means no single loss damages the account.
+Yannai's personal rule: risk a maximum of 1% of account on any single key level trade. The reason is that even the best levels fail 25-30% of the time. Keeping position size consistent means no single loss damages the account.
 
 ## The Patience Factor
 "Most traders would be profitable if they only traded their best 3 setups per week instead of every setup they saw. Key levels force you to be patient — there are only a finite number of truly key levels at any time. That's a feature, not a limitation."
@@ -1124,8 +1124,8 @@ Arjun's personal rule: risk a maximum of 1% of account on any single key level t
 - Volume is extremely low at the level (no one is participating)
 - The higher timeframe trend is strongly against the direction of your trade` },
         quiz: [
-          { q: 'In Arjun\'s framework, what is the actual "entry" at a key level?', options: ['Entering the moment price touches the level', 'A limit order placed days before price arrives', 'The REACTION at the level — a confirmation signal (wick, candle pattern, volume)', 'Always a market order right at the open'], answer: 2 },
-          { q: 'Arjun limits risk to what percentage of account per key level trade?', options: ['5% — to allow for meaningful position sizes', '0.25% — to be ultra-conservative', '1% — to stay consistent without risking significant capital', '2.5% — the standard professional risk rule'], answer: 2 },
+          { q: 'In Yannai\'s framework, what is the actual "entry" at a key level?', options: ['Entering the moment price touches the level', 'A limit order placed days before price arrives', 'The REACTION at the level — a confirmation signal (wick, candle pattern, volume)', 'Always a market order right at the open'], answer: 2 },
+          { q: 'Yannai limits risk to what percentage of account per key level trade?', options: ['5% — to allow for meaningful position sizes', '0.25% — to be ultra-conservative', '1% — to stay consistent without risking significant capital', '2.5% — the standard professional risk rule'], answer: 2 },
         ],
       },
       {
@@ -1138,14 +1138,14 @@ Arjun's personal rule: risk a maximum of 1% of account on any single key level t
       },
       {
         order_index: 5,
-        title: 'Trader Sim: Think Like Arjun Bhattula',
+        title: 'Trader Sim: Think Like Yannai Richter',
         type: 'trader_sim',
         is_free_preview: false,
         duration_mins: 15,
         content: {},
         questions: [
-          { trader: 'Arjun Bhattula', context: 'It is Wednesday morning. SPY has been in an uptrend for 3 weeks. Last week\'s high was $512.40. This week, SPY has been rallying and is now at $512.15 — approaching last week\'s high. Volume has been declining over the last 3 sessions as price climbed. The daily RSI is at 72 (overbought). Yesterday\'s candle was an inside bar (smaller range, fully inside the prior candle).', question: 'You\'re approaching a key weekly resistance level. Is this a short setup, a wait-and-see situation, or is there a breakout long case? Walk through your complete decision process using the key level framework. Where would you enter short if taking that trade, where is your stop, and what\'s your target?' },
-          { trader: 'Arjun Bhattula', context: 'NQ futures broke below a key support level at 18,200 two weeks ago on heavy volume. Since then, NQ has been making lower lows, now trading around 17,850. Yesterday, NQ started to rally. Today it is pushing back up toward 18,200 — the level that was support and has now flipped to resistance. The rally has been on declining volume. There is a small bearish FVG at 18,190-18,210.', question: 'Is this an S/R flip trade? Walk through exactly how you would execute this: your entry, stop placement, target, and what level of conviction you have (1-10) and why. What would change your mind and make you step aside?' },
+          { trader: 'Yannai Richter', context: 'It is Wednesday morning. SPY has been in an uptrend for 3 weeks. Last week\'s high was $512.40. This week, SPY has been rallying and is now at $512.15 — approaching last week\'s high. Volume has been declining over the last 3 sessions as price climbed. The daily RSI is at 72 (overbought). Yesterday\'s candle was an inside bar (smaller range, fully inside the prior candle).', question: 'You\'re approaching a key weekly resistance level. Is this a short setup, a wait-and-see situation, or is there a breakout long case? Walk through your complete decision process using the key level framework. Where would you enter short if taking that trade, where is your stop, and what\'s your target?' },
+          { trader: 'Yannai Richter', context: 'NQ futures broke below a key support level at 18,200 two weeks ago on heavy volume. Since then, NQ has been making lower lows, now trading around 17,850. Yesterday, NQ started to rally. Today it is pushing back up toward 18,200 — the level that was support and has now flipped to resistance. The rally has been on declining volume. There is a small bearish FVG at 18,190-18,210.', question: 'Is this an S/R flip trade? Walk through exactly how you would execute this: your entry, stop placement, target, and what level of conviction you have (1-10) and why. What would change your mind and make you step aside?' },
         ] as any,
       },
     ],

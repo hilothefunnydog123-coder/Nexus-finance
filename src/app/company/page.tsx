@@ -278,12 +278,12 @@ export default function CompanyPage() {
           <TimelineItem year="2023" accent="#a855f7" events={[
             "Neil builds a gap scanner at 13. It hits 40K upvotes on Reddit overnight.",
             "Yannai Richter, paper trading since 12, posts a TSLA call that gets 2.1M impressions on X.",
-            "Arjun Bhattula cold-emails Ross Cameron 47 times. No reply. 48th time: a meeting.",
+            "Yannai cold-emails Ross Cameron 47 times. No reply. 48th time: a meeting.",
           ]}/>
           <TimelineItem year="2024" accent="#00d4aa" events={[
-            "Neil, Yannai, and Arjun meet on Discord. Three 14-year-olds who built different edges.",
+            "Neil and Yannai meet on Discord. Two 14-year-olds who built different edges.",
             "YN Finance Corp. is founded in New York. First lines of platform code written.",
-            "Arjun signs 9 world-class instructors in 4 months on 70% revenue-share deals.",
+            "Yannai signs 9 world-class instructors in 4 months on 70% revenue-share deals.",
           ]}/>
           <TimelineItem year="2025–26" accent="#ff2d78" events={[
             "9 intelligence tools live: AI Analyzer, Intelligence Suite, Congress Tracker, Smart Money Alerts, Earnings Decoder, YN Arena, and more.",
@@ -311,8 +311,8 @@ export default function CompanyPage() {
       <section style={{ padding:'100px 32px' }}>
         <div style={{ maxWidth:1100, margin:'0 auto' }}>
           <div style={{ fontSize:11, fontWeight:700, color:'#00d4aa', letterSpacing:'0.2em', fontFamily:'monospace', marginBottom:16, textAlign:'center' }}>THE FOUNDERS</div>
-          <h2 style={{ fontSize:32, fontWeight:900, color:'#e8f4f8', marginBottom:48, textAlign:'center', letterSpacing:'-0.02em' }}>Three 14-year-olds who got tired of losing edge to institutions</h2>
-          <div className="founders-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:24 }}>
+          <h2 style={{ fontSize:32, fontWeight:900, color:'#e8f4f8', marginBottom:48, textAlign:'center', letterSpacing:'-0.02em' }}>Two 14-year-olds who got tired of losing edge to institutions</h2>
+          <div className="founders-grid" style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:24, maxWidth:700, margin:'0 auto' }}>
             <FounderCard
               name="Neil Gilani"
               role="CEO"
@@ -324,15 +324,8 @@ export default function CompanyPage() {
               name="Yannai Richter"
               role="CTO"
               accent="#1e90ff"
-              bio="Paper traded from age 12. Turned $500 simulated into $31K in 11 months. Posted a TSLA call at 13 that got 2.1M impressions on X. Met Neil on Discord."
+              bio="Paper traded from age 12. Turned $500 simulated into $31K in 11 months. Cold-emailed Ross Cameron 47 times and signed 9 world-class instructors on 70% revenue share."
               detail="'I trusted my thesis before the crowd did. That's the only edge that matters.'"
-            />
-            <FounderCard
-              name="Arjun Bhattula"
-              role="COO"
-              accent="#a855f7"
-              bio="Cold-emailed Ross Cameron 47 times at age 13 before getting a meeting. Signed 9 world-class instructors in 4 months with 70% revenue-share deals."
-              detail="'The 47th no is just the setup for the yes. I don't count rejections.'"
             />
           </div>
         </div>

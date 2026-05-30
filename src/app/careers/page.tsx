@@ -283,7 +283,7 @@ export default function CareersPage() {
               desc={[
                 'Source and close deals with prop firms, trading educators, and brokers.',
                 'Manage our instructor partner relationships (9 world-class traders).',
-                'You have Arjun energy — you don&apos;t count rejections.',
+                'You don&apos;t count rejections — the 47th no is just setup for the yes.',
               ]}
             />
           </div>
