@@ -263,12 +263,13 @@ function ArticleModal({ article, onClose }: { article: Article; onClose: () => v
       <div style={{ position:'relative', zIndex:1, width:'100%', maxWidth:860, margin:'32px 16px', background:'#07111c', border:'1px solid rgba(255,255,255,.1)', borderRadius:20, maxHeight:'calc(100vh - 64px)', overflowY:'auto' }}>
         {/* Header */}
         <div style={{ position:'sticky', top:0, background:'rgba(7,17,28,.97)', backdropFilter:'blur(12px)', borderBottom:'1px solid rgba(255,255,255,.07)', padding:'20px 32px', display:'flex', alignItems:'center', justifyContent:'space-between', zIndex:10 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
             <span style={{ fontSize:9, fontWeight:800, letterSpacing:'0.16em', color:article.color, background:`${article.color}15`, border:`1px solid ${article.color}30`, borderRadius:5, padding:'3px 9px', fontFamily:'monospace' }}>
               {article.tag}
             </span>
             <span style={{ fontSize:11, color:'#4a6a7a', fontFamily:'monospace' }}>{article.date}</span>
             <span style={{ fontSize:11, color:'#4a6a7a', fontFamily:'monospace' }}>· {article.readTime}</span>
+            <span style={{ fontSize:11, color:'#6a90a8', fontFamily:'monospace' }}>· by <strong style={{ color:'#a0b4bf' }}>Neil Gilani</strong></span>
           </div>
           <button onClick={onClose} style={{ background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, color:'#7a9aaa', cursor:'pointer', fontSize:13, padding:'6px 14px', fontFamily:'monospace' }}>
             ESC ✕
@@ -362,6 +363,7 @@ export default function ResearchPage() {
             <span style={{ fontSize:10,fontWeight:800,letterSpacing:'0.16em',background:'linear-gradient(135deg,#00d4aa,#1e90ff)',color:'#030a10',padding:'4px 12px',borderRadius:10 }}>LATEST REPORT</span>
             <span style={{ fontSize:11,color:'#6a90a8',fontFamily:'monospace' }}>May 2026</span>
             <span style={{ fontSize:11,color:'#4a6a7a',fontFamily:'monospace' }}>· {FEATURED_ARTICLE.readTime}</span>
+            <span style={{ fontSize:11,color:'#6a90a8',fontFamily:'monospace' }}>· by <strong style={{ color:'#a0b4bf' }}>Neil Gilani</strong></span>
           </div>
           <h2 style={{ fontSize:32,fontWeight:900,letterSpacing:'-0.02em',color:'#e8f4f8',marginBottom:12 }}>Congressional Alpha Report — May 2026</h2>
           <p style={{ fontSize:16,color:'#7a9aaa',lineHeight:1.6,marginBottom:36 }}>We analyzed 847 congressional stock trades filed in 2026. Members of Congress outperformed the S&P 500 by 4.2% on average — and the patterns are unmistakable.</p>
@@ -428,7 +430,8 @@ export default function ResearchPage() {
                 <span style={{ fontSize:9,fontWeight:800,letterSpacing:'0.14em',color:article.color,background:`${article.color}15`,border:`1px solid ${article.color}35`,borderRadius:5,padding:'2px 8px',fontFamily:'monospace' }}>{article.tag}</span>
                 <span style={{ fontSize:11,color:'#4a6a7a',fontFamily:'monospace' }}>{article.date}</span>
               </div>
-              <h3 style={{ fontSize:15,fontWeight:700,color:'#e8f4f8',marginBottom:10,lineHeight:1.3 }}>{article.title}</h3>
+              <h3 style={{ fontSize:15,fontWeight:700,color:'#e8f4f8',marginBottom:8,lineHeight:1.3 }}>{article.title}</h3>
+              <div style={{ fontSize:11,color:'#4a6a7a',fontFamily:'monospace',marginBottom:10 }}>by <span style={{ color:'#7a9aaa' }}>Neil Gilani</span> · {article.readTime}</div>
               <p style={{ fontSize:13,color:'#6a90a8',lineHeight:1.6,marginBottom:18 }}>{PAST_REPORTS[i]?.teaser || article.content ? `${article.readTime} · Click to read` : ''}</p>
               <div style={{ display:'inline-flex',alignItems:'center',gap:6,fontSize:12,fontWeight:700,color:article.color,fontFamily:'monospace' }}>
                 Read Report →
