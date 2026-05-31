@@ -818,7 +818,7 @@ export default function HomePage() {
           {/* Founder badge — the hook */}
           <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(245,158,11,.08)', border:'1px solid rgba(245,158,11,.25)', borderRadius:24, padding:'7px 20px', marginBottom:20, fontSize:11, color:'#f59e0b', fontWeight:700, letterSpacing:'1px' }}>
             <span style={{ width:7, height:7, borderRadius:'50%', background:'#f59e0b', display:'inline-block', animation:'pulse-dot 1.5s infinite' }} />
-            BUILT BY THREE 14-YEAR-OLDS · YNFINANCE.ORG
+            NEIL GILANI & YANNAI RICHTER · CO-FOUNDERS · YNFINANCE.ORG
           </div>
 
           {/* The setup — what exists */}
@@ -894,6 +894,67 @@ export default function HomePage() {
         <div style={{ position:'absolute', bottom:32, left:'50%', transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', gap:8, opacity:.3, zIndex:2 }}>
           <span style={{ fontSize:9, letterSpacing:'3px', color:'#6a90a8' }}>SCROLL</span>
           <div style={{ width:1, height:44, background:'linear-gradient(#00d4aa,transparent)', animation:'float3d 2s ease-in-out infinite' }} />
+        </div>
+      </section>
+
+      {/* ══ THE PROBLEM ══════════════════════════════════════════════════════════ */}
+      <section style={{ padding:'100px 24px 80px', background:'rgba(2,4,8,1)', borderTop:'1px solid rgba(255,255,255,.04)', position:'relative', zIndex:1 }}>
+        <div style={{ maxWidth:1000, margin:'0 auto' }}>
+
+          {/* Header */}
+          <div style={{ textAlign:'center', marginBottom:64 }}>
+            <div style={{ fontSize:11, fontWeight:700, letterSpacing:'0.2em', color:'#ff2d78', fontFamily:'monospace', marginBottom:20 }}>THE PROBLEM EVERY TRADER FACES</div>
+            <h2 style={{ fontSize:'clamp(32px,5vw,58px)', fontWeight:900, letterSpacing:'-2px', lineHeight:1.05, color:'#e8f4f8', marginBottom:24 }}>
+              You&apos;re trading against people<br/>with an unfair advantage.
+            </h2>
+            <p style={{ fontSize:18, color:'#4a6a78', lineHeight:1.75, maxWidth:660, margin:'0 auto' }}>
+              A Goldman analyst has a team doing your research. A senator legally trades on information you can&apos;t access. Institutions see order flow that never hits your screen. This isn&apos;t a talent gap — it&apos;s an information gap. Neil and Yannai built YN Finance to close it.
+            </p>
+          </div>
+
+          {/* Problem → Solution grid */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:72 }}>
+            {([
+              { problem:'2+ hours of research before every open', solution:'9 agents monitor everything 24/7, surfaces only what matters', icon:'⏱', clr:'#ff2d78' },
+              { problem:'Congressional trades you find out about weeks later', solution:'Congress Agent flags every buy the day it\'s filed', icon:'🏛', clr:'#f59e0b' },
+              { problem:'Earnings calls full of spin you can\'t decode', solution:'Lie Detector scores management honesty in real time', icon:'📊', clr:'#a855f7' },
+              { problem:'Smart money moves before news hits your feed', solution:'Dark Pool + Options agents track institutional footprints', icon:'💰', clr:'#00d4aa' },
+              { problem:'No time to study while also trying to trade', solution:'World-class courses for $0.99 — finish in one sitting', icon:'🎓', clr:'#1e90ff' },
+              { problem:'No way to know if your strategy actually works', solution:'YN Arena: compete live against real traders, real stakes', icon:'⚡', clr:'#ec4899' },
+            ] as {problem:string;solution:string;icon:string;clr:string}[]).map((item,i)=>(
+              <div key={i} style={{ background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.06)', borderRadius:16, padding:'28px 24px' }}>
+                <div style={{ fontSize:28, marginBottom:16 }}>{item.icon}</div>
+                <div style={{ fontSize:9, fontWeight:800, color:'#ff2d78', fontFamily:'monospace', letterSpacing:'0.14em', marginBottom:8 }}>THE PROBLEM</div>
+                <p style={{ fontSize:14, color:'#3a5a6a', lineHeight:1.6, marginBottom:18 }}>{item.problem}</p>
+                <div style={{ height:1, background:`${item.clr}25`, marginBottom:18 }}/>
+                <div style={{ fontSize:9, fontWeight:800, color:item.clr, fontFamily:'monospace', letterSpacing:'0.14em', marginBottom:8 }}>THE SOLUTION</div>
+                <p style={{ fontSize:14, color:'#c8dce8', lineHeight:1.6, fontWeight:600 }}>{item.solution}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* How to use the site — step guide */}
+          <div style={{ textAlign:'center', marginBottom:32 }}>
+            <div style={{ fontSize:11, fontWeight:700, letterSpacing:'0.2em', color:'#00d4aa', fontFamily:'monospace' }}>YOUR PATH THROUGH YN FINANCE</div>
+          </div>
+          <div style={{ display:'flex', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, overflow:'hidden' }}>
+            {([
+              { step:'01', label:'Learn',   desc:'Pick a course from Ross Cameron, ICT, or 7 other world-class traders. $0.99.',   href:'/courses', clr:'#00d4aa' },
+              { step:'02', label:'Analyze', desc:'Run any ticker through the Intelligence Suite or AI Analyzer before you trade.',   href:'/ai-stocks', clr:'#1e90ff' },
+              { step:'03', label:'Monitor', desc:'Check the Agent Network daily for live insider, congress, and macro signals.',     href:'/agents', clr:'#a855f7' },
+              { step:'04', label:'Practice',desc:'Trade the simulator with real market data. Build a track record risk-free.',      href:'/app', clr:'#f59e0b' },
+              { step:'05', label:'Compete', desc:'Enter YN Arena tournaments. Prove your edge. Win from real prize pools.',        href:'/arena', clr:'#ec4899' },
+            ] as {step:string;label:string;desc:string;href:string;clr:string}[]).map((s,i,arr)=>(
+              <Link key={i} href={s.href} style={{ flex:1, padding:'28px 20px', textDecoration:'none', borderRight:i<arr.length-1?'1px solid rgba(255,255,255,.05)':'none', transition:'background .2s' }}
+                onMouseEnter={e=>(e.currentTarget.style.background=`${s.clr}09`)}
+                onMouseLeave={e=>(e.currentTarget.style.background='transparent')}
+              >
+                <div style={{ fontSize:11, fontWeight:800, color:s.clr, fontFamily:'monospace', letterSpacing:'0.12em', marginBottom:10 }}>{s.step} · {s.label.toUpperCase()}</div>
+                <p style={{ fontSize:13, color:'#4a6a78', lineHeight:1.6 }}>{s.desc}</p>
+              </Link>
+            ))}
+          </div>
+
         </div>
       </section>
 
@@ -1910,14 +1971,14 @@ export default function HomePage() {
             <div className="item i0" style={{ textAlign:'center', marginBottom:80 }}>
               <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(245,158,11,.1)', border:'1px solid rgba(245,158,11,.25)', borderRadius:20, padding:'6px 18px', marginBottom:20, fontSize:11, color:'#f59e0b', fontWeight:700, letterSpacing:'1px' }}>
                 <span style={{ width:6, height:6, borderRadius:'50%', background:'#f59e0b', display:'inline-block' }}/>
-                THE PEOPLE WHO BUILT IT
+                THE FOUNDERS
               </div>
               <h2 style={{ fontSize:'clamp(36px,5.5vw,68px)', fontWeight:900, letterSpacing:'-3px', lineHeight:.96, marginBottom:18 }}>
-                Three builders.{' '}
-                <span style={{ background:'linear-gradient(135deg,#f59e0b,#ec4899,#a855f7)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>One obsession.</span>
+                Neil Gilani &amp;{' '}
+                <span style={{ background:'linear-gradient(135deg,#f59e0b,#ec4899,#a855f7)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Yannai Richter.</span>
               </h2>
-              <p style={{ fontSize:18, color:'#3a5a6a', maxWidth:560, margin:'0 auto', lineHeight:1.7 }}>
-                Three 14-year-olds. A programmer who built a trading tool at 13, a trader who went viral at 13, and an operator who cold-emailed 47 times to get a yes — while in middle school.
+              <p style={{ fontSize:18, color:'#3a5a6a', maxWidth:600, margin:'0 auto', lineHeight:1.7 }}>
+                Neil built the machine — a full-stack AI trading platform, solo, at 13. Yannai went viral with a TSLA short call that reached 2.1M people, then cold-emailed Ross Cameron 47 times to sign the first instructor. They founded YN Finance together to give every retail trader the edge that institutions take for granted.
               </p>
             </div>
 
