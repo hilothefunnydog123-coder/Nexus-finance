@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     template: '%s | YN Finance',
   },
   description: 'Learn from Ross Cameron, ICT, Graham Stephan & 6 more world-class traders for $0.99 per course. Built-in trading simulator, prop firm challenges, and live market data.',
-  keywords: ['trading courses', 'learn to trade', 'prop firm', 'day trading', 'Ross Cameron', 'ICT trading', 'trading simulator', 'stock market education'],
+  keywords: ['ynfinance', 'yn finance', 'YN Finance', 'trading courses', 'learn to trade', 'prop firm', 'day trading', 'trading simulator', 'stock market education', 'Ross Cameron', 'ICT trading', 'trading app', 'prop firm challenge', 'trading education platform', 'AI stock analyzer'],
   authors: [{ name: 'YN Finance', url: BASE_URL }],
   creator: 'YN Finance',
   openGraph: {
@@ -56,6 +56,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
         <link rel="preconnect" href="https://s3.tradingview.com" />
         <link rel="dns-prefetch" href="https://s3.tradingview.com" />
+        {/* JSON-LD — tells Google exactly who YN Finance is */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: 'YN Finance',
+          alternateName: ['ynfinance', 'YNFinance'],
+          url: 'https://ynfinance.org',
+          logo: 'https://ynfinance.org/icon.png',
+          description: 'AI-powered trading education platform. Learn from world-class traders for $0.99 per course. Built-in prop firm challenges, live market data, and 9-agent AI intelligence network.',
+          sameAs: ['https://twitter.com/ynfinance'],
+          contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', email: 'support@ynfinance.org' },
+        }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'YN Finance',
+          url: 'https://ynfinance.org',
+          potentialAction: { '@type': 'SearchAction', target: 'https://ynfinance.org/ai-stocks?q={search_term_string}', 'query-input': 'required name=search_term_string' },
+        }) }} />
       </head>
       <body className="h-full">
         {children}
