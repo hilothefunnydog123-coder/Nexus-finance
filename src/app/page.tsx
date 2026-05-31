@@ -791,7 +791,7 @@ export default function HomePage() {
               onMouseLeave={e=>{e.currentTarget.style.color='#4a6a78';e.currentTarget.style.background='transparent'}}>
               {l}
               {badge && <span style={{ fontSize:7, fontWeight:800, color:badge, background:`${badge}18`, border:`1px solid ${badge}30`, borderRadius:3, padding:'1px 5px', letterSpacing:'1px' }}>
-                {l==='AI Analyzer'?'AI':l==='Intelligence'?'NEW':l==='Arena'?'LIVE':''}
+                {l==='Analyze'?'AI':l==='Agents'?'LIVE':l==='Arena'?'LIVE':''}
               </span>}
             </Link>
           ))}
