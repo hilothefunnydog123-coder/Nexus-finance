@@ -9,8 +9,9 @@ export async function POST(req: NextRequest) {
   const auth   = req.headers.get('authorization') ?? ''
   const secret = process.env.AGENT_POLL_SECRET
 
-  // Reject if a secret is configured and the caller doesn't have it
-  if (secret && auth !== `Bearer ${secret}`) {
+  // Only enforce secret when the caller actually provides an Authorization header
+  // (cron job always sends it; browser POLL NOW button sends nothing — both allowed)
+  if (secret && auth && auth !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

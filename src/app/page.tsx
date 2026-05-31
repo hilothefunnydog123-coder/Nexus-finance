@@ -783,7 +783,7 @@ export default function HomePage() {
 
         {/* Nav links */}
         <div className="hide-sm" style={{ display:'flex', gap:4, marginLeft:8 }}>
-          {([['Analyze','/ai-stocks','#a855f7'],['Intelligence','/intelligence','#ff2d78'],['Research','/research','#00d4aa'],['Courses','/courses',null],['Arena','/arena','#ffa502'],['Developers','/developers','#3b8eea'],['Company','/company',null]] as [string,string,string|null][]).map(([l,h,badge])=>(
+          {([['Analyze','/ai-stocks','#a855f7'],['Intelligence','/intelligence','#ff2d78'],['Agents','/agents','#ff2d78'],['Research','/research','#00d4aa'],['Courses','/courses',null],['Arena','/arena','#ffa502'],['Developers','/developers','#3b8eea'],['Company','/company',null]] as [string,string,string|null][]).map(([l,h,badge])=>(
             <Link key={l} href={h} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:7, fontSize:12, color:'#4a6a78', textDecoration:'none', fontWeight:600, transition:'all .2s', letterSpacing:'-.1px' }}
               onMouseEnter={e=>{e.currentTarget.style.color='#dce8f0';e.currentTarget.style.background='rgba(255,255,255,.05)'}}
               onMouseLeave={e=>{e.currentTarget.style.color='#4a6a78';e.currentTarget.style.background='transparent'}}>
@@ -2071,6 +2071,9 @@ export default function HomePage() {
             </Link>
             <Link href="/intelligence" style={{ background:'linear-gradient(135deg,rgba(255,45,120,.2),rgba(168,85,247,.2))', border:'1px solid rgba(168,85,247,.4)', color:'#dce8f0', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(16px)', boxShadow:'0 0 40px rgba(168,85,247,.2)' }}>
               Intelligence Suite →
+            </Link>
+            <Link href="/agents" style={{ background:'linear-gradient(135deg,rgba(255,45,120,.15),rgba(255,45,120,.05))', border:'1px solid rgba(255,45,120,.35)', color:'#ff2d78', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(16px)', boxShadow:'0 0 40px rgba(255,45,120,.15)' }}>
+              🎯 Agent Network →
             </Link>
             <Link href="/daily" style={{ background:'rgba(6,13,20,.9)', border:'1px solid rgba(255,255,255,.08)', color:'#dce8f0', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(16px)' }}>
               Daily Intel
