@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { YNMark } from '@/components/YNLogo'
+import NativeAd from '@/components/ads/NativeAd'
 
 const MODULES = [
   { id:'lockup',      name:'Lock-Up Assassin', icon:'🔫', clr:'#ff2d78', bg:'radial-gradient(ellipse at 30% 50%,rgba(255,45,120,.12),transparent 70%)', tag:'SCHEDULED DESTRUCTION',     classif:'SECRET',     needsInput:true,  placeholder:'Recent IPO ticker...', example:'RDDT', desc:'Insiders are about to dump. You know before they do.', hook:'Every IPO has a 180-day lock-up. When it expires, insiders sell. This is guaranteed, dated, and sized.', isPro:false },
@@ -720,6 +721,11 @@ export default function IntelligencePage() {
 
             <div style={{textAlign:'center',marginTop:44,fontFamily:'monospace',fontSize:'9px',color:'#0a1a22',letterSpacing:'1.5px'}}>
               FREE TO USE · POWERED BY GEMINI AI + LIVE FINNHUB DATA · CLICK ANY WEAPON TO DEPLOY
+            </div>
+
+            {/* Ad — below weapon grid, above selected weapon */}
+            <div style={{maxWidth:640,margin:'40px auto 0'}}>
+              <NativeAd variant="tool" size="md" />
             </div>
           </div>
         )}

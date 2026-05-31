@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Home } from 'lucide-react'
+import NativeAd from '@/components/ads/NativeAd'
 
 const API_KEY = 'AIzaSyACZjdcSbccKMVF-aYhW-XN5C_w-_gSrj8'
 
@@ -337,6 +338,11 @@ Include 4-6 real recent news items. Be specific with prices and levels for ${tic
             <div style={{ background: '#111118', border: '1px solid #1e1e2e', borderRadius: 6, padding: '1.5rem', marginBottom: '1.5rem', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: verdictBorderColor }} />
               <p style={{ fontSize: '1rem', lineHeight: 1.7 }}>{analysis.recommendation}</p>
+            </div>
+
+            {/* Ad — below analysis results */}
+            <div style={{ marginTop: '2rem' }}>
+              <NativeAd variant="broker" size="md" />
             </div>
           </div>
         )}

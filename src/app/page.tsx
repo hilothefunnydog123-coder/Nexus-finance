@@ -6,6 +6,8 @@ import dynamic from 'next/dynamic'
 import { YNMark } from '@/components/YNLogo'
 
 const ThreeScene = dynamic(() => import('@/components/ThreeScene'), { ssr: false })
+import AdsterraBanner from '@/components/ads/AdsterraBanner'
+import NativeAd from '@/components/ads/NativeAd'
 
 // ── WEAPON MINI-VISUALIZATIONS ────────────────────────────────────────────────
 function CrashChart() {
@@ -976,6 +978,11 @@ export default function HomePage() {
             70% instructor revenue share
           </div>
         </div>
+      </div>
+
+      {/* Ad — between trust strip and platform map */}
+      <div style={{ display:'flex', justifyContent:'center', padding:'28px 24px', background:'rgba(3,6,12,1)', borderTop:'1px solid rgba(255,255,255,.03)' }}>
+        <AdsterraBanner size="728x90" />
       </div>
 
       {/* ══ PLATFORM MAP ═════════════════════════════════════════════════════════ */}
@@ -2050,6 +2057,11 @@ export default function HomePage() {
 
       {/* Section divider */}
       <div style={{ position:'relative', zIndex:1, height:1, background:'linear-gradient(90deg,transparent,rgba(0,212,170,.2),transparent)' }}/>
+
+      {/* Ad — between founders and final CTA */}
+      <div style={{ maxWidth:680, margin:'0 auto', padding:'0 24px 64px' }}>
+        <NativeAd variant="prop-firm" size="md" />
+      </div>
 
       {/* ══ FINAL CTA ═══════════════════════════════════════════════════════════ */}
       <section style={{ padding:'120px 0', position:'relative', zIndex:1, textAlign:'center' }}>

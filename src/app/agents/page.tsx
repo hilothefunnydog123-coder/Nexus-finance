@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { YNMark } from '@/components/YNLogo'
+import AdsterraBanner from '@/components/ads/AdsterraBanner'
+import NativeAd from '@/components/ads/NativeAd'
 
 // ── Custom Cursor ──────────────────────────────────────────────────────────────
 function CustomCursor() {
@@ -360,6 +362,11 @@ export default function AgentsPage() {
         </div>
       </div>
 
+      {/* Ad — between agent grid and live feed */}
+      <div style={{ display:'flex', justifyContent:'center', padding:'0 24px 48px' }}>
+        <AdsterraBanner size="728x90" />
+      </div>
+
       {/* LIVE FEED */}
       <div style={{ padding:'0 24px 80px',maxWidth:900,margin:'0 auto' }}>
         <div style={{ textAlign:'center',marginBottom:48 }}>
@@ -437,6 +444,11 @@ export default function AgentsPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Ad — after live feed */}
+      <div style={{ maxWidth:680, margin:'0 auto', padding:'0 24px 64px' }}>
+        <NativeAd variant="broker" size="md" />
       </div>
 
       {/* HOW IT WORKS */}
