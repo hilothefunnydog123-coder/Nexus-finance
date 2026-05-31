@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const [signalsRes, convergenceRes] = await Promise.all([
     supabase
       .from('agent_signals')
-      .select('id, created_at, agent_name, ticker, signal_text, conviction, source_url')
+      .select('id, created_at, agent_name, ticker, signal_text, conviction, source_url, raw_data')
       .order('created_at', { ascending: false })
       .limit(limit),
     supabase
