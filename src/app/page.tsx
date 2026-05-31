@@ -813,82 +813,115 @@ export default function HomePage() {
 
       {/* ══ HERO ═══════════════════════════════════════════════════════════════ */}
       <section style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', zIndex:1, paddingTop:58 }}>
-        <div style={{ textAlign:'center', padding:'0 24px', maxWidth:960, opacity: heroOp, transform: heroTrans }}>
+        <div style={{ textAlign:'center', padding:'0 24px', maxWidth:1100, width:'100%', opacity:heroOp, transform:heroTrans }}>
 
-          {/* Founder badge — the hook */}
-          <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(245,158,11,.08)', border:'1px solid rgba(245,158,11,.25)', borderRadius:24, padding:'7px 20px', marginBottom:20, fontSize:11, color:'#f59e0b', fontWeight:700, letterSpacing:'1px' }}>
-            <span style={{ width:7, height:7, borderRadius:'50%', background:'#f59e0b', display:'inline-block', animation:'pulse-dot 1.5s infinite' }} />
+          {/* Founders badge */}
+          <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(245,158,11,.08)', border:'1px solid rgba(245,158,11,.25)', borderRadius:24, padding:'7px 20px', marginBottom:22, fontSize:11, color:'#f59e0b', fontWeight:700, letterSpacing:'1px' }}>
+            <span style={{ width:7, height:7, borderRadius:'50%', background:'#f59e0b', display:'inline-block', animation:'pulse-dot 1.5s infinite' }}/>
             NEIL GILANI & YANNAI RICHTER · CO-FOUNDERS · YNFINANCE.ORG
           </div>
 
-          {/* The setup — what exists */}
-          <p style={{ fontSize:'clamp(13px,1.4vw,16px)', color:'#2a4a62', fontFamily:'monospace', letterSpacing:'.5px', marginBottom:20, lineHeight:1.8 }}>
-            Bloomberg Terminal: <span style={{ color:'#ff2d78' }}>$25,000/year</span> &nbsp;·&nbsp;
-            Goldman analyst: <span style={{ color:'#ff2d78' }}>$500,000/year</span> &nbsp;·&nbsp;
-            Congressional intel: <span style={{ color:'#ff2d78' }}>private</span> &nbsp;·&nbsp;
-            Institutional AI: <span style={{ color:'#ff2d78' }}>invite only</span>
+          {/* Problem headline */}
+          <h1 style={{ fontSize:'clamp(38px,7vw,84px)', fontWeight:900, lineHeight:.92, letterSpacing:'-4px', color:'#dce8f0', marginBottom:20, animation:'zoomPulse 8s ease-in-out infinite' }}>
+            You&apos;re trading against<br/>
+            <span style={{ background:'linear-gradient(135deg,#ff2d78,#f59e0b)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>a $500K/year</span>
+            <br/>information advantage.
+          </h1>
+
+          {/* Sub-pitch */}
+          <p style={{ fontSize:'clamp(14px,1.6vw,18px)', color:'#4a6a78', lineHeight:1.75, marginBottom:26, maxWidth:640, margin:'0 auto 26px' }}>
+            Goldman has 12 researchers doing your homework. Senators legally trade on info you can&apos;t access. Institutions see order flow that never hits your screen. Two 14-year-olds built the machine that closes every one of those gaps — completely free.
           </p>
 
-          {/* Main headline */}
-          <div style={{ position:'relative', marginBottom:28 }}>
-            <h1 aria-hidden="true" style={{ fontSize:'clamp(52px,9.5vw,108px)', fontWeight:900, lineHeight:.9, letterSpacing:'-5px', color:'#ff2d78', position:'absolute', inset:0, animation:'chromaR 4s ease-in-out infinite', pointerEvents:'none', opacity:0, zIndex:-1 }}>
-              We automated<br/>all of it.<br/>For free.
-            </h1>
-            <h1 aria-hidden="true" style={{ fontSize:'clamp(52px,9.5vw,108px)', fontWeight:900, lineHeight:.9, letterSpacing:'-5px', color:'#3b8eea', position:'absolute', inset:0, animation:'chromaB 4s ease-in-out infinite', pointerEvents:'none', opacity:0, zIndex:-1 }}>
-              We automated<br/>all of it.<br/>For free.
-            </h1>
-            <h1 style={{ fontSize:'clamp(52px,9.5vw,108px)', fontWeight:900, lineHeight:.9, letterSpacing:'-5px', color:'#dce8f0', animation:'zoomPulse 8s ease-in-out infinite' }}>
-              <span className="glitch-word" style={{ animationDelay:'.05s' }}>We </span>
-              <span className="glitch-word" style={{ animationDelay:'.15s' }}>automated</span>
-              <br/>
-              <span style={{ background:'linear-gradient(135deg,#00d4aa 0%,#1e90ff 45%,#a855f7 80%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundSize:'200%', animation:'holo 4s linear infinite' }}>
-                <span className="glitch-word" style={{ animationDelay:'.3s' }}>all of it.</span>
-              </span>
-              <br/>
-              <span className="glitch-word" style={{ animationDelay:'.5s', color:'#dce8f0' }}>For </span>
-              <span className="glitch-word" style={{ animationDelay:'.62s', color:'#00ff88' }}>free.</span>
-            </h1>
+          {/* 5-step path */}
+          <div style={{ display:'flex', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, overflow:'hidden', maxWidth:900, margin:'0 auto 22px', backdropFilter:'blur(16px)', background:'rgba(4,10,18,.75)' }}>
+            {([
+              { n:'01', label:'Learn',    sub:'$0.99 courses, world-class traders', href:'/courses',   clr:'#00d4aa' },
+              { n:'02', label:'Analyze',  sub:'AI + Intelligence Suite on any ticker', href:'/ai-stocks', clr:'#1e90ff' },
+              { n:'03', label:'Monitor',  sub:'9 live agents: congress, insider, macro', href:'/agents', clr:'#a855f7' },
+              { n:'04', label:'Practice', sub:'Real data simulator — zero risk',    href:'/app',       clr:'#f59e0b' },
+              { n:'05', label:'Compete',  sub:'Arena tournaments, real prizes',     href:'/arena',     clr:'#ec4899' },
+            ] as {n:string;label:string;sub:string;href:string;clr:string}[]).map((s,i,arr)=>(
+              <Link key={i} href={s.href} style={{ flex:1, padding:'13px 10px', textDecoration:'none', borderRight:i<arr.length-1?'1px solid rgba(255,255,255,.05)':'none', transition:'background .2s' }}
+                onMouseEnter={e=>(e.currentTarget.style.background=`${s.clr}12`)}
+                onMouseLeave={e=>(e.currentTarget.style.background='transparent')}
+              >
+                <div style={{ fontSize:9, fontWeight:800, color:s.clr, fontFamily:'monospace', letterSpacing:'0.14em', marginBottom:4 }}>{s.n}</div>
+                <div style={{ fontSize:13, fontWeight:800, color:'#dce8f0', marginBottom:3 }}>{s.label}</div>
+                <div style={{ fontSize:10, color:'#2a4a5a', lineHeight:1.4 }}>{s.sub}</div>
+              </Link>
+            ))}
           </div>
 
-          {/* The pitch */}
-          <p style={{ fontSize:'clamp(17px,2vw,22px)', color:'#4a6a78', lineHeight:1.7, marginBottom:44, maxWidth:700, margin:'0 auto 44px' }}>
-            AI stock analysis. Congressional trade tracking. Smart money detection. Earnings forensics. The exact intelligence that hedge funds pay analysts half a million dollars a year to produce.{' '}
-            <strong style={{ color:'#dce8f0', fontWeight:700 }}>Free. For every trader. Starting now.</strong>
-          </p>
+          {/* Founder identity cards */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, maxWidth:780, margin:'0 auto 22px' }}>
+
+            <div style={{ background:'rgba(0,212,170,.05)', border:'1px solid rgba(0,212,170,.22)', borderRadius:16, padding:'20px 22px', textAlign:'left', backdropFilter:'blur(16px)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
+                <div style={{ width:44, height:44, borderRadius:12, background:'linear-gradient(135deg,#00d4aa,#3b8eea)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:900, color:'#030a10', flexShrink:0, boxShadow:'0 0 20px rgba(0,212,170,.4)' }}>NG</div>
+                <div>
+                  <div style={{ fontSize:15, fontWeight:800, color:'#e8f4f8' }}>Neil Gilani</div>
+                  <div style={{ fontSize:9, color:'#00d4aa', fontFamily:'monospace', letterSpacing:'0.1em', marginTop:2 }}>CEO & CO-FOUNDER · AGE 14</div>
+                </div>
+              </div>
+              <p style={{ fontSize:12, color:'#4a6a78', lineHeight:1.65, marginBottom:12 }}>
+                Built the entire platform solo at 13 — 100K+ lines of code, 13 AI features, real-time market data infrastructure. Started because he was spending 2 hours on research every morning before school.
+              </p>
+              <div style={{ display:'flex', gap:7 }}>
+                {[['13','AI Features'],['100K+','Lines'],['$0','Eng. Cost']].map(([n,l])=>(
+                  <div key={l} style={{ flex:1, background:'rgba(0,212,170,.08)', border:'1px solid rgba(0,212,170,.15)', borderRadius:8, padding:'7px 8px', textAlign:'center' }}>
+                    <div style={{ fontSize:12, fontWeight:800, color:'#00d4aa', fontFamily:'monospace' }}>{n}</div>
+                    <div style={{ fontSize:8, color:'#1a3a42', marginTop:2 }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ background:'rgba(30,144,255,.05)', border:'1px solid rgba(30,144,255,.22)', borderRadius:16, padding:'20px 22px', textAlign:'left', backdropFilter:'blur(16px)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
+                <div style={{ width:44, height:44, borderRadius:12, background:'linear-gradient(135deg,#1e90ff,#a855f7)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:900, color:'#fff', flexShrink:0, boxShadow:'0 0 20px rgba(30,144,255,.4)' }}>YR</div>
+                <div>
+                  <div style={{ fontSize:15, fontWeight:800, color:'#e8f4f8' }}>Yannai Richter</div>
+                  <div style={{ fontSize:9, color:'#1e90ff', fontFamily:'monospace', letterSpacing:'0.1em', marginTop:2 }}>CTO & CO-FOUNDER · AGE 14</div>
+                </div>
+              </div>
+              <p style={{ fontSize:12, color:'#4a6a78', lineHeight:1.65, marginBottom:12 }}>
+                Went viral at 13 with a TSLA short call (2.1M impressions). Cold-emailed Ross Cameron 47 times for the first yes — then signed 9 world-class instructors on 70% revenue share. Found Neil on Discord the same week.
+              </p>
+              <div style={{ display:'flex', gap:7 }}>
+                {[['2.1M','Impressions'],['47×','Emails to Ross'],['9','Instructors']].map(([n,l])=>(
+                  <div key={l} style={{ flex:1, background:'rgba(30,144,255,.08)', border:'1px solid rgba(30,144,255,.15)', borderRadius:8, padding:'7px 8px', textAlign:'center' }}>
+                    <div style={{ fontSize:12, fontWeight:800, color:'#1e90ff', fontFamily:'monospace' }}>{n}</div>
+                    <div style={{ fontSize:8, color:'#0a1a30', marginTop:2 }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
 
           {/* CTAs */}
-          <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap', marginBottom:32 }}>
-            <Link href="/ai-stocks" className="mag-btn" style={{ background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#030a10', padding:'20px 44px', borderRadius:14, fontSize:16, fontWeight:900, textDecoration:'none', boxShadow:'0 0 70px #00d4aa50,0 24px 48px rgba(0,0,0,.5)', letterSpacing:'-.3px', display:'inline-block' }}>
+          <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap', marginBottom:20 }}>
+            <Link href="/ai-stocks" className="mag-btn" style={{ background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#030a10', padding:'16px 36px', borderRadius:14, fontSize:15, fontWeight:900, textDecoration:'none', boxShadow:'0 0 60px #00d4aa50,0 20px 40px rgba(0,0,0,.5)', letterSpacing:'-.3px', display:'inline-block' }}>
               Start for Free →
             </Link>
-            <Link href="/congress" style={{ background:'rgba(255,45,120,.12)', border:'1px solid rgba(255,45,120,.35)', color:'#ff6b9d', padding:'20px 44px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(12px)' }}>
-              🏛 Congress Tracker
+            <Link href="/agents" style={{ background:'rgba(255,45,120,.12)', border:'1px solid rgba(255,45,120,.35)', color:'#ff6b9d', padding:'16px 36px', borderRadius:14, fontSize:15, fontWeight:700, textDecoration:'none', backdropFilter:'blur(12px)' }}>
+              🎯 Agent Network
             </Link>
-            <Link href="/intel" style={{ background:'rgba(0,212,170,.08)', border:'1px solid rgba(0,212,170,.22)', color:'#00d4aa', padding:'20px 44px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(12px)' }}>
-              💰 Smart Money
+            <Link href="/intelligence" style={{ background:'rgba(0,212,170,.08)', border:'1px solid rgba(0,212,170,.22)', color:'#00d4aa', padding:'16px 36px', borderRadius:14, fontSize:15, fontWeight:700, textDecoration:'none', backdropFilter:'blur(12px)' }}>
+              🔫 Intelligence Suite
             </Link>
           </div>
 
-          {/* The proof strip */}
-          <div style={{ display:'flex', gap:0, justifyContent:'center', border:'1px solid rgba(255,255,255,.05)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', background:'rgba(4,10,18,.7)', maxWidth:720, margin:'0 auto 32px' }}>
-            {([
-              ['9','World-Class Instructors','#f59e0b'],
-              ['$0.99','Courses from','#00d4aa'],
-              ['3,247+','Active Traders','#3b8eea'],
-              ['9','Intelligence Tools','#a855f7'],
-              ['$0','To Start','#00ff88'],
-            ] as [string,string,string][]).map(([n,l,clr],i,arr)=>(
-              <div key={l} style={{ flex:1, padding:'16px 12px', textAlign:'center', borderRight:i<arr.length-1?'1px solid rgba(255,255,255,.04)':'none' }}>
-                <div style={{ fontSize:'clamp(16px,2vw,22px)', fontWeight:900, color:clr, fontFamily:'"SF Mono",ui-monospace,monospace', letterSpacing:'-1px', textShadow:`0 0 16px ${clr}40` }}>{n}</div>
-                <div style={{ fontSize:9, color:'#1a3040', letterSpacing:'1px', marginTop:3, fontWeight:600 }}>{l.toUpperCase()}</div>
+          {/* Stats strip */}
+          <div style={{ display:'flex', gap:0, border:'1px solid rgba(255,255,255,.05)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', background:'rgba(4,10,18,.7)', maxWidth:720, margin:'0 auto' }}>
+            {([['9','World-Class Instructors','#f59e0b'],['$0.99','Courses from','#00d4aa'],['3,247+','Active Traders','#3b8eea'],['9','Intelligence Tools','#a855f7'],['$0','To Start','#00ff88']] as [string,string,string][]).map(([n,l,clr],i,arr)=>(
+              <div key={l} style={{ flex:1, padding:'13px 10px', textAlign:'center', borderRight:i<arr.length-1?'1px solid rgba(255,255,255,.04)':'none' }}>
+                <div style={{ fontSize:'clamp(13px,1.8vw,19px)', fontWeight:900, color:clr, fontFamily:'"SF Mono",ui-monospace,monospace', letterSpacing:'-1px', textShadow:`0 0 14px ${clr}40` }}>{n}</div>
+                <div style={{ fontSize:8, color:'#1a3040', letterSpacing:'1px', marginTop:2, fontWeight:600 }}>{l.toUpperCase()}</div>
               </div>
             ))}
           </div>
 
-          {/* Mini chart */}
-          <div style={{ maxWidth:500, margin:'0 auto', height:72, background:'rgba(6,13,20,0.7)', border:'1px solid rgba(0,212,170,0.12)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(10px)', padding:'6px' }}>
-            <AnimChart />
-          </div>
         </div>
 
         <div style={{ position:'absolute', bottom:32, left:'50%', transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', gap:8, opacity:.3, zIndex:2 }}>
@@ -897,9 +930,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══ THE PROBLEM ══════════════════════════════════════════════════════════ */}
-      <section style={{ padding:'100px 24px 80px', background:'rgba(2,4,8,1)', borderTop:'1px solid rgba(255,255,255,.04)', position:'relative', zIndex:1 }}>
-        <div style={{ maxWidth:1000, margin:'0 auto' }}>
+      {/* ══ THE PROBLEM — moved into hero above ══════════════════════════════════ */}
+      <section style={{ display:'none' }}>
+        <div>
 
           {/* Header */}
           <div style={{ textAlign:'center', marginBottom:64 }}>
