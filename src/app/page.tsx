@@ -232,7 +232,7 @@ function CongressCanvas() {
     ]
     let offset=0; let raf:number; let t=0
     function draw(){
-      ctx.fillStyle='#030a10'; ctx.fillRect(0,0,W,H)
+      ctx.fillStyle='#0b1929'; ctx.fillRect(0,0,W,H)
       // header
       ctx.fillStyle='rgba(0,212,170,.08)'; ctx.fillRect(0,0,W,16)
       ctx.font='bold 8px monospace'; ctx.fillStyle='#1a3550'
@@ -345,7 +345,7 @@ function EarningsGauge() {
     const animScores=[0,0,0]
     function draw(){
       ctx.clearRect(0,0,W,H)
-      ctx.fillStyle='#030a10'; ctx.fillRect(0,0,W,H)
+      ctx.fillStyle='#0b1929'; ctx.fillRect(0,0,W,H)
       gauges.forEach((g,i)=>{
         if(animScores[i]<g.score) animScores[i]=Math.min(g.score,animScores[i]+1.2)
         const score=animScores[i]
@@ -710,7 +710,7 @@ export default function HomePage() {
   const heroTrans = `translateY(${scrollY * 0.3}px)`
 
   return (
-    <div style={{ background: '#030a10', color: '#dce8f0', fontFamily: '"Inter", system-ui, sans-serif', overflowX: 'hidden', cursor: 'none' }}>
+    <div style={{ background: '#0b1929', color: '#dce8f0', fontFamily: '"Inter", system-ui, sans-serif', overflowX: 'hidden', cursor: 'none' }}>
       <style>{`
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
         @keyframes fadeUp    {from{opacity:0;transform:translateY(40px) rotateX(-15deg)}to{opacity:1;transform:translateY(0) rotateX(0)}}
@@ -765,9 +765,6 @@ export default function HomePage() {
       {/* THREE.JS BACKGROUND */}
       <ThreeScene scrollY={scrollY} />
 
-      {/* HUD OVERLAY */}
-      <HeroHUD />
-
       {/* NAV */}
       <nav style={{ position:'fixed', top:0, left:0, right:0, zIndex:100, height:62, display:'flex', alignItems:'center', padding:'0 32px', gap:32, background:'rgba(2,6,10,.88)', backdropFilter:'blur(28px)', borderBottom:'1px solid rgba(255,255,255,.05)' }}
         onMouseEnter={() => setCursorBig(true)} onMouseLeave={() => setCursorBig(false)}>
@@ -805,7 +802,7 @@ export default function HomePage() {
             onMouseLeave={e=>{e.currentTarget.style.background='rgba(0,212,170,.08)';e.currentTarget.style.borderColor='rgba(0,212,170,.2)'}}>
             Terminal
           </Link>
-          <Link href="/ai-stocks" style={{ background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#030a10', padding:'8px 20px', borderRadius:8, fontSize:13, fontWeight:900, textDecoration:'none', boxShadow:'0 0 24px #00d4aa35', letterSpacing:'-.2px' }}>
+          <Link href="/ai-stocks" style={{ background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#0b1929', padding:'8px 20px', borderRadius:8, fontSize:13, fontWeight:900, textDecoration:'none', boxShadow:'0 0 24px #00d4aa35', letterSpacing:'-.2px' }}>
             Try Free →
           </Link>
         </div>
@@ -858,7 +855,7 @@ export default function HomePage() {
 
             <div style={{ background:'rgba(0,212,170,.05)', border:'1px solid rgba(0,212,170,.22)', borderRadius:16, padding:'20px 22px', textAlign:'left', backdropFilter:'blur(16px)' }}>
               <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
-                <div style={{ width:44, height:44, borderRadius:12, background:'linear-gradient(135deg,#00d4aa,#3b8eea)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:900, color:'#030a10', flexShrink:0, boxShadow:'0 0 20px rgba(0,212,170,.4)' }}>NG</div>
+                <div style={{ width:44, height:44, borderRadius:12, background:'linear-gradient(135deg,#00d4aa,#3b8eea)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:900, color:'#0b1929', flexShrink:0, boxShadow:'0 0 20px rgba(0,212,170,.4)' }}>NG</div>
                 <div>
                   <div style={{ fontSize:15, fontWeight:800, color:'#e8f4f8' }}>Neil Gilani</div>
                   <div style={{ fontSize:9, color:'#00d4aa', fontFamily:'monospace', letterSpacing:'0.1em', marginTop:2 }}>CEO & CO-FOUNDER · AGE 14</div>
@@ -901,7 +898,7 @@ export default function HomePage() {
 
           {/* CTAs */}
           <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap', marginBottom:20 }}>
-            <Link href="/ai-stocks" className="mag-btn" style={{ background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#030a10', padding:'16px 36px', borderRadius:14, fontSize:15, fontWeight:900, textDecoration:'none', boxShadow:'0 0 60px #00d4aa50,0 20px 40px rgba(0,0,0,.5)', letterSpacing:'-.3px', display:'inline-block' }}>
+            <Link href="/ai-stocks" className="mag-btn" style={{ background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#0b1929', padding:'16px 36px', borderRadius:14, fontSize:15, fontWeight:900, textDecoration:'none', boxShadow:'0 0 60px #00d4aa50,0 20px 40px rgba(0,0,0,.5)', letterSpacing:'-.3px', display:'inline-block' }}>
               Start for Free →
             </Link>
             <Link href="/agents" style={{ background:'rgba(255,45,120,.12)', border:'1px solid rgba(255,45,120,.35)', color:'#ff6b9d', padding:'16px 36px', borderRadius:14, fontSize:15, fontWeight:700, textDecoration:'none', backdropFilter:'blur(12px)' }}>
@@ -1061,7 +1058,7 @@ export default function HomePage() {
               <div key={name} style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', border:`1px solid rgba(255,255,255,.05)`, borderRadius:5, background:'rgba(255,255,255,.02)', transition:'all .2s' }}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor=`${clr}30`;e.currentTarget.style.background=`${clr}06`}}
                 onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.05)';e.currentTarget.style.background='rgba(255,255,255,.02)'}}>
-                <span style={{ width:14, height:14, borderRadius:'50%', background:`linear-gradient(135deg,${clr},${clr}80)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:7, fontWeight:900, color:'#030a10', flexShrink:0 }}>✓</span>
+                <span style={{ width:14, height:14, borderRadius:'50%', background:`linear-gradient(135deg,${clr},${clr}80)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:7, fontWeight:900, color:'#0b1929', flexShrink:0 }}>✓</span>
                 <span style={{ fontSize:11, fontWeight:700, color:'#4a6a78', letterSpacing:'-.2px' }}>{name}</span>
                 <span style={{ fontSize:8, color:'#1a3040', borderLeft:'1px solid rgba(255,255,255,.06)', paddingLeft:7, letterSpacing:'.3px', whiteSpace:'nowrap' }}>{cred}</span>
               </div>
@@ -1243,7 +1240,7 @@ export default function HomePage() {
                 ))}
               </div>
               <div className="item i4">
-                <Link href="/ai-stocks" style={{ background:'linear-gradient(135deg,#00d4aa,#3b8eea)', color:'#030a10', padding:'15px 32px', borderRadius:12, fontSize:15, fontWeight:900, textDecoration:'none', boxShadow:'0 0 40px #00d4aa40', display:'inline-block' }}>
+                <Link href="/ai-stocks" style={{ background:'linear-gradient(135deg,#00d4aa,#3b8eea)', color:'#0b1929', padding:'15px 32px', borderRadius:12, fontSize:15, fontWeight:900, textDecoration:'none', boxShadow:'0 0 40px #00d4aa40', display:'inline-block' }}>
                   Try It Now — It&apos;s Free →
                 </Link>
               </div>
@@ -1311,7 +1308,7 @@ export default function HomePage() {
       </div>
 
       {/* ══ AI WIDGET PROMO ═════════════════════════════════════════════════════ */}
-      <section style={{ padding:'100px 0', position:'relative', zIndex:1, overflow:'hidden', background:'linear-gradient(180deg,#030a10,#020810,#030a10)' }}>
+      <section style={{ padding:'100px 0', position:'relative', zIndex:1, overflow:'hidden', background:'linear-gradient(180deg,#0b1929,#020810,#0b1929)' }}>
         {/* Ambient */}
         <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:900, height:900, borderRadius:'50%', background:'radial-gradient(circle,rgba(0,212,170,.04),transparent 70%)', pointerEvents:'none' }}/>
         <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(0,212,170,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,170,.018) 1px,transparent 1px)', backgroundSize:'52px 52px', pointerEvents:'none' }}/>
@@ -1358,7 +1355,7 @@ export default function HomePage() {
                 const top  = Math.max(0, window.screen.height - h - 60)
                 window.open('/widget','yn-ai-widget',`width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=no,resizable=yes,location=no,status=no`)
               }}
-              style={{ display:'inline-flex', alignItems:'center', gap:10, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', border:'none', color:'#030a10', padding:'16px 36px', borderRadius:12, fontSize:15, fontWeight:900, cursor:'pointer', fontFamily:'inherit', letterSpacing:'-.2px', boxShadow:'0 0 50px rgba(0,212,170,.3),0 16px 40px rgba(0,0,0,.4)', transition:'all .3s' }}
+              style={{ display:'inline-flex', alignItems:'center', gap:10, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', border:'none', color:'#0b1929', padding:'16px 36px', borderRadius:12, fontSize:15, fontWeight:900, cursor:'pointer', fontFamily:'inherit', letterSpacing:'-.2px', boxShadow:'0 0 50px rgba(0,212,170,.3),0 16px 40px rgba(0,0,0,.4)', transition:'all .3s' }}
               onMouseEnter={e=>(e.currentTarget.style.boxShadow='0 0 70px rgba(0,212,170,.45),0 20px 50px rgba(0,0,0,.5)')}
               onMouseLeave={e=>(e.currentTarget.style.boxShadow='0 0 50px rgba(0,212,170,.3),0 16px 40px rgba(0,0,0,.4)')}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 12a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
@@ -1386,7 +1383,7 @@ export default function HomePage() {
               <div style={{ padding:'14px 12px', display:'flex', flexDirection:'column', gap:10 }}>
                 {/* AI greeting */}
                 <div style={{ display:'flex', gap:6 }}>
-                  <div style={{ width:20, height:20, borderRadius:5, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:900, color:'#030a10' }}>YN</div>
+                  <div style={{ width:20, height:20, borderRadius:5, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:900, color:'#0b1929' }}>YN</div>
                   <div style={{ fontSize:11, color:'#8aaabb', background:'rgba(13,30,44,.9)', border:'1px solid rgba(255,255,255,.05)', borderRadius:'8px 8px 8px 2px', padding:'8px 10px', maxWidth:220, lineHeight:1.6 }}>
                     What&apos;s up — ask me anything about markets, setups, levels.
                   </div>
@@ -1394,14 +1391,14 @@ export default function HomePage() {
 
                 {/* User message */}
                 <div style={{ display:'flex', flexDirection:'row-reverse', gap:6 }}>
-                  <div style={{ fontSize:11, color:'#030a10', background:'linear-gradient(135deg,#00d4aa,#1e90ff)', borderRadius:'8px 8px 2px 8px', padding:'8px 10px', maxWidth:200, fontWeight:600, lineHeight:1.6 }}>
+                  <div style={{ fontSize:11, color:'#0b1929', background:'linear-gradient(135deg,#00d4aa,#1e90ff)', borderRadius:'8px 8px 2px 8px', padding:'8px 10px', maxWidth:200, fontWeight:600, lineHeight:1.6 }}>
                     Is NQ setting up for a breakout above 19,500?
                   </div>
                 </div>
 
                 {/* AI response */}
                 <div style={{ display:'flex', gap:6 }}>
-                  <div style={{ width:20, height:20, borderRadius:5, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:900, color:'#030a10' }}>YN</div>
+                  <div style={{ width:20, height:20, borderRadius:5, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:900, color:'#0b1929' }}>YN</div>
                   <div style={{ fontSize:11, color:'#8aaabb', background:'rgba(13,30,44,.9)', border:'1px solid rgba(255,255,255,.05)', borderRadius:'8px 8px 8px 2px', padding:'8px 10px', maxWidth:240, lineHeight:1.6 }}>
                     NQ&apos;s been compressing under 19,500 for three sessions — that&apos;s a classic coil. Watch for a volume spike above with a clean close on the 15M...
                   </div>
@@ -1409,7 +1406,7 @@ export default function HomePage() {
 
                 {/* User voice message */}
                 <div style={{ display:'flex', flexDirection:'row-reverse', gap:6, alignItems:'center' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'#030a10', background:'linear-gradient(135deg,#a855f7,#1e90ff)', borderRadius:'8px 8px 2px 8px', padding:'8px 10px', fontWeight:600 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'#0b1929', background:'linear-gradient(135deg,#a855f7,#1e90ff)', borderRadius:'8px 8px 2px 8px', padding:'8px 10px', fontWeight:600 }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 12a7 7 0 0 0 14 0"/></svg>
                     What&apos;s the R:R if I enter at 19,480?
                   </div>
@@ -1417,7 +1414,7 @@ export default function HomePage() {
 
                 {/* Typing dots */}
                 <div style={{ display:'flex', gap:6 }}>
-                  <div style={{ width:20, height:20, borderRadius:5, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:900, color:'#030a10' }}>YN</div>
+                  <div style={{ width:20, height:20, borderRadius:5, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:900, color:'#0b1929' }}>YN</div>
                   <div style={{ background:'rgba(13,30,44,.9)', border:'1px solid rgba(255,255,255,.05)', borderRadius:'8px 8px 8px 2px', padding:'10px 12px', display:'flex', gap:3, alignItems:'center' }}>
                     {[0,1,2].map(i => <span key={i} style={{ width:4, height:4, borderRadius:'50%', background:'#00d4aa', display:'inline-block', animation:`dot 1.4s ease-in-out ${i*.16}s infinite` }}/>)}
                   </div>
@@ -1433,13 +1430,13 @@ export default function HomePage() {
                   <span style={{ fontSize:10, color:'#1a3050' }}>Ask about any trade, ticker, or setup...</span>
                 </div>
                 <div style={{ width:30, height:30, borderRadius:8, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#030a10" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0b1929" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 </div>
               </div>
             </div>
 
             {/* Floating label */}
-            <div style={{ position:'absolute', top:-16, right:20, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#030a10', fontSize:10, fontWeight:900, padding:'4px 12px', borderRadius:20, letterSpacing:'.5px', zIndex:2 }}>
+            <div style={{ position:'absolute', top:-16, right:20, background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#0b1929', fontSize:10, fontWeight:900, padding:'4px 12px', borderRadius:20, letterSpacing:'.5px', zIndex:2 }}>
               DRAG ANYWHERE
             </div>
           </div>
@@ -1795,7 +1792,7 @@ export default function HomePage() {
                     </div>
                   ))}
                 </div>
-                <Link href="/intel" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'#00d4aa', color:'#030a10', padding:'13px 28px', borderRadius:8, fontSize:13, fontWeight:800, textDecoration:'none', boxShadow:'0 0 30px rgba(0,212,170,.4)' }}>
+                <Link href="/intel" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'#00d4aa', color:'#0b1929', padding:'13px 28px', borderRadius:8, fontSize:13, fontWeight:800, textDecoration:'none', boxShadow:'0 0 30px rgba(0,212,170,.4)' }}>
                   Open Smart Money Alerts →
                 </Link>
               </div>
@@ -1909,7 +1906,7 @@ export default function HomePage() {
 
                 <div style={{ display:'flex', alignItems:'flex-start', gap:14, marginBottom:16 }}>
                   {/* Avatar */}
-                  <div style={{ width:48, height:48, borderRadius:13, background:ins.grad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'#030a10', flexShrink:0, boxShadow:`0 0 20px ${ins.clr}35` }}>
+                  <div style={{ width:48, height:48, borderRadius:13, background:ins.grad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'#0b1929', flexShrink:0, boxShadow:`0 0 20px ${ins.clr}35` }}>
                     {ins.init}
                   </div>
                   <div>
@@ -1945,7 +1942,7 @@ export default function HomePage() {
               <div style={{ fontSize:20, fontWeight:900, color:'#dce8f0', letterSpacing:'-.5px', marginBottom:4 }}>9 world-class instructors. Every trading style.</div>
               <div style={{ fontSize:13, color:'#2a4a62' }}>Ross Cameron · ICT · Rayner Teo · Graham Stephan · Anton Kreil · Kevin O&apos;Leary · Wall St. Trapper · Humbled Trader · InTheMoney Adam</div>
             </div>
-            <Link href="/courses" style={{ flexShrink:0, background:'linear-gradient(135deg,#00d4aa,#3b8eea)', color:'#030a10', padding:'14px 32px', borderRadius:10, fontSize:14, fontWeight:900, textDecoration:'none', boxShadow:'0 0 30px #00d4aa30', letterSpacing:'-.2px', whiteSpace:'nowrap' }}>
+            <Link href="/courses" style={{ flexShrink:0, background:'linear-gradient(135deg,#00d4aa,#3b8eea)', color:'#0b1929', padding:'14px 32px', borderRadius:10, fontSize:14, fontWeight:900, textDecoration:'none', boxShadow:'0 0 30px #00d4aa30', letterSpacing:'-.2px', whiteSpace:'nowrap' }}>
               Browse All Courses →
             </Link>
           </div>
@@ -2038,7 +2035,7 @@ export default function HomePage() {
                         <div style={{ position:'relative', width:92, height:92, marginBottom:26 }}>
                           <div style={{ position:'absolute', inset:-10, borderRadius:'50%', border:`1px solid ${f.clr}20`, animation:'spin-halo 12s linear infinite' }}/>
                           <div style={{ position:'absolute', inset:-20, borderRadius:'50%', border:`1px solid ${f.clr}0c` }}/>
-                          <div style={{ width:92, height:92, borderRadius:24, background:f.grad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:30, fontWeight:900, color:'#030a10', boxShadow:`0 0 60px ${f.clr}45,0 0 120px ${f.clr}18`, position:'relative', zIndex:1, animation:'float3d 5s ease-in-out infinite', animationDelay:`${i*.6}s` }}>
+                          <div style={{ width:92, height:92, borderRadius:24, background:f.grad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:30, fontWeight:900, color:'#0b1929', boxShadow:`0 0 60px ${f.clr}45,0 0 120px ${f.clr}18`, position:'relative', zIndex:1, animation:'float3d 5s ease-in-out infinite', animationDelay:`${i*.6}s` }}>
                             {f.init}
                           </div>
                         </div>
@@ -2172,7 +2169,7 @@ export default function HomePage() {
             Join thousands of traders using AI to find better entries, tighter stops, and bigger wins.
           </p>
           <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap', marginBottom:40 }}>
-            <Link href="/ai-stocks" style={{ background:'linear-gradient(135deg,#00d4aa,#3b8eea)', color:'#030a10', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:900, textDecoration:'none', boxShadow:'0 0 60px #00d4aa40,0 20px 40px rgba(0,0,0,.5)', letterSpacing:'-.3px', display:'inline-block' }}>
+            <Link href="/ai-stocks" style={{ background:'linear-gradient(135deg,#00d4aa,#3b8eea)', color:'#0b1929', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:900, textDecoration:'none', boxShadow:'0 0 60px #00d4aa40,0 20px 40px rgba(0,0,0,.5)', letterSpacing:'-.3px', display:'inline-block' }}>
               AI Analyzer →
             </Link>
             <Link href="/intelligence" style={{ background:'linear-gradient(135deg,rgba(255,45,120,.2),rgba(168,85,247,.2))', border:'1px solid rgba(168,85,247,.4)', color:'#dce8f0', padding:'18px 40px', borderRadius:14, fontSize:16, fontWeight:700, textDecoration:'none', backdropFilter:'blur(16px)', boxShadow:'0 0 40px rgba(168,85,247,.2)' }}>
@@ -2280,7 +2277,7 @@ export default function HomePage() {
 
             <div style={{ marginTop:28, padding:'16px', background:'rgba(0,212,170,.04)', border:'1px solid rgba(0,212,170,.12)', borderRadius:10 }}>
               <div style={{ fontSize:10, color:'#00d4aa', fontWeight:700, letterSpacing:'1px', marginBottom:8 }}>START FREE</div>
-              <Link href="/app" style={{ display:'block', background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#030a10', padding:'10px 16px', borderRadius:7, fontSize:12, fontWeight:900, textDecoration:'none', textAlign:'center', boxShadow:'0 0 20px #00d4aa25' }}>
+              <Link href="/app" style={{ display:'block', background:'linear-gradient(135deg,#00d4aa,#1e90ff)', color:'#0b1929', padding:'10px 16px', borderRadius:7, fontSize:12, fontWeight:900, textDecoration:'none', textAlign:'center', boxShadow:'0 0 20px #00d4aa25' }}>
                 Launch Terminal →
               </Link>
             </div>

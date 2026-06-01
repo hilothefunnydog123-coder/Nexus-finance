@@ -5,8 +5,6 @@ import Link from 'next/link'
 import { Home } from 'lucide-react'
 import NativeAd from '@/components/ads/NativeAd'
 
-const API_KEY = 'AIzaSyACZjdcSbccKMVF-aYhW-XN5C_w-_gSrj8'
-
 function calcRR(entry: number, sl: number, tp: number, dir: string) {
   const risk = dir === 'long' ? entry - sl : sl - entry
   const reward = dir === 'long' ? tp - entry : entry - tp
@@ -65,61 +63,18 @@ export default function TradeAnalyzerPage() {
     setLoading(true)
     setAnalysis(null)
 
-    const prompt = `You are a professional forex and financial markets analyst with access to real-time news.
-
-Analyze this trade setup and provide a comprehensive analysis:
-
-TRADE DETAILS:
-- Ticker: ${ticker}
-- Direction: ${direction.toUpperCase()}
-- Entry: ${entry}
-- Stop Loss: ${sl}
-- Take Profit: ${tp}
-- Position Size: ${size || 'Not specified'}
-- Risk/Reward Ratio: ${rr ? rr + ':1' : 'Unable to calculate'}
-- Additional Context: ${context || 'None'}
-
-Please provide a complete analysis in this EXACT JSON format (no markdown, just raw JSON):
-{
-  "overall_sentiment": "BULLISH" or "BEARISH" or "NEUTRAL",
-  "sentiment_score": number from -100 to 100,
-  "verdict": "STRONG BUY" or "BUY" or "HOLD" or "SELL" or "STRONG SELL" or "AVOID",
-  "summary": "2-3 sentence overall market summary for ${ticker}",
-  "news": [{"title":"...","source":"...","sentiment":"...","impact":"...","date":"..."}],
-  "trade_analysis": {
-    "position_assessment": "...",
-    "risk_assessment": "...",
-    "market_conditions": "...",
-    "confluence_factors": ["..."],
-    "risk_factors": ["..."]
-  },
-  "key_levels": {"strong_support":0,"support":0,"resistance":0,"strong_resistance":0},
-  "recommendation": "...",
-  "confidence": 0
-}
-Include 4-6 real recent news items. Be specific with prices and levels for ${ticker}.`
-
     try {
       setLoadingText('FETCHING LIVE NEWS...')
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            tools: [{ google_search: {} }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 4096 }
-          })
-        }
-      )
+      const res = await fetch('/api/analyzer/trade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker, direction, entry, sl, tp, size, context }),
+      })
+      if (!res.ok) throw new Error(`Server error ${res.status}`)
       const data = await res.json()
-      if (!data.candidates?.[0]) throw new Error('No response from AI')
-      const rawText = data.candidates[0].content.parts[0].text
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) throw new Error('Could not parse AI response')
+      if (data.error) throw new Error(data.error)
       setLoadingText('RENDERING RESULTS...')
-      setAnalysis(JSON.parse(jsonMatch[0]))
+      setAnalysis(data as Analysis)
     } catch (e: unknown) {
       setError('Analysis failed: ' + (e instanceof Error ? e.message : String(e)))
     } finally {

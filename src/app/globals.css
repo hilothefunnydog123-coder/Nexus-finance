@@ -40,12 +40,12 @@
   --radius-xl: calc(var(--radius) * 1.4);
 
   /* Nexus Finance custom tokens */
-  --color-nx-bg: #040c14;
-  --color-nx-surface: #071220;
-  --color-nx-surface2: #0a1628;
-  --color-nx-surface3: #0f1f38;
-  --color-nx-border: #1a2d4a;
-  --color-nx-border-bright: #1e3a5f;
+  --color-nx-bg: #0b1929;
+  --color-nx-surface: #111f30;
+  --color-nx-surface2: #152438;
+  --color-nx-surface3: #1a2d45;
+  --color-nx-border: #1e3250;
+  --color-nx-border-bright: #254068;
   --color-nx-text: #cdd6f4;
   --color-nx-text-dim: #7f93b5;
   --color-nx-text-muted: #4a5e7a;
@@ -59,33 +59,33 @@
 }
 
 :root {
-  --background: #040c14;
-  --foreground: #cdd6f4;
-  --card: #071220;
-  --card-foreground: #cdd6f4;
-  --popover: #0a1628;
-  --popover-foreground: #cdd6f4;
+  --background: #0b1929;
+  --foreground: #d4e4f4;
+  --card: #111f30;
+  --card-foreground: #d4e4f4;
+  --popover: #152438;
+  --popover-foreground: #d4e4f4;
   --primary: #00d4aa;
-  --primary-foreground: #040c14;
-  --secondary: #0a1628;
-  --secondary-foreground: #cdd6f4;
-  --muted: #0f1f38;
-  --muted-foreground: #7f93b5;
-  --accent: #0f1f38;
-  --accent-foreground: #cdd6f4;
+  --primary-foreground: #0b1929;
+  --secondary: #152438;
+  --secondary-foreground: #d4e4f4;
+  --muted: #1a2d45;
+  --muted-foreground: #7f9ab5;
+  --accent: #1a2d45;
+  --accent-foreground: #d4e4f4;
   --destructive: #ff4757;
-  --border: #1a2d4a;
-  --input: #0f1f38;
+  --border: #1e3250;
+  --input: #1a2d45;
   --ring: #00d4aa;
   --radius: 0.25rem;
   --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
-  --sidebar: #071220;
-  --sidebar-foreground: #cdd6f4;
+  --sidebar: #111f30;
+  --sidebar-foreground: #d4e4f4;
   --sidebar-primary: #00d4aa;
-  --sidebar-primary-foreground: #040c14;
-  --sidebar-accent: #0f1f38;
-  --sidebar-accent-foreground: #cdd6f4;
-  --sidebar-border: #1a2d4a;
+  --sidebar-primary-foreground: #0b1929;
+  --sidebar-accent: #1a2d45;
+  --sidebar-accent-foreground: #d4e4f4;
+  --sidebar-border: #1e3250;
   --sidebar-ring: #00d4aa;
 }
 
@@ -102,7 +102,7 @@
     -webkit-font-smoothing: antialiased;
   }
   html {
-    background-color: #040c14;
+    background-color: #0b1929;
   }
 }
 
