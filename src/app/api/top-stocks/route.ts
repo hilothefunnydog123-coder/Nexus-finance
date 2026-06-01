@@ -82,14 +82,15 @@ Return ONLY valid JSON array with exactly 10 objects, ranked #1 (highest convict
 
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 1200, temperature: 0.4 } }) }
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 2000, temperature: 0.4, responseMimeType: 'application/json' } }) }
     )
     const json = await res.json()
     const raw = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]'
     const match = raw.match(/\[[\s\S]*\]/)
     if (!match) return NextResponse.json({ stocks: [], demo: true })
 
-    const stocks = JSON.parse(match[0])
+    let stocks: unknown[]
+    try { stocks = JSON.parse(match[0]) } catch { return NextResponse.json({ stocks: [], demo: true }) }
 
     return NextResponse.json(
       { stocks, generatedAt: new Date().toISOString(), demo: false },

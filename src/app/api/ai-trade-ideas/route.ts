@@ -44,14 +44,15 @@ Rules: entry must be close to real current price, use min 1.5:1 R:R, short if pr
 
     const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 900, temperature: 0.3 } }) }
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 1500, temperature: 0.3, responseMimeType: 'application/json' } }) }
     )
     const geminiJson = await geminiRes.json()
     const raw = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]'
     const match = raw.match(/\[[\s\S]*\]/)
     if (!match) return NextResponse.json({ ideas: [], demo: true })
 
-    const parsed = JSON.parse(match[0])
+    let parsed: Record<string, unknown>[]
+    try { parsed = JSON.parse(match[0]) } catch { return NextResponse.json({ ideas: [], demo: true }) }
     const ideas = parsed.map((idea: Record<string, unknown>, i: number) => ({
       id: `ai_${Date.now()}_${i}`,
       author: 'YN AI',

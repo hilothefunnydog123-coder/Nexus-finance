@@ -19,7 +19,7 @@ async function gemini(prompt: string, temp = 0.8): Promise<string> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: temp, maxOutputTokens: 2000 },
+        generationConfig: { temperature: temp, maxOutputTokens: 3000, responseMimeType: 'application/json' },
       }),
     }
   )
