@@ -166,7 +166,10 @@ void OnTick() {
    double price = cl[0];
    double sl    = atr[0] * ATRMult;
    double risk  = AccountInfoDouble(ACCOUNT_BALANCE) * RiskPct / 100;
-   double lots  = NormalizeDouble(risk / (sl / _Point * _Point), 2);
+   // Correct lot size: risk / (stop_distance_in_ticks × tick_value)
+   double tickVal = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   if(tickVal <= 0) tickVal = 1.0;
+   double lots  = NormalizeDouble(risk / ((sl / _Point) * tickVal), 2);
    lots = MathMax(0.01, MathMin(lots, 10.0));
 
    bool bullTrend = !UseTrend || price > ema[0];
@@ -277,7 +280,7 @@ useSession = input.bool(true, "Morning session only (9:30–11:30am ET)")
 session    = input.session("0930-1130", "Trading Window")
 
 // ── VWAP ─────────────────────────────────────────────────────────
-[vwap, upper, lower] = ta.vwap(hlc3, false, 1)
+[vwap, upper, lower] = ta.vwap(hlc3, ta.change(time("D")) != 0, 1)
 
 // ── VOLUME ───────────────────────────────────────────────────────
 avgVol     = ta.sma(volume, 20)
@@ -325,7 +328,9 @@ input double VolMult    = 2.0;  // Volume multiplier
 input double ATRMult    = 0.5;  // SL below VWAP
 input double RRRatio    = 3.0;  // Take profit ratio
 
-// Simplified VWAP calculation (session-based)
+int atrH;  // Global handle — created once in OnInit, not per-tick
+
+// Session-based VWAP: finds the 9:30 AM ET bar and calculates from there
 double CalcVWAP() {
    double cumPV = 0, cumVol = 0;
    MqlDateTime dt;
@@ -334,10 +339,13 @@ double CalcVWAP() {
    for (int i = 0; i < 200; i++) {
       datetime t = iTime(_Symbol, PERIOD_CURRENT, i);
       TimeToStruct(t, dt);
-      if (dt.hour == 9 && dt.min == 30) { sessionStart = t; break; }
+      // 9:30 AM ET = 14:30 UTC (EST) or 13:30 UTC (EDT)
+      bool isOpen = (dt.hour == 14 && dt.min == 30) || (dt.hour == 13 && dt.min == 30);
+      if (isOpen) { sessionStart = t; break; }
    }
 
-   for (int i = iBarShift(_Symbol, PERIOD_CURRENT, sessionStart); i >= 0; i--) {
+   int startBar = (sessionStart > 0) ? iBarShift(_Symbol, PERIOD_CURRENT, sessionStart) : 50;
+   for (int i = startBar; i >= 0; i--) {
       double hlc3 = (iHigh(_Symbol,PERIOD_CURRENT,i) +
                      iLow(_Symbol,PERIOD_CURRENT,i) +
                      iClose(_Symbol,PERIOD_CURRENT,i)) / 3;
@@ -348,11 +356,22 @@ double CalcVWAP() {
    return cumVol > 0 ? cumPV / cumVol : iClose(_Symbol, PERIOD_CURRENT, 0);
 }
 
+int OnInit() {
+   atrH = iATR(_Symbol, PERIOD_CURRENT, 14);
+   if(atrH == INVALID_HANDLE) return INIT_FAILED;
+   return INIT_SUCCEEDED;
+}
+
+void OnDeinit(const int reason) { IndicatorRelease(atrH); }
+
 void OnTick() {
    if (PositionsTotal() > 0) return;
 
+   // 9:30-11:30 AM ET: EST = 14:30-16:30 UTC | EDT = 13:30-15:30 UTC
+   // Cover both seasons: 13:30-16:30 UTC window
    MqlDateTime dt; TimeToStruct(TimeCurrent(), dt);
-   bool morning = (dt.hour == 14 || (dt.hour == 15 && dt.min < 30)); // 9:30-11:30 ET = 14:30-16:30 UTC
+   int totalMin = dt.hour * 60 + dt.min;
+   bool morning = (totalMin >= 13*60+30) && (totalMin < 16*60+30);
    if (!morning) return;
 
    double vwap  = CalcVWAP();
@@ -360,14 +379,17 @@ void OnTick() {
    double prev  = iClose(_Symbol, PERIOD_D1, 1);
    double gap   = (iOpen(_Symbol, PERIOD_CURRENT, 0) - prev) / prev * 100;
 
-   int    atrH  = iATR(_Symbol, PERIOD_CURRENT, 14);
    double atr[1]; CopyBuffer(atrH, 0, 0, 1, atr);
 
    double sl    = vwap - atr[0] * ATRMult;
    double slDist = price - sl;
+   if(slDist <= 0) return;  // safety: don't trade if VWAP is above price
    double tp    = price + slDist * RRRatio;
    double risk  = AccountInfoDouble(ACCOUNT_BALANCE) * 0.005;
-   double lots  = NormalizeDouble(risk / (slDist / _Point * _Point), 2);
+   // Correct lot calc: risk / (stop_ticks × tick_value)
+   double tickVal = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   if(tickVal <= 0) tickVal = 1.0;
+   double lots  = NormalizeDouble(risk / ((slDist / _Point) * tickVal), 2);
    lots = MathMax(0.01, MathMin(lots, 5.0));
 
    bool vwapReclaim = iClose(_Symbol,PERIOD_CURRENT,1) < vwap && price > vwap;
@@ -395,7 +417,7 @@ volMult    = input.float(2.0, "Volume Multiplier")
 useSession = input.bool(true, "Morning session only")
 session    = input.session("0930-1130", "Window")
 
-[vwap, upper, lower] = ta.vwap(hlc3, false, 1)
+[vwap, upper, lower] = ta.vwap(hlc3, ta.change(time("D")) != 0, 1)
 avgVol      = ta.sma(volume, 20)
 prevClose   = request.security(syminfo.tickerid, "D", close[1])
 gapPct      = (open - prevClose) / prevClose * 100
@@ -538,7 +560,9 @@ void OnTick() {
 
    double risk  = AccountInfoDouble(ACCOUNT_BALANCE) * 0.005;
    double slDist= atr[0] * ATRMult;
-   double lots  = NormalizeDouble(risk / (slDist / _Point * _Point), 2);
+   double tickVal = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   if(tickVal <= 0) tickVal = 1.0;
+   double lots  = NormalizeDouble(risk / ((slDist / _Point) * tickVal), 2);
    lots = MathMax(0.01, MathMin(lots, 10.0));
 
    if (upTrend && rsiLong)
@@ -633,7 +657,8 @@ plotshape(shortSig, "SHORT", shape.triangledown, location.abovebar, color.red,  
 strategy("YN Finance — Humbled Trader Bull Flag | Prop Edition",
   overlay=true,
   default_qty_type=strategy.fixed,
-  default_qty_value=1)
+  default_qty_value=1,
+  max_bars_back=500)
 
 // ── INPUTS ───────────────────────────────────────────────────────
 poleMinPct  = input.float(3.0, "Min Pole Move %",         minval=1.0, maxval=10.0)
@@ -661,15 +686,17 @@ flagCnt    := isTightBar ? flagCnt + 1 : 0
 validFlag   = flagCnt >= 2 and flagCnt <= flagMaxBars
 
 // ── BREAKOUT ─────────────────────────────────────────────────────
-flagHigh    = ta.highest(high, math.max(flagCnt, 2))
+// Use flagMaxBars (simple int input) for constant-length ta.highest — Pine Script
+// requires a compile-time constant; dynamic flagCnt is not allowed as length.
+flagHigh    = ta.highest(high, flagMaxBars)
 breakout    = ta.crossover(close, flagHigh[1]) and volume > avgVol * volMult
 
 longEntry   = strongPole[flagCnt] and validFlag and breakout and
               inSession and strategy.position_size == 0
 
 // ── LEVELS (measured move) ───────────────────────────────────────
-poleSize    = ta.highest(high, poleLen + flagCnt) - ta.lowest(low, poleLen + flagCnt)
-flagLow     = ta.lowest(low, math.max(flagCnt, 2))
+poleSize    = ta.highest(high, poleLen + flagMaxBars) - ta.lowest(low, poleLen + flagMaxBars)
+flagLow     = ta.lowest(low, flagMaxBars)
 stopLoss    = flagLow - atr * atrSL
 takeProfit  = close + poleSize   // measured move target
 
@@ -725,6 +752,7 @@ void OnTick() {
 
    double flagLow = MathMin(iLow(_Symbol,PERIOD_CURRENT,1), iLow(_Symbol,PERIOD_CURRENT,2));
    double sl      = flagLow - atr[0] * ATRStop;
+   if(c0 - sl <= 0) return;
    double poleH   = 0, poleL = 999999;
    for (int i = 0; i < 10; i++) {
       poleH = MathMax(poleH, iHigh(_Symbol,PERIOD_CURRENT,i));
@@ -732,7 +760,9 @@ void OnTick() {
    }
    double tp = c0 + (poleH - poleL);  // measured move
    double risk = AccountInfoDouble(ACCOUNT_BALANCE) * 0.005;
-   double lots = NormalizeDouble(risk / ((c0-sl)/_Point*_Point), 2);
+   double tickVal = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   if(tickVal <= 0) tickVal = 1.0;
+   double lots = NormalizeDouble(risk / (((c0 - sl) / _Point) * tickVal), 2);
    lots = MathMax(0.01, MathMin(lots, 5.0));
 
    trade.Buy(lots, _Symbol, c0, sl, tp, "Bull Flag Break");
@@ -756,7 +786,7 @@ bool IsNewBar() {
     },
     signals: {
       tradingview: `//@version=5
-indicator("YN Finance — Humbled Trader Bull Flag SIGNALS", overlay=true)
+indicator("YN Finance — Humbled Trader Bull Flag SIGNALS", overlay=true, max_bars_back=500)
 
 poleMinPct  = input.float(3.0, "Pole Min %")
 flagMaxBars = input.int(8, "Max Flag Bars")
@@ -772,13 +802,14 @@ strongPole  = poleReturn >= poleMinPct and volume[5] > avgVol[5] * 1.5
 isTightBar  = (high - low) < atr * 0.6
 var int cnt = 0; cnt := isTightBar ? cnt + 1 : 0
 validFlag   = cnt >= 2 and cnt <= flagMaxBars
-flagHigh    = ta.highest(high, math.max(cnt, 2))
+// flagMaxBars is a simple int input — valid constant length for ta.highest/ta.lowest
+flagHigh    = ta.highest(high, flagMaxBars)
 breakout    = ta.crossover(close, flagHigh[1]) and volume > avgVol * volMult
 signal      = strongPole[cnt] and validFlag and breakout and inSession
 
-flagLow     = ta.lowest(low, math.max(cnt,2))
+flagLow     = ta.lowest(low, flagMaxBars)
 sl          = flagLow - atr
-poleSize    = ta.highest(high, 5+cnt) - ta.lowest(low, 5+cnt)
+poleSize    = ta.highest(high, 5 + flagMaxBars) - ta.lowest(low, 5 + flagMaxBars)
 tp          = close + poleSize
 
 alertcondition(signal, "🚩 BULL FLAG BREAKOUT",

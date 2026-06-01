@@ -16,7 +16,7 @@ interface Course {
 
 const DIFF_COLOR: Record<string, string> = { Beginner: '#00d4aa', Intermediate: '#ffa502', Advanced: '#ff4757' }
 
-const FILTERS = ['All', 'Day Trading', 'Smart Money Concepts', 'Swing Trading', 'Options Income', 'Institutional Trading', 'Scalping']
+const FILTERS = ['All', 'Day Trading', 'Smart Money Concepts', 'Swing Trading', 'Options Income', 'Long-Term Investing', 'Financial Literacy', 'Portfolio Management', 'Institutional Trading']
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
@@ -127,7 +127,7 @@ export default function CoursesPage() {
 
           {/* Stats */}
           <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap' }}>
-            {[['9', 'Expert Instructors'], ['40+', 'Hours of Content'], ['$0.99', 'Per Course'], ['Built-in', 'Practice Mode']].map(([v, l]) => (
+            {[['12', 'Expert Instructors'], ['60+', 'Hours of Content'], ['$0.99', 'Per Course'], ['Built-in', 'Practice Mode']].map(([v, l]) => (
               <div key={l}>
                 <div style={{ fontSize: 24, fontWeight: 900, color: '#00d4aa', fontFamily: 'monospace' }}>{v}</div>
                 <div style={{ fontSize: 11, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{l}</div>
