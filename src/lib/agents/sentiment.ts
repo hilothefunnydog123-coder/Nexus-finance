@@ -1,6 +1,6 @@
 import type { AgentSignal } from './types'
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
 type NewsItem = { headline: string; related: string; source: string; summary: string }
 

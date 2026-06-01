@@ -57,7 +57,7 @@ News: ${headlines}
 {"rating":"Buy","confidence":78,"price_target":0.0,"entry_low":0.0,"entry_high":0.0,"stop_loss":0.0,"take_profit_1":0.0,"one_liner":"One specific sentence on the setup RIGHT NOW.","sentiment":"Bullish","top_risk":"One specific risk sentence.","urgency":"high" | "medium" | "low"}`
 
   const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GM}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GM}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -151,7 +151,7 @@ Management Guidance Tone: ${guidance_tone || 'not specified'}
 Analyze this company's earnings pattern in 2-3 sentences. Comment specifically on whether management has a track record of sandbagging estimates, over-promising, or delivering honest guidance. What should a trader watch for going into this report?`
 
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GM}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GM}`,
       {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },

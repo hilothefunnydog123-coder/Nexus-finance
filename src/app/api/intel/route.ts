@@ -215,7 +215,7 @@ In 2-3 conversational sentences, explain what this unusual options activity migh
     }
 
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GM}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GM}`,
       {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
