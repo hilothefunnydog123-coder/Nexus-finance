@@ -782,7 +782,7 @@ export default function HomePage() {
 
         {/* Nav links */}
         <div className="hide-sm" style={{ display:'flex', gap:4, marginLeft:8 }}>
-          {([['Analyze','/ai-stocks','#a855f7'],['Intelligence','/intelligence','#ff2d78'],['Agents','/agents','#ff2d78'],['Research','/research','#00d4aa'],['Courses','/courses',null],['Arena','/arena','#ffa502'],['Developers','/developers','#3b8eea'],['Company','/company',null]] as [string,string,string|null][]).map(([l,h,badge])=>(
+          {([['Analyze','/ai-stocks','#a855f7'],['Intelligence','/intelligence','#ff2d78'],['Agents','/agents','#ff2d78'],['Algorithms','/algorithms','#00d4aa'],['Research','/research','#00d4aa'],['Courses','/courses',null],['Arena','/arena','#ffa502'],['Developers','/developers','#3b8eea'],['Company','/company',null]] as [string,string,string|null][]).map(([l,h,badge])=>(
             <Link key={l} href={h} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:7, fontSize:12, color:'#4a6a78', textDecoration:'none', fontWeight:600, transition:'all .2s', letterSpacing:'-.1px' }}
               onMouseEnter={e=>{e.currentTarget.style.color='#dce8f0';e.currentTarget.style.background='rgba(255,255,255,.05)'}}
               onMouseLeave={e=>{e.currentTarget.style.color='#4a6a78';e.currentTarget.style.background='transparent'}}>
