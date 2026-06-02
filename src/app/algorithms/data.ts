@@ -197,59 +197,50 @@ void OnTick() {
       tradingview: `//@version=5
 indicator("YN Finance — ICT Smart Money SIGNALS", overlay=true, max_bars_back=500)
 
-// ── INPUTS ────────────────────────────────────────────────────────
-atrMult  = input.float(1.5, "SL ATR Multiplier",  group="Levels")
-tpRR     = input.float(2.0, "TP R:R Ratio",       group="Levels")
-useTrend = input.bool(true, "200 EMA filter",     group="Filters")
-useSess  = input.bool(true, "Killzone filter",    group="Filters")
-lKZ      = input.session("0700-1000", "London",   group="Filters")
-nyKZ     = input.session("1300-1700", "New York", group="Filters")
+// ── INPUTS ───────────────────────────────────────────────────────
+atrMult   = input.float(1.5, "SL ATR Multiplier")
+tpRR      = input.float(2.0, "TP R:R Ratio")
+useSess   = input.bool(true, "Killzone filter")
+london    = input.session("0700-1000", "London")
+nyOpen    = input.session("1300-1600", "NY Open")
+useTrend  = input.bool(true, "200 EMA filter")
 
-// ── INDICATORS ────────────────────────────────────────────────────
-ema200  = ta.ema(close, 200)
-atr     = ta.atr(14)
+// ── LOGIC ────────────────────────────────────────────────────────
+ema200    = ta.ema(close, 200)
+atr       = ta.atr(14)
+bullFVG   = low > high[2] and (low - high[2]) > atr * 0.15
+bearFVG   = high < low[2] and (low[2] - high) > atr * 0.15
 
-// ── FVG DETECTION ─────────────────────────────────────────────────
-bullFVG = low > high[2] and (low - high[2]) > atr * 0.08
-bearFVG = high < low[2] and (low[2] - high) > atr * 0.08
+inSession = not useSess or
+             (not na(time(timeframe.period, london, "Europe/London")) or
+              not na(time(timeframe.period, nyOpen, "America/New_York")))
 
-// ── FILTERS ───────────────────────────────────────────────────────
-inLondon  = not na(time(timeframe.period, lKZ,  "Europe/London"))
-inNY      = not na(time(timeframe.period, nyKZ, "America/New_York"))
-inSession = not useSess or (inLondon or inNY)
-bullTrend = not useTrend or close > ema200
-bearTrend = not useTrend or close < ema200
+longSig    = bullFVG and inSession and (not useTrend or close > ema200)
+shortSig   = bearFVG and inSession and (not useTrend or close < ema200)
 
-// ── SIGNALS (confirmed on bar close only) ─────────────────────────
-longSig  = bullFVG and inSession and bullTrend and barstate.isconfirmed
-shortSig = bearFVG and inSession and bearTrend and barstate.isconfirmed
+// ── LEVELS ───────────────────────────────────────────────────────
+sl         = atr * atrMult
+tp         = sl * tpRR
 
-// ── PRICE LEVELS ──────────────────────────────────────────────────
-sl = atr * atrMult
-tp = sl * tpRR
+// ── ALERTS ───────────────────────────────────────────────────────
+if longSig
+    alert("YN ICT LONG | " + syminfo.ticker +
+          " | Entry: "  + str.tostring(close, "#.#####") +
+          " | SL: "     + str.tostring(close - sl, "#.#####") +
+          " | TP: "     + str.tostring(close + tp, "#.#####"), alert.freq_once_per_bar_close)
 
-// ── ALERTS ────────────────────────────────────────────────────────
-alertcondition(longSig, "ICT LONG SIGNAL",
-  "YN ICT LONG | " + syminfo.ticker +
-  " | Entry: " + str.tostring(close,       "#.#####") +
-  " | SL: "   + str.tostring(close - sl,  "#.#####") +
-  " | TP: "   + str.tostring(close + tp,  "#.#####") +
-  " | R:R "   + str.tostring(tpRR, "#.#") + ":1")
+if shortSig
+    alert("YN ICT SHORT | " + syminfo.ticker +
+          " | Entry: "  + str.tostring(close, "#.#####") +
+          " | SL: "     + str.tostring(close + sl, "#.#####") +
+          " | TP: "     + str.tostring(close - tp, "#.#####"), alert.freq_once_per_bar_close)
 
-alertcondition(shortSig, "ICT SHORT SIGNAL",
-  "YN ICT SHORT | " + syminfo.ticker +
-  " | Entry: " + str.tostring(close,       "#.#####") +
-  " | SL: "   + str.tostring(close + sl,  "#.#####") +
-  " | TP: "   + str.tostring(close - tp,  "#.#####") +
-  " | R:R "   + str.tostring(tpRR, "#.#") + ":1")
-
-// ── PLOT ──────────────────────────────────────────────────────────
-emaCol = close > ema200 ? color.new(color.teal, 30) : color.new(color.red, 30)
-plot(ema200, "200 EMA", emaCol, 2)
-bgcolor(bullFVG and inSession ? color.new(color.teal, 91)
-      : bearFVG and inSession ? color.new(color.red,  91) : na, title="FVG Zone")
-plotshape(longSig,  "LONG",  shape.triangleup,   location.belowbar, color.new(color.lime, 0), size=size.normal)
-plotshape(shortSig, "SHORT", shape.triangledown, location.abovebar, color.new(color.red,  0), size=size.normal)`,
+// ── PLOT ─────────────────────────────────────────────────────────
+plot(ema200, "200 EMA", color.new(color.blue, 40), 2)
+plotshape(longSig,  "LONG",  shape.triangleup,   location.belowbar, color.lime,  size=size.large)
+plotshape(shortSig, "SHORT", shape.triangledown, location.abovebar, color.red,   size=size.large)
+bgcolor(longSig  ? color.new(color.green, 90) : na)
+bgcolor(shortSig ? color.new(color.red,   90) : na)`,
       steps: [
         'Paste the signals script into TradingView Pine Script Editor → Add to chart',
         'Green triangle = LONG signal. Red triangle = SHORT signal. Signals only appear on bar CLOSE (no repainting)',
@@ -431,20 +422,14 @@ volMult    = input.float(1.5,  "Volume Multiplier",                     group="S
 atrMult    = input.float(0.5,  "Stop Below VWAP (ATR ×)",              group="Strategy")
 rrRatio    = input.float(3.0,  "R:R Ratio",                             group="Strategy")
 useSession = input.bool(true,  "Morning session only",                  group="Filters")
-session    = input.session("0930-1130", "Window",                       group="Filters")
+session    = input.session("0930-1130", "Window",                        group="Filters")
 
 // ── SESSION ───────────────────────────────────────────────────────
 inSession = not useSession or not na(time(timeframe.period, session, "America/New_York"))
 
 // ── INTRADAY VWAP ─────────────────────────────────────────────────
-var float cumPV  = 0.0
-var float cumVol = 0.0
-if timeframe.change("D")
-    cumPV  := 0.0
-    cumVol := 0.0
-cumPV  += hlc3 * volume
-cumVol += volume
-vwap = cumVol > 0 ? cumPV / cumVol : close
+// Using the built-in, highly optimized v5 VWAP function
+vwapVal = ta.vwap
 
 // ── GAP DETECTION ─────────────────────────────────────────────────
 var float prevDayClose = na
@@ -456,25 +441,25 @@ gapUp  = gapPct >= minGap
 // ── VOLUME + SIGNAL ───────────────────────────────────────────────
 avgVol      = ta.sma(volume, 20)
 highVol     = volume > avgVol * volMult
-vwapReclaim = ta.crossover(close, vwap)
+vwapReclaim = ta.crossover(close, vwapVal)
 atr         = ta.atr(14)
 signal      = gapUp and vwapReclaim and highVol and inSession and barstate.isconfirmed
 
 // ── LEVELS ────────────────────────────────────────────────────────
-sl = vwap - atr * atrMult
+sl = vwapVal - atr * atrMult
 tp = close + (close - sl) * rrRatio
 
 // ── ALERT ─────────────────────────────────────────────────────────
-alertcondition(signal, "RC VWAP RECLAIM",
-  "RC LONG | " + syminfo.ticker +
-  " | Entry: " + str.tostring(close,    "#.##") +
-  " | SL: "   + str.tostring(sl,       "#.##") +
-  " | TP: "   + str.tostring(tp,       "#.##") +
-  " | Gap: "  + str.tostring(gapPct,   "#.1") + "%")
+if signal
+    alert("RC LONG | " + syminfo.ticker +
+          " | Entry: " + str.tostring(close,    "#.##") +
+          " | SL: "   + str.tostring(sl,       "#.##") +
+          " | TP: "   + str.tostring(tp,       "#.##") +
+          " | Gap: "  + str.tostring(gapPct,   "#.1") + "%", alert.freq_once_per_bar_close)
 
 // ── PLOT ──────────────────────────────────────────────────────────
-vwapCol = close > vwap ? color.new(color.orange, 20) : color.new(color.orange, 60)
-plot(vwap, "VWAP", vwapCol, 2)
+vwapCol = close > vwapVal ? color.new(color.orange, 20) : color.new(color.orange, 60)
+plot(vwapVal, "VWAP", vwapCol, 2)
 bgcolor(gapUp and inSession ? color.new(color.teal, 93) : na, title="Gap-Up Session")
 plotshape(signal, "BUY", shape.triangleup, location.belowbar, color.new(color.lime, 0), size=size.normal)`,
       steps: [
@@ -658,7 +643,7 @@ atr    = ta.atr(14)
 // ── TREND & SIGNALS ───────────────────────────────────────────────
 upTrend   = close > ema200
 downTrend = close < ema200
-rsiLong   = ta.crossover (rsi, rsiOS)
+rsiLong   = ta.crossover(rsi, rsiOS)
 rsiShort  = ta.crossunder(rsi, rsiOB)
 
 // Only fire on confirmed bar close (no repainting)
@@ -666,7 +651,7 @@ longSig  = upTrend   and rsiLong  and barstate.isconfirmed
 shortSig = downTrend and rsiShort and barstate.isconfirmed
 
 // ── LEVELS ────────────────────────────────────────────────────────
-swingLow  = ta.lowest (low,  5)
+swingLow  = ta.lowest(low,  5)
 swingHigh = ta.highest(high, 5)
 lSL = swingLow  - atr * 0.3
 sSL = swingHigh + atr * 0.3
@@ -674,17 +659,17 @@ lTP = close + (close - lSL)  * rrRatio
 sTP = close - (sSL - close)  * rrRatio
 
 // ── ALERTS ────────────────────────────────────────────────────────
-alertcondition(longSig, "RT LONG PULLBACK",
-  "RT LONG | " + syminfo.ticker +
-  " | Entry: " + str.tostring(close, "#.#####") +
-  " | SL: "   + str.tostring(lSL,   "#.#####") +
-  " | TP: "   + str.tostring(lTP,   "#.#####"))
+if longSig
+    alert("RT LONG | " + syminfo.ticker +
+          " | Entry: " + str.tostring(close, "#.#####") +
+          " | SL: "   + str.tostring(lSL,   "#.#####") +
+          " | TP: "   + str.tostring(lTP,   "#.#####"), alert.freq_once_per_bar_close)
 
-alertcondition(shortSig, "RT SHORT PULLBACK",
-  "RT SHORT | " + syminfo.ticker +
-  " | Entry: " + str.tostring(close, "#.#####") +
-  " | SL: "   + str.tostring(sSL,   "#.#####") +
-  " | TP: "   + str.tostring(sTP,   "#.#####"))
+if shortSig
+    alert("RT SHORT | " + syminfo.ticker +
+          " | Entry: " + str.tostring(close, "#.#####") +
+          " | SL: "   + str.tostring(sSL,   "#.#####") +
+          " | TP: "   + str.tostring(sTP,   "#.#####"), alert.freq_once_per_bar_close)
 
 // ── PLOT ──────────────────────────────────────────────────────────
 emaCol = upTrend ? color.new(color.green, 30) : color.new(color.red, 30)
@@ -882,7 +867,7 @@ strongPole = poleReturn >= poleMinPct and volume[5] > avgVol[5] * 1.5
 // ── FLAG ──────────────────────────────────────────────────────────
 isTightBar = (high - low) < atr * 0.6
 var int cnt = 0
-cnt       := isTightBar ? cnt + 1 : 0
+cnt := isTightBar ? cnt + 1 : 0
 validFlag  = cnt >= 2 and cnt <= flagMaxBars
 
 var bool poleSeen = false
@@ -906,12 +891,12 @@ poleSize = ta.highest(high, 5 + flagMaxBars) - ta.lowest(low, 5 + flagMaxBars)
 tp       = close + poleSize
 
 // ── ALERT ─────────────────────────────────────────────────────────
-alertcondition(signal, "HT BULL FLAG BREAKOUT",
-  "HT LONG | " + syminfo.ticker +
-  " | Entry: " + str.tostring(close, "#.##") +
-  " | SL: "   + str.tostring(sl,    "#.##") +
-  " | TP: "   + str.tostring(tp,    "#.##") +
-  " (Measured Move)")
+if signal
+    alert("HT LONG | " + syminfo.ticker +
+          " | Entry: " + str.tostring(close, "#.##") +
+          " | SL: "   + str.tostring(sl,    "#.##") +
+          " | TP: "   + str.tostring(tp,    "#.##") +
+          " (Measured Move)", alert.freq_once_per_bar_close)
 
 // ── PLOT ──────────────────────────────────────────────────────────
 bgcolor(validFlag ? color.new(color.yellow, 91) : na, title="Flag Zone")
@@ -1094,11 +1079,12 @@ sizeChanged = na(lastUnits) ? false : math.abs(unitsRounded - lastUnits) >= 0.1
 if barstate.isconfirmed
     lastUnits := unitsRounded
 
-alertcondition(sizeChanged, "Position Size Updated",
-  "Risk Update | Trade: $" + str.tostring(riskDollar, "#,###") +
-  " | Units: "     + str.tostring(unitsRounded,       "#.##") +
-  " | Daily Limit: $" + str.tostring(dailyLimit,      "#,###") +
-  " | Stop Dist: " + str.tostring(atr * atrMult,      "#.#####"))
+// ── ALERTS ───────────────────────────────────────────────────────
+if sizeChanged and barstate.isconfirmed
+    alert("Risk Update | Trade: $" + str.tostring(riskDollar,       "#,###") +
+          " | Units: "              + str.tostring(unitsRounded,     "#.##") +
+          " | Daily Limit: $"       + str.tostring(dailyLimit,       "#,###") +
+          " | Stop Dist: "          + str.tostring(atr * atrMult,    "#.#####"), alert.freq_once_per_bar_close)
 
 // ── PLOTS ─────────────────────────────────────────────────────────
 plot(units,       "Units to Trade",   color.new(color.teal,   0), 2)
