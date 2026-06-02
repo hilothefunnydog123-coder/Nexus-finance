@@ -94,7 +94,7 @@ riskPct = input.float(0.5, "Risk % per trade",               step=0.1, group="�
 slBuf   = input.float(0.15,"SL buffer beyond sweep (ATR ×)", step=0.05, group="⑥ Risk & Targets")
 tp1R    = input.float(1.0, "TP1 at (R multiple)",            step=0.5, group="⑥ Risk & Targets")
 tp1Pct  = input.int(50,    "TP1 close %", minval=0, maxval=100,        group="⑥ Risk & Targets")
-tp2Mode = input.string("Opposing Liquidity", "TP2 Target", options=["Opposing Liquidity","Fixed R"], group="⑥ Risk & Targets")
+tp2Mode = input.string("Fixed R", "TP2 Target", options=["Fixed R","Opposing Liquidity"], group="⑥ Risk & Targets")
 tp2R    = input.float(3.0, "TP2 at (R) if Fixed",            step=0.5, group="⑥ Risk & Targets")
 useBE   = input.bool(true, "Move SL to breakeven after TP1",            group="⑥ Risk & Targets")
 
@@ -257,7 +257,7 @@ canArm = not armed and not inTrade and strategy.position_size == 0
 
 // ── arm LONG ──
 if canArm and longSetup and lOteOK and lEqOK
-    bsl = math.max(nz(pdh, recHi), recHi)
+    bsl = math.max(nz(pdh, recHi[1]), recHi[1])
     sl  = lRangeLo - atr * slBuf
     risk = lEntry - sl
     if risk > 0
@@ -266,7 +266,7 @@ if canArm and longSetup and lOteOK and lEqOK
         aEntry := lEntry
         aSL := sl
         aTP1 := lEntry + risk * tp1R
-        aTP2 := tp2Mode == "Opposing Liquidity" and bsl > lEntry ? bsl : lEntry + risk * tp2R
+        aTP2 := tp2Mode == "Opposing Liquidity" and bsl > lEntry + risk * 1.5 and bsl < lEntry + risk * 10 ? bsl : lEntry + risk * tp2R
         aInval := lFvgBot
         aBar := bar_index
         tp1Done := false
@@ -287,7 +287,7 @@ if canArm and longSetup and lOteOK and lEqOK
 
 // ── arm SHORT ──
 if canArm and shortSetup and sOteOK and sEqOK
-    ssl = math.min(nz(pdl, recLo), recLo)
+    ssl = math.min(nz(pdl, recLo[1]), recLo[1])
     sl  = sRangeHi + atr * slBuf
     risk = sl - sEntry
     if risk > 0
@@ -296,7 +296,7 @@ if canArm and shortSetup and sOteOK and sEqOK
         aEntry := sEntry
         aSL := sl
         aTP1 := sEntry - risk * tp1R
-        aTP2 := tp2Mode == "Opposing Liquidity" and ssl < sEntry ? ssl : sEntry - risk * tp2R
+        aTP2 := tp2Mode == "Opposing Liquidity" and ssl < sEntry - risk * 1.5 and ssl > sEntry - risk * 10 ? ssl : sEntry - risk * tp2R
         aInval := sFvgTop
         aBar := bar_index
         tp1Done := false
@@ -524,7 +524,7 @@ kzPM  = input.session("1400-1500", "New York PM",   group="⑤ Killzones (New Yo
 // ══════════ ⑥ TARGETS ══════════
 slBuf   = input.float(0.15,"SL buffer beyond sweep (ATR ×)", step=0.05, group="⑥ Targets")
 tp1R    = input.float(1.0, "TP1 at (R multiple)",            step=0.5, group="⑥ Targets")
-tp2Mode = input.string("Opposing Liquidity", "TP2 Target", options=["Opposing Liquidity","Fixed R"], group="⑥ Targets")
+tp2Mode = input.string("Fixed R", "TP2 Target", options=["Fixed R","Opposing Liquidity"], group="⑥ Targets")
 tp2R    = input.float(3.0, "TP2 at (R) if Fixed",            step=0.5, group="⑥ Targets")
 
 // ══════════ ⑦ VISUALS ══════════
@@ -659,11 +659,11 @@ shortSig = biasBear and sweepOKS and dispBear and inKZ and smtBear and sOteOK an
 
 // ══════════ ALERTS (full trade plan, to the tick) ══════════
 if longSig
-    bsl = math.max(nz(pdh, recHi), recHi)
+    bsl = math.max(nz(pdh, recHi[1]), recHi[1])
     sl  = lRangeLo - atr * slBuf
     risk = lEntry - sl
     tp1 = lEntry + risk * tp1R
-    tp2 = tp2Mode == "Opposing Liquidity" and bsl > lEntry ? bsl : lEntry + risk * tp2R
+    tp2 = tp2Mode == "Opposing Liquidity" and bsl > lEntry + risk * 1.5 and bsl < lEntry + risk * 10 ? bsl : lEntry + risk * tp2R
     rr  = risk > 0 ? (tp2 - lEntry) / risk : 0.0
     bxR = bar_index + tradeBars
     if showFVG
@@ -685,11 +685,11 @@ if longSig
           " | Confluence: Swept SSL + MSS + FVG + OTE", alert.freq_once_per_bar_close)
 
 if shortSig
-    ssl = math.min(nz(pdl, recLo), recLo)
+    ssl = math.min(nz(pdl, recLo[1]), recLo[1])
     sl  = sRangeHi + atr * slBuf
     risk = sl - sEntry
     tp1 = sEntry - risk * tp1R
-    tp2 = tp2Mode == "Opposing Liquidity" and ssl < sEntry ? ssl : sEntry - risk * tp2R
+    tp2 = tp2Mode == "Opposing Liquidity" and ssl < sEntry - risk * 1.5 and ssl > sEntry - risk * 10 ? ssl : sEntry - risk * tp2R
     rr  = risk > 0 ? (sEntry - tp2) / risk : 0.0
     bxR = bar_index + tradeBars
     if showFVG
