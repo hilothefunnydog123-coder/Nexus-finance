@@ -529,9 +529,11 @@ tp1R    = input.float(1.0, "TP1 at (R multiple)",            step=0.5, group="�
 tp2Mode = input.string("Fixed R", "TP2 Target", options=["Fixed R","Opposing Liquidity"], group="⑥ Targets")
 tp2R    = input.float(3.0, "TP2 at (R) if Fixed",            step=0.5, group="⑥ Targets")
 
-// ══════════ ⑦ ALERTS (scaling across accounts) ══════════
-alertFmt = input.string("Readable", "Alert format", options=["Readable","JSON (webhook)"], group="⑦ Alerts")
-acctRisk = input.float(0.5, "Risk % in webhook payload", step=0.1, group="⑦ Alerts")
+// ══════════ ⑦ ALERTS / AUTOTRADE ══════════
+alertFmt  = input.string("Readable", "Alert / webhook format", options=["Readable","JSON - Generic","JSON - TradersPost"], group="⑦ Alerts / Autotrade")
+brokerSym = input.string("", "Broker symbol override (blank = chart symbol)", group="⑦ Alerts / Autotrade")
+contracts = input.int(1, "Contracts per signal", minval=1, group="⑦ Alerts / Autotrade")
+webhookTP = input.string("TP2 (full)", "Webhook take-profit", options=["TP1 (1R)","TP2 (full)"], group="⑦ Alerts / Autotrade")
 
 // ══════════ ⑧ VISUALS ══════════
 showTrade = input.bool(true,  "Show trade box (entry / TP / SL)", group="⑧ Visuals")
@@ -778,9 +780,12 @@ if fireLong
         label.new(bxR, pT2, "TP " + str.tostring(pT2,"#.#####"), style=label.style_label_left, color=color.new(color.green,0), textcolor=color.white, size=size.small)
         label.new(bxR, pSL, "SL " + str.tostring(pSL,"#.#####"), style=label.style_label_left, color=color.new(color.red,0),   textcolor=color.white, size=size.small)
         label.new(bar_index, pSL, gradeStr + " LONG @ " + str.tostring(pE,"#.#####") + "  (RR " + str.tostring(pR,"#.#") + ")\\nSwept SSL, displaced up (MSS), price returned to the FVG and rejected.", style=label.style_label_up, color=color.new(#1e90ff,12), textcolor=color.white, size=size.small)
-    jLong = '{"symbol":"' + syminfo.ticker + '","tf":"' + timeframe.period + '","side":"long","grade":"' + gradeStr + '","entry":' + str.tostring(pE,"#.#####") + ',"sl":' + str.tostring(pSL,"#.#####") + ',"tp1":' + str.tostring(pT1,"#.#####") + ',"tp2":' + str.tostring(pT2,"#.#####") + ',"rr":' + str.tostring(pR,"#.##") + ',"risk_pct":' + str.tostring(acctRisk,"#.##") + '}'
-    rLong = "YN ICT LONG " + gradeStr + " | " + syminfo.ticker + " " + timeframe.period + " | Entry " + str.tostring(pE,"#.#####") + " | SL " + str.tostring(pSL,"#.#####") + " | TP1 " + str.tostring(pT1,"#.#####") + " | TP2 " + str.tostring(pT2,"#.#####") + " | RR " + str.tostring(pR,"#.#")
-    alert(alertFmt == "JSON (webhook)" ? jLong : rLong, alert.freq_once_per_bar_close)
+    symL = brokerSym == "" ? syminfo.ticker : brokerSym
+    tpWL = webhookTP == "TP1 (1R)" ? pT1 : pT2
+    tpJsonL = '{"ticker":"' + symL + '","action":"buy","quantity":' + str.tostring(contracts) + ',"stopLoss":{"type":"stop","stopPrice":' + str.tostring(pSL,"#.#####") + '},"takeProfit":{"limitPrice":' + str.tostring(tpWL,"#.#####") + '}}'
+    gJsonL  = '{"symbol":"' + symL + '","side":"long","action":"buy","qty":' + str.tostring(contracts) + ',"entry":' + str.tostring(pE,"#.#####") + ',"sl":' + str.tostring(pSL,"#.#####") + ',"tp1":' + str.tostring(pT1,"#.#####") + ',"tp2":' + str.tostring(pT2,"#.#####") + ',"grade":"' + gradeStr + '"}'
+    rTxtL   = "YN ICT LONG " + gradeStr + " | " + symL + " " + timeframe.period + " | Entry " + str.tostring(pE,"#.#####") + " | SL " + str.tostring(pSL,"#.#####") + " | TP1 " + str.tostring(pT1,"#.#####") + " | TP2 " + str.tostring(pT2,"#.#####") + " | RR " + str.tostring(pR,"#.#")
+    alert(alertFmt == "JSON - TradersPost" ? tpJsonL : alertFmt == "JSON - Generic" ? gJsonL : rTxtL, alert.freq_once_per_bar_close)
 
 if fireShort
     pend := false
@@ -797,9 +802,12 @@ if fireShort
         label.new(bxR, pT2, "TP " + str.tostring(pT2,"#.#####"), style=label.style_label_left, color=color.new(color.green,0), textcolor=color.white, size=size.small)
         label.new(bxR, pSL, "SL " + str.tostring(pSL,"#.#####"), style=label.style_label_left, color=color.new(color.red,0),   textcolor=color.white, size=size.small)
         label.new(bar_index, pSL, gradeStr + " SHORT @ " + str.tostring(pE,"#.#####") + "  (RR " + str.tostring(pR,"#.#") + ")\\nSwept BSL, displaced down (MSS), price returned to the FVG and rejected.", style=label.style_label_down, color=color.new(#1e90ff,12), textcolor=color.white, size=size.small)
-    jShort = '{"symbol":"' + syminfo.ticker + '","tf":"' + timeframe.period + '","side":"short","grade":"' + gradeStr + '","entry":' + str.tostring(pE,"#.#####") + ',"sl":' + str.tostring(pSL,"#.#####") + ',"tp1":' + str.tostring(pT1,"#.#####") + ',"tp2":' + str.tostring(pT2,"#.#####") + ',"rr":' + str.tostring(pR,"#.##") + ',"risk_pct":' + str.tostring(acctRisk,"#.##") + '}'
-    rShort = "YN ICT SHORT " + gradeStr + " | " + syminfo.ticker + " " + timeframe.period + " | Entry " + str.tostring(pE,"#.#####") + " | SL " + str.tostring(pSL,"#.#####") + " | TP1 " + str.tostring(pT1,"#.#####") + " | TP2 " + str.tostring(pT2,"#.#####") + " | RR " + str.tostring(pR,"#.#")
-    alert(alertFmt == "JSON (webhook)" ? jShort : rShort, alert.freq_once_per_bar_close)
+    symS = brokerSym == "" ? syminfo.ticker : brokerSym
+    tpWS = webhookTP == "TP1 (1R)" ? pT1 : pT2
+    tpJsonS = '{"ticker":"' + symS + '","action":"sell","quantity":' + str.tostring(contracts) + ',"stopLoss":{"type":"stop","stopPrice":' + str.tostring(pSL,"#.#####") + '},"takeProfit":{"limitPrice":' + str.tostring(tpWS,"#.#####") + '}}'
+    gJsonS  = '{"symbol":"' + symS + '","side":"short","action":"sell","qty":' + str.tostring(contracts) + ',"entry":' + str.tostring(pE,"#.#####") + ',"sl":' + str.tostring(pSL,"#.#####") + ',"tp1":' + str.tostring(pT1,"#.#####") + ',"tp2":' + str.tostring(pT2,"#.#####") + ',"grade":"' + gradeStr + '"}'
+    rTxtS   = "YN ICT SHORT " + gradeStr + " | " + symS + " " + timeframe.period + " | Entry " + str.tostring(pE,"#.#####") + " | SL " + str.tostring(pSL,"#.#####") + " | TP1 " + str.tostring(pT1,"#.#####") + " | TP2 " + str.tostring(pT2,"#.#####") + " | RR " + str.tostring(pR,"#.#")
+    alert(alertFmt == "JSON - TradersPost" ? tpJsonS : alertFmt == "JSON - Generic" ? gJsonS : rTxtS, alert.freq_once_per_bar_close)
 
 // ══════════ VIRTUAL TRADE OUTCOME (backtest stats) ══════════
 if tOpen
@@ -855,9 +863,12 @@ if showDash and barstate.islast
         'It now ARMS on a setup (faint FVG box) then only fires once price RETURNS to the FVG and rejects — far fewer false signals. Turn this off via "Wait for FVG tap + rejection" if you want instant setup alerts',
         'Every signal is graded A+/A/B by how many confluences stack (PD-level sweep, big displacement, OTE, discount/premium, SMT, prime killzone, strong bias). Set "Minimum setup grade" to A+ only for the cleanest trades',
         'The dashboard shows a live BACKTEST on your chart: trades, win rate, profit factor, expectancy (R/trade), max losing streak. This is your proof — screenshot it for your sales page',
-        'To scale across accounts: set Alert format = "JSON (webhook)", create an alert → "Any alert() function call" → Once Per Bar Close → point the webhook at your copier/bridge. The payload has symbol, side, entry, sl, tp1, tp2, grade, risk_pct',
-        'Manual execution: place a LIMIT at the entry, stop beyond the swept liquidity, TP1 50% → move to breakeven, runner to TP2',
-        'Futures tip: the 10-11 AM ET Silver Bullet window is the highest-grade killzone. Skip 30 min around CPI/FOMC.',
+        'AUTOTRADE MES: TradingView cannot place futures orders directly — you need a bridge. Open a Tradovate account (or connect your prop account), then sign up for a bridge: PickMyTrade (built for Topstep/Apex/TradeDay) or TradersPost',
+        'In the indicator settings → set "Alert / webhook format" to "JSON - TradersPost" (or "JSON - Generic" for PickMyTrade field-mapping), set Contracts, and set Broker symbol override to your contract (e.g. MES1! or what your bridge expects)',
+        'Create the TradingView alert: clock icon → Condition = "YN Finance — ICT 2022 Pro SIGNALS" → "Any alert() function call" → Once Per Bar Close → in Notifications paste your bridge Webhook URL',
+        'The webhook fires a bracket order on every confirmed signal: market entry + stop-loss + take-profit, sized to your Contracts setting. The bridge routes it to your MES position automatically',
+        'CHECK YOUR PROP FIRM RULES FIRST — Apex/Topstep/TradeDay each have automation policies; some require you to be present, some restrict bots. Violating them voids the account',
+        'Manual execution still works: place a LIMIT at the entry, stop beyond the swept liquidity, TP1 50% → breakeven, runner to TP2. Silver Bullet (10-11 AM ET) is the highest-grade window. Skip 30 min around CPI/FOMC.',
       ]
     }
   },
