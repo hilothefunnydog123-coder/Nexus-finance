@@ -99,10 +99,12 @@ tp2R    = input.float(3.0, "TP2 at (R) if Fixed",            step=0.5, group="�
 useBE   = input.bool(true, "Move SL to breakeven after TP1",            group="⑥ Risk & Targets")
 
 // ══════════ ⑦ VISUALS ══════════
-showFVG  = input.bool(true, "Show FVG entry zone",    group="⑦ Visuals")
-showOTE  = input.bool(true, "Show OTE zone",          group="⑦ Visuals")
-showLbl  = input.bool(true, "Show structure labels",  group="⑦ Visuals")
-showDash = input.bool(true, "Show dashboard",         group="⑦ Visuals")
+showTrade = input.bool(true,  "Show trade box (entry / TP / SL)", group="⑦ Visuals")
+tradeBars = input.int(24,     "Trade box width (bars)",           group="⑦ Visuals")
+showFVG   = input.bool(true,  "Show FVG entry zone",              group="⑦ Visuals")
+showOTE   = input.bool(false, "Show OTE zone",                    group="⑦ Visuals")
+showLbl   = input.bool(false, "Show structure labels",           group="⑦ Visuals")
+showDash  = input.bool(true,  "Show dashboard",                   group="⑦ Visuals")
 
 atr = ta.atr(14)
 
@@ -266,6 +268,14 @@ if canArm and longSetup and lOteOK and lEqOK
             fvgBox := box.new(bar_index, lFvgTop, bar_index + sweepWin, lFvgBot, border_color=color.new(color.teal,0), bgcolor=color.new(color.teal,80))
         if showOTE
             oteBox := box.new(bar_index, lOte62, bar_index + sweepWin, lOte79, border_color=color.new(color.blue,40), bgcolor=color.new(color.blue,88))
+        if showTrade
+            bxR = bar_index + tradeBars
+            box.new(bar_index, aTP2,   bxR, aEntry, border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
+            box.new(bar_index, aEntry, bxR, aSL,    border_color=color.new(color.red,55),   bgcolor=color.new(color.red,85))
+            line.new(bar_index, aEntry, bxR, aEntry, color=color.new(color.white,0), style=line.style_dashed)
+            label.new(bxR, aTP2, "TP " + str.tostring(aTP2,"#.#####"), style=label.style_label_left, color=color.new(color.green,0), textcolor=color.white, size=size.small)
+            label.new(bxR, aSL,  "SL " + str.tostring(aSL,"#.#####"),  style=label.style_label_left, color=color.new(color.red,0),   textcolor=color.white, size=size.small)
+            label.new(bar_index, aSL, "LONG @ " + str.tostring(aEntry,"#.#####") + "\\nSwept sell-side liquidity, displaced up (MSS) — buying the FVG in OTE discount.", style=label.style_label_up, color=color.new(#1e90ff,15), textcolor=color.white, size=size.small)
 
 // ── arm SHORT ──
 if canArm and shortSetup and sOteOK and sEqOK
@@ -288,6 +298,14 @@ if canArm and shortSetup and sOteOK and sEqOK
             fvgBox := box.new(bar_index, sFvgTop, bar_index + sweepWin, sFvgBot, border_color=color.new(color.red,0), bgcolor=color.new(color.red,80))
         if showOTE
             oteBox := box.new(bar_index, sOte79, bar_index + sweepWin, sOte62, border_color=color.new(color.blue,40), bgcolor=color.new(color.blue,88))
+        if showTrade
+            bxR = bar_index + tradeBars
+            box.new(bar_index, aEntry, bxR, aTP2,   border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
+            box.new(bar_index, aSL,    bxR, aEntry, border_color=color.new(color.red,55),   bgcolor=color.new(color.red,85))
+            line.new(bar_index, aEntry, bxR, aEntry, color=color.new(color.white,0), style=line.style_dashed)
+            label.new(bxR, aTP2, "TP " + str.tostring(aTP2,"#.#####"), style=label.style_label_left, color=color.new(color.green,0), textcolor=color.white, size=size.small)
+            label.new(bxR, aSL,  "SL " + str.tostring(aSL,"#.#####"),  style=label.style_label_left, color=color.new(color.red,0),   textcolor=color.white, size=size.small)
+            label.new(bar_index, aSL, "SHORT @ " + str.tostring(aEntry,"#.#####") + "\\nSwept buy-side liquidity, displaced down (MSS) — selling the FVG in OTE premium.", style=label.style_label_down, color=color.new(#1e90ff,15), textcolor=color.white, size=size.small)
 
 // ── place / manage pending entry ──
 if armed and strategy.position_size == 0
@@ -327,8 +345,6 @@ if inTrade and strategy.position_size == 0
 
 // ══════════ VISUALS ══════════
 plot(htfEma, "HTF Bias EMA", color.new(color.gray, 50), 1)
-plotshape(sweptSSL, "SSL Raid", shape.xcross, location.belowbar, color.new(color.orange,0), size=size.tiny)
-plotshape(sweptBSL, "BSL Raid", shape.xcross, location.abovebar, color.new(color.orange,0), size=size.tiny)
 if showLbl and chochUp
     label.new(bar_index, low,  "CHoCH↑", color=color.new(color.teal,20), style=label.style_label_up,   textcolor=color.white, size=size.tiny)
 if showLbl and chochDn
@@ -504,9 +520,11 @@ tp2Mode = input.string("Opposing Liquidity", "TP2 Target", options=["Opposing Li
 tp2R    = input.float(3.0, "TP2 at (R) if Fixed",            step=0.5, group="⑥ Targets")
 
 // ══════════ ⑦ VISUALS ══════════
-showFVG  = input.bool(true, "Show FVG entry zone", group="⑦ Visuals")
-showOTE  = input.bool(true, "Show OTE zone",       group="⑦ Visuals")
-showDash = input.bool(true, "Show dashboard",      group="⑦ Visuals")
+showTrade = input.bool(true,  "Show trade box (entry / TP / SL)", group="⑦ Visuals")
+tradeBars = input.int(24,     "Trade box width (bars)",           group="⑦ Visuals")
+showFVG   = input.bool(true,  "Show FVG entry zone",              group="⑦ Visuals")
+showOTE   = input.bool(false, "Show OTE zone",                    group="⑦ Visuals")
+showDash  = input.bool(true,  "Show dashboard",                   group="⑦ Visuals")
 
 atr = ta.atr(14)
 
@@ -630,16 +648,25 @@ if longSig
     risk = lEntry - sl
     tp1 = lEntry + risk * tp1R
     tp2 = tp2Mode == "Opposing Liquidity" and bsl > lEntry ? bsl : lEntry + risk * tp2R
+    rr  = risk > 0 ? (tp2 - lEntry) / risk : 0.0
+    bxR = bar_index + tradeBars
+    if showFVG
+        box.new(bar_index, lFvgTop, bar_index + sweepWin, lFvgBot, border_color=color.new(color.teal,40), bgcolor=color.new(color.teal,88))
+    if showOTE
+        box.new(bar_index, lOte62, bar_index + sweepWin, lOte79, border_color=color.new(color.blue,40), bgcolor=color.new(color.blue,90))
+    if showTrade
+        box.new(bar_index, tp2,    bxR, lEntry, border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
+        box.new(bar_index, lEntry, bxR, sl,     border_color=color.new(color.red,55),   bgcolor=color.new(color.red,85))
+        line.new(bar_index, lEntry, bxR, lEntry, color=color.new(color.white,0), style=line.style_dashed)
+        label.new(bxR, tp2, "TP " + str.tostring(tp2, "#.#####"), style=label.style_label_left, color=color.new(color.green,0), textcolor=color.white, size=size.small)
+        label.new(bxR, sl,  "SL " + str.tostring(sl,  "#.#####"), style=label.style_label_left, color=color.new(color.red,0),   textcolor=color.white, size=size.small)
+        label.new(bar_index, sl, "LONG @ " + str.tostring(lEntry,"#.#####") + "  (RR " + str.tostring(rr,"#.#") + ")\\nSwept sell-side liquidity, displaced up (MSS) — buying the FVG in OTE discount.", style=label.style_label_up, color=color.new(#1e90ff,15), textcolor=color.white, size=size.small)
     alert("YN ICT 2022 LONG | " + syminfo.ticker + " " + timeframe.period +
           " | LIMIT BUY: " + str.tostring(lEntry, "#.#####") +
           " | SL: "  + str.tostring(sl,  "#.#####") +
           " | TP1: " + str.tostring(tp1, "#.#####") +
           " | TP2: " + str.tostring(tp2, "#.#####") +
-          " | Confluence: Swept SSL + MSS↑ + FVG + OTE", alert.freq_once_per_bar_close)
-    if showFVG
-        box.new(bar_index, lFvgTop, bar_index + sweepWin, lFvgBot, border_color=color.new(color.teal,0), bgcolor=color.new(color.teal,80))
-    if showOTE
-        box.new(bar_index, lOte62, bar_index + sweepWin, lOte79, border_color=color.new(color.blue,40), bgcolor=color.new(color.blue,88))
+          " | Confluence: Swept SSL + MSS + FVG + OTE", alert.freq_once_per_bar_close)
 
 if shortSig
     ssl = math.min(nz(pdl, recLo), recLo)
@@ -647,23 +674,30 @@ if shortSig
     risk = sl - sEntry
     tp1 = sEntry - risk * tp1R
     tp2 = tp2Mode == "Opposing Liquidity" and ssl < sEntry ? ssl : sEntry - risk * tp2R
+    rr  = risk > 0 ? (sEntry - tp2) / risk : 0.0
+    bxR = bar_index + tradeBars
+    if showFVG
+        box.new(bar_index, sFvgTop, bar_index + sweepWin, sFvgBot, border_color=color.new(color.red,40), bgcolor=color.new(color.red,88))
+    if showOTE
+        box.new(bar_index, sOte79, bar_index + sweepWin, sOte62, border_color=color.new(color.blue,40), bgcolor=color.new(color.blue,90))
+    if showTrade
+        box.new(bar_index, sEntry, bxR, tp2,    border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
+        box.new(bar_index, sl,     bxR, sEntry, border_color=color.new(color.red,55),   bgcolor=color.new(color.red,85))
+        line.new(bar_index, sEntry, bxR, sEntry, color=color.new(color.white,0), style=line.style_dashed)
+        label.new(bxR, tp2, "TP " + str.tostring(tp2, "#.#####"), style=label.style_label_left, color=color.new(color.green,0), textcolor=color.white, size=size.small)
+        label.new(bxR, sl,  "SL " + str.tostring(sl,  "#.#####"), style=label.style_label_left, color=color.new(color.red,0),   textcolor=color.white, size=size.small)
+        label.new(bar_index, sl, "SHORT @ " + str.tostring(sEntry,"#.#####") + "  (RR " + str.tostring(rr,"#.#") + ")\\nSwept buy-side liquidity, displaced down (MSS) — selling the FVG in OTE premium.", style=label.style_label_down, color=color.new(#1e90ff,15), textcolor=color.white, size=size.small)
     alert("YN ICT 2022 SHORT | " + syminfo.ticker + " " + timeframe.period +
           " | LIMIT SELL: " + str.tostring(sEntry, "#.#####") +
           " | SL: "  + str.tostring(sl,  "#.#####") +
           " | TP1: " + str.tostring(tp1, "#.#####") +
           " | TP2: " + str.tostring(tp2, "#.#####") +
-          " | Confluence: Swept BSL + MSS↓ + FVG + OTE", alert.freq_once_per_bar_close)
-    if showFVG
-        box.new(bar_index, sFvgTop, bar_index + sweepWin, sFvgBot, border_color=color.new(color.red,0), bgcolor=color.new(color.red,80))
-    if showOTE
-        box.new(bar_index, sOte79, bar_index + sweepWin, sOte62, border_color=color.new(color.blue,40), bgcolor=color.new(color.blue,88))
+          " | Confluence: Swept BSL + MSS + FVG + OTE", alert.freq_once_per_bar_close)
 
 // ══════════ PLOT ══════════
 plot(htfEma, "HTF Bias EMA", color.new(color.gray, 50), 1)
-plotshape(sweptSSL, "SSL Raid", shape.xcross,       location.belowbar, color.new(color.orange,0), size=size.tiny)
-plotshape(sweptBSL, "BSL Raid", shape.xcross,       location.abovebar, color.new(color.orange,0), size=size.tiny)
-plotshape(longSig,  "LONG",     shape.triangleup,   location.belowbar, color.new(color.lime,0),   size=size.normal)
-plotshape(shortSig, "SHORT",    shape.triangledown, location.abovebar, color.new(color.red,0),    size=size.normal)
+plotshape(longSig,  "LONG",  shape.triangleup,   location.belowbar, color.new(color.lime,0), size=size.normal)
+plotshape(shortSig, "SHORT", shape.triangledown, location.abovebar, color.new(color.red,0),  size=size.normal)
 
 // ══════════ DASHBOARD ══════════
 if showDash and barstate.islast
