@@ -488,7 +488,7 @@ void OnTick() {
     },
     signals: {
       tradingview: `//@version=5
-indicator("YN Finance — ICT 2022 Model SIGNALS | Tick-Precision", overlay=true,
+indicator("YN Finance — ICT 2022 Pro SIGNALS | Graded + Confirmed", overlay=true,
   max_bars_back=1000, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
 
 // ══════════ ① DIRECTIONAL BIAS ══════════
@@ -508,11 +508,13 @@ usePDHL  = input.bool(true, "Use Previous Day High/Low", group="③ Liquidity")
 sweepReq = input.bool(true, "Require liquidity sweep",    group="③ Liquidity")
 sweepWin = input.int(15,   "Max bars: sweep → entry",    group="③ Liquidity")
 
-// ══════════ ④ ENTRY PRECISION ══════════
-fvgMult  = input.float(0.15, "Min FVG size (ATR ×)", step=0.05, group="④ Entry Precision")
-entryLvl = input.string("Consequent Encroachment (50%)", "FVG Entry Level", options=["FVG Top (first touch)","Consequent Encroachment (50%)","FVG Bottom (deep discount)"], group="④ Entry Precision")
-useOTE   = input.bool(false, "Require OTE 62-79% confluence",      group="④ Entry Precision")
-useEq    = input.bool(false, "Require Discount/Premium confluence", group="④ Entry Precision")
+// ══════════ ④ ENTRY PRECISION + GRADE ══════════
+fvgMult      = input.float(0.15, "Min FVG size (ATR ×)", step=0.05, group="④ Entry Precision + Grade")
+entryLvl     = input.string("Consequent Encroachment (50%)", "FVG Entry Level", options=["FVG Top (first touch)","Consequent Encroachment (50%)","FVG Bottom (deep discount)"], group="④ Entry Precision + Grade")
+confirmEntry = input.bool(true,  "Wait for FVG tap + rejection (confirmation)", group="④ Entry Precision + Grade")
+minGrade     = input.string("A and above", "Minimum setup grade", options=["A+ only","A and above","B and above","All"], group="④ Entry Precision + Grade")
+useOTE       = input.bool(false, "Hard filter: require OTE 62-79%",       group="④ Entry Precision + Grade")
+useEq        = input.bool(false, "Hard filter: require Discount/Premium", group="④ Entry Precision + Grade")
 
 // ══════════ ⑤ KILLZONES (New York time) ══════════
 useKZ = input.bool(true, "Trade only in killzones", group="⑤ Killzones (New York time)")
@@ -527,12 +529,15 @@ tp1R    = input.float(1.0, "TP1 at (R multiple)",            step=0.5, group="�
 tp2Mode = input.string("Fixed R", "TP2 Target", options=["Fixed R","Opposing Liquidity"], group="⑥ Targets")
 tp2R    = input.float(3.0, "TP2 at (R) if Fixed",            step=0.5, group="⑥ Targets")
 
-// ══════════ ⑦ VISUALS ══════════
-showTrade = input.bool(true,  "Show trade box (entry / TP / SL)", group="⑦ Visuals")
-tradeBars = input.int(24,     "Trade box width (bars)",           group="⑦ Visuals")
-showFVG   = input.bool(true,  "Show FVG entry zone",              group="⑦ Visuals")
-showOTE   = input.bool(false, "Show OTE zone",                    group="⑦ Visuals")
-showDash  = input.bool(true,  "Show dashboard",                   group="⑦ Visuals")
+// ══════════ ⑦ ALERTS (scaling across accounts) ══════════
+alertFmt = input.string("Readable", "Alert format", options=["Readable","JSON (webhook)"], group="⑦ Alerts")
+acctRisk = input.float(0.5, "Risk % in webhook payload", step=0.1, group="⑦ Alerts")
+
+// ══════════ ⑧ VISUALS ══════════
+showTrade = input.bool(true,  "Show trade box (entry / TP / SL)", group="⑧ Visuals")
+tradeBars = input.int(24,     "Trade box width (bars)",           group="⑧ Visuals")
+showFVG   = input.bool(true,  "Show FVG zone",                    group="⑧ Visuals")
+showDash  = input.bool(true,  "Show dashboard + stats",           group="⑧ Visuals")
 
 atr = ta.atr(14)
 
@@ -598,22 +603,30 @@ recHi = ta.highest(high, liqLook)
 recLo = ta.lowest (low,  liqLook)
 sweptSSL = (usePDHL and not na(pdl) and low  < pdl and close > pdl) or (low  < recLo[1] and close > recLo[1])
 sweptBSL = (usePDHL and not na(pdh) and high > pdh and close < pdh) or (high > recHi[1] and close < recHi[1])
+sweptPDL = usePDHL and not na(pdl) and low  < pdl and close > pdl
+sweptPDH = usePDHL and not na(pdh) and high > pdh and close < pdh
 var int   sslBar = na
 var float sslPx  = na
+var bool  sslPD  = false
 var int   bslBar = na
 var float bslPx  = na
+var bool  bslPD  = false
 if sweptSSL
     sslBar := bar_index
     sslPx  := low
+    sslPD  := sweptPDL
 if sweptBSL
     bslBar := bar_index
     bslPx  := high
+    bslPD  := sweptPDH
 
 // ══════════ SMT DIVERGENCE ══════════
 smtLow  = request.security(smtSym, timeframe.period, low,  lookahead=barmerge.lookahead_off)
 smtHigh = request.security(smtSym, timeframe.period, high, lookahead=barmerge.lookahead_off)
-smtBull = not useSMT or ((low  < recLo[1]) and not (smtLow  < ta.lowest(smtLow,  liqLook)[1]))
-smtBear = not useSMT or ((high > recHi[1]) and not (smtHigh > ta.highest(smtHigh, liqLook)[1]))
+smtBullDiv = (low  < recLo[1]) and not (smtLow  < ta.lowest(smtLow,  liqLook)[1])
+smtBearDiv = (high > recHi[1]) and not (smtHigh > ta.highest(smtHigh, liqLook)[1])
+smtBull = not useSMT or smtBullDiv
+smtBear = not useSMT or smtBearDiv
 
 // ══════════ DISPLACEMENT + FVG ══════════
 bullFVG = low > high[2]
@@ -628,17 +641,15 @@ inSB  = not na(time(timeframe.period, kzSB,  "America/New_York"))
 inPM  = not na(time(timeframe.period, kzPM,  "America/New_York"))
 inKZ  = not useKZ or inLDN or inAM or inSB or inPM
 
-// ══════════ SETUP ══════════
+// ══════════ DEALING RANGE / FVG GEOMETRY ══════════
 sweepOKL = not sweepReq or (not na(sslBar) and (bar_index - sslBar) <= sweepWin)
 sweepOKS = not sweepReq or (not na(bslBar) and (bar_index - bslBar) <= sweepWin)
-
 lFvgTop = low
 lFvgBot = high[2]
 sFvgBot = high
 sFvgTop = low[2]
 lEntry = entryLvl == "FVG Top (first touch)" ? lFvgTop : entryLvl == "FVG Bottom (deep discount)" ? lFvgBot : (lFvgTop + lFvgBot) / 2
 sEntry = entryLvl == "FVG Top (first touch)" ? sFvgBot : entryLvl == "FVG Bottom (deep discount)" ? sFvgTop : (sFvgTop + sFvgBot) / 2
-
 lRangeLo = not na(sslPx) ? sslPx : ta.lowest(low, sweepWin)
 lRangeHi = high
 sRangeHi = not na(bslPx) ? bslPx : ta.highest(high, sweepWin)
@@ -646,94 +657,207 @@ sRangeLo = low
 lEq    = (lRangeHi + lRangeLo) / 2
 lOte62 = lRangeHi - (lRangeHi - lRangeLo) * 0.62
 lOte79 = lRangeHi - (lRangeHi - lRangeLo) * 0.79
-lOteOK = not useOTE or (lFvgBot <= lOte62 and lFvgTop >= lOte79)
-lEqOK  = not useEq  or (lFvgBot < lEq)
+lOteHit = lFvgBot <= lOte62 and lFvgTop >= lOte79
+lDisc   = lFvgBot < lEq
 sEq    = (sRangeHi + sRangeLo) / 2
 sOte62 = sRangeLo + (sRangeHi - sRangeLo) * 0.62
 sOte79 = sRangeLo + (sRangeHi - sRangeLo) * 0.79
-sOteOK = not useOTE or (sFvgBot <= sOte79 and sFvgTop >= sOte62)
-sEqOK  = not useEq  or (sFvgTop > sEq)
+sOteHit = sFvgBot <= sOte79 and sFvgTop >= sOte62
+sPrem   = sFvgTop > sEq
+lOteOK = not useOTE or lOteHit
+sOteOK = not useOTE or sOteHit
+lEqOK  = not useEq  or lDisc
+sEqOK  = not useEq  or sPrem
 
-longSig  = biasBull and sweepOKL and dispBull and inKZ and smtBull and lOteOK and lEqOK and barstate.isconfirmed
-shortSig = biasBear and sweepOKS and dispBear and inKZ and smtBear and sOteOK and sEqOK and barstate.isconfirmed
+// ══════════ A+ GRADE (0-7 confluence score) ══════════
+gradeThr   = minGrade == "A+ only" ? 6 : minGrade == "A and above" ? 5 : minGrade == "B and above" ? 4 : 0
+bigDispL   = (lFvgTop - lFvgBot) > atr * 0.30
+bigDispS   = (sFvgTop - sFvgBot) > atr * 0.30
+biasStrong = math.abs(htfClose - htfEma) > atr * 0.5
+primeKZ    = inSB or inAM
+gradeL = (sslPD?1:0) + (bigDispL?1:0) + (lOteHit?1:0) + (lDisc?1:0) + (smtBullDiv?1:0) + (primeKZ?1:0) + (biasStrong?1:0)
+gradeS = (bslPD?1:0) + (bigDispS?1:0) + (sOteHit?1:0) + (sPrem?1:0) + (smtBearDiv?1:0) + (primeKZ?1:0) + (biasStrong?1:0)
+f_letter(g) => g >= 6 ? "A+" : g >= 5 ? "A" : g >= 4 ? "B" : "C"
 
-// ══════════ ALERTS (full trade plan, to the tick) ══════════
-if longSig
+// ══════════ SETUP DETECTION ══════════
+setupLong  = biasBull and sweepOKL and dispBull and inKZ and smtBull and lOteOK and lEqOK and barstate.isconfirmed
+setupShort = biasBear and sweepOKS and dispBear and inKZ and smtBear and sOteOK and sEqOK and barstate.isconfirmed
+
+// ══════════ STATE MACHINE: ARM → CONFIRM ══════════
+var bool  pend = false
+var int   pDir = 0
+var float pTop = na
+var float pBot = na
+var float pE   = na
+var float pSL  = na
+var float pT1  = na
+var float pT2  = na
+var float pR   = na
+var int   pG   = na
+var int   pBar = na
+
+// virtual-trade tracker (powers the backtest stats)
+var bool  tOpen = false
+var int   tDir  = 0
+var float tS = na
+var float tT = na
+var float tR = na
+var int   wins = 0
+var int   losses = 0
+var float sumWinR = 0.0
+var float sumLossR = 0.0
+var int   consecLoss = 0
+var int   maxLossStreak = 0
+
+canArm = not pend and not tOpen
+
+if canArm and setupLong and gradeL >= gradeThr
     bsl = math.max(nz(pdh, recHi[1]), recHi[1])
-    sl  = lRangeLo - atr * slBuf
-    risk = lEntry - sl
-    tp1 = lEntry + risk * tp1R
-    tp2 = tp2Mode == "Opposing Liquidity" and bsl > lEntry + risk * 1.5 and bsl < lEntry + risk * 10 ? bsl : lEntry + risk * tp2R
-    rr  = risk > 0 ? (tp2 - lEntry) / risk : 0.0
-    bxR = bar_index + tradeBars
-    if showFVG
-        box.new(bar_index, lFvgTop, bar_index + sweepWin, lFvgBot, border_color=color.new(color.teal,40), bgcolor=color.new(color.teal,88))
-    if showOTE
-        box.new(bar_index, lOte62, bar_index + sweepWin, lOte79, border_color=color.new(color.blue,40), bgcolor=color.new(color.blue,90))
-    if showTrade
-        box.new(bar_index, tp2,    bxR, lEntry, border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
-        box.new(bar_index, lEntry, bxR, sl,     border_color=color.new(color.red,55),   bgcolor=color.new(color.red,85))
-        line.new(bar_index, lEntry, bxR, lEntry, color=color.new(color.white,0), style=line.style_dashed)
-        label.new(bxR, tp2, "TP " + str.tostring(tp2, "#.#####"), style=label.style_label_left, color=color.new(color.green,0), textcolor=color.white, size=size.small)
-        label.new(bxR, sl,  "SL " + str.tostring(sl,  "#.#####"), style=label.style_label_left, color=color.new(color.red,0),   textcolor=color.white, size=size.small)
-        label.new(bar_index, sl, "LONG @ " + str.tostring(lEntry,"#.#####") + "  (RR " + str.tostring(rr,"#.#") + ")\\nSwept sell-side liquidity, displaced up (MSS) — buying the FVG in OTE discount.", style=label.style_label_up, color=color.new(#1e90ff,15), textcolor=color.white, size=size.small)
-    alert("YN ICT 2022 LONG | " + syminfo.ticker + " " + timeframe.period +
-          " | LIMIT BUY: " + str.tostring(lEntry, "#.#####") +
-          " | SL: "  + str.tostring(sl,  "#.#####") +
-          " | TP1: " + str.tostring(tp1, "#.#####") +
-          " | TP2: " + str.tostring(tp2, "#.#####") +
-          " | Confluence: Swept SSL + MSS + FVG + OTE", alert.freq_once_per_bar_close)
+    slL = lRangeLo - atr * slBuf
+    rkL = lEntry - slL
+    if rkL > 0
+        pend := true
+        pDir := 1
+        pTop := lFvgTop
+        pBot := lFvgBot
+        pE   := lEntry
+        pSL  := slL
+        pT1  := lEntry + rkL * tp1R
+        pT2  := tp2Mode == "Opposing Liquidity" and bsl > lEntry + rkL * 1.5 and bsl < lEntry + rkL * 10 ? bsl : lEntry + rkL * tp2R
+        pR   := (pT2 - lEntry) / rkL
+        pG   := gradeL
+        pBar := bar_index
+        if showFVG
+            box.new(bar_index, lFvgTop, bar_index + sweepWin, lFvgBot, border_color=color.new(color.teal,40), bgcolor=color.new(color.teal,90))
 
-if shortSig
+if canArm and setupShort and gradeS >= gradeThr
     ssl = math.min(nz(pdl, recLo[1]), recLo[1])
-    sl  = sRangeHi + atr * slBuf
-    risk = sl - sEntry
-    tp1 = sEntry - risk * tp1R
-    tp2 = tp2Mode == "Opposing Liquidity" and ssl < sEntry - risk * 1.5 and ssl > sEntry - risk * 10 ? ssl : sEntry - risk * tp2R
-    rr  = risk > 0 ? (sEntry - tp2) / risk : 0.0
+    slS = sRangeHi + atr * slBuf
+    rkS = slS - sEntry
+    if rkS > 0
+        pend := true
+        pDir := -1
+        pTop := sFvgTop
+        pBot := sFvgBot
+        pE   := sEntry
+        pSL  := slS
+        pT1  := sEntry - rkS * tp1R
+        pT2  := tp2Mode == "Opposing Liquidity" and ssl < sEntry - rkS * 1.5 and ssl > sEntry - rkS * 10 ? ssl : sEntry - rkS * tp2R
+        pR   := (sEntry - pT2) / rkS
+        pG   := gradeS
+        pBar := bar_index
+        if showFVG
+            box.new(bar_index, sFvgTop, bar_index + sweepWin, sFvgBot, border_color=color.new(color.red,40), bgcolor=color.new(color.red,90))
+
+// invalidate pending setup if the FVG is violated or it goes stale
+if pend
+    bad = pDir == 1 ? close < pBot : close > pTop
+    if bad or (bar_index - pBar > sweepWin)
+        pend := false
+        pDir := 0
+
+// confirmation = price returns to the FVG and rejects (or immediate if confirmation off)
+longConfirm  = pend and pDir == 1  and (not confirmEntry or (low  <= pE and close > pE and close > open))
+shortConfirm = pend and pDir == -1 and (not confirmEntry or (high >= pE and close < pE and close < open))
+fireLong  = longConfirm  and barstate.isconfirmed
+fireShort = shortConfirm and barstate.isconfirmed
+gradeStr  = f_letter(pG)
+
+if fireLong
+    pend := false
+    tOpen := true
+    tDir := 1
+    tS := pSL
+    tT := pT2
+    tR := pR
     bxR = bar_index + tradeBars
-    if showFVG
-        box.new(bar_index, sFvgTop, bar_index + sweepWin, sFvgBot, border_color=color.new(color.red,40), bgcolor=color.new(color.red,88))
-    if showOTE
-        box.new(bar_index, sOte79, bar_index + sweepWin, sOte62, border_color=color.new(color.blue,40), bgcolor=color.new(color.blue,90))
     if showTrade
-        box.new(bar_index, sEntry, bxR, tp2,    border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
-        box.new(bar_index, sl,     bxR, sEntry, border_color=color.new(color.red,55),   bgcolor=color.new(color.red,85))
-        line.new(bar_index, sEntry, bxR, sEntry, color=color.new(color.white,0), style=line.style_dashed)
-        label.new(bxR, tp2, "TP " + str.tostring(tp2, "#.#####"), style=label.style_label_left, color=color.new(color.green,0), textcolor=color.white, size=size.small)
-        label.new(bxR, sl,  "SL " + str.tostring(sl,  "#.#####"), style=label.style_label_left, color=color.new(color.red,0),   textcolor=color.white, size=size.small)
-        label.new(bar_index, sl, "SHORT @ " + str.tostring(sEntry,"#.#####") + "  (RR " + str.tostring(rr,"#.#") + ")\\nSwept buy-side liquidity, displaced down (MSS) — selling the FVG in OTE premium.", style=label.style_label_down, color=color.new(#1e90ff,15), textcolor=color.white, size=size.small)
-    alert("YN ICT 2022 SHORT | " + syminfo.ticker + " " + timeframe.period +
-          " | LIMIT SELL: " + str.tostring(sEntry, "#.#####") +
-          " | SL: "  + str.tostring(sl,  "#.#####") +
-          " | TP1: " + str.tostring(tp1, "#.#####") +
-          " | TP2: " + str.tostring(tp2, "#.#####") +
-          " | Confluence: Swept BSL + MSS + FVG + OTE", alert.freq_once_per_bar_close)
+        box.new(bar_index, pT2, bxR, pE,  border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
+        box.new(bar_index, pE,  bxR, pSL, border_color=color.new(color.red,55),   bgcolor=color.new(color.red,85))
+        line.new(bar_index, pE, bxR, pE, color=color.new(color.white,0), style=line.style_dashed)
+        label.new(bxR, pT2, "TP " + str.tostring(pT2,"#.#####"), style=label.style_label_left, color=color.new(color.green,0), textcolor=color.white, size=size.small)
+        label.new(bxR, pSL, "SL " + str.tostring(pSL,"#.#####"), style=label.style_label_left, color=color.new(color.red,0),   textcolor=color.white, size=size.small)
+        label.new(bar_index, pSL, gradeStr + " LONG @ " + str.tostring(pE,"#.#####") + "  (RR " + str.tostring(pR,"#.#") + ")\\nSwept SSL, displaced up (MSS), price returned to the FVG and rejected.", style=label.style_label_up, color=color.new(#1e90ff,12), textcolor=color.white, size=size.small)
+    jLong = '{"symbol":"' + syminfo.ticker + '","tf":"' + timeframe.period + '","side":"long","grade":"' + gradeStr + '","entry":' + str.tostring(pE,"#.#####") + ',"sl":' + str.tostring(pSL,"#.#####") + ',"tp1":' + str.tostring(pT1,"#.#####") + ',"tp2":' + str.tostring(pT2,"#.#####") + ',"rr":' + str.tostring(pR,"#.##") + ',"risk_pct":' + str.tostring(acctRisk,"#.##") + '}'
+    rLong = "YN ICT LONG " + gradeStr + " | " + syminfo.ticker + " " + timeframe.period + " | Entry " + str.tostring(pE,"#.#####") + " | SL " + str.tostring(pSL,"#.#####") + " | TP1 " + str.tostring(pT1,"#.#####") + " | TP2 " + str.tostring(pT2,"#.#####") + " | RR " + str.tostring(pR,"#.#")
+    alert(alertFmt == "JSON (webhook)" ? jLong : rLong, alert.freq_once_per_bar_close)
+
+if fireShort
+    pend := false
+    tOpen := true
+    tDir := -1
+    tS := pSL
+    tT := pT2
+    tR := pR
+    bxR = bar_index + tradeBars
+    if showTrade
+        box.new(bar_index, pE,  bxR, pT2, border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
+        box.new(bar_index, pSL, bxR, pE,  border_color=color.new(color.red,55),   bgcolor=color.new(color.red,85))
+        line.new(bar_index, pE, bxR, pE, color=color.new(color.white,0), style=line.style_dashed)
+        label.new(bxR, pT2, "TP " + str.tostring(pT2,"#.#####"), style=label.style_label_left, color=color.new(color.green,0), textcolor=color.white, size=size.small)
+        label.new(bxR, pSL, "SL " + str.tostring(pSL,"#.#####"), style=label.style_label_left, color=color.new(color.red,0),   textcolor=color.white, size=size.small)
+        label.new(bar_index, pSL, gradeStr + " SHORT @ " + str.tostring(pE,"#.#####") + "  (RR " + str.tostring(pR,"#.#") + ")\\nSwept BSL, displaced down (MSS), price returned to the FVG and rejected.", style=label.style_label_down, color=color.new(#1e90ff,12), textcolor=color.white, size=size.small)
+    jShort = '{"symbol":"' + syminfo.ticker + '","tf":"' + timeframe.period + '","side":"short","grade":"' + gradeStr + '","entry":' + str.tostring(pE,"#.#####") + ',"sl":' + str.tostring(pSL,"#.#####") + ',"tp1":' + str.tostring(pT1,"#.#####") + ',"tp2":' + str.tostring(pT2,"#.#####") + ',"rr":' + str.tostring(pR,"#.##") + ',"risk_pct":' + str.tostring(acctRisk,"#.##") + '}'
+    rShort = "YN ICT SHORT " + gradeStr + " | " + syminfo.ticker + " " + timeframe.period + " | Entry " + str.tostring(pE,"#.#####") + " | SL " + str.tostring(pSL,"#.#####") + " | TP1 " + str.tostring(pT1,"#.#####") + " | TP2 " + str.tostring(pT2,"#.#####") + " | RR " + str.tostring(pR,"#.#")
+    alert(alertFmt == "JSON (webhook)" ? jShort : rShort, alert.freq_once_per_bar_close)
+
+// ══════════ VIRTUAL TRADE OUTCOME (backtest stats) ══════════
+if tOpen
+    hitSL = tDir == 1 ? low <= tS : high >= tS
+    hitTP = tDir == 1 ? high >= tT : low <= tT
+    if hitSL or hitTP
+        won = hitTP and not hitSL
+        tOpen := false
+        if won
+            wins += 1
+            sumWinR += tR
+            consecLoss := 0
+        else
+            losses += 1
+            sumLossR += 1.0
+            consecLoss += 1
+            maxLossStreak := math.max(maxLossStreak, consecLoss)
 
 // ══════════ PLOT ══════════
 plot(htfEma, "HTF Bias EMA", color.new(color.gray, 50), 1)
-plotshape(longSig,  "LONG",  shape.triangleup,   location.belowbar, color.new(color.lime,0), size=size.normal)
-plotshape(shortSig, "SHORT", shape.triangledown, location.abovebar, color.new(color.red,0),  size=size.normal)
+plotshape(fireLong,  "LONG",  shape.triangleup,   location.belowbar, color.new(color.lime,0), size=size.normal)
+plotshape(fireShort, "SHORT", shape.triangledown, location.abovebar, color.new(color.red,0),  size=size.normal)
 
-// ══════════ DASHBOARD ══════════
+// ══════════ DASHBOARD + BACKTEST STATS ══════════
 if showDash and barstate.islast
-    var table d = table.new(position.bottom_right, 2, 4, bgcolor=color.new(color.black,15), frame_color=color.new(#1e90ff,50), frame_width=2, border_color=color.new(color.gray,70), border_width=1)
-    table.cell(d, 0, 0, "YN ICT SIGNALS", text_color=color.new(#1e90ff,0), bgcolor=color.new(#1e90ff,85), text_size=size.small)
+    total = wins + losses
+    winRate = total > 0 ? wins / total * 100 : 0.0
+    pf = sumLossR > 0 ? sumWinR / sumLossR : (sumWinR > 0 ? 99.9 : 0.0)
+    expR = total > 0 ? (sumWinR - sumLossR) / total : 0.0
+    var table d = table.new(position.bottom_right, 2, 10, bgcolor=color.new(color.black,12), frame_color=color.new(#1e90ff,50), frame_width=2, border_color=color.new(color.gray,70), border_width=1)
+    table.cell(d, 0, 0, "YN ICT PRO", text_color=color.new(#1e90ff,0), bgcolor=color.new(#1e90ff,85), text_size=size.small)
     table.cell(d, 1, 0, biasBull and not biasBear ? "BULL" : biasBear and not biasBull ? "BEAR" : "—", text_color=biasBull and not biasBear ? color.lime : biasBear and not biasBull ? color.red : color.gray, bgcolor=color.new(#1e90ff,85), text_size=size.small)
-    table.cell(d, 0, 1, "Killzone",  text_color=color.gray, text_size=size.small)
+    table.cell(d, 0, 1, "Killzone", text_color=color.gray, text_size=size.small)
     table.cell(d, 1, 1, inKZ ? (inLDN?"London":inAM?"NY AM":inSB?"Silver Bullet":inPM?"NY PM":"Active") : "Closed", text_color=inKZ?color.lime:color.gray, text_size=size.small)
     table.cell(d, 0, 2, "Structure", text_color=color.gray, text_size=size.small)
     table.cell(d, 1, 2, mktBias==1?"Bullish":mktBias==-1?"Bearish":"Ranging", text_color=mktBias==1?color.lime:mktBias==-1?color.red:color.gray, text_size=size.small)
-    table.cell(d, 0, 3, "Last Raid", text_color=color.gray, text_size=size.small)
-    table.cell(d, 1, 3, not na(sslBar) and (na(bslBar) or sslBar>=bslBar) ? "Sell-side" : not na(bslBar) ? "Buy-side" : "—", text_color=color.aqua, text_size=size.small)`,
+    table.cell(d, 0, 3, "Status", text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 3, tOpen ? "IN TRADE" : pend ? (pDir==1?"ARMED LONG "+f_letter(pG):"ARMED SHORT "+f_letter(pG)) : "Scanning", text_color=tOpen?color.aqua:pend?color.yellow:color.gray, text_size=size.small)
+    table.cell(d, 0, 4, "── Backtest ──", text_color=color.new(#1e90ff,0), text_size=size.tiny)
+    table.cell(d, 1, 4, str.tostring(total) + " trades", text_color=color.white, text_size=size.tiny)
+    table.cell(d, 0, 5, "Win Rate", text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 5, str.tostring(winRate,"#.#") + "%", text_color=winRate>=50?color.lime:color.orange, text_size=size.small)
+    table.cell(d, 0, 6, "Profit Factor", text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 6, str.tostring(pf,"#.##"), text_color=pf>=1.5?color.lime:pf>=1?color.orange:color.red, text_size=size.small)
+    table.cell(d, 0, 7, "Expectancy", text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 7, str.tostring(expR,"#.##") + " R/trade", text_color=expR>0?color.lime:color.red, text_size=size.small)
+    table.cell(d, 0, 8, "Max Loss Streak", text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 8, str.tostring(maxLossStreak), text_color=color.white, text_size=size.small)
+    table.cell(d, 0, 9, "Wins / Losses", text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 9, str.tostring(wins) + " / " + str.tostring(losses), text_color=color.white, text_size=size.small)`,
       steps: [
-        'Paste the SIGNALS script into TradingView → Add to chart on your 5m/15m setup chart (EURUSD, NQ, XAUUSD)',
-        'When a full setup completes you get ONE alert with the exact LIMIT entry, SL, TP1 and TP2 — already calculated to the tick',
-        'Create the alert: clock icon on the indicator → Condition = "YN Finance — ICT 2022 Model SIGNALS" → "Any alert() function call" → Once Per Bar Close → enable mobile push',
-        'The alert lists the confluences that fired (swept liquidity + MSS + FVG + OTE) so you know exactly why it is an A+ setup',
-        'Place a LIMIT order at the entry price — do NOT chase market. The edge is getting filled on the retrace back into the FVG',
-        'Stop goes beyond the swept liquidity (in the alert). Take 50% at TP1, move to breakeven, let the runner reach the opposing liquidity at TP2',
-        'Trade only in killzones (dashboard shows the active one) and skip 30 min around red-folder news (NFP, CPI, FOMC)',
+        'Paste into TradingView → Add to chart. For futures evals run it on NQ/ES/GC, 5m or 15m, with HTF Bias Timeframe = 1H',
+        'It now ARMS on a setup (faint FVG box) then only fires once price RETURNS to the FVG and rejects — far fewer false signals. Turn this off via "Wait for FVG tap + rejection" if you want instant setup alerts',
+        'Every signal is graded A+/A/B by how many confluences stack (PD-level sweep, big displacement, OTE, discount/premium, SMT, prime killzone, strong bias). Set "Minimum setup grade" to A+ only for the cleanest trades',
+        'The dashboard shows a live BACKTEST on your chart: trades, win rate, profit factor, expectancy (R/trade), max losing streak. This is your proof — screenshot it for your sales page',
+        'To scale across accounts: set Alert format = "JSON (webhook)", create an alert → "Any alert() function call" → Once Per Bar Close → point the webhook at your copier/bridge. The payload has symbol, side, entry, sl, tp1, tp2, grade, risk_pct',
+        'Manual execution: place a LIMIT at the entry, stop beyond the swept liquidity, TP1 50% → move to breakeven, runner to TP2',
+        'Futures tip: the 10-11 AM ET Silver Bullet window is the highest-grade killzone. Skip 30 min around CPI/FOMC.',
       ]
     }
   },
