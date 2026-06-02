@@ -166,8 +166,8 @@ if mssUp
     mssUpBar := bar_index
 if mssDn
     mssDnBar := bar_index
-recentMssUp = not na(mssUpBar) and (bar_index - mssUpBar) <= 3
-recentMssDn = not na(mssDnBar) and (bar_index - mssDnBar) <= 3
+recentMssUp = not na(mssUpBar) and (bar_index - mssUpBar) <= 5
+recentMssDn = not na(mssDnBar) and (bar_index - mssDnBar) <= 5
 
 // ══════════ LIQUIDITY + SWEEPS ══════════
 [pdh, pdl] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead=barmerge.lookahead_on)
@@ -739,7 +739,7 @@ sweepWin = input.int(15,   "Max bars: sweep → entry",    group="③ Liquidity"
 fvgMult      = input.float(0.15, "Min FVG size (ATR ×)", step=0.05, group="④ Entry Precision + Grade")
 entryLvl     = input.string("Consequent Encroachment (50%)", "FVG Entry Level", options=["FVG Top (first touch)","Consequent Encroachment (50%)","FVG Bottom (deep discount)"], group="④ Entry Precision + Grade")
 confirmEntry = input.bool(true,  "Wait for FVG tap + rejection (confirmation)", group="④ Entry Precision + Grade")
-minGrade     = input.string("A and above", "Minimum setup grade", options=["A+ only","A and above","B and above","All"], group="④ Entry Precision + Grade")
+minGrade     = input.string("B and above", "Minimum setup grade", options=["A+ only","A and above","B and above","All"], group="④ Entry Precision + Grade")
 useOTE       = input.bool(false, "Hard filter: require OTE 62-79%",       group="④ Entry Precision + Grade")
 useEq        = input.bool(false, "Hard filter: require Discount/Premium", group="④ Entry Precision + Grade")
 
@@ -830,8 +830,8 @@ if mssUp
     mssUpBar := bar_index
 if mssDn
     mssDnBar := bar_index
-recentMssUp = not na(mssUpBar) and (bar_index - mssUpBar) <= 3
-recentMssDn = not na(mssDnBar) and (bar_index - mssDnBar) <= 3
+recentMssUp = not na(mssUpBar) and (bar_index - mssUpBar) <= 5
+recentMssDn = not na(mssDnBar) and (bar_index - mssDnBar) <= 5
 
 // ══════════ LIQUIDITY + SWEEPS ══════════
 [pdh, pdl] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead=barmerge.lookahead_on)
@@ -906,14 +906,14 @@ lEqOK  = not useEq  or lDisc
 sEqOK  = not useEq  or sPrem
 
 // ══════════ A+ GRADE (0-7 confluence score) ══════════
-gradeThr   = minGrade == "A+ only" ? 6 : minGrade == "A and above" ? 5 : minGrade == "B and above" ? 4 : 0
+gradeThr   = minGrade == "A+ only" ? 5 : minGrade == "A and above" ? 4 : minGrade == "B and above" ? 3 : 0
 bigDispL   = (lFvgTop - lFvgBot) > atr * 0.30
 bigDispS   = (sFvgTop - sFvgBot) > atr * 0.30
 biasStrong = math.abs(htfClose - htfEma) > atr * 0.5
 primeKZ    = inSB or inAM
 gradeL = (sslPD?1:0) + (bigDispL?1:0) + (lOteHit?1:0) + (lDisc?1:0) + (smtBullDiv?1:0) + (primeKZ?1:0) + (biasStrong?1:0)
 gradeS = (bslPD?1:0) + (bigDispS?1:0) + (sOteHit?1:0) + (sPrem?1:0) + (smtBearDiv?1:0) + (primeKZ?1:0) + (biasStrong?1:0)
-f_letter(g) => g >= 6 ? "A+" : g >= 5 ? "A" : g >= 4 ? "B" : "C"
+f_letter(g) => g >= 5 ? "A+" : g >= 4 ? "A" : g >= 3 ? "B" : "C"
 
 // ══════════ SETUP DETECTION ══════════
 setupLong  = biasBull and sweepOKL and dispBull and inKZ and smtBull and lOteOK and lEqOK and barstate.isconfirmed
