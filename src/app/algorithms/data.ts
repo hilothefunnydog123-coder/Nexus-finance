@@ -33,8 +33,8 @@ export const ALGORITHMS: Algorithm[] = [
   {
     id: 'ict',
     instructor: 'ICT (Michael Huddleston)',
-    strategy: 'Smart Money Concepts — Fair Value Gap',
-    tagline: 'Trade institutional order flow using FVGs and session killzones',
+    strategy: 'ICT 2022 Model — Liquidity Sweep + Displacement + OTE',
+    tagline: 'The full ICT model: HTF bias → liquidity raid → displacement MSS → FVG entry in the OTE zone, with SMT divergence + killzone timing',
     assets: ['Forex', 'Gold (XAUUSD)', 'Indices'],
     timeframes: ['15m', '1H', '4H'],
     propFirms: ['FTMO', 'E8 Funding', 'MyFundedFX', 'The Funded Trader'],
@@ -42,213 +42,648 @@ export const ALGORITHMS: Algorithm[] = [
     riskPerTrade: '0.5%',
     color: '#1e90ff',
     init: 'ICT',
-    overview: 'Detects Fair Value Gaps (imbalances left by institutional order flow) during London and NY killzones. Only trades in the direction of the 200 EMA trend. Enters on FVG formation with ATR-based stops.',
-    propNotes: 'Risk is capped at 0.5% per trade by default. For FTMO: leave Max Daily DD at 4% (their limit is 5%). Run on EURUSD, GBPUSD, or XAUUSD on the 15m or 1H chart. Do NOT trade during high-impact news.',
+    overview: 'A complete institutional order-flow engine — not a single indicator. It reads higher-timeframe bias, marks buy/sell-side liquidity (PDH/PDL, recent swing highs/lows, session extremes), waits for a stop raid (Judas swing) that sweeps that liquidity, then requires displacement that shifts internal market structure (MSS) and prints a Fair Value Gap. Entry is a limit order back into the FVG, filtered to the Optimal Trade Entry (62–79%) and the discount/premium of the dealing range. Stops sit beyond the swept liquidity; targets draw to the opposing liquidity pool. Optional SMT divergence against a correlated symbol confirms the raid.',
+    propNotes: 'Default risk 0.5%/trade with true risk-based sizing (auto-calculates lots/contracts from your stop distance). The model only fires inside killzones (London, NY AM, Silver Bullet 10–11 ET, NY PM) so it avoids dead tape. For FTMO/E8: TP1 closes 50% at 1R then the stop moves to breakeven — this protects the challenge. Best on EURUSD, GBPUSD, XAUUSD, NQ, ES on 5m–1H. Enable SMT divergence (ES for NQ, GBPUSD for EURUSD) for A+ setups only.',
     auto: {
       tradingview: `//@version=5
-strategy("YN Finance — ICT Smart Money | Prop Edition",
-  overlay        = true,
-  max_bars_back  = 500,
-  default_qty_type  = strategy.percent_of_equity,
-  default_qty_value = 1,
-  commission_type   = strategy.commission.percent,
-  commission_value  = 0.01,
-  slippage          = 2)
+strategy("YN Finance — ICT 2022 Model | Tick-Precision Prop Engine",
+  overlay                 = true,
+  max_bars_back           = 1000,
+  max_boxes_count         = 500,
+  max_lines_count         = 500,
+  max_labels_count        = 500,
+  default_qty_type        = strategy.percent_of_equity,
+  default_qty_value       = 1,
+  commission_type         = strategy.commission.percent,
+  commission_value        = 0.01,
+  slippage                = 2,
+  calc_on_every_tick      = false)
 
-// ── INPUTS ────────────────────────────────────────────────────────
-riskPct  = input.float(0.5,  "Risk % Per Trade",   minval=0.1, maxval=2.0, step=0.1, group="Risk Management")
-atrMult  = input.float(1.5,  "Stop Loss (ATR ×)",  minval=0.5, maxval=4.0, step=0.1, group="Risk Management")
-tpRR     = input.float(2.0,  "Take Profit (R:R)",  minval=1.0, maxval=5.0, step=0.5, group="Risk Management")
-useTrend = input.bool(true,  "200 EMA trend filter",            group="Filters")
-useSess  = input.bool(true,  "London + NY killzones only",      group="Filters")
-lKZ      = input.session("0700-1000", "London Killzone",        group="Filters")
-nyKZ     = input.session("1300-1700", "New York Killzone",      group="Filters")
+// ══════════ ① DIRECTIONAL BIAS ══════════
+biasTF  = input.timeframe("60",   "HTF Bias Timeframe",        group="① Directional Bias")
+useBias = input.bool(true,        "Trade only with HTF bias",  group="① Directional Bias")
+biasLen = input.int(50,           "HTF Bias EMA Length",       group="① Directional Bias")
+useSMT  = input.bool(false,       "Require SMT divergence",    group="① Directional Bias")
+smtSym  = input.symbol("CME_MINI:ES1!", "SMT Correlated Symbol", group="① Directional Bias")
 
-// ── INDICATORS ────────────────────────────────────────────────────
-ema200 = ta.ema(close, 200)
-atr    = ta.atr(14)
+// ══════════ ② MARKET STRUCTURE ══════════
+swingLen = input.int(10, "Swing Pivot Strength",    minval=3, group="② Market Structure")
+intLen   = input.int(5,  "Internal Pivot Strength", minval=2, group="② Market Structure")
 
-// ── FAIR VALUE GAP (3-candle imbalance) ──────────────────────────
-// bar[2] = pre-impulse | bar[1] = impulse candle | bar[0] = current
-// Bullish FVG: current bar low is ABOVE bar[2] high — a price vacuum exists
-bullFVG = low > high[2] and (low - high[2]) > atr * 0.08
-bearFVG = high < low[2] and (low[2] - high) > atr * 0.08
+// ══════════ ③ LIQUIDITY ══════════
+liqLook  = input.int(20,   "Liquidity Lookback (bars)", group="③ Liquidity")
+usePDHL  = input.bool(true, "Use Previous Day High/Low", group="③ Liquidity")
+sweepReq = input.bool(true, "Require liquidity sweep",    group="③ Liquidity")
+sweepWin = input.int(15,   "Max bars: sweep → entry",    group="③ Liquidity")
 
-// ── SESSION FILTER ────────────────────────────────────────────────
-inLondon  = not na(time(timeframe.period, lKZ,  "Europe/London"))
-inNY      = not na(time(timeframe.period, nyKZ, "America/New_York"))
-inSession = not useSess or (inLondon or inNY)
+// ══════════ ④ ENTRY PRECISION ══════════
+fvgMult  = input.float(0.15, "Min FVG size (ATR ×)", step=0.05, group="④ Entry Precision")
+entryLvl = input.string("Consequent Encroachment (50%)", "FVG Entry Level", options=["FVG Top (first touch)","Consequent Encroachment (50%)","FVG Bottom (deep discount)"], group="④ Entry Precision")
+useOTE   = input.bool(true,  "Require OTE 62-79% confluence",         group="④ Entry Precision")
+useEq    = input.bool(true,  "Require Discount/Premium confluence",    group="④ Entry Precision")
 
-// ── TREND FILTER ──────────────────────────────────────────────────
-bullTrend = not useTrend or close > ema200
-bearTrend = not useTrend or close < ema200
+// ══════════ ⑤ KILLZONES (New York time) ══════════
+useKZ = input.bool(true, "Trade only in killzones", group="⑤ Killzones (New York time)")
+kzLDN = input.session("0200-0500", "London Open",   group="⑤ Killzones (New York time)")
+kzAM  = input.session("0700-1000", "New York AM",   group="⑤ Killzones (New York time)")
+kzSB  = input.session("1000-1100", "Silver Bullet", group="⑤ Killzones (New York time)")
+kzPM  = input.session("1400-1500", "New York PM",   group="⑤ Killzones (New York time)")
 
-// ── ENTRIES ───────────────────────────────────────────────────────
-longEntry  = bullFVG and inSession and bullTrend and strategy.position_size == 0
-shortEntry = bearFVG and inSession and bearTrend and strategy.position_size == 0
+// ══════════ ⑥ RISK & TARGETS ══════════
+riskPct = input.float(0.5, "Risk % per trade",               step=0.1, group="⑥ Risk & Targets")
+slBuf   = input.float(0.15,"SL buffer beyond sweep (ATR ×)", step=0.05, group="⑥ Risk & Targets")
+tp1R    = input.float(1.0, "TP1 at (R multiple)",            step=0.5, group="⑥ Risk & Targets")
+tp1Pct  = input.int(50,    "TP1 close %", minval=0, maxval=100,        group="⑥ Risk & Targets")
+tp2Mode = input.string("Opposing Liquidity", "TP2 Target", options=["Opposing Liquidity","Fixed R"], group="⑥ Risk & Targets")
+tp2R    = input.float(3.0, "TP2 at (R) if Fixed",            step=0.5, group="⑥ Risk & Targets")
+useBE   = input.bool(true, "Move SL to breakeven after TP1",            group="⑥ Risk & Targets")
 
-// ── STOPS & TARGETS ───────────────────────────────────────────────
-slDist  = atr * atrMult
-longSL  = close - slDist
-longTP  = close + slDist * tpRR
-shortSL = close + slDist
-shortTP = close - slDist * tpRR
+// ══════════ ⑦ VISUALS ══════════
+showFVG  = input.bool(true, "Show FVG entry zone",    group="⑦ Visuals")
+showOTE  = input.bool(true, "Show OTE zone",          group="⑦ Visuals")
+showLbl  = input.bool(true, "Show structure labels",  group="⑦ Visuals")
+showDash = input.bool(true, "Show dashboard",         group="⑦ Visuals")
 
-// ── EXECUTE ───────────────────────────────────────────────────────
-if longEntry
-    strategy.entry("Long",  strategy.long)
-    strategy.exit ("L-TP",  "Long",  stop=longSL,  limit=longTP)
+atr = ta.atr(14)
 
-if shortEntry
-    strategy.entry("Short", strategy.short)
-    strategy.exit ("S-TP",  "Short", stop=shortSL, limit=shortTP)
+// ══════════ HTF BIAS ══════════
+htfClose = request.security(syminfo.tickerid, biasTF, close,               lookahead=barmerge.lookahead_off)
+htfEma   = request.security(syminfo.tickerid, biasTF, ta.ema(close, biasLen), lookahead=barmerge.lookahead_off)
+biasBull = not useBias or htfClose > htfEma
+biasBear = not useBias or htfClose < htfEma
 
-// ── VISUALS ───────────────────────────────────────────────────────
-emaCol = close > ema200 ? color.new(color.teal, 30) : color.new(color.red, 30)
-plot(ema200, "200 EMA", emaCol, 2)
-bgcolor(bullFVG and inSession ? color.new(color.teal, 91)
-      : bearFVG and inSession ? color.new(color.red,  91) : na, title="FVG Zone")
-plotshape(longEntry,  "BUY",  shape.triangleup,   location.belowbar, color.new(color.lime, 0), size=size.small)
-plotshape(shortEntry, "SELL", shape.triangledown, location.abovebar, color.new(color.red,  0), size=size.small)`,
-      mt5: `// YN Finance — ICT SMC EA (MetaTrader 5)
-// Attach to EURUSD, XAUUSD | Timeframe: H1 or M15
+// ══════════ SWING STRUCTURE (BOS / CHoCH) ══════════
+ph = ta.pivothigh(high, swingLen, swingLen)
+pl = ta.pivotlow (low,  swingLen, swingLen)
+var float swH = na
+var float swL = na
+var bool  swHbk = false
+var bool  swLbk = false
+if not na(ph)
+    swH := ph
+    swHbk := false
+if not na(pl)
+    swL := pl
+    swLbk := false
+var int mktBias = 0
+bosUp = not na(swH) and not swHbk and close > swH
+bosDn = not na(swL) and not swLbk and close < swL
+chochUp = bosUp and mktBias < 0
+chochDn = bosDn and mktBias > 0
+if bosUp
+    mktBias := 1
+    swHbk := true
+if bosDn
+    mktBias := -1
+    swLbk := true
+
+// ══════════ INTERNAL STRUCTURE (MSS entry trigger) ══════════
+iph = ta.pivothigh(high, intLen, intLen)
+ipl = ta.pivotlow (low,  intLen, intLen)
+var float iH = na
+var float iL = na
+var bool  iHbk = false
+var bool  iLbk = false
+if not na(iph)
+    iH := iph
+    iHbk := false
+if not na(ipl)
+    iL := ipl
+    iLbk := false
+mssUp = not na(iH) and not iHbk and close > iH
+mssDn = not na(iL) and not iLbk and close < iL
+if mssUp
+    iHbk := true
+if mssDn
+    iLbk := true
+
+// ══════════ LIQUIDITY + SWEEPS ══════════
+[pdh, pdl] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead=barmerge.lookahead_on)
+recHi = ta.highest(high, liqLook)
+recLo = ta.lowest (low,  liqLook)
+sweptSSL = (usePDHL and not na(pdl) and low  < pdl and close > pdl) or (low  < recLo[1] and close > recLo[1])
+sweptBSL = (usePDHL and not na(pdh) and high > pdh and close < pdh) or (high > recHi[1] and close < recHi[1])
+var int   sslBar = na
+var float sslPx  = na
+var int   bslBar = na
+var float bslPx  = na
+if sweptSSL
+    sslBar := bar_index
+    sslPx  := low
+if sweptBSL
+    bslBar := bar_index
+    bslPx  := high
+
+// ══════════ SMT DIVERGENCE (optional) ══════════
+smtLow  = request.security(smtSym, timeframe.period, low,  lookahead=barmerge.lookahead_off)
+smtHigh = request.security(smtSym, timeframe.period, high, lookahead=barmerge.lookahead_off)
+ourNewLow  = low  < recLo[1]
+smtNewLow  = smtLow  < ta.lowest(smtLow,  liqLook)[1]
+ourNewHigh = high > recHi[1]
+smtNewHigh = smtHigh > ta.highest(smtHigh, liqLook)[1]
+smtBull = not useSMT or (ourNewLow  and not smtNewLow)
+smtBear = not useSMT or (ourNewHigh and not smtNewHigh)
+
+// ══════════ DISPLACEMENT + FVG ══════════
+bullFVG = low > high[2]
+bearFVG = high < low[2]
+bullSz  = bullFVG ? low - high[2] : 0.0
+bearSz  = bearFVG ? low[2] - high : 0.0
+dispBull = bullFVG and bullSz > atr * fvgMult and close[1] > open[1] and mssUp
+dispBear = bearFVG and bearSz > atr * fvgMult and close[1] < open[1] and mssDn
+
+// ══════════ KILLZONES ══════════
+inLDN = not na(time(timeframe.period, kzLDN, "America/New_York"))
+inAM  = not na(time(timeframe.period, kzAM,  "America/New_York"))
+inSB  = not na(time(timeframe.period, kzSB,  "America/New_York"))
+inPM  = not na(time(timeframe.period, kzPM,  "America/New_York"))
+inKZ  = not useKZ or inLDN or inAM or inSB or inPM
+
+// ══════════ SETUP ASSEMBLY ══════════
+sweepOKL = not sweepReq or (not na(sslBar) and (bar_index - sslBar) <= sweepWin)
+sweepOKS = not sweepReq or (not na(bslBar) and (bar_index - bslBar) <= sweepWin)
+longSetup  = biasBull and sweepOKL and dispBull and inKZ and smtBull
+shortSetup = biasBear and sweepOKS and dispBear and inKZ and smtBear
+
+// FVG geometry + entry level
+lFvgTop = low
+lFvgBot = high[2]
+sFvgBot = high
+sFvgTop = low[2]
+lEntry = entryLvl == "FVG Top (first touch)" ? lFvgTop : entryLvl == "FVG Bottom (deep discount)" ? lFvgBot : (lFvgTop + lFvgBot) / 2
+sEntry = entryLvl == "FVG Top (first touch)" ? sFvgBot : entryLvl == "FVG Bottom (deep discount)" ? sFvgTop : (sFvgTop + sFvgBot) / 2
+
+// dealing range + OTE + equilibrium
+lRangeLo = not na(sslPx) ? sslPx : ta.lowest(low, sweepWin)
+lRangeHi = high
+sRangeHi = not na(bslPx) ? bslPx : ta.highest(high, sweepWin)
+sRangeLo = low
+lEq    = (lRangeHi + lRangeLo) / 2
+lOte62 = lRangeHi - (lRangeHi - lRangeLo) * 0.62
+lOte79 = lRangeHi - (lRangeHi - lRangeLo) * 0.79
+lOteOK = not useOTE or (lEntry <= lOte62 and lEntry >= lOte79)
+lEqOK  = not useEq  or (lEntry < lEq)
+sEq    = (sRangeHi + sRangeLo) / 2
+sOte62 = sRangeLo + (sRangeHi - sRangeLo) * 0.62
+sOte79 = sRangeLo + (sRangeHi - sRangeLo) * 0.79
+sOteOK = not useOTE or (sEntry >= sOte62 and sEntry <= sOte79)
+sEqOK  = not useEq  or (sEntry > sEq)
+
+// ══════════ STATE ══════════
+var bool  armed   = false
+var int   dir     = 0
+var float aEntry  = na
+var float aSL     = na
+var float aTP1    = na
+var float aTP2    = na
+var float aInval  = na
+var int   aBar    = na
+var bool  tp1Done = false
+var bool  inTrade = false
+var box   fvgBox  = na
+var box   oteBox  = na
+
+canArm = not armed and not inTrade and strategy.position_size == 0
+
+// ── arm LONG ──
+if canArm and longSetup and lOteOK and lEqOK
+    bsl = math.max(nz(pdh, recHi), recHi)
+    sl  = lRangeLo - atr * slBuf
+    risk = lEntry - sl
+    if risk > 0
+        armed := true
+        dir := 1
+        aEntry := lEntry
+        aSL := sl
+        aTP1 := lEntry + risk * tp1R
+        aTP2 := tp2Mode == "Opposing Liquidity" and bsl > lEntry ? bsl : lEntry + risk * tp2R
+        aInval := lFvgBot
+        aBar := bar_index
+        tp1Done := false
+        box.delete(fvgBox)
+        box.delete(oteBox)
+        if showFVG
+            fvgBox := box.new(bar_index, lFvgTop, bar_index + sweepWin, lFvgBot, border_color=color.new(color.teal,0), bgcolor=color.new(color.teal,80))
+        if showOTE
+            oteBox := box.new(bar_index, lOte62, bar_index + sweepWin, lOte79, border_color=color.new(color.blue,40), bgcolor=color.new(color.blue,88))
+
+// ── arm SHORT ──
+if canArm and shortSetup and sOteOK and sEqOK
+    ssl = math.min(nz(pdl, recLo), recLo)
+    sl  = sRangeHi + atr * slBuf
+    risk = sl - sEntry
+    if risk > 0
+        armed := true
+        dir := -1
+        aEntry := sEntry
+        aSL := sl
+        aTP1 := sEntry - risk * tp1R
+        aTP2 := tp2Mode == "Opposing Liquidity" and ssl < sEntry ? ssl : sEntry - risk * tp2R
+        aInval := sFvgTop
+        aBar := bar_index
+        tp1Done := false
+        box.delete(fvgBox)
+        box.delete(oteBox)
+        if showFVG
+            fvgBox := box.new(bar_index, sFvgTop, bar_index + sweepWin, sFvgBot, border_color=color.new(color.red,0), bgcolor=color.new(color.red,80))
+        if showOTE
+            oteBox := box.new(bar_index, sOte79, bar_index + sweepWin, sOte62, border_color=color.new(color.blue,40), bgcolor=color.new(color.blue,88))
+
+// ── place / manage pending entry ──
+if armed and strategy.position_size == 0
+    qty = math.abs(aEntry - aSL) > 0 ? (strategy.equity * riskPct / 100) / math.abs(aEntry - aSL) : na
+    if dir == 1
+        strategy.entry("Long", strategy.long, qty=qty, limit=aEntry)
+    else
+        strategy.entry("Short", strategy.short, qty=qty, limit=aEntry)
+    invalid = dir == 1 ? close < aInval : close > aInval
+    if invalid or (bar_index - aBar > sweepWin * 2)
+        strategy.cancel("Long")
+        strategy.cancel("Short")
+        armed := false
+        dir := 0
+
+// ── manage open position ──
+if strategy.position_size != 0
+    inTrade := true
+    if dir == 1 and high >= aTP1
+        tp1Done := true
+    if dir == -1 and low <= aTP1
+        tp1Done := true
+    slNow = useBE and tp1Done ? aEntry : aSL
+    if dir == 1
+        strategy.exit("X1", from_entry="Long",  qty_percent=tp1Pct, stop=slNow, limit=aTP1)
+        strategy.exit("X2", from_entry="Long",  stop=slNow, limit=aTP2)
+    else
+        strategy.exit("X1", from_entry="Short", qty_percent=tp1Pct, stop=slNow, limit=aTP1)
+        strategy.exit("X2", from_entry="Short", stop=slNow, limit=aTP2)
+
+// ── reset after trade closes ──
+if inTrade and strategy.position_size == 0
+    inTrade := false
+    armed := false
+    dir := 0
+    tp1Done := false
+
+// ══════════ VISUALS ══════════
+plot(htfEma, "HTF Bias EMA", color.new(color.gray, 50), 1)
+plotshape(sweptSSL, "SSL Raid", shape.xcross, location.belowbar, color.new(color.orange,0), size=size.tiny)
+plotshape(sweptBSL, "BSL Raid", shape.xcross, location.abovebar, color.new(color.orange,0), size=size.tiny)
+if showLbl and chochUp
+    label.new(bar_index, low,  "CHoCH↑", color=color.new(color.teal,20), style=label.style_label_up,   textcolor=color.white, size=size.tiny)
+if showLbl and chochDn
+    label.new(bar_index, high, "CHoCH↓", color=color.new(color.red,20),  style=label.style_label_down, textcolor=color.white, size=size.tiny)
+bgcolor(longSetup ? color.new(color.teal, 85) : shortSetup ? color.new(color.red, 85) : na, title="Setup Bar")
+
+// ══════════ DASHBOARD ══════════
+if showDash and barstate.islast
+    var table d = table.new(position.bottom_right, 2, 6, bgcolor=color.new(color.black,15), frame_color=color.new(#1e90ff,50), frame_width=2, border_color=color.new(color.gray,70), border_width=1)
+    table.cell(d, 0, 0, "YN ICT ENGINE", text_color=color.new(#1e90ff,0), bgcolor=color.new(#1e90ff,85), text_size=size.small)
+    table.cell(d, 1, 0, biasBull and not biasBear ? "BULL" : biasBear and not biasBull ? "BEAR" : "—", text_color=biasBull and not biasBear ? color.lime : biasBear and not biasBull ? color.red : color.gray, bgcolor=color.new(#1e90ff,85), text_size=size.small)
+    table.cell(d, 0, 1, "Killzone",  text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 1, inKZ ? (inLDN?"London":inAM?"NY AM":inSB?"Silver Bullet":inPM?"NY PM":"Active") : "Closed", text_color=inKZ?color.lime:color.gray, text_size=size.small)
+    table.cell(d, 0, 2, "Structure", text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 2, mktBias==1?"Bullish":mktBias==-1?"Bearish":"Ranging", text_color=mktBias==1?color.lime:mktBias==-1?color.red:color.gray, text_size=size.small)
+    table.cell(d, 0, 3, "Setup",     text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 3, armed?(dir==1?"ARMED LONG":"ARMED SHORT"):inTrade?"IN TRADE":"Scanning", text_color=armed?color.yellow:inTrade?color.aqua:color.gray, text_size=size.small)
+    table.cell(d, 0, 4, "Entry",     text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 4, armed?str.tostring(aEntry,"#.#####"):"—", text_color=color.white, text_size=size.small)
+    table.cell(d, 0, 5, "SL / TP2",  text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 5, armed?str.tostring(aSL,"#.###")+" / "+str.tostring(aTP2,"#.###"):"—", text_color=color.white, text_size=size.small)`,
+      mt5: `// YN Finance — ICT 2022 Model EA (MetaTrader 5) — Long-side core
+// Sweep -> Displacement/MSS -> FVG entry in OTE | EURUSD, XAUUSD, NAS100 | M5-M15
+// Mirror this logic for shorts (sweep BSL -> bearish FVG below internal structure).
 
 #include <Trade\\Trade.mqh>
 CTrade trade;
 
-input double RiskPct    = 0.5;   // Risk % per trade
-input double ATRMult    = 1.5;   // Stop loss ATR multiplier
-input double TPRR       = 2.0;   // Take profit R:R ratio
-input bool   UseSession = true;  // London/NY only
-input bool   UseTrend   = true;  // 200 EMA filter
+input double RiskPct    = 0.5;    // Risk % per trade
+input int    IntLen     = 5;      // Internal structure lookback (MSS)
+input int    LiqLook    = 20;     // Liquidity lookback (bars)
+input int    SweepWin   = 15;     // Bars a sweep stays valid
+input double FVGMultATR = 0.15;   // Min FVG size (ATR x)
+input double SLBufATR   = 0.15;   // Stop buffer beyond the sweep (ATR x)
+input double TP2_R      = 3.0;    // Fixed R target if no liquidity above
+input bool   UseKZ      = true;   // Trade only in killzones
 
-int atrHandle, emaHandle;
+int    atrH;
+bool   haveSweep = false;
+double sweptLow  = 0.0;
+int    sweepAge  = 0;
 
 int OnInit() {
-   atrHandle = iATR(_Symbol, PERIOD_CURRENT, 14);
-   emaHandle = iMA(_Symbol, PERIOD_CURRENT, 200, 0, MODE_EMA, PRICE_CLOSE);
-   if(atrHandle == INVALID_HANDLE || emaHandle == INVALID_HANDLE) return INIT_FAILED;
+   atrH = iATR(_Symbol, PERIOD_CURRENT, 14);
+   if (atrH == INVALID_HANDLE) return INIT_FAILED;
    return INIT_SUCCEEDED;
 }
+void OnDeinit(const int reason) { IndicatorRelease(atrH); }
 
-void OnDeinit(const int reason) {
-   IndicatorRelease(atrHandle);
-   IndicatorRelease(emaHandle);
+bool NewBar() {
+   static datetime t = 0;
+   datetime c = iTime(_Symbol, PERIOD_CURRENT, 0);
+   if (c != t) { t = c; return true; }
+   return false;
 }
 
 bool InKillzone() {
-   MqlDateTime dt;
-   TimeToStruct(TimeCurrent(), dt);
-   int h = dt.hour;
-   return (h >= 7 && h < 10) || (h >= 13 && h < 17);
+   // Broker time ~ UTC+2/3. Windows below approximate London + NY in UTC.
+   MqlDateTime dt; TimeToStruct(TimeCurrent(), dt);
+   int m = dt.hour * 60 + dt.min;
+   return (m >= 7*60 && m < 10*60) || (m >= 12*60+30 && m < 16*60);
 }
 
-bool FVGBull(const double &lo[], const double &hi[]) {
-   double atr[1]; CopyBuffer(atrHandle, 0, 0, 1, atr);
-   return lo[0] > hi[2] && (lo[0] - hi[2]) > atr[0] * 0.08;
-}
-
-bool FVGBear(const double &lo[], const double &hi[]) {
-   double atr[1]; CopyBuffer(atrHandle, 0, 0, 1, atr);
-   return hi[0] < lo[2] && (lo[2] - hi[0]) > atr[0] * 0.08;
-}
+double ATRv()        { double a[1]; CopyBuffer(atrH,0,0,1,a); return a[0]; }
+double PrevDayLow()  { double l[]; return CopyLow (_Symbol,PERIOD_D1,1,1,l) > 0 ? l[0] : 0.0; }
+double PrevDayHigh() { double h[]; return CopyHigh(_Symbol,PERIOD_D1,1,1,h) > 0 ? h[0] : 0.0; }
+double LowestN(int n, int start)  { double l[]; int k=CopyLow (_Symbol,PERIOD_CURRENT,start,n,l); double mn= DBL_MAX; for(int i=0;i<k;i++) mn=MathMin(mn,l[i]); return mn; }
+double HighestN(int n, int start) { double h[]; int k=CopyHigh(_Symbol,PERIOD_CURRENT,start,n,h); double mx=-DBL_MAX; for(int i=0;i<k;i++) mx=MathMax(mx,h[i]); return mx; }
 
 void OnTick() {
+   if (!NewBar()) return;
+   if (haveSweep) { sweepAge++; if (sweepAge > SweepWin) { haveSweep=false; sweepAge=0; } }
    if (PositionsTotal() > 0) return;
-   if (UseSession && !InKillzone()) return;
+   if (UseKZ && !InKillzone()) return;
 
-   double atr[1], ema[1];
-   CopyBuffer(atrHandle, 0, 0, 1, atr);
-   CopyBuffer(emaHandle, 0, 0, 1, ema);
+   double atr   = ATRv();
+   double o1    = iOpen (_Symbol,PERIOD_CURRENT,1);
+   double c1    = iClose(_Symbol,PERIOD_CURRENT,1);
+   double low1  = iLow  (_Symbol,PERIOD_CURRENT,1);
+   double high3 = iHigh (_Symbol,PERIOD_CURRENT,3);
+   double pdl   = PrevDayLow();
+   double recLo = LowestN(LiqLook, 2);
 
-   double lo[], hi[], cl[];
-   CopyLow  (_Symbol, PERIOD_CURRENT, 0, 3, lo);
-   CopyHigh (_Symbol, PERIOD_CURRENT, 0, 3, hi);
-   CopyClose(_Symbol, PERIOD_CURRENT, 0, 1, cl);
+   // 1) Sell-side liquidity sweep on the last closed bar (wick below, close back above)
+   double keyLow = MathMax(pdl, recLo);
+   if (keyLow > 0 && low1 < keyLow && c1 > keyLow) { haveSweep=true; sweptLow=low1; sweepAge=0; }
 
-   double price   = cl[0];
-   double sl      = atr[0] * ATRMult;
-   double risk    = AccountInfoDouble(ACCOUNT_BALANCE) * RiskPct / 100;
-   double tickVal = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
-   if (tickVal <= 0) tickVal = 1.0;
-   double lots = NormalizeDouble(risk / ((sl / _Point) * tickVal), 2);
-   lots = MathMax(0.01, MathMin(lots, 10.0));
+   // 2) Bullish FVG (bars 1-2-3) + displacement + internal MSS
+   bool   bullFVG = (low1 > high3) && ((low1 - high3) > atr*FVGMultATR) && (c1 > o1);
+   double intHigh = HighestN(IntLen, 2);
+   bool   mss     = c1 > intHigh;
 
-   bool bullTrend = !UseTrend || price > ema[0];
-   bool bearTrend = !UseTrend || price < ema[0];
+   if (haveSweep && bullFVG && mss) {
+      double fvgTop = low1, fvgBot = high3;
+      double entry  = (fvgTop + fvgBot) / 2.0;          // Consequent Encroachment (50% of FVG)
+      double rangeLo= sweptLow;
+      double rangeHi= MathMax(c1, HighestN(SweepWin, 1));
+      double ote62  = rangeHi - (rangeHi-rangeLo)*0.62;
+      double ote79  = rangeHi - (rangeHi-rangeLo)*0.79;
+      double eq     = (rangeHi + rangeLo) / 2.0;
+      bool   oteOK  = entry <= ote62 && entry >= ote79; // inside Optimal Trade Entry
+      bool   eqOK   = entry < eq;                        // in discount
+      double sl     = rangeLo - atr*SLBufATR;
+      double risk   = entry - sl;
 
-   if (FVGBull(lo, hi) && bullTrend)
-      trade.Buy (lots, _Symbol, price, price - sl, price + sl * TPRR, "ICT FVG Long");
-   if (FVGBear(lo, hi) && bearTrend)
-      trade.Sell(lots, _Symbol, price, price + sl, price - sl * TPRR, "ICT FVG Short");
+      if (oteOK && eqOK && risk > 0) {
+         double bsl     = MathMax(PrevDayHigh(), HighestN(LiqLook, 1));
+         double tp      = bsl > entry ? bsl : entry + risk*TP2_R;  // draw to opposing liquidity
+         double cash    = AccountInfoDouble(ACCOUNT_BALANCE) * RiskPct/100.0;
+         double tickVal = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+         if (tickVal <= 0) tickVal = 1.0;
+         double lots    = NormalizeDouble(cash / ((risk/_Point)*tickVal), 2);
+         lots = MathMax(0.01, MathMin(lots, 10.0));
+         double ask     = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+
+         // Limit order back into the FVG (the retrace entry). Market fallback if already inside.
+         if (entry < ask) trade.BuyLimit(lots, entry, _Symbol, sl, tp, ORDER_TIME_GTC, 0, "ICT 2022 Long");
+         else             trade.Buy(lots, _Symbol, ask, sl, tp, "ICT 2022 Long");
+         haveSweep=false; sweepAge=0;
+      }
+   }
 }`,
       steps: [
-        'Open TradingView → search your pair (EURUSD, XAUUSD, etc.) → open a 15-minute or 1-hour chart',
-        'Click "Pine Script Editor" at the bottom → select all existing code → delete it → paste the script above → click "Add to chart"',
-        'Click the ⚙️ gear icon on the strategy panel → set Risk % to 0.5 for FTMO/E8 (never exceed 1%)',
-        'The algorithm auto-detects London (7-10am UTC) and NY (1-5pm UTC) killzones — green/red background shows active FVGs',
-        'For auto-execution: TradingView → Alerts → Create → set "Order fills" → connect your broker (Interactive Brokers, Alpaca, TradeStation)',
-        'For FTMO: pause the bot on days with CPI, NFP, or FOMC — these events spike through stops instantly',
-        'Monitor your equity curve weekly. If you hit 3% daily drawdown, manually stop the bot for that day',
-        'MetaTrader 5 users: open MetaEditor (F4 in MT5) → New → Expert Advisor → paste the MQL5 code → compile → drag onto your chart',
+        'This is the full ICT 2022 model — paste into TradingView Pine Editor on a 5m or 15m chart (EURUSD, NQ, XAUUSD) → Add to chart',
+        'Set HTF Bias Timeframe one or two steps up (e.g. 1H bias for a 5m chart). The engine only takes trades in that direction',
+        'Leave killzones ON — it only hunts during London, NY AM, Silver Bullet (10–11 ET) and NY PM, where the algorithmic moves happen',
+        'The flow it waits for: liquidity sweep (stop raid) → displacement that breaks internal structure (MSS) and leaves an FVG → LIMIT order back into the FVG inside the 62–79% OTE zone',
+        'Risk % auto-sizes your position from the stop distance. Keep it at 0.5% for FTMO/E8. TP1 closes 50% at 1R then the stop moves to breakeven',
+        'For auto-execution: TradingView → Alerts → "Order fills and alert() function calls" → connect your broker or a webhook to a prop-firm bridge',
+        'Optional A+ filter: turn on SMT divergence and set the correlated symbol (ES for NQ, GBPUSD for EURUSD) — only the cleanest raids fire',
+        'MT5 users: compile the MQL5 version in MetaEditor → attach → enable AutoTrading. It runs the same sweep → FVG → OTE long-side logic',
       ]
     },
     signals: {
       tradingview: `//@version=5
-indicator("YN Finance — ICT Smart Money SIGNALS", overlay=true, max_bars_back=500)
+indicator("YN Finance — ICT 2022 Model SIGNALS | Tick-Precision", overlay=true,
+  max_bars_back=1000, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
 
-// ── INPUTS ───────────────────────────────────────────────────────
-atrMult   = input.float(1.5, "SL ATR Multiplier")
-tpRR      = input.float(2.0, "TP R:R Ratio")
-useSess   = input.bool(true, "Killzone filter")
-london    = input.session("0700-1000", "London")
-nyOpen    = input.session("1300-1600", "NY Open")
-useTrend  = input.bool(true, "200 EMA filter")
+// ══════════ ① DIRECTIONAL BIAS ══════════
+biasTF  = input.timeframe("60",   "HTF Bias Timeframe",        group="① Directional Bias")
+useBias = input.bool(true,        "Trade only with HTF bias",  group="① Directional Bias")
+biasLen = input.int(50,           "HTF Bias EMA Length",       group="① Directional Bias")
+useSMT  = input.bool(false,       "Require SMT divergence",    group="① Directional Bias")
+smtSym  = input.symbol("CME_MINI:ES1!", "SMT Correlated Symbol", group="① Directional Bias")
 
-// ── LOGIC ────────────────────────────────────────────────────────
-ema200    = ta.ema(close, 200)
-atr       = ta.atr(14)
-bullFVG   = low > high[2] and (low - high[2]) > atr * 0.15
-bearFVG   = high < low[2] and (low[2] - high) > atr * 0.15
+// ══════════ ② MARKET STRUCTURE ══════════
+swingLen = input.int(10, "Swing Pivot Strength",    minval=3, group="② Market Structure")
+intLen   = input.int(5,  "Internal Pivot Strength", minval=2, group="② Market Structure")
 
-inSession = not useSess or
-             (not na(time(timeframe.period, london, "Europe/London")) or
-              not na(time(timeframe.period, nyOpen, "America/New_York")))
+// ══════════ ③ LIQUIDITY ══════════
+liqLook  = input.int(20,   "Liquidity Lookback (bars)", group="③ Liquidity")
+usePDHL  = input.bool(true, "Use Previous Day High/Low", group="③ Liquidity")
+sweepReq = input.bool(true, "Require liquidity sweep",    group="③ Liquidity")
+sweepWin = input.int(15,   "Max bars: sweep → entry",    group="③ Liquidity")
 
-longSig    = bullFVG and inSession and (not useTrend or close > ema200)
-shortSig   = bearFVG and inSession and (not useTrend or close < ema200)
+// ══════════ ④ ENTRY PRECISION ══════════
+fvgMult  = input.float(0.15, "Min FVG size (ATR ×)", step=0.05, group="④ Entry Precision")
+entryLvl = input.string("Consequent Encroachment (50%)", "FVG Entry Level", options=["FVG Top (first touch)","Consequent Encroachment (50%)","FVG Bottom (deep discount)"], group="④ Entry Precision")
+useOTE   = input.bool(true,  "Require OTE 62-79% confluence",      group="④ Entry Precision")
+useEq    = input.bool(true,  "Require Discount/Premium confluence", group="④ Entry Precision")
 
-// ── LEVELS ───────────────────────────────────────────────────────
-sl         = atr * atrMult
-tp         = sl * tpRR
+// ══════════ ⑤ KILLZONES (New York time) ══════════
+useKZ = input.bool(true, "Trade only in killzones", group="⑤ Killzones (New York time)")
+kzLDN = input.session("0200-0500", "London Open",   group="⑤ Killzones (New York time)")
+kzAM  = input.session("0700-1000", "New York AM",   group="⑤ Killzones (New York time)")
+kzSB  = input.session("1000-1100", "Silver Bullet", group="⑤ Killzones (New York time)")
+kzPM  = input.session("1400-1500", "New York PM",   group="⑤ Killzones (New York time)")
 
-// ── ALERTS ───────────────────────────────────────────────────────
+// ══════════ ⑥ TARGETS ══════════
+slBuf   = input.float(0.15,"SL buffer beyond sweep (ATR ×)", step=0.05, group="⑥ Targets")
+tp1R    = input.float(1.0, "TP1 at (R multiple)",            step=0.5, group="⑥ Targets")
+tp2Mode = input.string("Opposing Liquidity", "TP2 Target", options=["Opposing Liquidity","Fixed R"], group="⑥ Targets")
+tp2R    = input.float(3.0, "TP2 at (R) if Fixed",            step=0.5, group="⑥ Targets")
+
+// ══════════ ⑦ VISUALS ══════════
+showFVG  = input.bool(true, "Show FVG entry zone", group="⑦ Visuals")
+showOTE  = input.bool(true, "Show OTE zone",       group="⑦ Visuals")
+showDash = input.bool(true, "Show dashboard",      group="⑦ Visuals")
+
+atr = ta.atr(14)
+
+// ══════════ HTF BIAS ══════════
+htfClose = request.security(syminfo.tickerid, biasTF, close,                 lookahead=barmerge.lookahead_off)
+htfEma   = request.security(syminfo.tickerid, biasTF, ta.ema(close, biasLen), lookahead=barmerge.lookahead_off)
+biasBull = not useBias or htfClose > htfEma
+biasBear = not useBias or htfClose < htfEma
+
+// ══════════ STRUCTURE ══════════
+ph = ta.pivothigh(high, swingLen, swingLen)
+pl = ta.pivotlow (low,  swingLen, swingLen)
+var float swH = na
+var float swL = na
+var bool  swHbk = false
+var bool  swLbk = false
+if not na(ph)
+    swH := ph
+    swHbk := false
+if not na(pl)
+    swL := pl
+    swLbk := false
+var int mktBias = 0
+bosUp = not na(swH) and not swHbk and close > swH
+bosDn = not na(swL) and not swLbk and close < swL
+if bosUp
+    mktBias := 1
+    swHbk := true
+if bosDn
+    mktBias := -1
+    swLbk := true
+
+iph = ta.pivothigh(high, intLen, intLen)
+ipl = ta.pivotlow (low,  intLen, intLen)
+var float iH = na
+var float iL = na
+var bool  iHbk = false
+var bool  iLbk = false
+if not na(iph)
+    iH := iph
+    iHbk := false
+if not na(ipl)
+    iL := ipl
+    iLbk := false
+mssUp = not na(iH) and not iHbk and close > iH
+mssDn = not na(iL) and not iLbk and close < iL
+if mssUp
+    iHbk := true
+if mssDn
+    iLbk := true
+
+// ══════════ LIQUIDITY + SWEEPS ══════════
+[pdh, pdl] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead=barmerge.lookahead_on)
+recHi = ta.highest(high, liqLook)
+recLo = ta.lowest (low,  liqLook)
+sweptSSL = (usePDHL and not na(pdl) and low  < pdl and close > pdl) or (low  < recLo[1] and close > recLo[1])
+sweptBSL = (usePDHL and not na(pdh) and high > pdh and close < pdh) or (high > recHi[1] and close < recHi[1])
+var int   sslBar = na
+var float sslPx  = na
+var int   bslBar = na
+var float bslPx  = na
+if sweptSSL
+    sslBar := bar_index
+    sslPx  := low
+if sweptBSL
+    bslBar := bar_index
+    bslPx  := high
+
+// ══════════ SMT DIVERGENCE ══════════
+smtLow  = request.security(smtSym, timeframe.period, low,  lookahead=barmerge.lookahead_off)
+smtHigh = request.security(smtSym, timeframe.period, high, lookahead=barmerge.lookahead_off)
+smtBull = not useSMT or ((low  < recLo[1]) and not (smtLow  < ta.lowest(smtLow,  liqLook)[1]))
+smtBear = not useSMT or ((high > recHi[1]) and not (smtHigh > ta.highest(smtHigh, liqLook)[1]))
+
+// ══════════ DISPLACEMENT + FVG ══════════
+bullFVG = low > high[2]
+bearFVG = high < low[2]
+dispBull = bullFVG and (low - high[2]) > atr * fvgMult and close[1] > open[1] and mssUp
+dispBear = bearFVG and (low[2] - high) > atr * fvgMult and close[1] < open[1] and mssDn
+
+// ══════════ KILLZONES ══════════
+inLDN = not na(time(timeframe.period, kzLDN, "America/New_York"))
+inAM  = not na(time(timeframe.period, kzAM,  "America/New_York"))
+inSB  = not na(time(timeframe.period, kzSB,  "America/New_York"))
+inPM  = not na(time(timeframe.period, kzPM,  "America/New_York"))
+inKZ  = not useKZ or inLDN or inAM or inSB or inPM
+
+// ══════════ SETUP ══════════
+sweepOKL = not sweepReq or (not na(sslBar) and (bar_index - sslBar) <= sweepWin)
+sweepOKS = not sweepReq or (not na(bslBar) and (bar_index - bslBar) <= sweepWin)
+
+lFvgTop = low
+lFvgBot = high[2]
+sFvgBot = high
+sFvgTop = low[2]
+lEntry = entryLvl == "FVG Top (first touch)" ? lFvgTop : entryLvl == "FVG Bottom (deep discount)" ? lFvgBot : (lFvgTop + lFvgBot) / 2
+sEntry = entryLvl == "FVG Top (first touch)" ? sFvgBot : entryLvl == "FVG Bottom (deep discount)" ? sFvgTop : (sFvgTop + sFvgBot) / 2
+
+lRangeLo = not na(sslPx) ? sslPx : ta.lowest(low, sweepWin)
+lRangeHi = high
+sRangeHi = not na(bslPx) ? bslPx : ta.highest(high, sweepWin)
+sRangeLo = low
+lEq    = (lRangeHi + lRangeLo) / 2
+lOte62 = lRangeHi - (lRangeHi - lRangeLo) * 0.62
+lOte79 = lRangeHi - (lRangeHi - lRangeLo) * 0.79
+lOteOK = not useOTE or (lEntry <= lOte62 and lEntry >= lOte79)
+lEqOK  = not useEq  or (lEntry < lEq)
+sEq    = (sRangeHi + sRangeLo) / 2
+sOte62 = sRangeLo + (sRangeHi - sRangeLo) * 0.62
+sOte79 = sRangeLo + (sRangeHi - sRangeLo) * 0.79
+sOteOK = not useOTE or (sEntry >= sOte62 and sEntry <= sOte79)
+sEqOK  = not useEq  or (sEntry > sEq)
+
+longSig  = biasBull and sweepOKL and dispBull and inKZ and smtBull and lOteOK and lEqOK and barstate.isconfirmed
+shortSig = biasBear and sweepOKS and dispBear and inKZ and smtBear and sOteOK and sEqOK and barstate.isconfirmed
+
+// ══════════ ALERTS (full trade plan, to the tick) ══════════
 if longSig
-    alert("YN ICT LONG | " + syminfo.ticker +
-          " | Entry: "  + str.tostring(close, "#.#####") +
-          " | SL: "     + str.tostring(close - sl, "#.#####") +
-          " | TP: "     + str.tostring(close + tp, "#.#####"), alert.freq_once_per_bar_close)
+    bsl = math.max(nz(pdh, recHi), recHi)
+    sl  = lRangeLo - atr * slBuf
+    risk = lEntry - sl
+    tp1 = lEntry + risk * tp1R
+    tp2 = tp2Mode == "Opposing Liquidity" and bsl > lEntry ? bsl : lEntry + risk * tp2R
+    alert("YN ICT 2022 LONG | " + syminfo.ticker + " " + timeframe.period +
+          " | LIMIT BUY: " + str.tostring(lEntry, "#.#####") +
+          " | SL: "  + str.tostring(sl,  "#.#####") +
+          " | TP1: " + str.tostring(tp1, "#.#####") +
+          " | TP2: " + str.tostring(tp2, "#.#####") +
+          " | Confluence: Swept SSL + MSS↑ + FVG + OTE", alert.freq_once_per_bar_close)
+    if showFVG
+        box.new(bar_index, lFvgTop, bar_index + sweepWin, lFvgBot, border_color=color.new(color.teal,0), bgcolor=color.new(color.teal,80))
+    if showOTE
+        box.new(bar_index, lOte62, bar_index + sweepWin, lOte79, border_color=color.new(color.blue,40), bgcolor=color.new(color.blue,88))
 
 if shortSig
-    alert("YN ICT SHORT | " + syminfo.ticker +
-          " | Entry: "  + str.tostring(close, "#.#####") +
-          " | SL: "     + str.tostring(close + sl, "#.#####") +
-          " | TP: "     + str.tostring(close - tp, "#.#####"), alert.freq_once_per_bar_close)
+    ssl = math.min(nz(pdl, recLo), recLo)
+    sl  = sRangeHi + atr * slBuf
+    risk = sl - sEntry
+    tp1 = sEntry - risk * tp1R
+    tp2 = tp2Mode == "Opposing Liquidity" and ssl < sEntry ? ssl : sEntry - risk * tp2R
+    alert("YN ICT 2022 SHORT | " + syminfo.ticker + " " + timeframe.period +
+          " | LIMIT SELL: " + str.tostring(sEntry, "#.#####") +
+          " | SL: "  + str.tostring(sl,  "#.#####") +
+          " | TP1: " + str.tostring(tp1, "#.#####") +
+          " | TP2: " + str.tostring(tp2, "#.#####") +
+          " | Confluence: Swept BSL + MSS↓ + FVG + OTE", alert.freq_once_per_bar_close)
+    if showFVG
+        box.new(bar_index, sFvgTop, bar_index + sweepWin, sFvgBot, border_color=color.new(color.red,0), bgcolor=color.new(color.red,80))
+    if showOTE
+        box.new(bar_index, sOte79, bar_index + sweepWin, sOte62, border_color=color.new(color.blue,40), bgcolor=color.new(color.blue,88))
 
-// ── PLOT ─────────────────────────────────────────────────────────
-plot(ema200, "200 EMA", color.new(color.blue, 40), 2)
-plotshape(longSig,  "LONG",  shape.triangleup,   location.belowbar, color.lime,  size=size.large)
-plotshape(shortSig, "SHORT", shape.triangledown, location.abovebar, color.red,   size=size.large)
-bgcolor(longSig  ? color.new(color.green, 90) : na)
-bgcolor(shortSig ? color.new(color.red,   90) : na)`,
+// ══════════ PLOT ══════════
+plot(htfEma, "HTF Bias EMA", color.new(color.gray, 50), 1)
+plotshape(sweptSSL, "SSL Raid", shape.xcross,       location.belowbar, color.new(color.orange,0), size=size.tiny)
+plotshape(sweptBSL, "BSL Raid", shape.xcross,       location.abovebar, color.new(color.orange,0), size=size.tiny)
+plotshape(longSig,  "LONG",     shape.triangleup,   location.belowbar, color.new(color.lime,0),   size=size.normal)
+plotshape(shortSig, "SHORT",    shape.triangledown, location.abovebar, color.new(color.red,0),    size=size.normal)
+
+// ══════════ DASHBOARD ══════════
+if showDash and barstate.islast
+    var table d = table.new(position.bottom_right, 2, 4, bgcolor=color.new(color.black,15), frame_color=color.new(#1e90ff,50), frame_width=2, border_color=color.new(color.gray,70), border_width=1)
+    table.cell(d, 0, 0, "YN ICT SIGNALS", text_color=color.new(#1e90ff,0), bgcolor=color.new(#1e90ff,85), text_size=size.small)
+    table.cell(d, 1, 0, biasBull and not biasBear ? "BULL" : biasBear and not biasBull ? "BEAR" : "—", text_color=biasBull and not biasBear ? color.lime : biasBear and not biasBull ? color.red : color.gray, bgcolor=color.new(#1e90ff,85), text_size=size.small)
+    table.cell(d, 0, 1, "Killzone",  text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 1, inKZ ? (inLDN?"London":inAM?"NY AM":inSB?"Silver Bullet":inPM?"NY PM":"Active") : "Closed", text_color=inKZ?color.lime:color.gray, text_size=size.small)
+    table.cell(d, 0, 2, "Structure", text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 2, mktBias==1?"Bullish":mktBias==-1?"Bearish":"Ranging", text_color=mktBias==1?color.lime:mktBias==-1?color.red:color.gray, text_size=size.small)
+    table.cell(d, 0, 3, "Last Raid", text_color=color.gray, text_size=size.small)
+    table.cell(d, 1, 3, not na(sslBar) and (na(bslBar) or sslBar>=bslBar) ? "Sell-side" : not na(bslBar) ? "Buy-side" : "—", text_color=color.aqua, text_size=size.small)`,
       steps: [
-        'Paste the signals script into TradingView Pine Script Editor → Add to chart',
-        'Green triangle = LONG signal. Red triangle = SHORT signal. Signals only appear on bar CLOSE (no repainting)',
-        'To get phone alerts: click the clock icon on the indicator → Create Alert → select "ICT LONG SIGNAL" or "ICT SHORT SIGNAL" → set to "Once Per Bar Close"',
-        'When the alert fires: open your prop firm platform → enter at market → paste the SL and TP from the alert message exactly',
-        'Risk no more than 0.5% of your account per trade — keeps you safe inside FTMO/E8 drawdown limits',
-        'Best pairs: EURUSD, GBPUSD, XAUUSD on 15m or 1H charts during the London or NY killzone',
-        'Avoid trading 30 minutes before and after NFP, CPI, or FOMC announcements',
+        'Paste the SIGNALS script into TradingView → Add to chart on your 5m/15m setup chart (EURUSD, NQ, XAUUSD)',
+        'When a full setup completes you get ONE alert with the exact LIMIT entry, SL, TP1 and TP2 — already calculated to the tick',
+        'Create the alert: clock icon on the indicator → Condition = "YN Finance — ICT 2022 Model SIGNALS" → "Any alert() function call" → Once Per Bar Close → enable mobile push',
+        'The alert lists the confluences that fired (swept liquidity + MSS + FVG + OTE) so you know exactly why it is an A+ setup',
+        'Place a LIMIT order at the entry price — do NOT chase market. The edge is getting filled on the retrace back into the FVG',
+        'Stop goes beyond the swept liquidity (in the alert). Take 50% at TP1, move to breakeven, let the runner reach the opposing liquidity at TP2',
+        'Trade only in killzones (dashboard shows the active one) and skip 30 min around red-folder news (NFP, CPI, FOMC)',
       ]
     }
   },
