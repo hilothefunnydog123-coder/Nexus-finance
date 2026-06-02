@@ -79,8 +79,8 @@ sweepWin = input.int(15,   "Max bars: sweep → entry",    group="③ Liquidity"
 // ══════════ ④ ENTRY PRECISION ══════════
 fvgMult  = input.float(0.15, "Min FVG size (ATR ×)", step=0.05, group="④ Entry Precision")
 entryLvl = input.string("Consequent Encroachment (50%)", "FVG Entry Level", options=["FVG Top (first touch)","Consequent Encroachment (50%)","FVG Bottom (deep discount)"], group="④ Entry Precision")
-useOTE   = input.bool(true,  "Require OTE 62-79% confluence",         group="④ Entry Precision")
-useEq    = input.bool(true,  "Require Discount/Premium confluence",    group="④ Entry Precision")
+useOTE   = input.bool(false, "Require OTE 62-79% confluence",         group="④ Entry Precision")
+useEq    = input.bool(false, "Require Discount/Premium confluence",    group="④ Entry Precision")
 
 // ══════════ ⑤ KILLZONES (New York time) ══════════
 useKZ = input.bool(true, "Trade only in killzones", group="⑤ Killzones (New York time)")
@@ -158,6 +158,14 @@ if mssUp
     iHbk := true
 if mssDn
     iLbk := true
+var int mssUpBar = na
+var int mssDnBar = na
+if mssUp
+    mssUpBar := bar_index
+if mssDn
+    mssDnBar := bar_index
+recentMssUp = not na(mssUpBar) and (bar_index - mssUpBar) <= 3
+recentMssDn = not na(mssDnBar) and (bar_index - mssDnBar) <= 3
 
 // ══════════ LIQUIDITY + SWEEPS ══════════
 [pdh, pdl] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead=barmerge.lookahead_on)
@@ -191,8 +199,8 @@ bullFVG = low > high[2]
 bearFVG = high < low[2]
 bullSz  = bullFVG ? low - high[2] : 0.0
 bearSz  = bearFVG ? low[2] - high : 0.0
-dispBull = bullFVG and bullSz > atr * fvgMult and close[1] > open[1] and mssUp
-dispBear = bearFVG and bearSz > atr * fvgMult and close[1] < open[1] and mssDn
+dispBull = bullFVG and bullSz > atr * fvgMult and close[1] > open[1] and recentMssUp
+dispBear = bearFVG and bearSz > atr * fvgMult and close[1] < open[1] and recentMssDn
 
 // ══════════ KILLZONES ══════════
 inLDN = not na(time(timeframe.period, kzLDN, "America/New_York"))
@@ -223,13 +231,13 @@ sRangeLo = low
 lEq    = (lRangeHi + lRangeLo) / 2
 lOte62 = lRangeHi - (lRangeHi - lRangeLo) * 0.62
 lOte79 = lRangeHi - (lRangeHi - lRangeLo) * 0.79
-lOteOK = not useOTE or (lEntry <= lOte62 and lEntry >= lOte79)
-lEqOK  = not useEq  or (lEntry < lEq)
+lOteOK = not useOTE or (lFvgBot <= lOte62 and lFvgTop >= lOte79)
+lEqOK  = not useEq  or (lFvgBot < lEq)
 sEq    = (sRangeHi + sRangeLo) / 2
 sOte62 = sRangeLo + (sRangeHi - sRangeLo) * 0.62
 sOte79 = sRangeLo + (sRangeHi - sRangeLo) * 0.79
-sOteOK = not useOTE or (sEntry >= sOte62 and sEntry <= sOte79)
-sEqOK  = not useEq  or (sEntry > sEq)
+sOteOK = not useOTE or (sFvgBot <= sOte79 and sFvgTop >= sOte62)
+sEqOK  = not useEq  or (sFvgTop > sEq)
 
 // ══════════ STATE ══════════
 var bool  armed   = false
@@ -503,8 +511,8 @@ sweepWin = input.int(15,   "Max bars: sweep → entry",    group="③ Liquidity"
 // ══════════ ④ ENTRY PRECISION ══════════
 fvgMult  = input.float(0.15, "Min FVG size (ATR ×)", step=0.05, group="④ Entry Precision")
 entryLvl = input.string("Consequent Encroachment (50%)", "FVG Entry Level", options=["FVG Top (first touch)","Consequent Encroachment (50%)","FVG Bottom (deep discount)"], group="④ Entry Precision")
-useOTE   = input.bool(true,  "Require OTE 62-79% confluence",      group="④ Entry Precision")
-useEq    = input.bool(true,  "Require Discount/Premium confluence", group="④ Entry Precision")
+useOTE   = input.bool(false, "Require OTE 62-79% confluence",      group="④ Entry Precision")
+useEq    = input.bool(false, "Require Discount/Premium confluence", group="④ Entry Precision")
 
 // ══════════ ⑤ KILLZONES (New York time) ══════════
 useKZ = input.bool(true, "Trade only in killzones", group="⑤ Killzones (New York time)")
@@ -575,6 +583,14 @@ if mssUp
     iHbk := true
 if mssDn
     iLbk := true
+var int mssUpBar = na
+var int mssDnBar = na
+if mssUp
+    mssUpBar := bar_index
+if mssDn
+    mssDnBar := bar_index
+recentMssUp = not na(mssUpBar) and (bar_index - mssUpBar) <= 3
+recentMssDn = not na(mssDnBar) and (bar_index - mssDnBar) <= 3
 
 // ══════════ LIQUIDITY + SWEEPS ══════════
 [pdh, pdl] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead=barmerge.lookahead_on)
@@ -602,8 +618,8 @@ smtBear = not useSMT or ((high > recHi[1]) and not (smtHigh > ta.highest(smtHigh
 // ══════════ DISPLACEMENT + FVG ══════════
 bullFVG = low > high[2]
 bearFVG = high < low[2]
-dispBull = bullFVG and (low - high[2]) > atr * fvgMult and close[1] > open[1] and mssUp
-dispBear = bearFVG and (low[2] - high) > atr * fvgMult and close[1] < open[1] and mssDn
+dispBull = bullFVG and (low - high[2]) > atr * fvgMult and close[1] > open[1] and recentMssUp
+dispBear = bearFVG and (low[2] - high) > atr * fvgMult and close[1] < open[1] and recentMssDn
 
 // ══════════ KILLZONES ══════════
 inLDN = not na(time(timeframe.period, kzLDN, "America/New_York"))
@@ -630,13 +646,13 @@ sRangeLo = low
 lEq    = (lRangeHi + lRangeLo) / 2
 lOte62 = lRangeHi - (lRangeHi - lRangeLo) * 0.62
 lOte79 = lRangeHi - (lRangeHi - lRangeLo) * 0.79
-lOteOK = not useOTE or (lEntry <= lOte62 and lEntry >= lOte79)
-lEqOK  = not useEq  or (lEntry < lEq)
+lOteOK = not useOTE or (lFvgBot <= lOte62 and lFvgTop >= lOte79)
+lEqOK  = not useEq  or (lFvgBot < lEq)
 sEq    = (sRangeHi + sRangeLo) / 2
 sOte62 = sRangeLo + (sRangeHi - sRangeLo) * 0.62
 sOte79 = sRangeLo + (sRangeHi - sRangeLo) * 0.79
-sOteOK = not useOTE or (sEntry >= sOte62 and sEntry <= sOte79)
-sEqOK  = not useEq  or (sEntry > sEq)
+sOteOK = not useOTE or (sFvgBot <= sOte79 and sFvgTop >= sOte62)
+sEqOK  = not useEq  or (sFvgTop > sEq)
 
 longSig  = biasBull and sweepOKL and dispBull and inKZ and smtBull and lOteOK and lEqOK and barstate.isconfirmed
 shortSig = biasBear and sweepOKS and dispBear and inKZ and smtBear and sOteOK and sEqOK and barstate.isconfirmed
