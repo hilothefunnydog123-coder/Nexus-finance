@@ -756,6 +756,13 @@ tp1R    = input.float(1.0, "TP1 at (R multiple)",            step=0.5, group="�
 tp2Mode = input.string("Fixed R", "TP2 Target", options=["Fixed R","Opposing Liquidity"], group="⑥ Targets")
 tp2R    = input.float(3.0, "TP2 at (R) if Fixed",            step=0.5, group="⑥ Targets")
 
+// ══════════ ⑥b TRADE MANAGEMENT (trailing stop — let winners run) ══════════
+useTrail   = input.bool(true, "Trail stop (let winners run)",             group="⑥ Trade Management")
+beAtR      = input.float(1.0, "Move to breakeven at (R)",   step=0.5,      group="⑥ Trade Management")
+trailMult  = input.float(2.0, "Trail distance (ATR ×)",     step=0.5,      group="⑥ Trade Management")
+trailStep  = input.int(4,     "Min trail move to re-alert (ticks)",        group="⑥ Trade Management")
+mgmtAlerts = input.bool(true, "Fire management alerts (breakeven / trail / exit)", group="⑥ Trade Management")
+
 // ══════════ ⑦ ALERTS / AUTOTRADE ══════════
 alertFmt  = input.string("Readable", "Alert / webhook format", options=["Readable","JSON - Generic","JSON - TradersPost"], group="⑦ Alerts / Autotrade")
 brokerSym = input.string("", "Broker symbol override (blank = chart symbol)", group="⑦ Alerts / Autotrade")
@@ -928,9 +935,15 @@ var int   pBar = na
 // virtual-trade tracker (powers the backtest stats)
 var bool  tOpen = false
 var int   tDir  = 0
+var float tEntry = na
+var float tRisk  = na
 var float tS = na
 var float tT = na
 var float tR = na
+var bool  tBE = false
+var float tTrail = na
+var float tExtreme = na
+var float tLastTrailAlert = na
 var int   wins = 0
 var int   losses = 0
 var float sumWinR = 0.0
@@ -996,9 +1009,15 @@ if fireLong
     pend := false
     tOpen := true
     tDir := 1
+    tEntry := pE
+    tRisk := pE - pSL
     tS := pSL
-    tT := pT2
+    tT := useTrail ? na : pT2
     tR := pR
+    tBE := false
+    tTrail := pSL
+    tExtreme := high
+    tLastTrailAlert := pSL
     bxR = bar_index + tradeBars
     if showTrade
         box.new(bar_index, pT2, bxR, pE,  border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
@@ -1018,9 +1037,15 @@ if fireShort
     pend := false
     tOpen := true
     tDir := -1
+    tEntry := pE
+    tRisk := pSL - pE
     tS := pSL
-    tT := pT2
+    tT := useTrail ? na : pT2
     tR := pR
+    tBE := false
+    tTrail := pSL
+    tExtreme := low
+    tLastTrailAlert := pSL
     bxR = bar_index + tradeBars
     if showTrade
         box.new(bar_index, pE,  bxR, pT2, border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
@@ -1036,25 +1061,46 @@ if fireShort
     rTxtS   = "YN ICT SHORT " + gradeStr + " | " + symS + " " + timeframe.period + " | Entry " + str.tostring(pE,"#.#####") + " | SL " + str.tostring(pSL,"#.#####") + " | TP1 " + str.tostring(pT1,"#.#####") + " | TP2 " + str.tostring(pT2,"#.#####") + " | RR " + str.tostring(pR,"#.#")
     alert(alertFmt == "JSON - TradersPost" ? tpJsonS : alertFmt == "JSON - Generic" ? gJsonS : rTxtS, alert.freq_once_per_bar_close)
 
-// ══════════ VIRTUAL TRADE OUTCOME (backtest stats) ══════════
+// ══════════ TRADE MANAGEMENT + OUTCOME (trailing stop) ══════════
 if tOpen
-    hitSL = tDir == 1 ? low <= tS : high >= tS
-    hitTP = tDir == 1 ? high >= tT : low <= tT
-    if hitSL or hitTP
-        won = hitTP and not hitSL
+    // 1) exit check against the stop/target set on PRIOR bars (no lookahead)
+    exitStop = tDir == 1 ? low <= tTrail : high >= tTrail
+    exitTgt  = not na(tT) and (tDir == 1 ? high >= tT : low <= tT)
+    if exitStop or exitTgt
+        exitPx = exitStop ? tTrail : tT
+        realR  = tDir == 1 ? (exitPx - tEntry) / tRisk : (tEntry - exitPx) / tRisk
         tOpen := false
-        if won
+        if realR > 0
             wins += 1
-            sumWinR += tR
+            sumWinR += realR
             consecLoss := 0
         else
             losses += 1
-            sumLossR += 1.0
+            sumLossR += math.abs(realR)
             consecLoss += 1
             maxLossStreak := math.max(maxLossStreak, consecLoss)
+        if mgmtAlerts and barstate.isconfirmed
+            alert("YN ICT " + (tDir == 1 ? "LONG" : "SHORT") + " | " + syminfo.ticker + " — CLOSE @ " + str.tostring(exitPx, "#.#####") + "  (" + str.tostring(realR, "#.##") + "R)", alert.freq_once_per_bar_close)
+    else
+        // 2) advance management for the next bar
+        tExtreme := tDir == 1 ? math.max(tExtreme, high) : math.min(tExtreme, low)
+        reachedBE = tDir == 1 ? high >= tEntry + tRisk * beAtR : low <= tEntry - tRisk * beAtR
+        if useTrail and not tBE and reachedBE
+            tBE := true
+            tTrail := tEntry
+            if mgmtAlerts and barstate.isconfirmed
+                alert("YN ICT " + (tDir == 1 ? "LONG" : "SHORT") + " | " + syminfo.ticker + " — move STOP to BREAKEVEN " + str.tostring(tEntry, "#.#####"), alert.freq_once_per_bar_close)
+        if useTrail and tBE
+            cand = tDir == 1 ? tExtreme - atr * trailMult : tExtreme + atr * trailMult
+            tTrail := tDir == 1 ? math.max(tTrail, cand) : math.min(tTrail, cand)
+            moved = tDir == 1 ? (tTrail - tLastTrailAlert) >= syminfo.mintick * trailStep : (tLastTrailAlert - tTrail) >= syminfo.mintick * trailStep
+            if mgmtAlerts and moved and barstate.isconfirmed
+                tLastTrailAlert := tTrail
+                alert("YN ICT " + (tDir == 1 ? "LONG" : "SHORT") + " | " + syminfo.ticker + " — trail STOP to " + str.tostring(tTrail, "#.#####"), alert.freq_once_per_bar_close)
 
 // ══════════ PLOT ══════════
 plot(htfEma, "HTF Bias EMA", color.new(color.gray, 50), 1)
+plot(tOpen ? tTrail : na, "Trailing Stop", color.new(color.orange, 0), 2, style=plot.style_linebr)
 plotshape(fireLong,  "LONG",  shape.triangleup,   location.belowbar, color.new(color.lime,0), size=size.normal)
 plotshape(fireShort, "SHORT", shape.triangledown, location.abovebar, color.new(color.red,0),  size=size.normal)
 
@@ -1072,7 +1118,7 @@ if showDash and barstate.islast
     table.cell(d, 0, 2, "Structure", text_color=color.gray, text_size=size.small)
     table.cell(d, 1, 2, mktBias==1?"Bullish":mktBias==-1?"Bearish":"Ranging", text_color=mktBias==1?color.lime:mktBias==-1?color.red:color.gray, text_size=size.small)
     table.cell(d, 0, 3, "Status", text_color=color.gray, text_size=size.small)
-    table.cell(d, 1, 3, tOpen ? "IN TRADE" : pend ? (pDir==1?"ARMED LONG "+f_letter(pG):"ARMED SHORT "+f_letter(pG)) : "Scanning", text_color=tOpen?color.aqua:pend?color.yellow:color.gray, text_size=size.small)
+    table.cell(d, 1, 3, tOpen ? ("IN TRADE — stop " + str.tostring(tTrail,"#.##")) : pend ? (pDir==1?"ARMED LONG "+f_letter(pG):"ARMED SHORT "+f_letter(pG)) : "Scanning", text_color=tOpen?color.aqua:pend?color.yellow:color.gray, text_size=size.small)
     table.cell(d, 0, 4, "── Backtest ──", text_color=color.new(#1e90ff,0), text_size=size.tiny)
     table.cell(d, 1, 4, str.tostring(total) + " trades", text_color=color.white, text_size=size.tiny)
     table.cell(d, 0, 5, "Win Rate", text_color=color.gray, text_size=size.small)
@@ -1089,7 +1135,9 @@ if showDash and barstate.islast
         'Paste into TradingView → Add to chart. For futures evals run it on NQ/ES/GC, 5m or 15m, with HTF Bias Timeframe = 1H',
         'It now ARMS on a setup (faint FVG box) then only fires once price RETURNS to the FVG and rejects — far fewer false signals. Turn this off via "Wait for FVG tap + rejection" if you want instant setup alerts',
         'Every signal is graded A+/A/B by how many confluences stack (PD-level sweep, big displacement, OTE, discount/premium, SMT, prime killzone, strong bias). Set "Minimum setup grade" to A+ only for the cleanest trades',
-        'The dashboard shows a live BACKTEST on your chart: trades, win rate, profit factor, expectancy (R/trade), max losing streak. This is your proof — screenshot it for your sales page',
+        'TRADE MANAGEMENT (the new part): after entry it tells you where to trail. At 1R you get a "move STOP to BREAKEVEN" alert, then "trail STOP to X" alerts as price runs — the orange line on the chart is your live stop. This lets winners run instead of capping at a fixed target',
+        'Set the alert to "Any alert() function call" so you receive BOTH the entry AND the breakeven/trail/close management alerts on the same alert. Tune trail in ⑥ Trade Management (ATR × distance, breakeven R, min step)',
+        'The dashboard backtest now records the ACTUAL R of each trailed exit (wins can be 3R, 5R+), so win rate + profit factor + expectancy reflect letting winners run — not a fixed RR. Screenshot it for your sales page',
         'AUTOTRADE MES: TradingView cannot place futures orders directly — you need a bridge. Open a Tradovate account (or connect your prop account), then sign up for a bridge: PickMyTrade (built for Topstep/Apex/TradeDay) or TradersPost',
         'In the indicator settings → set "Alert / webhook format" to "JSON - TradersPost" (or "JSON - Generic" for PickMyTrade field-mapping), set Contracts, and set Broker symbol override to your contract (e.g. MES1! or what your bridge expects)',
         'Create the TradingView alert: clock icon → Condition = "YN Finance — ICT 2022 Pro SIGNALS" → "Any alert() function call" → Once Per Bar Close → in Notifications paste your bridge Webhook URL',
