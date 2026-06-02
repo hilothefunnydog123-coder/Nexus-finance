@@ -29,6 +29,17 @@ function CopyButton({ text }: { text: string }) {
   )
 }
 
+// ── NinjaTrader mark (original shuriken artwork) ───────────────────────────────
+function NinjaMark({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="NinjaTrader" style={{ flexShrink: 0 }}>
+      <circle cx="12" cy="12" r="11" fill="#0b1220" stroke="#2bd17e" strokeWidth="1.5" />
+      <path d="M12 2.5 L14.1 9.9 L21.5 12 L14.1 14.1 L12 21.5 L9.9 14.1 L2.5 12 L9.9 9.9 Z" fill="#2bd17e" />
+      <circle cx="12" cy="12" r="1.7" fill="#0b1220" />
+    </svg>
+  )
+}
+
 // ── Code block ────────────────────────────────────────────────────────────────
 function CodeBlock({ code, lang = 'pine' }: { code: string; lang?: string }) {
   // Minimal syntax coloring via spans — works without a library
@@ -48,7 +59,7 @@ function CodeBlock({ code, lang = 'pine' }: { code: string; lang?: string }) {
       {/* Header bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(255,255,255,.04)', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
         <span style={{ fontSize: 11, color: '#4a6a78', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
-          {lang === 'pine' ? '📊 PINE SCRIPT v5 — TRADINGVIEW' : lang === 'mql5' ? '⚙️ MQL5 — METATRADER 5' : '📋 CODE'}
+          {lang === 'pine' ? '📊 PINE SCRIPT v5 — TRADINGVIEW' : lang === 'mql5' ? '⚙️ MQL5 — METATRADER 5' : lang === 'csharp' ? '⚙️ C# — NINJATRADER 8' : '📋 CODE'}
         </span>
         <CopyButton text={code} />
       </div>
@@ -92,10 +103,14 @@ export default function AlgorithmsPage() {
   const algo = ALGORITHMS.find(a => a.id === selectedId) ?? ALGORITHMS[0]
 
   const code = mode === 'auto'
-    ? (platform === 'tradingview' ? algo.auto.tradingview : algo.auto.mt5)
+    ? (platform === 'ninjatrader'
+        ? (algo.auto.ninjatrader ?? algo.auto.tradingview)
+        : platform === 'mt5' ? algo.auto.mt5 : algo.auto.tradingview)
     : algo.signals.tradingview
 
-  const steps = mode === 'auto' ? algo.auto.steps : algo.signals.steps
+  const steps = mode === 'auto'
+    ? (platform === 'ninjatrader' && algo.auto.ninjaSteps ? algo.auto.ninjaSteps : algo.auto.steps)
+    : algo.signals.steps
 
   // Scroll to detail when strategy changes
   useEffect(() => {
@@ -103,6 +118,11 @@ export default function AlgorithmsPage() {
       setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
     }
   }, [selectedId])
+
+  // If the selected strategy has no NinjaTrader build, fall back to TradingView
+  useEffect(() => {
+    if (platform === 'ninjatrader' && !algo.auto.ninjatrader) setPlatform('tradingview')
+  }, [selectedId, platform, algo.auto.ninjatrader])
 
   return (
     <div style={{ background: '#0b1929', minHeight: '100vh', color: '#e8f4f8', fontFamily: '"Inter",system-ui,sans-serif' }}>
@@ -259,8 +279,12 @@ export default function AlgorithmsPage() {
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#4a6a7a', fontFamily: 'monospace', marginBottom: 10 }}>PLATFORM</div>
                   <div style={{ display: 'flex', gap: 0, border: '1px solid rgba(255,255,255,.1)', borderRadius: 10, overflow: 'hidden' }}>
-                    {([['tradingview','TradingView (Pine Script)'],['mt5','MetaTrader 5 (MQL5)']] as const).map(([p, label]) => (
-                      <button key={p} onClick={() => setPlatform(p)} style={{ padding: '11px 22px', cursor: 'pointer', border: 'none', outline: 'none', transition: 'all .2s', background: platform === p ? '#1e3250' : 'rgba(255,255,255,.03)', color: platform === p ? '#e8f4f8' : '#6a90a8', fontWeight: platform === p ? 700 : 500, fontSize: 13, borderRight: '1px solid rgba(255,255,255,.08)' }}>
+                    {(algo.auto.ninjatrader
+                      ? [['tradingview', 'TradingView'], ['mt5', 'MetaTrader 5'], ['ninjatrader', 'NinjaTrader 8']]
+                      : [['tradingview', 'TradingView (Pine Script)'], ['mt5', 'MetaTrader 5 (MQL5)']]
+                    ).map(([p, label]) => (
+                      <button key={p} onClick={() => setPlatform(p as Platform)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '11px 20px', cursor: 'pointer', border: 'none', outline: 'none', transition: 'all .2s', background: platform === p ? (p === 'ninjatrader' ? '#0b1220' : '#1e3250') : 'rgba(255,255,255,.03)', color: platform === p ? '#e8f4f8' : '#6a90a8', fontWeight: platform === p ? 700 : 500, fontSize: 13, borderRight: '1px solid rgba(255,255,255,.08)' }}>
+                        {p === 'ninjatrader' ? <NinjaMark size={15} /> : null}
                         {label}
                       </button>
                     ))}
@@ -273,8 +297,10 @@ export default function AlgorithmsPage() {
             <div style={{ marginBottom: 20, fontSize: 13, color: '#4a6a7a', padding: '10px 14px', background: 'rgba(255,255,255,.02)', borderRadius: 8, borderLeft: `3px solid ${algo.color}40` }}>
               {mode === 'auto'
                 ? platform === 'tradingview'
-                  ? '📊 Paste this into TradingView\'s Pine Script Editor. The strategy auto-executes entries and exits via TradingView\'s broker integrations or webhooks.'
-                  : '⚙️ Compile this in MetaEditor (comes with MT5). Attach the EA to your chart and enable AutoTrading. Works with any MT5 broker including FTMO\'s funded account.'
+                  ? '📊 Paste this into TradingView\'s Pine Script Editor. The strategy auto-executes via TradingView broker integrations or webhooks (webhooks need a paid TradingView plan).'
+                  : platform === 'mt5'
+                  ? '⚙️ Compile this in MetaEditor (comes with MT5). Attach the EA to your chart and enable AutoTrading. Works with any MT5 broker.'
+                  : '🥷 Compile this in NinjaTrader 8 (NinjaScript Editor → F5). Add it to an MES chart and enable it — auto-executes on your prop futures account with no TradingView, no webhook and no monthly fee.'
                 : '📡 This is an indicator (not a strategy). Add it to your chart — it displays arrows and fires alerts with exact entry, SL, and TP prices. You execute the trade manually.'}
             </div>
 
@@ -282,7 +308,7 @@ export default function AlgorithmsPage() {
             <div style={{ marginBottom: 36 }}>
               <CodeBlock
                 code={code}
-                lang={mode === 'auto' && platform === 'mt5' ? 'mql5' : 'pine'}
+                lang={mode === 'auto' ? (platform === 'mt5' ? 'mql5' : platform === 'ninjatrader' ? 'csharp' : 'pine') : 'pine'}
               />
             </div>
 

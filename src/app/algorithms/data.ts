@@ -1,5 +1,5 @@
 export type AlgoMode = 'auto' | 'signals'
-export type Platform = 'tradingview' | 'mt5'
+export type Platform = 'tradingview' | 'mt5' | 'ninjatrader'
 
 export interface Algorithm {
   id: string
@@ -18,7 +18,9 @@ export interface Algorithm {
   auto: {
     tradingview: string
     mt5: string
+    ninjatrader?: string
     steps: string[]
+    ninjaSteps?: string[]
   }
   signals: {
     tradingview: string
@@ -475,6 +477,231 @@ void OnTick() {
       }
    }
 }`,
+      ninjatrader: `// YN Finance — ICT 2022 Model | NinjaTrader 8 Strategy (MES futures)
+// Sweep -> displacement/MSS -> FVG entry in OTE. Auto-executes on your
+// connected futures account (Apex / Topstep / TradeDay via Rithmic/Tradovate).
+// No TradingView, no webhook, no monthly fee. Set the chart time zone to US Eastern.
+
+#region Using declarations
+using System;
+using System.ComponentModel.DataAnnotations;
+using NinjaTrader.Cbi;
+using NinjaTrader.Data;
+using NinjaTrader.NinjaScript;
+using NinjaTrader.NinjaScript.Indicators;
+#endregion
+
+namespace NinjaTrader.NinjaScript.Strategies
+{
+    public class YNFinanceICT2022 : Strategy
+    {
+        private bool   armed = false;
+        private int    dir = 0;
+        private double fvgTop, fvgBot, entryPx, slPx, tpPx;
+        private int    armBar = -1, sweepBarL = -1, sweepBarH = -1;
+        private double sweepLow = 0.0, sweepHigh = 0.0;
+
+        protected override void OnStateChange()
+        {
+            if (State == State.SetDefaults)
+            {
+                Name                         = "YN Finance - ICT 2022 (MES)";
+                Description                  = "ICT 2022: liquidity sweep + displacement/MSS + FVG entry in OTE.";
+                Calculate                    = Calculate.OnBarClose;
+                EntriesPerDirection          = 1;
+                EntryHandling                = EntryHandling.AllEntries;
+                IsExitOnSessionCloseStrategy = true;
+                ExitOnSessionCloseSeconds    = 30;
+                BarsRequiredToTrade          = 60;
+                IncludeCommission            = true;
+
+                Contracts   = 1;
+                IntLen      = 5;
+                LiqLookback = 20;
+                SweepWindow = 15;
+                FvgMultAtr  = 0.15;
+                SlBufAtr    = 0.15;
+                TargetR     = 2.0;
+                BiasLen     = 50;
+                UseBias     = true;
+                UseKillzone = true;
+                MinGrade    = 3;
+            }
+        }
+
+        protected override void OnBarUpdate()
+        {
+            if (CurrentBar < Math.Max(LiqLookback, BiasLen) + 5)
+                return;
+
+            double atr = ATR(14)[0];
+            if (atr <= 0) return;
+            double ema = EMA(BiasLen)[0];
+            bool biasBull = !UseBias || Close[0] > ema;
+            bool biasBear = !UseBias || Close[0] < ema;
+
+            double recLo = MIN(Low, LiqLookback)[1];
+            double recHi = MAX(High, LiqLookback)[1];
+
+            // liquidity sweeps (wick beyond a level, close back inside)
+            if (Low[0]  < recLo && Close[0] > recLo) { sweepBarL = CurrentBar; sweepLow  = Low[0];  }
+            if (High[0] > recHi && Close[0] < recHi) { sweepBarH = CurrentBar; sweepHigh = High[0]; }
+
+            // internal market structure shift (break of last IntLen-bar extreme)
+            bool mssUp = Close[0] > MAX(High, IntLen)[1];
+            bool mssDn = Close[0] < MIN(Low,  IntLen)[1];
+
+            // displacement + Fair Value Gap (3-candle imbalance)
+            bool dispBull = Low[0]  > High[2] && (Low[0] - High[2]) > atr * FvgMultAtr && Close[1] > Open[1] && mssUp;
+            bool dispBear = High[0] < Low[2]  && (Low[2] - High[0]) > atr * FvgMultAtr && Close[1] < Open[1] && mssDn;
+
+            // killzone (chart MUST be in US Eastern time)
+            TimeSpan tod = Time[0].TimeOfDay;
+            bool inAM = tod >= new TimeSpan(9,30,0) && tod <= new TimeSpan(11,0,0);
+            bool inPM = tod >= new TimeSpan(14,0,0) && tod <= new TimeSpan(15,0,0);
+            bool inKZ = !UseKillzone || inAM || inPM;
+
+            bool sweepOKL = sweepBarL >= 0 && (CurrentBar - sweepBarL) <= SweepWindow;
+            bool sweepOKS = sweepBarH >= 0 && (CurrentBar - sweepBarH) <= SweepWindow;
+
+            // ---- LONG geometry + grade (0-5) ----
+            double lTop = Low[0], lBot = High[2];
+            double lEntry = (lTop + lBot) / 2.0;
+            double lRangeLo = sweepBarL >= 0 ? sweepLow : MIN(Low, SweepWindow)[0];
+            double lRangeHi = High[0];
+            double lEq    = (lRangeHi + lRangeLo) / 2.0;
+            double lOte62 = lRangeHi - (lRangeHi - lRangeLo) * 0.62;
+            double lOte79 = lRangeHi - (lRangeHi - lRangeLo) * 0.79;
+            int gradeL = 0;
+            if ((lTop - lBot) > atr * 0.30)           gradeL++;
+            if (lBot <= lOte62 && lTop >= lOte79)     gradeL++;
+            if (lBot <  lEq)                          gradeL++;
+            if (inAM)                                 gradeL++;
+            if (Math.Abs(Close[0] - ema) > atr * 0.5) gradeL++;
+
+            // ---- SHORT geometry + grade (0-5) ----
+            double sBot = High[0], sTop = Low[2];
+            double sEntry = (sTop + sBot) / 2.0;
+            double sRangeHi = sweepBarH >= 0 ? sweepHigh : MAX(High, SweepWindow)[0];
+            double sRangeLo = Low[0];
+            double sEq    = (sRangeHi + sRangeLo) / 2.0;
+            double sOte62 = sRangeLo + (sRangeHi - sRangeLo) * 0.62;
+            double sOte79 = sRangeLo + (sRangeHi - sRangeLo) * 0.79;
+            int gradeS = 0;
+            if ((sTop - sBot) > atr * 0.30)           gradeS++;
+            if (sBot <= sOte79 && sTop >= sOte62)     gradeS++;
+            if (sTop >  sEq)                          gradeS++;
+            if (inAM)                                 gradeS++;
+            if (Math.Abs(Close[0] - ema) > atr * 0.5) gradeS++;
+
+            // ---- ARM the setup ----
+            if (!armed && Position.MarketPosition == MarketPosition.Flat)
+            {
+                if (biasBull && sweepOKL && dispBull && inKZ && gradeL >= MinGrade)
+                {
+                    double sl = lRangeLo - atr * SlBufAtr;
+                    double risk = lEntry - sl;
+                    if (risk > 0)
+                    {
+                        armed = true; dir = 1; fvgTop = lTop; fvgBot = lBot;
+                        entryPx = lEntry; slPx = sl; tpPx = lEntry + risk * TargetR; armBar = CurrentBar;
+                    }
+                }
+                else if (biasBear && sweepOKS && dispBear && inKZ && gradeS >= MinGrade)
+                {
+                    double sl = sRangeHi + atr * SlBufAtr;
+                    double risk = sl - sEntry;
+                    if (risk > 0)
+                    {
+                        armed = true; dir = -1; fvgTop = sTop; fvgBot = sBot;
+                        entryPx = sEntry; slPx = sl; tpPx = sEntry - risk * TargetR; armBar = CurrentBar;
+                    }
+                }
+            }
+
+            // ---- INVALIDATE if the FVG is violated or it goes stale ----
+            if (armed)
+            {
+                bool bad = dir == 1 ? Close[0] < fvgBot : Close[0] > fvgTop;
+                if (bad || (CurrentBar - armBar) > SweepWindow) { armed = false; dir = 0; }
+            }
+
+            // ---- CONFIRM (price returns to FVG and rejects) -> market entry + bracket ----
+            if (armed && Position.MarketPosition == MarketPosition.Flat)
+            {
+                if (dir == 1 && Low[0] <= entryPx && Close[0] > entryPx && Close[0] > Open[0])
+                {
+                    SetStopLoss("ICTLong", CalculationMode.Price, slPx, false);
+                    SetProfitTarget("ICTLong", CalculationMode.Price, tpPx);
+                    EnterLong(Contracts, "ICTLong");
+                    armed = false; dir = 0;
+                }
+                else if (dir == -1 && High[0] >= entryPx && Close[0] < entryPx && Close[0] < Open[0])
+                {
+                    SetStopLoss("ICTShort", CalculationMode.Price, slPx, false);
+                    SetProfitTarget("ICTShort", CalculationMode.Price, tpPx);
+                    EnterShort(Contracts, "ICTShort");
+                    armed = false; dir = 0;
+                }
+            }
+        }
+
+        #region Properties
+        [NinjaScriptProperty, Range(1, int.MaxValue)]
+        [Display(Name="Contracts", Description="Contracts per trade", Order=1, GroupName="1. Risk")]
+        public int Contracts { get; set; }
+
+        [NinjaScriptProperty, Range(0.1, 10.0)]
+        [Display(Name="Target (R multiple)", Order=2, GroupName="1. Risk")]
+        public double TargetR { get; set; }
+
+        [NinjaScriptProperty, Range(0.05, 2.0)]
+        [Display(Name="Stop buffer (ATR x)", Order=3, GroupName="1. Risk")]
+        public double SlBufAtr { get; set; }
+
+        [NinjaScriptProperty, Range(2, 50)]
+        [Display(Name="Internal structure length", Order=4, GroupName="2. Model")]
+        public int IntLen { get; set; }
+
+        [NinjaScriptProperty, Range(5, 100)]
+        [Display(Name="Liquidity lookback", Order=5, GroupName="2. Model")]
+        public int LiqLookback { get; set; }
+
+        [NinjaScriptProperty, Range(1, 60)]
+        [Display(Name="Sweep to entry window (bars)", Order=6, GroupName="2. Model")]
+        public int SweepWindow { get; set; }
+
+        [NinjaScriptProperty, Range(0.0, 2.0)]
+        [Display(Name="Min FVG size (ATR x)", Order=7, GroupName="2. Model")]
+        public double FvgMultAtr { get; set; }
+
+        [NinjaScriptProperty, Range(10, 400)]
+        [Display(Name="HTF bias EMA length", Order=8, GroupName="2. Model")]
+        public int BiasLen { get; set; }
+
+        [NinjaScriptProperty]
+        [Display(Name="Use bias filter", Order=9, GroupName="2. Model")]
+        public bool UseBias { get; set; }
+
+        [NinjaScriptProperty]
+        [Display(Name="Killzones only (ET)", Order=10, GroupName="2. Model")]
+        public bool UseKillzone { get; set; }
+
+        [NinjaScriptProperty, Range(0, 5)]
+        [Display(Name="Minimum grade (0-5)", Order=11, GroupName="2. Model")]
+        public int MinGrade { get; set; }
+        #endregion
+    }
+}`,
+      ninjaSteps: [
+        'Use the futures account your prop firm gives you (Apex, Topstep, TradeDay) — they provide a NinjaTrader 8 login + data feed (Rithmic or Tradovate). Install NinjaTrader 8 free from ninjatrader.com and connect.',
+        'In NinjaTrader: New → NinjaScript Editor → expand Strategies → right-click → New Strategy (skip the wizard / "Generated code"). Select all the default code, delete it, paste the strategy above, then press F5 to Compile.',
+        'Open an MES 5-minute chart. CRITICAL: set the chart time zone to US Eastern so the killzones line up — Right-click chart → Properties → Time zone = (UTC-05:00) Eastern.',
+        'Right-click the chart → Strategies → tick "YN Finance - ICT 2022 (MES)" → set Contracts (respect your prop contract limit) and Target R → set Enabled = True → Apply. It now auto-trades MES with NO TradingView, NO webhook, NO monthly fee.',
+        'How it fires: it arms on a liquidity sweep + displacement/MSS + FVG, then enters at market only when price returns into the FVG and rejects. Stop-loss and take-profit attach automatically as a bracket.',
+        'PROVE IT FIRST: right-click → Strategy Analyzer → run it on 6-12 months of MES data to see win rate, profit factor and max drawdown. Then run it on a NinjaTrader Sim101 demo account for a week to confirm live fills before risking a funded account.',
+        'CHECK YOUR PROP FIRM AUTOMATION RULES before going live — Apex/Topstep/TradeDay each have policies; some require you present at the desk. Violating them voids the account.',
+      ],
       steps: [
         'This is the full ICT 2022 model — paste into TradingView Pine Editor on a 5m or 15m chart (EURUSD, NQ, XAUUSD) → Add to chart',
         'Set HTF Bias Timeframe one or two steps up (e.g. 1H bias for a 5m chart). The engine only takes trades in that direction',
