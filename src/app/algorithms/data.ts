@@ -2768,5 +2768,516 @@ if showDash and barstate.islast
         'Tune: "Max bars since above cloud" controls how deep a pullback you accept; tighter trail locks profit sooner, wider trail rides bigger trends.',
       ]
     }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 8. ALL-DAY COMBO — ORB (NY AM) + EMA Cloud Pullback (rest of session)
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    id: 'combo',
+    instructor: 'All-Day Combo',
+    strategy: 'ORB + EMA Cloud — All-Day Trend System',
+    tagline: 'Opening Range Breakout in the NY AM, EMA-cloud pullbacks the rest of the session — one engine, one dashboard, one alert stream',
+    assets: ['Futures (MES, ES, NQ)', 'Index ETFs', 'Large-cap stocks'],
+    timeframes: ['5m', '15m'],
+    propFirms: ['Topstep', 'Apex Trader Funding', 'TradeDay'],
+    winTarget: '45–55%',
+    riskPerTrade: '0.5–1%',
+    color: '#eab308',
+    init: 'ALL',
+    overview: 'The combined system. During the NY AM window it runs the Opening Range Breakout (the morning volatility-expansion edge); the rest of the session it runs the long-only EMA Cloud Pullback (trend continuation with an ADX chop filter). It only ever holds one position at a time — ORB has priority while the AM window is open — and both engines share the same breakeven-then-trail management, the same R-based backtest dashboard, and the same alert stream. The point is full-session coverage from two edges that each work best at different times of day.',
+    propNotes: 'Built for futures prop accounts on MES/ES/NQ 5m. ORB part trades the 9:45-11:30 ET window; the EMA Cloud part covers the rest of the session (long-only, ADX-filtered so it stays flat in chop). Cap total trades/day, let the trailing stop run, and read the dashboard — it splits trade counts by source (ORB vs Cloud) so you can see which engine is actually carrying the edge on your instrument. Set the chart time zone to US Eastern.',
+    auto: {
+      tradingview: `//@version=5
+strategy("YN Finance — All-Day Combo (ORB + EMA Cloud) | Prop Edition",
+  overlay           = true,
+  max_bars_back     = 500,
+  default_qty_type  = strategy.percent_of_equity,
+  default_qty_value = 1,
+  commission_type   = strategy.commission.cash_per_contract,
+  commission_value  = 0.62,
+  slippage          = 2)
+
+tz = "America/New_York"
+// ORB
+orSess   = input.session("0930-0945", "Opening range window (ET)", group="ORB")
+orbWin   = input.session("0945-1130", "ORB trade window (ET)",     group="ORB")
+orDir    = input.string("Longs only", "ORB direction", options=["Both","Longs only","Shorts only"], group="ORB")
+orUseVol = input.bool(true,  "ORB volume filter", group="ORB")
+orVolMult= input.float(1.2,  "ORB volume multiplier", step=0.1, group="ORB")
+orUseTr  = input.bool(true,  "ORB 50-EMA trend filter", group="ORB")
+orSlMult = input.float(1.0,  "ORB stop (ATR ×)", step=0.1, group="ORB")
+// EMA Cloud
+fastLen  = input.int(20, "Fast EMA", group="EMA Cloud")
+slowLen  = input.int(50, "Slow EMA", group="EMA Cloud")
+use200   = input.bool(true, "200 EMA regime filter", group="EMA Cloud")
+useADX   = input.bool(true, "ADX chop filter", group="EMA Cloud")
+adxLen   = input.int(14, "ADX length", group="EMA Cloud")
+adxMin   = input.float(20.0, "Min ADX", step=1.0, group="EMA Cloud")
+reqRise  = input.bool(true, "Require rising 50 EMA", group="EMA Cloud")
+riseLen  = input.int(10, "Slope lookback", group="EMA Cloud")
+pullWin  = input.int(10, "Max bars since above cloud", group="EMA Cloud")
+confirmBar = input.bool(true, "Cloud confirmation candle", group="EMA Cloud")
+cloudAllDay= input.bool(false, "Allow cloud during AM too", group="EMA Cloud")
+cloudSlBuf = input.float(0.5, "Cloud stop below cloud (ATR ×)", step=0.1, group="EMA Cloud")
+// Shared
+maxTrades= input.int(3, "Max trades per day", minval=1, group="Shared")
+tp2R     = input.float(3.0, "Target (R) if trailing off", step=0.5, group="Shared")
+useTrail = input.bool(true, "Trail stop (let winners run)", group="Shared")
+beAtR    = input.float(1.0, "Breakeven at (R)", step=0.5, group="Shared")
+trailMult= input.float(2.0, "Trail distance (ATR ×)", step=0.5, group="Shared")
+
+ema20=ta.ema(close,fastLen)
+ema50=ta.ema(close,slowLen)
+ema200=ta.ema(close,200)
+atr=ta.atr(14)
+cloudTop=math.max(ema20,ema50)
+cloudBot=math.min(ema20,ema50)
+bullCloud=ema20>ema50
+
+// ORB build
+inOR=not na(time(timeframe.period, orSess, tz))
+inOrbWin=not na(time(timeframe.period, orbWin, tz))
+newDay=ta.change(time("D"))!=0
+var float orHigh=na
+var float orLow=na
+var int tradesToday=0
+if newDay
+    orHigh:=na
+    orLow:=na
+    tradesToday:=0
+if inOR
+    orHigh:=na(orHigh)?high:math.max(orHigh,high)
+    orLow:=na(orLow)?low:math.min(orLow,low)
+orReady=not inOR and not na(orHigh) and not na(orLow)
+avgVol=ta.sma(volume,20)
+orVolOK=not orUseVol or volume>avgVol*orVolMult
+orbLong = orReady and inOrbWin and ta.crossover(close,orHigh) and orVolOK and (not orUseTr or close>ema50) and orDir!="Shorts only"
+orbShort= orReady and inOrbWin and ta.crossunder(close,orLow) and orVolOK and (not orUseTr or close<ema50) and orDir!="Longs only"
+
+// EMA Cloud
+[diPlus,diMinus,adxVal]=ta.dmi(adxLen,adxLen)
+adxOK=not useADX or (adxVal>adxMin and diPlus>diMinus)
+riseOK=not reqRise or ema50>ema50[riseLen]
+regimeOK=(not use200 or close>ema200) and bullCloud and adxOK and riseOK
+aboveCloud=close>cloudTop
+var int lastAboveBar=na
+if aboveCloud
+    lastAboveBar:=bar_index
+wasExt=not na(lastAboveBar) and (bar_index-lastAboveBar)<=pullWin
+tap=low<=cloudTop and close>cloudBot
+conf=not confirmBar or (close>open and close>cloudBot)
+cloudActive=cloudAllDay or not inOrbWin
+cloudLong=regimeOK and wasExt and tap and conf and cloudActive
+
+flat=strategy.position_size==0
+canTrade=flat and tradesToday<maxTrades
+takeORBl=canTrade and orbLong
+takeORBs=canTrade and orbShort
+takeCloud=canTrade and cloudLong and not takeORBl and not takeORBs
+fire=takeORBl or takeORBs or takeCloud
+dirSel=takeORBs?-1:1
+stopSel=takeCloud?(math.min(low,cloudBot)-atr*cloudSlBuf):takeORBs?(close+atr*orSlMult):(close-atr*orSlMult)
+
+var float eEntry=na
+var float eStop=na
+var float eTgt=na
+var float trail=na
+var bool beDone=false
+
+if fire
+    risk=math.abs(close-stopSel)
+    if risk>0
+        tradesToday+=1
+        eEntry:=close
+        eStop:=stopSel
+        eTgt:=useTrail?na:(dirSel==1?close+risk*tp2R:close-risk*tp2R)
+        trail:=stopSel
+        beDone:=false
+        if dirSel==1
+            strategy.entry("Long",strategy.long)
+        else
+            strategy.entry("Short",strategy.short)
+
+if strategy.position_size>0
+    risk=eEntry-eStop
+    if useTrail and not beDone and high>=eEntry+risk*beAtR
+        beDone:=true
+        trail:=eEntry
+    if useTrail and beDone
+        trail:=math.max(trail,high-atr*trailMult)
+    stp=useTrail?trail:eStop
+    if na(eTgt)
+        strategy.exit("xL","Long",stop=stp)
+    else
+        strategy.exit("xL","Long",stop=stp,limit=eTgt)
+
+if strategy.position_size<0
+    risk=eStop-eEntry
+    if useTrail and not beDone and low<=eEntry-risk*beAtR
+        beDone:=true
+        trail:=eEntry
+    if useTrail and beDone
+        trail:=math.min(trail,low+atr*trailMult)
+    stp=useTrail?trail:eStop
+    if na(eTgt)
+        strategy.exit("xS","Short",stop=stp)
+    else
+        strategy.exit("xS","Short",stop=stp,limit=eTgt)
+
+p20=plot(ema20,"EMA20",color.new(color.teal,60))
+p50=plot(ema50,"EMA50",color.new(color.blue,60))
+fill(p20,p50,bullCloud?color.new(color.teal,88):color.new(color.red,90),title="Cloud")
+plot(ema200,"EMA200",color.new(color.orange,30),2)
+plot(orReady?orHigh:na,"OR High",color.new(color.teal,0),1,plot.style_linebr)
+plot(orReady?orLow:na,"OR Low",color.new(color.red,0),1,plot.style_linebr)
+plot(strategy.position_size!=0?trail:na,"Trail",color.new(color.orange,0),2,plot.style_linebr)
+bgcolor(inOrbWin?color.new(color.blue,94):na,title="ORB window")
+plotshape(takeORBl or (takeCloud and dirSel==1),"Long",shape.triangleup,location.belowbar,color.new(color.lime,0),size=size.small)
+plotshape(takeORBs,"Short",shape.triangledown,location.abovebar,color.new(color.red,0),size=size.small)`,
+      mt5: `// YN Finance — All-Day Combo EA (MetaTrader 5)
+// ORB in the NY AM window, EMA Cloud pullback the rest of the session.
+// One position at a time. Map OpenHour/Min to 09:30 ET in broker time.
+
+#include <Trade\\Trade.mqh>
+CTrade trade;
+
+input int    OpenHour   = 9;
+input int    OpenMin    = 30;
+input int    OR_Minutes = 15;
+input int    AMEndHour   = 11;     // ORB window ends
+input int    AMEndMin    = 30;
+input bool   ORBLongsOnly= true;
+input double ORSLMultATR  = 1.0;
+input int    FastLen   = 20;
+input int    SlowLen   = 50;
+input int    RegimeLen = 200;
+input int    ADXLen    = 14;
+input double ADXMin    = 20.0;
+input int    PullWindow= 10;
+input double CloudSLBufATR = 0.5;
+input double TargetR   = 3.0;
+input double RiskPct   = 0.5;
+input int    MaxTradesDay = 3;
+
+int fH,sH,rH,atrH,adxH;
+double orHigh=0, orLow=0;
+bool orDone=false;
+int tradesToday=0, lastDay=-1, barCount=0, lastAbove=-1;
+
+int OnInit(){
+   fH=iMA(_Symbol,_Period,FastLen,0,MODE_EMA,PRICE_CLOSE);
+   sH=iMA(_Symbol,_Period,SlowLen,0,MODE_EMA,PRICE_CLOSE);
+   rH=iMA(_Symbol,_Period,RegimeLen,0,MODE_EMA,PRICE_CLOSE);
+   atrH=iATR(_Symbol,_Period,14);
+   adxH=iADX(_Symbol,_Period,ADXLen);
+   if(fH==INVALID_HANDLE||sH==INVALID_HANDLE||rH==INVALID_HANDLE||atrH==INVALID_HANDLE||adxH==INVALID_HANDLE) return INIT_FAILED;
+   return INIT_SUCCEEDED;
+}
+void OnDeinit(const int reason){ IndicatorRelease(fH);IndicatorRelease(sH);IndicatorRelease(rH);IndicatorRelease(atrH);IndicatorRelease(adxH); }
+bool NewBar(){ static datetime t=0; datetime c=iTime(_Symbol,_Period,0); if(c!=t){t=c;return true;} return false; }
+
+void OnTick(){
+   if(!NewBar()) return;
+   MqlDateTime dt; TimeToStruct(TimeCurrent(),dt);
+   if(dt.day_of_year!=lastDay){ lastDay=dt.day_of_year; orHigh=0; orLow=0; orDone=false; tradesToday=0; }
+   barCount++;
+
+   int nowMin=dt.hour*60+dt.min, openMin=OpenHour*60+OpenMin;
+   int orEnd=openMin+OR_Minutes, amEnd=AMEndHour*60+AMEndMin;
+
+   // build OR
+   if(nowMin>=openMin && nowMin<orEnd){
+      double h=iHigh(_Symbol,_Period,1), l=iLow(_Symbol,_Period,1);
+      if(orHigh==0||h>orHigh) orHigh=h;
+      if(orLow==0||l<orLow) orLow=l;
+      return;
+   }
+   if(nowMin>=orEnd && orHigh>0) orDone=true;
+   if(PositionsTotal()>0 || tradesToday>=MaxTradesDay) return;
+
+   double f[1],s[1],r[1],a[1],adxM[1],adxP[1],adxMi[1],sPrev[1];
+   CopyBuffer(fH,0,1,1,f);CopyBuffer(sH,0,1,1,s);CopyBuffer(rH,0,1,1,r);CopyBuffer(atrH,0,1,1,a);
+   CopyBuffer(adxH,0,1,1,adxM);CopyBuffer(adxH,1,1,1,adxP);CopyBuffer(adxH,2,1,1,adxMi);
+   CopyBuffer(sH,0,1+PullWindow,1,sPrev);
+   double ema20=f[0],ema50=s[0],ema200=r[0],atr=a[0];
+   double cloudTop=MathMax(ema20,ema50),cloudBot=MathMin(ema20,ema50);
+   double c1=iClose(_Symbol,_Period,1),c2=iClose(_Symbol,_Period,2),o1=iOpen(_Symbol,_Period,1),l1=iLow(_Symbol,_Period,1);
+   double tickVal=SymbolInfoDouble(_Symbol,SYMBOL_TRADE_TICK_VALUE); if(tickVal<=0) tickVal=1.0;
+   double cash=AccountInfoDouble(ACCOUNT_BALANCE)*RiskPct/100.0;
+   double ask=SymbolInfoDouble(_Symbol,SYMBOL_ASK), bid=SymbolInfoDouble(_Symbol,SYMBOL_BID);
+   bool inAM = nowMin>=orEnd && nowMin<amEnd;
+
+   // ORB (AM window)
+   if(orDone && inAM){
+      bool bu = c2<=orHigh && c1>orHigh && c1>ema50;
+      bool bd = c2>=orLow  && c1<orLow  && c1<ema50 && !ORBLongsOnly;
+      if(bu){ double risk=atr*ORSLMultATR; double lots=NormalizeDouble(cash/((risk/_Point)*tickVal),2); lots=MathMax(0.01,MathMin(lots,20.0)); tradesToday++; trade.Buy(lots,_Symbol,ask,ask-risk,ask+risk*TargetR,"ORB Long"); return; }
+      if(bd){ double risk=atr*ORSLMultATR; double lots=NormalizeDouble(cash/((risk/_Point)*tickVal),2); lots=MathMax(0.01,MathMin(lots,20.0)); tradesToday++; trade.Sell(lots,_Symbol,bid,bid+risk,bid-risk*TargetR,"ORB Short"); return; }
+      return;
+   }
+
+   // EMA Cloud (rest of session, long only)
+   bool bullCloud=ema20>ema50;
+   bool adxOK=adxM[0]>ADXMin && adxP[0]>adxMi[0];
+   bool riseOK=ema50>sPrev[0];
+   bool regimeOK=(c1>ema200) && bullCloud && adxOK && riseOK;
+   if(c1>cloudTop) lastAbove=barCount;
+   bool wasExt=lastAbove>=0 && (barCount-lastAbove)<=PullWindow;
+   bool tap=l1<=cloudTop && c1>cloudBot;
+   bool conf=c1>o1 && c1>cloudBot;
+   if(regimeOK && wasExt && tap && conf){
+      double stop=MathMin(l1,cloudBot)-atr*CloudSLBufATR;
+      double risk=ask-stop; if(risk<=0) return;
+      double lots=NormalizeDouble(cash/((risk/_Point)*tickVal),2); lots=MathMax(0.01,MathMin(lots,20.0));
+      tradesToday++; trade.Buy(lots,_Symbol,ask,stop,ask+risk*TargetR,"Cloud Long");
+   }
+}`,
+      steps: [
+        'Paste the strategy into TradingView on MES/ES/NQ 5m → Add to chart. SET THE CHART TIME ZONE TO US EASTERN so the ORB window lines up.',
+        'It runs ORB inside the 9:45-11:30 ET window (blue shade), then switches to EMA-cloud pullbacks the rest of the day. Only one position at a time; ORB has priority in the AM.',
+        'Open the Strategy Tester → check Net Profit, Win Rate, Profit Factor, Max Drawdown. Costs + slippage are modeled.',
+        'Tune each engine independently (ORB volume/stop, Cloud ADX/slope/stop) and the shared Max trades/day + trail.',
+        'Backtest 1-2 years on your instrument before trusting it. The combo only helps if BOTH engines show edge — the signals dashboard splits results by source so you can tell.',
+        'For autotrade use the SIGNALS version + a bridge, or the NinjaTrader pattern. Verify prop-firm automation rules first.',
+      ]
+    },
+    signals: {
+      tradingview: `//@version=5
+indicator("YN Finance — All-Day Combo PRO (ORB + EMA Cloud)", overlay=true,
+  max_bars_back=1000, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+
+tz = "America/New_York"
+// ① ORB
+orSess   = input.session("0930-0945", "Opening range window (ET)", group="① ORB")
+orbWin   = input.session("0945-1130", "ORB trade window (ET)",     group="① ORB")
+orDir    = input.string("Longs only", "ORB direction", options=["Both","Longs only","Shorts only"], group="① ORB")
+orUseVol = input.bool(true,  "ORB volume filter", group="① ORB")
+orVolMult= input.float(1.2,  "ORB volume multiplier", step=0.1, group="① ORB")
+orUseTr  = input.bool(true,  "ORB 50-EMA trend filter", group="① ORB")
+orSlMult = input.float(1.0,  "ORB stop (ATR ×)", step=0.1, group="① ORB")
+// ② EMA CLOUD
+fastLen  = input.int(20, "Fast EMA", group="② EMA Cloud")
+slowLen  = input.int(50, "Slow EMA", group="② EMA Cloud")
+use200   = input.bool(true, "200 EMA regime filter", group="② EMA Cloud")
+useADX   = input.bool(true, "ADX chop filter", group="② EMA Cloud")
+adxLen   = input.int(14, "ADX length", group="② EMA Cloud")
+adxMin   = input.float(20.0, "Min ADX", step=1.0, group="② EMA Cloud")
+reqRise  = input.bool(true, "Require rising 50 EMA", group="② EMA Cloud")
+riseLen  = input.int(10, "Slope lookback", group="② EMA Cloud")
+pullWin  = input.int(10, "Max bars since above cloud", group="② EMA Cloud")
+confirmBar = input.bool(true, "Cloud confirmation candle", group="② EMA Cloud")
+cloudAllDay= input.bool(false, "Allow cloud during AM too", group="② EMA Cloud")
+cloudSlBuf = input.float(0.5, "Cloud stop below cloud (ATR ×)", step=0.1, group="② EMA Cloud")
+// ③ SHARED RISK
+maxTrades= input.int(3, "Max trades per day", minval=1, group="③ Shared")
+tp2R     = input.float(3.0, "Target (R) if trailing off", step=0.5, group="③ Shared")
+// ④ TRADE MANAGEMENT
+useTrail   = input.bool(true, "Trail stop (let winners run)", group="④ Trade Management")
+beAtR      = input.float(1.0, "Breakeven at (R)", step=0.5, group="④ Trade Management")
+trailMult  = input.float(2.0, "Trail distance (ATR ×)", step=0.5, group="④ Trade Management")
+trailStep  = input.int(4, "Min trail move to re-alert (ticks)", group="④ Trade Management")
+mgmtAlerts = input.bool(true, "Fire management alerts", group="④ Trade Management")
+// ⑤ ALERTS
+alertFmt  = input.string("Readable", "Alert / webhook format", options=["Readable","JSON - Generic","JSON - TradersPost"], group="⑤ Alerts / Autotrade")
+brokerSym = input.string("", "Broker symbol override", group="⑤ Alerts / Autotrade")
+contracts = input.int(1, "Contracts per signal", minval=1, group="⑤ Alerts / Autotrade")
+// ⑥ VISUALS
+showTrade = input.bool(true, "Show trade box", group="⑥ Visuals")
+tradeBars = input.int(24, "Trade box width (bars)", group="⑥ Visuals")
+showDash  = input.bool(true, "Show dashboard + stats", group="⑥ Visuals")
+
+ema20=ta.ema(close,fastLen)
+ema50=ta.ema(close,slowLen)
+ema200=ta.ema(close,200)
+atr=ta.atr(14)
+cloudTop=math.max(ema20,ema50)
+cloudBot=math.min(ema20,ema50)
+bullCloud=ema20>ema50
+
+// ===== ORB =====
+inOR=not na(time(timeframe.period, orSess, tz))
+inOrbWin=not na(time(timeframe.period, orbWin, tz))
+newDay=ta.change(time("D"))!=0
+var float orHigh=na
+var float orLow=na
+var int tradesToday=0
+if newDay
+    orHigh:=na
+    orLow:=na
+    tradesToday:=0
+if inOR
+    orHigh:=na(orHigh)?high:math.max(orHigh,high)
+    orLow:=na(orLow)?low:math.min(orLow,low)
+orReady=not inOR and not na(orHigh) and not na(orLow)
+avgVol=ta.sma(volume,20)
+orVolOK=not orUseVol or volume>avgVol*orVolMult
+orbLong = orReady and inOrbWin and ta.crossover(close,orHigh) and orVolOK and (not orUseTr or close>ema50) and orDir!="Shorts only"
+orbShort= orReady and inOrbWin and ta.crossunder(close,orLow) and orVolOK and (not orUseTr or close<ema50) and orDir!="Longs only"
+
+// ===== EMA CLOUD =====
+[diPlus,diMinus,adxVal]=ta.dmi(adxLen,adxLen)
+adxOK=not useADX or (adxVal>adxMin and diPlus>diMinus)
+riseOK=not reqRise or ema50>ema50[riseLen]
+regimeOK=(not use200 or close>ema200) and bullCloud and adxOK and riseOK
+aboveCloud=close>cloudTop
+var int lastAboveBar=na
+if aboveCloud
+    lastAboveBar:=bar_index
+wasExt=not na(lastAboveBar) and (bar_index-lastAboveBar)<=pullWin
+tap=low<=cloudTop and close>cloudBot
+conf=not confirmBar or (close>open and close>cloudBot)
+cloudActive=cloudAllDay or not inOrbWin
+cloudLong=regimeOK and wasExt and tap and conf and cloudActive
+
+// ===== ROUTER (one position; ORB priority in AM) =====
+var bool  tOpen=false
+var int   tDir=0
+var string tSrc=""
+var float tEntry=na
+var float tRisk=na
+var float tT=na
+var float tTrail=na
+var float tExtreme=na
+var float tLastTrailAlert=na
+var bool  tBE=false
+var int   wins=0
+var int   losses=0
+var float sumWinR=0.0
+var float sumLossR=0.0
+var int   consecLoss=0
+var int   maxLossStreak=0
+var int   orbN=0
+var int   cloudN=0
+
+canTrade=not tOpen and tradesToday<maxTrades and barstate.isconfirmed
+takeORBl=canTrade and orbLong
+takeORBs=canTrade and orbShort
+takeCloud=canTrade and cloudLong and not takeORBl and not takeORBs
+fire=takeORBl or takeORBs or takeCloud
+dirSel=takeORBs?-1:1
+srcSel=takeCloud?"CLOUD":"ORB"
+stopSel=takeCloud?(math.min(low,cloudBot)-atr*cloudSlBuf):takeORBs?(close+atr*orSlMult):(close-atr*orSlMult)
+
+if fire
+    risk=math.abs(close-stopSel)
+    if risk>0
+        tradesToday+=1
+        tOpen:=true
+        tDir:=dirSel
+        tSrc:=srcSel
+        tEntry:=close
+        tRisk:=risk
+        tT:=useTrail?na:(dirSel==1?close+risk*tp2R:close-risk*tp2R)
+        tTrail:=stopSel
+        tExtreme:=dirSel==1?high:low
+        tLastTrailAlert:=stopSel
+        tBE:=false
+        if srcSel=="ORB"
+            orbN+=1
+        else
+            cloudN+=1
+        tpv=dirSel==1?close+risk*tp2R:close-risk*tp2R
+        bxR=bar_index+tradeBars
+        if showTrade
+            if dirSel==1
+                box.new(bar_index,tpv,bxR,close,border_color=color.new(color.green,55),bgcolor=color.new(color.green,82))
+                box.new(bar_index,close,bxR,stopSel,border_color=color.new(color.red,55),bgcolor=color.new(color.red,85))
+            else
+                box.new(bar_index,close,bxR,tpv,border_color=color.new(color.green,55),bgcolor=color.new(color.green,82))
+                box.new(bar_index,stopSel,bxR,close,border_color=color.new(color.red,55),bgcolor=color.new(color.red,85))
+            label.new(bar_index,stopSel,srcSel+(dirSel==1?" LONG @ ":" SHORT @ ")+str.tostring(close,"#.#####"),style=dirSel==1?label.style_label_up:label.style_label_down,color=color.new(#eab308,12),textcolor=color.white,size=size.small)
+        sym=brokerSym==""?syminfo.ticker:brokerSym
+        side=dirSel==1?"long":"short"
+        act=dirSel==1?"buy":"sell"
+        jX='{"symbol":"'+sym+'","side":"'+side+'","action":"'+act+'","qty":'+str.tostring(contracts)+',"entry":'+str.tostring(close,"#.#####")+',"sl":'+str.tostring(stopSel,"#.#####")+',"tp":'+str.tostring(tpv,"#.#####")+',"source":"'+srcSel+'"}'
+        tpJ='{"ticker":"'+sym+'","action":"'+act+'","quantity":'+str.tostring(contracts)+',"stopLoss":{"type":"stop","stopPrice":'+str.tostring(stopSel,"#.#####")+'},"takeProfit":{"limitPrice":'+str.tostring(tpv,"#.#####")+'}}'
+        rT=srcSel+" "+(dirSel==1?"LONG":"SHORT")+" | "+sym+" "+timeframe.period+" | Entry "+str.tostring(close,"#.#####")+" | SL "+str.tostring(stopSel,"#.#####")+" | Target "+str.tostring(tpv,"#.#####")+" | then trail"
+        alert(alertFmt=="JSON - TradersPost"?tpJ:alertFmt=="JSON - Generic"?jX:rT, alert.freq_once_per_bar_close)
+
+// ===== MANAGEMENT + OUTCOME =====
+if tOpen
+    exitStop=tDir==1?low<=tTrail:high>=tTrail
+    exitTgt=not na(tT) and (tDir==1?high>=tT:low<=tT)
+    if exitStop or exitTgt
+        exitPx=exitStop?tTrail:tT
+        realR=tDir==1?(exitPx-tEntry)/tRisk:(tEntry-exitPx)/tRisk
+        tOpen:=false
+        if realR>0
+            wins+=1
+            sumWinR+=realR
+            consecLoss:=0
+        else
+            losses+=1
+            sumLossR+=math.abs(realR)
+            consecLoss+=1
+            maxLossStreak:=math.max(maxLossStreak,consecLoss)
+        if mgmtAlerts and barstate.isconfirmed
+            alert(tSrc+" "+(tDir==1?"LONG":"SHORT")+" | "+syminfo.ticker+" — CLOSE @ "+str.tostring(exitPx,"#.#####")+"  ("+str.tostring(realR,"#.##")+"R)", alert.freq_once_per_bar_close)
+    else
+        tExtreme:=tDir==1?math.max(tExtreme,high):math.min(tExtreme,low)
+        reachedBE=tDir==1?high>=tEntry+tRisk*beAtR:low<=tEntry-tRisk*beAtR
+        if useTrail and not tBE and reachedBE
+            tBE:=true
+            tTrail:=tEntry
+            if mgmtAlerts and barstate.isconfirmed
+                alert(tSrc+" "+(tDir==1?"LONG":"SHORT")+" | "+syminfo.ticker+" — move STOP to BREAKEVEN "+str.tostring(tEntry,"#.#####"), alert.freq_once_per_bar_close)
+        if useTrail and tBE
+            cand=tDir==1?tExtreme-atr*trailMult:tExtreme+atr*trailMult
+            tTrail:=tDir==1?math.max(tTrail,cand):math.min(tTrail,cand)
+            moved=tDir==1?(tTrail-tLastTrailAlert)>=syminfo.mintick*trailStep:(tLastTrailAlert-tTrail)>=syminfo.mintick*trailStep
+            if mgmtAlerts and moved and barstate.isconfirmed
+                tLastTrailAlert:=tTrail
+                alert(tSrc+" "+(tDir==1?"LONG":"SHORT")+" | "+syminfo.ticker+" — trail STOP to "+str.tostring(tTrail,"#.#####"), alert.freq_once_per_bar_close)
+
+// ===== PLOT =====
+p20=plot(ema20,"EMA20",color.new(color.teal,60))
+p50=plot(ema50,"EMA50",color.new(color.blue,60))
+fill(p20,p50,bullCloud?color.new(color.teal,88):color.new(color.red,90),title="Cloud")
+plot(ema200,"EMA200",color.new(color.orange,30),2)
+plot(orReady?orHigh:na,"OR High",color.new(color.teal,0),1,plot.style_linebr)
+plot(orReady?orLow:na,"OR Low",color.new(color.red,0),1,plot.style_linebr)
+plot(tOpen?tTrail:na,"Trailing Stop",color.new(color.orange,0),2,plot.style_linebr)
+bgcolor(inOrbWin?color.new(color.blue,94):na,title="ORB window")
+plotshape(takeORBl or (takeCloud and dirSel==1),"Long",shape.triangleup,location.belowbar,color.new(color.lime,0),size=size.normal)
+plotshape(takeORBs,"Short",shape.triangledown,location.abovebar,color.new(color.red,0),size=size.normal)
+
+// ===== DASHBOARD =====
+if showDash and barstate.islast
+    total=wins+losses
+    winRate=total>0?wins/total*100:0.0
+    pf=sumLossR>0?sumWinR/sumLossR:(sumWinR>0?99.9:0.0)
+    expR=total>0?(sumWinR-sumLossR)/total:0.0
+    var table d=table.new(position.bottom_right,2,10,bgcolor=color.new(color.black,12),frame_color=color.new(#eab308,50),frame_width=2,border_color=color.new(color.gray,70),border_width=1)
+    table.cell(d,0,0,"YN ALL-DAY COMBO",text_color=color.new(#eab308,0),bgcolor=color.new(#eab308,85),text_size=size.small)
+    table.cell(d,1,0,inOrbWin?"ORB AM":"CLOUD",text_color=color.new(#eab308,0),bgcolor=color.new(#eab308,85),text_size=size.small)
+    table.cell(d,0,1,"Cloud / ADX",text_color=color.gray,text_size=size.small)
+    table.cell(d,1,1,(bullCloud?"Bull":"Bear")+" · ADX "+str.tostring(adxVal,"#"),text_color=adxOK?color.lime:color.orange,text_size=size.small)
+    table.cell(d,0,2,"Status",text_color=color.gray,text_size=size.small)
+    table.cell(d,1,2,tOpen?(tSrc+" "+(tDir==1?"LONG":"SHORT")+" — stop "+str.tostring(tTrail,"#.##")):"Scanning",text_color=tOpen?color.aqua:color.gray,text_size=size.small)
+    table.cell(d,0,3,"Trades today",text_color=color.gray,text_size=size.small)
+    table.cell(d,1,3,str.tostring(tradesToday)+" / "+str.tostring(maxTrades),text_color=color.white,text_size=size.small)
+    table.cell(d,0,4,"ORB / Cloud",text_color=color.gray,text_size=size.small)
+    table.cell(d,1,4,str.tostring(orbN)+" / "+str.tostring(cloudN),text_color=color.white,text_size=size.small)
+    table.cell(d,0,5,"── Backtest ──",text_color=color.new(#eab308,0),text_size=size.tiny)
+    table.cell(d,1,5,str.tostring(total)+" trades",text_color=color.white,text_size=size.tiny)
+    table.cell(d,0,6,"Win Rate",text_color=color.gray,text_size=size.small)
+    table.cell(d,1,6,str.tostring(winRate,"#.#")+"%",text_color=winRate>=50?color.lime:color.orange,text_size=size.small)
+    table.cell(d,0,7,"Profit Factor",text_color=color.gray,text_size=size.small)
+    table.cell(d,1,7,str.tostring(pf,"#.##"),text_color=pf>=1.5?color.lime:pf>=1?color.orange:color.red,text_size=size.small)
+    table.cell(d,0,8,"Expectancy",text_color=color.gray,text_size=size.small)
+    table.cell(d,1,8,str.tostring(expR,"#.##")+" R/trade",text_color=expR>0?color.lime:color.red,text_size=size.small)
+    table.cell(d,0,9,"Max Loss Streak",text_color=color.gray,text_size=size.small)
+    table.cell(d,1,9,str.tostring(maxLossStreak),text_color=color.white,text_size=size.small)`,
+      steps: [
+        'Add to MES/ES/NQ 5m and SET THE CHART TIME ZONE TO US EASTERN. The blue shade is the ORB window (9:45-11:30 ET); outside it the system hunts EMA-cloud pullbacks.',
+        'One position at a time. In the AM, ORB has priority; the rest of the session it is long-only EMA-cloud continuation (ADX-filtered so it stays out of chop).',
+        'Every alert is tagged with its source (ORB or CLOUD) and carries entry, stop, target, then the breakeven/trail management alerts — set the alert to "Any alert() function call", Once Per Bar Close.',
+        'The dashboard splits trade counts ORB vs Cloud AND shows combined win rate / profit factor / expectancy — so you can see which engine is actually carrying the edge on your instrument.',
+        'Tune each engine separately (ORB volume + stop; Cloud ADX + slope + stop) and the shared Max trades/day + trail. Default ORB is Longs-only to match an index long-bias; switch to Both if you want shorts in the AM.',
+        'Backtest each engine ALONE first (set the other off — e.g. ORB direction to a session with no cloud, or cloudAllDay off), confirm each has edge, THEN run combined. A combo of two weak edges is still weak.',
+        'Honest check: if the dashboard shows most profit from one source only, just trade that one. The combo is for coverage, not for hiding a dead engine inside a live one.',
+      ]
+    }
   }
 ]
