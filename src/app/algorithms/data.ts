@@ -1994,5 +1994,418 @@ hline(0, "Zero", color.new(color.gray, 70))`,
         'Combine with any other YN Finance signal indicator for a complete institutional-grade trading system',
       ]
     }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 6. OPENING RANGE BREAKOUT — evidence-based intraday edge
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    id: 'orb',
+    instructor: 'Opening Range Breakout',
+    strategy: 'NY Opening Range Breakout — Volatility Expansion',
+    tagline: 'The intraday strategy with real documented edge: trade the break of the first 15-minute range after the NY open, then trail the winner',
+    assets: ['Futures (MES, ES, NQ)', 'Index ETFs (SPY, QQQ)'],
+    timeframes: ['1m', '5m'],
+    propFirms: ['Topstep', 'Apex Trader Funding', 'TradeDay'],
+    winTarget: '40–50%',
+    riskPerTrade: '0.5–1%',
+    color: '#22c55e',
+    init: 'ORB',
+    overview: 'Opening Range Breakout is one of the few intraday approaches with documented, repeatable edge on index futures. It marks the high/low of the first 15 minutes after the 9:30 ET open — where the day\'s volume and volatility cluster — then enters on a clean break of that range in the trend direction with a volume filter. The stop is ATR-based and the winner is trailed, so a handful of big momentum days carry the month. Lower win rate, larger average winner: the opposite profile of a scalper, and the reason it survives costs.',
+    propNotes: 'Built for futures prop accounts. By default it only trades the NY AM window (9:45-11:30 ET) — the highest-edge period — but you can switch it to any session. Cap it at 1-2 trades/day and LET THE TRAILING STOP RUN; ORB profit comes from the occasional 3-6R trend day, so cutting winners early kills the edge. Best on MES/ES/NQ 1m or 5m. Set your chart time zone to US Eastern.',
+    auto: {
+      tradingview: `//@version=5
+strategy("YN Finance — Opening Range Breakout | Prop Edition",
+  overlay           = true,
+  max_bars_back     = 500,
+  default_qty_type  = strategy.percent_of_equity,
+  default_qty_value = 1,
+  commission_type   = strategy.commission.cash_per_contract,
+  commission_value  = 0.62,
+  slippage          = 2)
+
+orSess   = input.session("0930-0945", "Opening range window (ET)", group="Opening Range")
+useKZ    = input.bool(true,  "Only trade NY AM window",  group="Filters")
+kzSess   = input.session("0945-1130", "Trade window (ET)", group="Filters")
+dirMode  = input.string("Both", "Direction", options=["Both","Longs only","Shorts only"], group="Filters")
+useTrend = input.bool(true,  "EMA trend filter", group="Filters")
+emaLen   = input.int(50,     "Trend EMA length", group="Filters")
+useVol   = input.bool(true,  "Volume above average", group="Filters")
+volMult  = input.float(1.2,  "Volume multiplier", step=0.1, group="Filters")
+maxTrades= input.int(2,      "Max trades per day", minval=1, group="Filters")
+slMult   = input.float(1.0,  "Stop (ATR ×)", step=0.1, group="Risk")
+tp2R     = input.float(3.0,  "Target (R) if trailing off", step=0.5, group="Risk")
+useTrail = input.bool(true,  "Trail stop (let winners run)", group="Risk")
+beAtR    = input.float(1.0,  "Move to breakeven at (R)", step=0.5, group="Risk")
+trailMult= input.float(2.0,  "Trail distance (ATR ×)", step=0.5, group="Risk")
+
+atr = ta.atr(14)
+ema = ta.ema(close, emaLen)
+tz  = "America/New_York"
+inOR = not na(time(timeframe.period, orSess, tz))
+inKZ = not useKZ or not na(time(timeframe.period, kzSess, tz))
+newDay = ta.change(time("D")) != 0
+var float orHigh = na
+var float orLow  = na
+var int   tradesToday = 0
+if newDay
+    orHigh := na
+    orLow  := na
+    tradesToday := 0
+if inOR
+    orHigh := na(orHigh) ? high : math.max(orHigh, high)
+    orLow  := na(orLow)  ? low  : math.min(orLow,  low)
+orReady = not inOR and not na(orHigh) and not na(orLow)
+avgVol = ta.sma(volume, 20)
+volOK  = not useVol or volume > avgVol * volMult
+allowLong  = dirMode != "Shorts only"
+allowShort = dirMode != "Longs only"
+breakUp = orReady and inKZ and ta.crossover(close, orHigh) and volOK and (not useTrend or close > ema) and allowLong
+breakDn = orReady and inKZ and ta.crossunder(close, orLow)  and volOK and (not useTrend or close < ema) and allowShort
+
+flat = strategy.position_size == 0
+canTrade = flat and tradesToday < maxTrades
+
+var float eEntry = na
+var float eStop  = na
+var float eTgt   = na
+var bool  beDone = false
+var float trail  = na
+
+if canTrade and breakUp
+    tradesToday += 1
+    eEntry := close
+    eStop  := close - atr * slMult
+    eTgt   := useTrail ? na : close + atr * slMult * tp2R
+    trail  := close - atr * slMult
+    beDone := false
+    strategy.entry("Long", strategy.long)
+
+if canTrade and breakDn
+    tradesToday += 1
+    eEntry := close
+    eStop  := close + atr * slMult
+    eTgt   := useTrail ? na : close - atr * slMult * tp2R
+    trail  := close + atr * slMult
+    beDone := false
+    strategy.entry("Short", strategy.short)
+
+if strategy.position_size > 0
+    risk = eEntry - eStop
+    if useTrail and not beDone and high >= eEntry + risk * beAtR
+        beDone := true
+        trail := eEntry
+    if useTrail and beDone
+        trail := math.max(trail, high - atr * trailMult)
+    stp = useTrail ? trail : eStop
+    if na(eTgt)
+        strategy.exit("xL", "Long", stop=stp)
+    else
+        strategy.exit("xL", "Long", stop=stp, limit=eTgt)
+
+if strategy.position_size < 0
+    risk = eStop - eEntry
+    if useTrail and not beDone and low <= eEntry - risk * beAtR
+        beDone := true
+        trail := eEntry
+    if useTrail and beDone
+        trail := math.min(trail, low + atr * trailMult)
+    stp = useTrail ? trail : eStop
+    if na(eTgt)
+        strategy.exit("xS", "Short", stop=stp)
+    else
+        strategy.exit("xS", "Short", stop=stp, limit=eTgt)
+
+plot(orReady ? orHigh : na, "OR High", color.new(color.teal,0), 1, plot.style_linebr)
+plot(orReady ? orLow  : na, "OR Low",  color.new(color.red,0),  1, plot.style_linebr)
+plot(ema, "Trend EMA", color.new(color.gray,55), 1)
+plot(strategy.position_size != 0 ? trail : na, "Trailing Stop", color.new(color.orange,0), 2, plot.style_linebr)
+bgcolor(inOR ? color.new(color.blue, 92) : na, title="Opening Range")
+plotshape(breakUp, "Long",  shape.triangleup,   location.belowbar, color.new(color.lime,0), size=size.small)
+plotshape(breakDn, "Short", shape.triangledown, location.abovebar, color.new(color.red,0),  size=size.small)`,
+      mt5: `// YN Finance — Opening Range Breakout EA (MetaTrader 5)
+// Marks the first OR_Minutes after the open, trades the breakout with an
+// ATR stop + fixed R target. Map OpenHour/OpenMin to 09:30 ET in broker time.
+
+#include <Trade\\Trade.mqh>
+CTrade trade;
+
+input int    OR_Minutes  = 15;   // opening range length (minutes)
+input int    OpenHour    = 9;    // session open hour (broker time)
+input int    OpenMin     = 30;   // session open minute
+input int    CloseHour   = 11;   // stop taking new trades after this time
+input int    CloseMin    = 30;
+input double SLMultATR    = 1.0;  // stop = ATR x
+input double TargetR      = 3.0;  // take-profit in R
+input double RiskPct      = 0.5;  // risk % per trade
+input int    MaxTradesDay = 2;
+
+int    atrH;
+double orHigh = 0.0, orLow = 0.0;
+bool   orDone = false;
+int    tradesToday = 0, lastDay = -1;
+
+int OnInit() { atrH = iATR(_Symbol, PERIOD_CURRENT, 14); if(atrH==INVALID_HANDLE) return INIT_FAILED; return INIT_SUCCEEDED; }
+void OnDeinit(const int reason) { IndicatorRelease(atrH); }
+bool NewBar() { static datetime t=0; datetime c=iTime(_Symbol,PERIOD_CURRENT,0); if(c!=t){t=c;return true;} return false; }
+
+void OnTick() {
+   if(!NewBar()) return;
+   MqlDateTime dt; TimeToStruct(TimeCurrent(), dt);
+   if(dt.day_of_year != lastDay) { lastDay=dt.day_of_year; orHigh=0; orLow=0; orDone=false; tradesToday=0; }
+
+   int nowMin   = dt.hour*60 + dt.min;
+   int openMin  = OpenHour*60 + OpenMin;
+   int orEndMin = openMin + OR_Minutes;
+   int closeMin = CloseHour*60 + CloseMin;
+
+   // build the opening range from closed bars
+   if(nowMin >= openMin && nowMin < orEndMin) {
+      double h=iHigh(_Symbol,PERIOD_CURRENT,1), l=iLow(_Symbol,PERIOD_CURRENT,1);
+      if(orHigh==0 || h>orHigh) orHigh=h;
+      if(orLow==0  || l<orLow ) orLow=l;
+      return;
+   }
+   if(nowMin >= orEndMin && orHigh>0) orDone=true;
+   if(!orDone || nowMin >= closeMin) return;
+   if(PositionsTotal()>0 || tradesToday >= MaxTradesDay) return;
+
+   double atr[1]; CopyBuffer(atrH,0,0,1,atr);
+   double c1=iClose(_Symbol,PERIOD_CURRENT,1), c2=iClose(_Symbol,PERIOD_CURRENT,2);
+   bool breakUp = c2 <= orHigh && c1 > orHigh;
+   bool breakDn = c2 >= orLow  && c1 < orLow;
+
+   double risk    = atr[0]*SLMultATR;
+   double tickVal = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE); if(tickVal<=0) tickVal=1.0;
+   double cash    = AccountInfoDouble(ACCOUNT_BALANCE)*RiskPct/100.0;
+   double lots    = NormalizeDouble(cash/((risk/_Point)*tickVal), 2); lots=MathMax(0.01, MathMin(lots,20.0));
+   double ask=SymbolInfoDouble(_Symbol,SYMBOL_ASK), bid=SymbolInfoDouble(_Symbol,SYMBOL_BID);
+
+   if(breakUp) { tradesToday++; trade.Buy (lots,_Symbol,ask, ask-risk, ask+risk*TargetR, "ORB Long"); }
+   if(breakDn) { tradesToday++; trade.Sell(lots,_Symbol,bid, bid+risk, bid-risk*TargetR, "ORB Short"); }
+}`,
+      steps: [
+        'Paste into TradingView Pine Editor on an MES/ES/NQ 1m or 5m chart → Add to chart. SET THE CHART TIME ZONE TO US EASTERN so the 9:30 open lines up.',
+        'It auto-marks the opening range (blue shade), then enters on the breakout with a volume + EMA-trend filter, ATR stop, and a trailing stop that lets winners run.',
+        'Open the Strategy Tester (bottom panel) → check Net Profit, Win Rate, Profit Factor and Max Drawdown — commissions + slippage are already modeled for futures realism.',
+        'Tune: OR length (0930-0945 = 15m, 0930-0935 = 5m for more trades), Max trades/day, Stop ATR ×, Trail ATR ×. "Longs only" often improves index results (equity drift).',
+        'For auto-execution use the SIGNALS version + a bridge (free TradingView has no webhooks), or run the NinjaTrader equivalent. Verify prop-firm automation rules first.',
+        'Backtest across 1-2 years and several symbols before trusting it. ORB has documented edge but still must be validated on YOUR instrument and session.',
+      ]
+    },
+    signals: {
+      tradingview: `//@version=5
+indicator("YN Finance — Opening Range Breakout PRO | Trailed Signals", overlay=true,
+  max_bars_back=1000, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+
+// ① OPENING RANGE
+orSess = input.session("0930-0945", "Opening range window (ET)", group="① Opening Range")
+
+// ② FILTERS
+useKZ    = input.bool(true,  "Only trade NY AM window (preferred)", group="② Filters")
+kzSess   = input.session("0945-1130", "Trade window (ET)", group="② Filters")
+dirMode  = input.string("Both", "Direction", options=["Both","Longs only","Shorts only"], group="② Filters")
+useTrend = input.bool(true,  "EMA trend filter", group="② Filters")
+emaLen   = input.int(50,     "Trend EMA length", group="② Filters")
+useVol   = input.bool(true,  "Volume above average", group="② Filters")
+volMult  = input.float(1.2,  "Volume multiplier", step=0.1, group="② Filters")
+maxTrades= input.int(2,      "Max trades per day", minval=1, group="② Filters")
+
+// ③ RISK / TARGET
+slMult = input.float(1.0, "Stop (ATR ×)", step=0.1, group="③ Risk")
+tp2R   = input.float(3.0, "Target (R) if trailing off", step=0.5, group="③ Risk")
+
+// ④ TRADE MANAGEMENT
+useTrail   = input.bool(true, "Trail stop (let winners run)", group="④ Trade Management")
+beAtR      = input.float(1.0, "Move to breakeven at (R)", step=0.5, group="④ Trade Management")
+trailMult  = input.float(2.0, "Trail distance (ATR ×)", step=0.5, group="④ Trade Management")
+trailStep  = input.int(4,     "Min trail move to re-alert (ticks)", group="④ Trade Management")
+mgmtAlerts = input.bool(true, "Fire management alerts (BE / trail / exit)", group="④ Trade Management")
+
+// ⑤ ALERTS / AUTOTRADE
+alertFmt  = input.string("Readable", "Alert / webhook format", options=["Readable","JSON - Generic","JSON - TradersPost"], group="⑤ Alerts / Autotrade")
+brokerSym = input.string("", "Broker symbol override (blank = chart)", group="⑤ Alerts / Autotrade")
+contracts = input.int(1, "Contracts per signal", minval=1, group="⑤ Alerts / Autotrade")
+
+// ⑥ VISUALS
+showOR    = input.bool(true, "Show opening range", group="⑥ Visuals")
+showTrade = input.bool(true, "Show trade box (entry / TP / SL)", group="⑥ Visuals")
+tradeBars = input.int(24, "Trade box width (bars)", group="⑥ Visuals")
+showDash  = input.bool(true, "Show dashboard + stats", group="⑥ Visuals")
+
+atr = ta.atr(14)
+ema = ta.ema(close, emaLen)
+tz  = "America/New_York"
+
+// ===== OPENING RANGE =====
+inOR  = not na(time(timeframe.period, orSess, tz))
+inKZ  = not useKZ or not na(time(timeframe.period, kzSess, tz))
+newDay = ta.change(time("D")) != 0
+var float orHigh = na
+var float orLow  = na
+var int   tradesToday = 0
+if newDay
+    orHigh := na
+    orLow  := na
+    tradesToday := 0
+if inOR
+    orHigh := na(orHigh) ? high : math.max(orHigh, high)
+    orLow  := na(orLow)  ? low  : math.min(orLow,  low)
+orReady = not inOR and not na(orHigh) and not na(orLow)
+
+// ===== FILTERS + BREAKOUT =====
+avgVol = ta.sma(volume, 20)
+volOK  = not useVol or volume > avgVol * volMult
+allowLong  = dirMode != "Shorts only"
+allowShort = dirMode != "Longs only"
+breakUp = orReady and inKZ and ta.crossover(close, orHigh) and volOK and (not useTrend or close > ema) and allowLong
+breakDn = orReady and inKZ and ta.crossunder(close, orLow)  and volOK and (not useTrend or close < ema) and allowShort
+
+// ===== TRADE STATE + TRAILING =====
+var bool  tOpen = false
+var int   tDir  = 0
+var float tEntry = na
+var float tRisk  = na
+var float tT = na
+var float tTrail = na
+var float tExtreme = na
+var float tLastTrailAlert = na
+var bool  tBE = false
+var int   wins = 0
+var int   losses = 0
+var float sumWinR = 0.0
+var float sumLossR = 0.0
+var int   consecLoss = 0
+var int   maxLossStreak = 0
+
+canTrade = not tOpen and tradesToday < maxTrades and barstate.isconfirmed
+fireLong  = canTrade and breakUp
+fireShort = canTrade and breakDn
+
+if fireLong
+    tradesToday += 1
+    tOpen := true
+    tDir := 1
+    tEntry := close
+    tRisk := atr * slMult
+    tT := useTrail ? na : close + atr * slMult * tp2R
+    tTrail := close - atr * slMult
+    tExtreme := high
+    tLastTrailAlert := close - atr * slMult
+    tBE := false
+    sym = brokerSym == "" ? syminfo.ticker : brokerSym
+    slv = close - atr * slMult
+    tpv = close + atr * slMult * tp2R
+    bxR = bar_index + tradeBars
+    if showTrade
+        box.new(bar_index, tpv, bxR, close, border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
+        box.new(bar_index, close, bxR, slv, border_color=color.new(color.red,55), bgcolor=color.new(color.red,85))
+        label.new(bar_index, slv, "ORB LONG @ " + str.tostring(close,"#.#####") + "\\nBreak of opening-range high with volume — trail the runner.", style=label.style_label_up, color=color.new(#22c55e,12), textcolor=color.white, size=size.small)
+    jL  = '{"symbol":"' + sym + '","side":"long","action":"buy","qty":' + str.tostring(contracts) + ',"entry":' + str.tostring(close,"#.#####") + ',"sl":' + str.tostring(slv,"#.#####") + ',"tp":' + str.tostring(tpv,"#.#####") + '}'
+    tpJ = '{"ticker":"' + sym + '","action":"buy","quantity":' + str.tostring(contracts) + ',"stopLoss":{"type":"stop","stopPrice":' + str.tostring(slv,"#.#####") + '},"takeProfit":{"limitPrice":' + str.tostring(tpv,"#.#####") + '}}'
+    rT  = "ORB LONG | " + sym + " " + timeframe.period + " | Entry " + str.tostring(close,"#.#####") + " | SL " + str.tostring(slv,"#.#####") + " | Target " + str.tostring(tpv,"#.#####") + " | then trail"
+    alert(alertFmt == "JSON - TradersPost" ? tpJ : alertFmt == "JSON - Generic" ? jL : rT, alert.freq_once_per_bar_close)
+
+if fireShort
+    tradesToday += 1
+    tOpen := true
+    tDir := -1
+    tEntry := close
+    tRisk := atr * slMult
+    tT := useTrail ? na : close - atr * slMult * tp2R
+    tTrail := close + atr * slMult
+    tExtreme := low
+    tLastTrailAlert := close + atr * slMult
+    tBE := false
+    sym = brokerSym == "" ? syminfo.ticker : brokerSym
+    slv = close + atr * slMult
+    tpv = close - atr * slMult * tp2R
+    bxR = bar_index + tradeBars
+    if showTrade
+        box.new(bar_index, close, bxR, tpv, border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
+        box.new(bar_index, slv, bxR, close, border_color=color.new(color.red,55), bgcolor=color.new(color.red,85))
+        label.new(bar_index, slv, "ORB SHORT @ " + str.tostring(close,"#.#####") + "\\nBreak of opening-range low with volume — trail the runner.", style=label.style_label_down, color=color.new(#22c55e,12), textcolor=color.white, size=size.small)
+    jS  = '{"symbol":"' + sym + '","side":"short","action":"sell","qty":' + str.tostring(contracts) + ',"entry":' + str.tostring(close,"#.#####") + ',"sl":' + str.tostring(slv,"#.#####") + ',"tp":' + str.tostring(tpv,"#.#####") + '}'
+    tpJ = '{"ticker":"' + sym + '","action":"sell","quantity":' + str.tostring(contracts) + ',"stopLoss":{"type":"stop","stopPrice":' + str.tostring(slv,"#.#####") + '},"takeProfit":{"limitPrice":' + str.tostring(tpv,"#.#####") + '}}'
+    rT  = "ORB SHORT | " + sym + " " + timeframe.period + " | Entry " + str.tostring(close,"#.#####") + " | SL " + str.tostring(slv,"#.#####") + " | Target " + str.tostring(tpv,"#.#####") + " | then trail"
+    alert(alertFmt == "JSON - TradersPost" ? tpJ : alertFmt == "JSON - Generic" ? jS : rT, alert.freq_once_per_bar_close)
+
+// ===== MANAGEMENT + OUTCOME (trailing) =====
+if tOpen
+    exitStop = tDir == 1 ? low <= tTrail : high >= tTrail
+    exitTgt  = not na(tT) and (tDir == 1 ? high >= tT : low <= tT)
+    if exitStop or exitTgt
+        exitPx = exitStop ? tTrail : tT
+        realR  = tDir == 1 ? (exitPx - tEntry) / tRisk : (tEntry - exitPx) / tRisk
+        tOpen := false
+        if realR > 0
+            wins += 1
+            sumWinR += realR
+            consecLoss := 0
+        else
+            losses += 1
+            sumLossR += math.abs(realR)
+            consecLoss += 1
+            maxLossStreak := math.max(maxLossStreak, consecLoss)
+        if mgmtAlerts and barstate.isconfirmed
+            alert("ORB " + (tDir == 1 ? "LONG" : "SHORT") + " | " + syminfo.ticker + " — CLOSE @ " + str.tostring(exitPx,"#.#####") + "  (" + str.tostring(realR,"#.##") + "R)", alert.freq_once_per_bar_close)
+    else
+        tExtreme := tDir == 1 ? math.max(tExtreme, high) : math.min(tExtreme, low)
+        reachedBE = tDir == 1 ? high >= tEntry + tRisk * beAtR : low <= tEntry - tRisk * beAtR
+        if useTrail and not tBE and reachedBE
+            tBE := true
+            tTrail := tEntry
+            if mgmtAlerts and barstate.isconfirmed
+                alert("ORB " + (tDir == 1 ? "LONG" : "SHORT") + " | " + syminfo.ticker + " — move STOP to BREAKEVEN " + str.tostring(tEntry,"#.#####"), alert.freq_once_per_bar_close)
+        if useTrail and tBE
+            cand = tDir == 1 ? tExtreme - atr * trailMult : tExtreme + atr * trailMult
+            tTrail := tDir == 1 ? math.max(tTrail, cand) : math.min(tTrail, cand)
+            moved = tDir == 1 ? (tTrail - tLastTrailAlert) >= syminfo.mintick * trailStep : (tLastTrailAlert - tTrail) >= syminfo.mintick * trailStep
+            if mgmtAlerts and moved and barstate.isconfirmed
+                tLastTrailAlert := tTrail
+                alert("ORB " + (tDir == 1 ? "LONG" : "SHORT") + " | " + syminfo.ticker + " — trail STOP to " + str.tostring(tTrail,"#.#####"), alert.freq_once_per_bar_close)
+
+// ===== PLOT =====
+plot(showOR and orReady ? orHigh : na, "OR High", color.new(color.teal,0), 1, plot.style_linebr)
+plot(showOR and orReady ? orLow  : na, "OR Low",  color.new(color.red,0),  1, plot.style_linebr)
+plot(ema, "Trend EMA", color.new(color.gray,55), 1)
+plot(tOpen ? tTrail : na, "Trailing Stop", color.new(color.orange,0), 2, plot.style_linebr)
+bgcolor(inOR ? color.new(color.blue, 92) : na, title="Opening Range")
+plotshape(fireLong,  "LONG",  shape.triangleup,   location.belowbar, color.new(color.lime,0), size=size.normal)
+plotshape(fireShort, "SHORT", shape.triangledown, location.abovebar, color.new(color.red,0),  size=size.normal)
+
+// ===== DASHBOARD + BACKTEST STATS =====
+if showDash and barstate.islast
+    total = wins + losses
+    winRate = total > 0 ? wins / total * 100 : 0.0
+    pf = sumLossR > 0 ? sumWinR / sumLossR : (sumWinR > 0 ? 99.9 : 0.0)
+    expR = total > 0 ? (sumWinR - sumLossR) / total : 0.0
+    var table d = table.new(position.bottom_right, 2, 8, bgcolor=color.new(color.black,12), frame_color=color.new(#22c55e,50), frame_width=2, border_color=color.new(color.gray,70), border_width=1)
+    table.cell(d,0,0,"YN ORB PRO", text_color=color.new(#22c55e,0), bgcolor=color.new(#22c55e,85), text_size=size.small)
+    table.cell(d,1,0, orReady?"OR SET":"—", text_color=orReady?color.lime:color.gray, bgcolor=color.new(#22c55e,85), text_size=size.small)
+    table.cell(d,0,1,"Trade window", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,1, inKZ?"Open":"Closed", text_color=inKZ?color.lime:color.gray, text_size=size.small)
+    table.cell(d,0,2,"Status", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,2, tOpen?("IN TRADE — stop "+str.tostring(tTrail,"#.##")):"Scanning", text_color=tOpen?color.aqua:color.gray, text_size=size.small)
+    table.cell(d,0,3,"Trades today", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,3, str.tostring(tradesToday)+" / "+str.tostring(maxTrades), text_color=color.white, text_size=size.small)
+    table.cell(d,0,4,"── Backtest ──", text_color=color.new(#22c55e,0), text_size=size.tiny)
+    table.cell(d,1,4, str.tostring(total)+" trades", text_color=color.white, text_size=size.tiny)
+    table.cell(d,0,5,"Win Rate", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,5, str.tostring(winRate,"#.#")+"%", text_color=winRate>=45?color.lime:color.orange, text_size=size.small)
+    table.cell(d,0,6,"Profit Factor", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,6, str.tostring(pf,"#.##"), text_color=pf>=1.5?color.lime:pf>=1?color.orange:color.red, text_size=size.small)
+    table.cell(d,0,7,"Expectancy", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,7, str.tostring(expR,"#.##")+" R/trade", text_color=expR>0?color.lime:color.red, text_size=size.small)`,
+      steps: [
+        'Add to an MES/ES/NQ 1m or 5m chart and SET THE CHART TIME ZONE TO US EASTERN so the 9:30 open lines up (right-click chart → Settings → Symbol → Time zone).',
+        'It marks the first 15 minutes after the open (blue opening-range shade), then signals on a clean break of that range with volume — long above the high, short below the low.',
+        'Default trades the NY AM window (9:45-11:30 ET) only — the highest-edge period. Toggle "Only trade NY AM window" off to run it any session, any time.',
+        'After entry it manages for you: "move STOP to BREAKEVEN" at 1R, then "trail STOP to X" alerts as price runs (orange line = your live stop). ORB makes its money on the occasional 3-6R trend day, so let the runner run.',
+        'Create the alert: clock icon → Condition = "YN Finance — Opening Range Breakout PRO" → "Any alert() function call" → Once Per Bar Close → mobile push (or a webhook for autotrade).',
+        'Dashboard shows the live backtest. ORB runs a LOWER win rate (40-50%) with bigger winners — judge it on Expectancy and Profit Factor, NOT win rate.',
+        'Tune: 5-minute OR (0930-0935) for more/faster trades, 15-minute (0930-0945) for cleaner ones. "Longs only" suits strong-uptrend regimes; the volume filter keeps you out of dead breakouts.',
+      ]
+    }
   }
 ]
