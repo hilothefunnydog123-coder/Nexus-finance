@@ -2407,5 +2407,339 @@ if showDash and barstate.islast
         'Tune: 5-minute OR (0930-0935) for more/faster trades, 15-minute (0930-0945) for cleaner ones. "Longs only" suits strong-uptrend regimes; the volume filter keeps you out of dead breakouts.',
       ]
     }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 7. EMA CLOUD PULLBACK — long-only trend continuation
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    id: 'emacloud',
+    instructor: 'EMA Cloud Pullback',
+    strategy: '20/50 EMA Cloud Pullback — Long-Only Trend Continuation',
+    tagline: 'Buy pullbacks into the 20/50 EMA cloud in a confirmed uptrend (above the 200 EMA), wait for the bounce, then trail the winner',
+    assets: ['Stocks', 'Futures', 'Crypto', 'Forex'],
+    timeframes: ['5m', '15m', '1H'],
+    propFirms: ['FTMO', 'Topstep', 'Apex Trader Funding'],
+    winTarget: '45–55%',
+    riskPerTrade: '0.5–1%',
+    color: '#06b6d4',
+    init: 'EC',
+    overview: 'A long-only trend-continuation engine. It only looks for buys when price is in a clean uptrend (above the 200 EMA with the 20 EMA above the 50 EMA), then waits for price to pull back and TAP the 20/50 EMA cloud, then enters on a bullish rejection candle that holds the cloud. Stop sits below the cloud; the winner is trailed so trend legs pay for the chop. The 200 EMA regime filter is the difference between a real edge and buying every dip into a downtrend — which is how most people lose with this.',
+    propNotes: 'Long-only by design — the EMA-cloud pullback edge lives almost entirely on the long side in uptrends. The 200 EMA regime filter is non-negotiable: no uptrend, no trade. Best on liquid instruments (ES/NQ, SPY/QQQ, large-cap stocks, BTC) on 5m-1H. Do not trust it blindly — load it and read the dashboard (win rate, profit factor, expectancy). If the numbers are not there on your instrument, it is a myth on that instrument; move on.',
+    auto: {
+      tradingview: `//@version=5
+strategy("YN Finance — EMA Cloud Pullback (Long-Only) | Prop Edition",
+  overlay           = true,
+  max_bars_back     = 500,
+  default_qty_type  = strategy.percent_of_equity,
+  default_qty_value = 1,
+  commission_type   = strategy.commission.cash_per_contract,
+  commission_value  = 0.62,
+  slippage          = 2)
+
+fastLen     = input.int(20,  "Fast EMA (cloud top)",  group="Cloud")
+slowLen     = input.int(50,  "Slow EMA (cloud bottom)", group="Cloud")
+use200      = input.bool(true, "200 EMA regime filter (uptrend only)", group="Regime")
+requireBull = input.bool(true, "Require bullish cloud (20 > 50)", group="Regime")
+pullWindow  = input.int(10,  "Max bars since above cloud", group="Entry")
+confirmBar  = input.bool(true, "Require bullish confirmation candle", group="Entry")
+slBuf       = input.float(0.5, "Stop below cloud (ATR ×)", step=0.1, group="Risk")
+tp2R        = input.float(3.0, "Target (R) if trailing off", step=0.5, group="Risk")
+useTrail    = input.bool(true, "Trail stop (let winners run)", group="Risk")
+beAtR       = input.float(1.0, "Move to breakeven at (R)", step=0.5, group="Risk")
+trailMult   = input.float(2.0, "Trail distance (ATR ×)", step=0.5, group="Risk")
+
+ema20  = ta.ema(close, fastLen)
+ema50  = ta.ema(close, slowLen)
+ema200 = ta.ema(close, 200)
+atr    = ta.atr(14)
+cloudTop = math.max(ema20, ema50)
+cloudBot = math.min(ema20, ema50)
+bullCloud = ema20 > ema50
+regimeOK = (not use200 or close > ema200) and (not requireBull or bullCloud)
+aboveCloud = close > cloudTop
+var int lastAboveBar = na
+if aboveCloud
+    lastAboveBar := bar_index
+wasExtended = not na(lastAboveBar) and (bar_index - lastAboveBar) <= pullWindow
+tap  = low <= cloudTop and close > cloudBot
+conf = not confirmBar or (close > open and close > cloudBot)
+longSetup = regimeOK and wasExtended and tap and conf
+
+flat = strategy.position_size == 0
+var float eEntry = na
+var float eStop  = na
+var float eTgt   = na
+var float trail  = na
+var bool  beDone = false
+
+if flat and longSetup
+    eEntry := close
+    eStop  := math.min(low, cloudBot) - atr * slBuf
+    eTgt   := useTrail ? na : close + (close - eStop) * tp2R
+    trail  := eStop
+    beDone := false
+    strategy.entry("Long", strategy.long)
+
+if strategy.position_size > 0
+    risk = eEntry - eStop
+    if useTrail and not beDone and high >= eEntry + risk * beAtR
+        beDone := true
+        trail := eEntry
+    if useTrail and beDone
+        trail := math.max(trail, high - atr * trailMult)
+    stp = useTrail ? trail : eStop
+    if na(eTgt)
+        strategy.exit("x", "Long", stop=stp)
+    else
+        strategy.exit("x", "Long", stop=stp, limit=eTgt)
+
+p20 = plot(ema20, "EMA 20", color.new(color.teal, 50))
+p50 = plot(ema50, "EMA 50", color.new(color.blue, 50))
+fill(p20, p50, bullCloud ? color.new(color.teal, 85) : color.new(color.red, 88), title="Cloud")
+plot(ema200, "EMA 200", color.new(color.orange, 25), 2)
+plot(strategy.position_size != 0 ? trail : na, "Trailing Stop", color.new(color.orange, 0), 2, plot.style_linebr)
+plotshape(flat and longSetup, "Long", shape.triangleup, location.belowbar, color.new(color.lime, 0), size=size.small)`,
+      mt5: `// YN Finance — EMA Cloud Pullback EA (MetaTrader 5) — Long only
+// Buys pullbacks into the 20/50 EMA cloud while price is above the 200 EMA.
+
+#include <Trade\\Trade.mqh>
+CTrade trade;
+
+input int    FastLen   = 20;
+input int    SlowLen   = 50;
+input int    RegimeLen = 200;
+input int    PullWindow= 10;
+input bool   Use200    = true;
+input double SLBufATR  = 0.5;
+input double TargetR   = 3.0;
+input double RiskPct   = 0.5;
+
+int fH, sH, rH, atrH;
+int barCount = 0, lastAbove = -1;
+
+int OnInit() {
+   fH   = iMA (_Symbol, _Period, FastLen,   0, MODE_EMA, PRICE_CLOSE);
+   sH   = iMA (_Symbol, _Period, SlowLen,   0, MODE_EMA, PRICE_CLOSE);
+   rH   = iMA (_Symbol, _Period, RegimeLen, 0, MODE_EMA, PRICE_CLOSE);
+   atrH = iATR(_Symbol, _Period, 14);
+   if(fH==INVALID_HANDLE || sH==INVALID_HANDLE || rH==INVALID_HANDLE || atrH==INVALID_HANDLE) return INIT_FAILED;
+   return INIT_SUCCEEDED;
+}
+void OnDeinit(const int reason) { IndicatorRelease(fH); IndicatorRelease(sH); IndicatorRelease(rH); IndicatorRelease(atrH); }
+bool NewBar() { static datetime t=0; datetime c=iTime(_Symbol,_Period,0); if(c!=t){t=c;return true;} return false; }
+
+void OnTick() {
+   if(!NewBar()) return;
+   if(PositionsTotal()>0) return;
+
+   double f[1],s[1],r[1],a[1];
+   CopyBuffer(fH,0,1,1,f); CopyBuffer(sH,0,1,1,s); CopyBuffer(rH,0,1,1,r); CopyBuffer(atrH,0,1,1,a);
+   double ema20=f[0], ema50=s[0], ema200=r[0], atr=a[0];
+   double cloudTop=MathMax(ema20,ema50), cloudBot=MathMin(ema20,ema50);
+   double c1=iClose(_Symbol,_Period,1), o1=iOpen(_Symbol,_Period,1), l1=iLow(_Symbol,_Period,1);
+   bool bullCloud = ema20 > ema50;
+   bool regimeOK  = (!Use200 || c1 > ema200) && bullCloud;
+
+   barCount++;
+   if(c1 > cloudTop) lastAbove = barCount;
+   bool wasExt = lastAbove >= 0 && (barCount - lastAbove) <= PullWindow;
+   bool tap    = l1 <= cloudTop && c1 > cloudBot;
+   bool conf   = c1 > o1 && c1 > cloudBot;
+
+   if(regimeOK && wasExt && tap && conf) {
+      double entry = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      double stop  = MathMin(l1, cloudBot) - atr * SLBufATR;
+      double risk  = entry - stop;
+      if(risk <= 0) return;
+      double tp    = entry + risk * TargetR;
+      double tickVal = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE); if(tickVal<=0) tickVal=1.0;
+      double cash  = AccountInfoDouble(ACCOUNT_BALANCE) * RiskPct/100.0;
+      double lots  = NormalizeDouble(cash/((risk/_Point)*tickVal), 2); lots=MathMax(0.01, MathMin(lots,20.0));
+      trade.Buy(lots, _Symbol, entry, stop, tp, "EMA Cloud Long");
+   }
+}`,
+      steps: [
+        'Paste into TradingView Pine Editor on your instrument (ES/NQ, SPY/QQQ, large-cap, BTC), 5m-1H → Add to chart.',
+        'You will see the 20/50 cloud (teal when bullish), the 200 EMA, and entry triangles. It only buys when price is above the 200 EMA and pulls back into the cloud.',
+        'Open the Strategy Tester → check Net Profit, Win Rate, Profit Factor, Max Drawdown. Commissions + slippage are modeled for realism.',
+        'Tune: Stop below cloud (ATR ×), Trail distance, and "Max bars since above cloud" (how deep/late a pullback you will still take).',
+        'Backtest across 1-2 years and several instruments before trusting it. The 200 EMA filter is what gives it edge — turning it off will look great in bull runs and bleed everywhere else.',
+        'For auto-execution use the SIGNALS version + a bridge, or the NinjaTrader pattern. Check prop-firm automation rules first.',
+      ]
+    },
+    signals: {
+      tradingview: `//@version=5
+indicator("YN Finance — EMA Cloud Pullback PRO | Long-Only Trailed", overlay=true,
+  max_bars_back=1000, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+
+// ① CLOUD
+fastLen = input.int(20, "Fast EMA (cloud top)",    group="① Cloud")
+slowLen = input.int(50, "Slow EMA (cloud bottom)", group="① Cloud")
+
+// ② REGIME (uptrend filter)
+use200      = input.bool(true, "200 EMA regime filter (uptrend only)", group="② Regime")
+requireBull = input.bool(true, "Require bullish cloud (20 > 50)",      group="② Regime")
+
+// ③ ENTRY
+pullWindow = input.int(10,   "Max bars since price was above cloud", group="③ Entry")
+confirmBar = input.bool(true, "Require bullish confirmation candle", group="③ Entry")
+
+// ④ RISK / TARGET
+slBuf = input.float(0.5, "Stop below cloud (ATR ×)", step=0.1, group="④ Risk")
+tp2R  = input.float(3.0, "Target (R) if trailing off", step=0.5, group="④ Risk")
+
+// ⑤ TRADE MANAGEMENT
+useTrail   = input.bool(true, "Trail stop (let winners run)", group="⑤ Trade Management")
+beAtR      = input.float(1.0, "Move to breakeven at (R)", step=0.5, group="⑤ Trade Management")
+trailMult  = input.float(2.0, "Trail distance (ATR ×)", step=0.5, group="⑤ Trade Management")
+trailStep  = input.int(4,     "Min trail move to re-alert (ticks)", group="⑤ Trade Management")
+mgmtAlerts = input.bool(true, "Fire management alerts (BE / trail / exit)", group="⑤ Trade Management")
+
+// ⑥ ALERTS / AUTOTRADE
+alertFmt  = input.string("Readable", "Alert / webhook format", options=["Readable","JSON - Generic","JSON - TradersPost"], group="⑥ Alerts / Autotrade")
+brokerSym = input.string("", "Broker symbol override (blank = chart)", group="⑥ Alerts / Autotrade")
+contracts = input.int(1, "Contracts per signal", minval=1, group="⑥ Alerts / Autotrade")
+
+// ⑦ VISUALS
+showTrade = input.bool(true, "Show trade box (entry / TP / SL)", group="⑦ Visuals")
+tradeBars = input.int(24, "Trade box width (bars)", group="⑦ Visuals")
+showDash  = input.bool(true, "Show dashboard + stats", group="⑦ Visuals")
+
+ema20  = ta.ema(close, fastLen)
+ema50  = ta.ema(close, slowLen)
+ema200 = ta.ema(close, 200)
+atr    = ta.atr(14)
+cloudTop = math.max(ema20, ema50)
+cloudBot = math.min(ema20, ema50)
+bullCloud = ema20 > ema50
+
+// ===== REGIME + PULLBACK =====
+regimeOK = (not use200 or close > ema200) and (not requireBull or bullCloud)
+aboveCloud = close > cloudTop
+var int lastAboveBar = na
+if aboveCloud
+    lastAboveBar := bar_index
+wasExtended = not na(lastAboveBar) and (bar_index - lastAboveBar) <= pullWindow
+tap  = low <= cloudTop and close > cloudBot
+conf = not confirmBar or (close > open and close > cloudBot)
+longSetup = regimeOK and wasExtended and tap and conf and barstate.isconfirmed
+
+// ===== TRADE STATE + TRAILING (long only) =====
+var bool  tOpen = false
+var float tEntry = na
+var float tRisk  = na
+var float tT = na
+var float tTrail = na
+var float tExtreme = na
+var float tLastTrailAlert = na
+var bool  tBE = false
+var int   wins = 0
+var int   losses = 0
+var float sumWinR = 0.0
+var float sumLossR = 0.0
+var int   consecLoss = 0
+var int   maxLossStreak = 0
+
+fireLong = not tOpen and longSetup
+
+if fireLong
+    slv = math.min(low, cloudBot) - atr * slBuf
+    if close - slv > 0
+        tOpen := true
+        tEntry := close
+        tRisk := close - slv
+        tT := useTrail ? na : close + (close - slv) * tp2R
+        tTrail := slv
+        tExtreme := high
+        tLastTrailAlert := slv
+        tBE := false
+        sym = brokerSym == "" ? syminfo.ticker : brokerSym
+        tpv = close + (close - slv) * tp2R
+        bxR = bar_index + tradeBars
+        if showTrade
+            box.new(bar_index, tpv, bxR, close, border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
+            box.new(bar_index, close, bxR, slv, border_color=color.new(color.red,55), bgcolor=color.new(color.red,85))
+            label.new(bar_index, slv, "EMA CLOUD LONG @ " + str.tostring(close,"#.#####") + "\\nPullback tap of the 20/50 cloud in an uptrend, bullish rejection.", style=label.style_label_up, color=color.new(#06b6d4,12), textcolor=color.white, size=size.small)
+        jL  = '{"symbol":"' + sym + '","side":"long","action":"buy","qty":' + str.tostring(contracts) + ',"entry":' + str.tostring(close,"#.#####") + ',"sl":' + str.tostring(slv,"#.#####") + ',"tp":' + str.tostring(tpv,"#.#####") + '}'
+        tpJ = '{"ticker":"' + sym + '","action":"buy","quantity":' + str.tostring(contracts) + ',"stopLoss":{"type":"stop","stopPrice":' + str.tostring(slv,"#.#####") + '},"takeProfit":{"limitPrice":' + str.tostring(tpv,"#.#####") + '}}'
+        rT  = "EMA CLOUD LONG | " + sym + " " + timeframe.period + " | Entry " + str.tostring(close,"#.#####") + " | SL " + str.tostring(slv,"#.#####") + " | Target " + str.tostring(tpv,"#.#####") + " | then trail"
+        alert(alertFmt == "JSON - TradersPost" ? tpJ : alertFmt == "JSON - Generic" ? jL : rT, alert.freq_once_per_bar_close)
+
+// ===== MANAGEMENT + OUTCOME (trailing) =====
+if tOpen
+    exitStop = low <= tTrail
+    exitTgt  = not na(tT) and high >= tT
+    if exitStop or exitTgt
+        exitPx = exitStop ? tTrail : tT
+        realR  = (exitPx - tEntry) / tRisk
+        tOpen := false
+        if realR > 0
+            wins += 1
+            sumWinR += realR
+            consecLoss := 0
+        else
+            losses += 1
+            sumLossR += math.abs(realR)
+            consecLoss += 1
+            maxLossStreak := math.max(maxLossStreak, consecLoss)
+        if mgmtAlerts and barstate.isconfirmed
+            alert("EMA CLOUD LONG | " + syminfo.ticker + " — CLOSE @ " + str.tostring(exitPx,"#.#####") + "  (" + str.tostring(realR,"#.##") + "R)", alert.freq_once_per_bar_close)
+    else
+        tExtreme := math.max(tExtreme, high)
+        if useTrail and not tBE and high >= tEntry + tRisk * beAtR
+            tBE := true
+            tTrail := tEntry
+            if mgmtAlerts and barstate.isconfirmed
+                alert("EMA CLOUD LONG | " + syminfo.ticker + " — move STOP to BREAKEVEN " + str.tostring(tEntry,"#.#####"), alert.freq_once_per_bar_close)
+        if useTrail and tBE
+            cand = tExtreme - atr * trailMult
+            tTrail := math.max(tTrail, cand)
+            moved = (tTrail - tLastTrailAlert) >= syminfo.mintick * trailStep
+            if mgmtAlerts and moved and barstate.isconfirmed
+                tLastTrailAlert := tTrail
+                alert("EMA CLOUD LONG | " + syminfo.ticker + " — trail STOP to " + str.tostring(tTrail,"#.#####"), alert.freq_once_per_bar_close)
+
+// ===== PLOT =====
+p20 = plot(ema20, "EMA 20", color.new(color.teal, 50))
+p50 = plot(ema50, "EMA 50", color.new(color.blue, 50))
+fill(p20, p50, bullCloud ? color.new(color.teal, 85) : color.new(color.red, 88), title="Cloud")
+plot(ema200, "EMA 200", color.new(color.orange, 25), 2)
+plot(tOpen ? tTrail : na, "Trailing Stop", color.new(color.orange, 0), 2, plot.style_linebr)
+plotshape(fireLong, "LONG", shape.triangleup, location.belowbar, color.new(color.lime, 0), size=size.normal)
+
+// ===== DASHBOARD + BACKTEST STATS =====
+if showDash and barstate.islast
+    total = wins + losses
+    winRate = total > 0 ? wins / total * 100 : 0.0
+    pf = sumLossR > 0 ? sumWinR / sumLossR : (sumWinR > 0 ? 99.9 : 0.0)
+    expR = total > 0 ? (sumWinR - sumLossR) / total : 0.0
+    var table d = table.new(position.bottom_right, 2, 8, bgcolor=color.new(color.black,12), frame_color=color.new(#06b6d4,50), frame_width=2, border_color=color.new(color.gray,70), border_width=1)
+    table.cell(d,0,0,"YN EMA CLOUD", text_color=color.new(#06b6d4,0), bgcolor=color.new(#06b6d4,85), text_size=size.small)
+    table.cell(d,1,0, regimeOK?"UPTREND":"NO TRADE", text_color=regimeOK?color.lime:color.gray, bgcolor=color.new(#06b6d4,85), text_size=size.small)
+    table.cell(d,0,1,"Cloud", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,1, bullCloud?"Bullish":"Bearish", text_color=bullCloud?color.lime:color.red, text_size=size.small)
+    table.cell(d,0,2,"Status", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,2, tOpen?("IN TRADE — stop "+str.tostring(tTrail,"#.##")):"Scanning", text_color=tOpen?color.aqua:color.gray, text_size=size.small)
+    table.cell(d,0,3,"vs 200 EMA", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,3, close>ema200?"Above":"Below", text_color=close>ema200?color.lime:color.red, text_size=size.small)
+    table.cell(d,0,4,"── Backtest ──", text_color=color.new(#06b6d4,0), text_size=size.tiny)
+    table.cell(d,1,4, str.tostring(total)+" trades", text_color=color.white, text_size=size.tiny)
+    table.cell(d,0,5,"Win Rate", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,5, str.tostring(winRate,"#.#")+"%", text_color=winRate>=50?color.lime:color.orange, text_size=size.small)
+    table.cell(d,0,6,"Profit Factor", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,6, str.tostring(pf,"#.##"), text_color=pf>=1.5?color.lime:pf>=1?color.orange:color.red, text_size=size.small)
+    table.cell(d,0,7,"Expectancy", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,7, str.tostring(expR,"#.##")+" R/trade", text_color=expR>0?color.lime:color.red, text_size=size.small)`,
+      steps: [
+        'Add to your instrument (ES/NQ, SPY/QQQ, large-cap stock, BTC) on 5m-1H. You will see the 20/50 cloud (teal = bullish), the 200 EMA, and long triangles.',
+        'It ONLY signals when: price is above the 200 EMA, the cloud is bullish (20 > 50), price pulled back and tapped the cloud, and a bullish candle confirmed the bounce. No uptrend = no signal (that is the edge).',
+        'After entry it manages for you: "move STOP to BREAKEVEN" at 1R, then "trail STOP to X" alerts as price runs (orange line = your live stop). Let the trend leg run.',
+        'Create the alert: clock icon → Condition = "YN Finance — EMA Cloud Pullback PRO" → "Any alert() function call" → Once Per Bar Close → mobile push (or a webhook for autotrade).',
+        'The dashboard is the truth-teller: trades, win rate, profit factor, expectancy. If profit factor is comfortably above 1 and expectancy is positive on YOUR instrument, you have a real edge to combine with ORB.',
+        'If the dashboard is red on your instrument, the cloud-tap is a myth there — do not trade it. That is the whole point of testing instead of believing.',
+        'Tune: "Max bars since above cloud" controls how deep a pullback you accept; tighter trail locks profit sooner, wider trail rides bigger trends.',
+      ]
+    }
   }
 ]
