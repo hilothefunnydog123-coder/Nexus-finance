@@ -2441,6 +2441,11 @@ fastLen     = input.int(20,  "Fast EMA (cloud top)",  group="Cloud")
 slowLen     = input.int(50,  "Slow EMA (cloud bottom)", group="Cloud")
 use200      = input.bool(true, "200 EMA regime filter (uptrend only)", group="Regime")
 requireBull = input.bool(true, "Require bullish cloud (20 > 50)", group="Regime")
+useADX      = input.bool(true,  "Trend-strength filter (ADX) — blocks chop", group="Regime")
+adxLen      = input.int(14,     "ADX length", group="Regime")
+adxMin      = input.float(20.0, "Min ADX", step=1.0, group="Regime")
+reqRise     = input.bool(true,  "Require rising 50 EMA", group="Regime")
+riseLen     = input.int(10,     "Slope lookback (bars)", group="Regime")
 pullWindow  = input.int(10,  "Max bars since above cloud", group="Entry")
 confirmBar  = input.bool(true, "Require bullish confirmation candle", group="Entry")
 slBuf       = input.float(0.5, "Stop below cloud (ATR ×)", step=0.1, group="Risk")
@@ -2456,7 +2461,10 @@ atr    = ta.atr(14)
 cloudTop = math.max(ema20, ema50)
 cloudBot = math.min(ema20, ema50)
 bullCloud = ema20 > ema50
-regimeOK = (not use200 or close > ema200) and (not requireBull or bullCloud)
+[diPlus, diMinus, adxVal] = ta.dmi(adxLen, adxLen)
+adxOK  = not useADX or (adxVal > adxMin and diPlus > diMinus)
+riseOK = not reqRise or ema50 > ema50[riseLen]
+regimeOK = (not use200 or close > ema200) and (not requireBull or bullCloud) and adxOK and riseOK
 aboveCloud = close > cloudTop
 var int lastAboveBar = na
 if aboveCloud
@@ -2511,11 +2519,16 @@ input int    SlowLen   = 50;
 input int    RegimeLen = 200;
 input int    PullWindow= 10;
 input bool   Use200    = true;
+input bool   UseADX    = true;
+input int    ADXLen    = 14;
+input double ADXMin    = 20.0;
+input bool   ReqRise   = true;
+input int    RiseLen   = 10;
 input double SLBufATR  = 0.5;
 input double TargetR   = 3.0;
 input double RiskPct   = 0.5;
 
-int fH, sH, rH, atrH;
+int fH, sH, rH, atrH, adxH;
 int barCount = 0, lastAbove = -1;
 
 int OnInit() {
@@ -2523,10 +2536,11 @@ int OnInit() {
    sH   = iMA (_Symbol, _Period, SlowLen,   0, MODE_EMA, PRICE_CLOSE);
    rH   = iMA (_Symbol, _Period, RegimeLen, 0, MODE_EMA, PRICE_CLOSE);
    atrH = iATR(_Symbol, _Period, 14);
-   if(fH==INVALID_HANDLE || sH==INVALID_HANDLE || rH==INVALID_HANDLE || atrH==INVALID_HANDLE) return INIT_FAILED;
+   adxH = iADX(_Symbol, _Period, ADXLen);
+   if(fH==INVALID_HANDLE || sH==INVALID_HANDLE || rH==INVALID_HANDLE || atrH==INVALID_HANDLE || adxH==INVALID_HANDLE) return INIT_FAILED;
    return INIT_SUCCEEDED;
 }
-void OnDeinit(const int reason) { IndicatorRelease(fH); IndicatorRelease(sH); IndicatorRelease(rH); IndicatorRelease(atrH); }
+void OnDeinit(const int reason) { IndicatorRelease(fH); IndicatorRelease(sH); IndicatorRelease(rH); IndicatorRelease(atrH); IndicatorRelease(adxH); }
 bool NewBar() { static datetime t=0; datetime c=iTime(_Symbol,_Period,0); if(c!=t){t=c;return true;} return false; }
 
 void OnTick() {
@@ -2539,7 +2553,12 @@ void OnTick() {
    double cloudTop=MathMax(ema20,ema50), cloudBot=MathMin(ema20,ema50);
    double c1=iClose(_Symbol,_Period,1), o1=iOpen(_Symbol,_Period,1), l1=iLow(_Symbol,_Period,1);
    bool bullCloud = ema20 > ema50;
-   bool regimeOK  = (!Use200 || c1 > ema200) && bullCloud;
+   double adxM[1], adxP[1], adxMi[1], sPrev[1];
+   CopyBuffer(adxH,0,1,1,adxM); CopyBuffer(adxH,1,1,1,adxP); CopyBuffer(adxH,2,1,1,adxMi);
+   CopyBuffer(sH,0,1+RiseLen,1,sPrev);
+   bool adxOK  = !UseADX || (adxM[0] > ADXMin && adxP[0] > adxMi[0]);
+   bool riseOK = !ReqRise || (ema50 > sPrev[0]);
+   bool regimeOK = (!Use200 || c1 > ema200) && bullCloud && adxOK && riseOK;
 
    barCount++;
    if(c1 > cloudTop) lastAbove = barCount;
@@ -2580,6 +2599,11 @@ slowLen = input.int(50, "Slow EMA (cloud bottom)", group="① Cloud")
 // ② REGIME (uptrend filter)
 use200      = input.bool(true, "200 EMA regime filter (uptrend only)", group="② Regime")
 requireBull = input.bool(true, "Require bullish cloud (20 > 50)",      group="② Regime")
+useADX      = input.bool(true,  "Trend-strength filter (ADX) — blocks chop", group="② Regime")
+adxLen      = input.int(14,     "ADX length",                          group="② Regime")
+adxMin      = input.float(20.0, "Min ADX (higher = stricter, less chop)", step=1.0, group="② Regime")
+reqRise     = input.bool(true,  "Require rising trend (50 EMA sloping up)", group="② Regime")
+riseLen     = input.int(10,     "Slope lookback (bars)",               group="② Regime")
 
 // ③ ENTRY
 pullWindow = input.int(10,   "Max bars since price was above cloud", group="③ Entry")
@@ -2615,7 +2639,10 @@ cloudBot = math.min(ema20, ema50)
 bullCloud = ema20 > ema50
 
 // ===== REGIME + PULLBACK =====
-regimeOK = (not use200 or close > ema200) and (not requireBull or bullCloud)
+[diPlus, diMinus, adxVal] = ta.dmi(adxLen, adxLen)
+adxOK  = not useADX or (adxVal > adxMin and diPlus > diMinus)
+riseOK = not reqRise or ema50 > ema50[riseLen]
+regimeOK = (not use200 or close > ema200) and (not requireBull or bullCloud) and adxOK and riseOK
 aboveCloud = close > cloudTop
 var int lastAboveBar = na
 if aboveCloud
@@ -2717,8 +2744,8 @@ if showDash and barstate.islast
     var table d = table.new(position.bottom_right, 2, 8, bgcolor=color.new(color.black,12), frame_color=color.new(#06b6d4,50), frame_width=2, border_color=color.new(color.gray,70), border_width=1)
     table.cell(d,0,0,"YN EMA CLOUD", text_color=color.new(#06b6d4,0), bgcolor=color.new(#06b6d4,85), text_size=size.small)
     table.cell(d,1,0, regimeOK?"UPTREND":"NO TRADE", text_color=regimeOK?color.lime:color.gray, bgcolor=color.new(#06b6d4,85), text_size=size.small)
-    table.cell(d,0,1,"Cloud", text_color=color.gray, text_size=size.small)
-    table.cell(d,1,1, bullCloud?"Bullish":"Bearish", text_color=bullCloud?color.lime:color.red, text_size=size.small)
+    table.cell(d,0,1,"Cloud / ADX", text_color=color.gray, text_size=size.small)
+    table.cell(d,1,1, (bullCloud?"Bull":"Bear") + " · ADX " + str.tostring(adxVal,"#"), text_color=adxOK?color.lime:color.orange, text_size=size.small)
     table.cell(d,0,2,"Status", text_color=color.gray, text_size=size.small)
     table.cell(d,1,2, tOpen?("IN TRADE — stop "+str.tostring(tTrail,"#.##")):"Scanning", text_color=tOpen?color.aqua:color.gray, text_size=size.small)
     table.cell(d,0,3,"vs 200 EMA", text_color=color.gray, text_size=size.small)
@@ -2733,7 +2760,7 @@ if showDash and barstate.islast
     table.cell(d,1,7, str.tostring(expR,"#.##")+" R/trade", text_color=expR>0?color.lime:color.red, text_size=size.small)`,
       steps: [
         'Add to your instrument (ES/NQ, SPY/QQQ, large-cap stock, BTC) on 5m-1H. You will see the 20/50 cloud (teal = bullish), the 200 EMA, and long triangles.',
-        'It ONLY signals when: price is above the 200 EMA, the cloud is bullish (20 > 50), price pulled back and tapped the cloud, and a bullish candle confirmed the bounce. No uptrend = no signal (that is the edge).',
+        'It ONLY signals in a real uptrend: price above the 200 EMA, bullish cloud (20 > 50), ADX above the threshold (filters chop/sideways), the 50 EMA rising, price tapped the cloud, and a bullish candle confirmed the bounce. Bearish or choppy market = zero signals (that is the edge).',
         'After entry it manages for you: "move STOP to BREAKEVEN" at 1R, then "trail STOP to X" alerts as price runs (orange line = your live stop). Let the trend leg run.',
         'Create the alert: clock icon → Condition = "YN Finance — EMA Cloud Pullback PRO" → "Any alert() function call" → Once Per Bar Close → mobile push (or a webhook for autotrade).',
         'The dashboard is the truth-teller: trades, win rate, profit factor, expectancy. If profit factor is comfortably above 1 and expectancy is positive on YOUR instrument, you have a real edge to combine with ORB.',
