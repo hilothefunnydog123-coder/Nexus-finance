@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+export const maxDuration = 26
+
 const FH = process.env.FINNHUB_API_KEY
 const GM = process.env.GEMINI_API_KEY
 
 async function fh(path: string) {
   try {
-    const r = await fetch(`https://finnhub.io/api/v1${path}&token=${FH}`, { cache: 'no-store' })
+    const r = await fetch(`https://finnhub.io/api/v1${path}&token=${FH}`, { cache: 'no-store', signal: AbortSignal.timeout(4500) })
     if (!r.ok) return null
     return r.json()
   } catch { return null }
@@ -64,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     // Candles non-blocking
     const candlePromise = fh(`/stock/candle?symbol=${sym}&resolution=D&from=${frUnix}&to=${toUnix}`)
-    const candleTimeout = new Promise<null>(r => setTimeout(() => r(null), 5000))
+    const candleTimeout = new Promise<null>(r => setTimeout(() => r(null), 3000))
     const candles = await Promise.race([candlePromise, candleTimeout])
 
     const price     = Number(quote?.c  ?? 0)
@@ -114,7 +117,7 @@ export async function POST(req: NextRequest) {
     ].filter(Boolean).join(' | ') || 'Limited fundamentals available'
 
     // ── Peers ──
-    const peerSyms = (Array.isArray(peers) ? peers : []).filter((p: unknown) => typeof p === 'string' && (p as string).toUpperCase() !== sym).slice(0, 4) as string[]
+    const peerSyms = (Array.isArray(peers) ? peers : []).filter((p: unknown) => typeof p === 'string' && (p as string).toUpperCase() !== sym).slice(0, 3) as string[]
     const peerProfiles = await Promise.all(peerSyms.map(p => fh(`/stock/profile2?symbol=${p}`)))
     const peerRows = peerSyms.map((p, i) => ({
       ticker: p,
@@ -181,7 +184,7 @@ Return EXACTLY this JSON shape (fill every field):
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.65, maxOutputTokens: 8192, responseMimeType: 'application/json' },
+          generationConfig: { temperature: 0.65, maxOutputTokens: 5000, responseMimeType: 'application/json' },
         }),
       }
     )
