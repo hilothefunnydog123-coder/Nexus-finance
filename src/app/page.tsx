@@ -30,7 +30,7 @@ function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 }
 
 const NAV = [
-  { label: 'Analyzer',     href: '/analyzer' },
+  { label: 'Analyzer',     href: '/ai-stocks' },
   { label: 'Intelligence', href: '/intelligence' },
   { label: 'Agents',       href: '/agents' },
   { label: 'Algorithms',   href: '/algorithms' },
@@ -47,7 +47,7 @@ const WEAPONS = [
 ]
 
 const PRODUCTS = [
-  { tag: 'AI Analyzer',       href: '/analyzer',     clr: '#00d4aa', title: 'Grade any trade in seconds', body: 'Drop a chart or ticker — get a verdict, conviction, and exact entry, stop & target.' },
+  { tag: 'AI Stock Analyzer', href: '/ai-stocks',    clr: '#00d4aa', title: 'Full AI rating on any stock', body: 'Rating, bull & bear price targets, conviction, thesis and key levels — any ticker in seconds.' },
   { tag: 'Intelligence Suite',href: '/intelligence', clr: '#1e90ff', title: 'Six institutional weapons',  body: 'Insider timing, earnings forensics, macro mapping & filing intel — one click each.' },
   { tag: 'Agent Network',     href: '/agents',       clr: '#a855f7', title: 'Nine agents, 24/7',          body: 'Congress, insiders, options flow, dark pools and macro — watched and pushed to you.' },
   { tag: 'Algorithms',        href: '/algorithms',   clr: '#22c55e', title: 'Prop-grade trading bots',    body: 'Copy-paste strategies with backtest stats, trailing exits and webhook autotrade.' },
@@ -137,7 +137,7 @@ export default function Home() {
           </p>
 
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginTop: 40 }}>
-            <Link href="/analyzer" className="btn-primary" style={{ background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', color: '#06121f', padding: '16px 38px', borderRadius: 14, fontSize: 15.5, fontWeight: 900, textDecoration: 'none', boxShadow: '0 0 50px #00d4aa40, 0 16px 36px rgba(0,0,0,.45)', letterSpacing: '-.3px' }}>
+            <Link href="/ai-stocks" className="btn-primary" style={{ background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', color: '#06121f', padding: '16px 38px', borderRadius: 14, fontSize: 15.5, fontWeight: 900, textDecoration: 'none', boxShadow: '0 0 50px #00d4aa40, 0 16px 36px rgba(0,0,0,.45)', letterSpacing: '-.3px' }}>
               Try the AI Analyzer
             </Link>
             <Link href="/intelligence" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', color: '#dce8f0', padding: '16px 34px', borderRadius: 14, fontSize: 15, fontWeight: 700, textDecoration: 'none', backdropFilter: 'blur(10px)' }}>
@@ -309,7 +309,7 @@ export default function Home() {
             {"Start free in under a minute. No card, no terminal to learn — just the edge."}
           </p>
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginTop: 38 }}>
-            <Link href="/analyzer" className="btn-primary" style={{ background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', color: '#06121f', padding: '17px 44px', borderRadius: 14, fontSize: 16, fontWeight: 900, textDecoration: 'none', boxShadow: '0 0 60px #00d4aa50' }}>
+            <Link href="/ai-stocks" className="btn-primary" style={{ background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', color: '#06121f', padding: '17px 44px', borderRadius: 14, fontSize: 16, fontWeight: 900, textDecoration: 'none', boxShadow: '0 0 60px #00d4aa50' }}>
               Start for free →
             </Link>
             <Link href="/courses" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', color: '#dce8f0', padding: '17px 38px', borderRadius: 14, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
@@ -333,7 +333,7 @@ export default function Home() {
               </p>
             </div>
             {([
-              ['Product', [['AI Analyzer', '/analyzer'], ['Intelligence Suite', '/intelligence'], ['Agent Network', '/agents'], ['Algorithms', '/algorithms'], ['YN Arena', '/arena'], ['Daily Intel', '/daily'], ['Courses', '/courses']]],
+              ['Product', [['AI Stock Analyzer', '/ai-stocks'], ['Trade Analyzer', '/analyzer'], ['Intelligence Suite', '/intelligence'], ['Agent Network', '/agents'], ['Algorithms', '/algorithms'], ['YN Arena', '/arena'], ['Daily Intel', '/daily'], ['Courses', '/courses']]],
               ['Company', [['About', '/company'], ['Careers', '/careers'], ['Press', '/press'], ['Investors', '/investors']]],
               ['Resources', [['Research', '/research'], ['Developer API', '/developers'], ['Brand Kit', '/brand'], ['Find your type', '/quiz'], ['Privacy', '/privacy'], ['Terms', '/terms']]],
             ] as [string, [string, string][]][]).map(([col, links]) => (
