@@ -33,6 +33,7 @@ const NAV = [
   { label: 'Analyzer',     href: '/analyzer' },
   { label: 'Intelligence', href: '/intelligence' },
   { label: 'Agents',       href: '/agents' },
+  { label: 'Algorithms',   href: '/algorithms' },
   { label: 'Courses',      href: '/courses' },
 ]
 
@@ -45,25 +46,15 @@ const WEAPONS = [
   { name: 'Filing X-Ray',     desc: 'Pulls the buried numbers out of dense SEC filings.',     clr: '#22c55e' },
 ]
 
-const FEATURES = [
-  {
-    tag: 'AI ANALYZER', href: '/analyzer', clr: '#00d4aa',
-    title: 'Grade any trade in seconds',
-    body: 'Drop in a chart or a ticker. The AI returns a verdict, conviction score, and exact entry, stop and target — no bias, no guesswork.',
-    cta: 'Open the Analyzer',
-  },
-  {
-    tag: 'INTELLIGENCE SUITE', href: '/intelligence', clr: '#1e90ff',
-    title: 'Six institutional-grade weapons',
-    body: 'The research an analyst team does in hours — insider timing, earnings forensics, macro mapping, filing intelligence — in one click.',
-    cta: 'See the Suite',
-  },
-  {
-    tag: 'LIVE AGENT NETWORK', href: '/agents', clr: '#a855f7',
-    title: 'Nine agents watching the market',
-    body: 'Congress trades, insider buys, unusual options, dark pool prints and macro events — monitored around the clock and pushed to you.',
-    cta: 'View the Network',
-  },
+const PRODUCTS = [
+  { tag: 'AI Analyzer',       href: '/analyzer',     clr: '#00d4aa', title: 'Grade any trade in seconds', body: 'Drop a chart or ticker — get a verdict, conviction, and exact entry, stop & target.' },
+  { tag: 'Intelligence Suite',href: '/intelligence', clr: '#1e90ff', title: 'Six institutional weapons',  body: 'Insider timing, earnings forensics, macro mapping & filing intel — one click each.' },
+  { tag: 'Agent Network',     href: '/agents',       clr: '#a855f7', title: 'Nine agents, 24/7',          body: 'Congress, insiders, options flow, dark pools and macro — watched and pushed to you.' },
+  { tag: 'Algorithms',        href: '/algorithms',   clr: '#22c55e', title: 'Prop-grade trading bots',    body: 'Copy-paste strategies with backtest stats, trailing exits and webhook autotrade.' },
+  { tag: 'Research',          href: '/research',     clr: '#eab308', title: 'Deep-dive reports',          body: 'Long-form market intelligence and AI research on the names that actually matter.' },
+  { tag: 'YN Arena',          href: '/arena',        clr: '#ec4899', title: 'Compete for real prizes',    body: 'DraftKings-style trading tournaments. Climb the board, win the pool.' },
+  { tag: 'Daily Intel',       href: '/daily',        clr: '#f59e0b', title: 'Your morning edge',          body: 'An AI market briefing before the bell. Know the whole day in two minutes.' },
+  { tag: 'Courses',           href: '/courses',      clr: '#06b6d4', title: '$0.99 from 9 pros',          body: 'Learn the strategy, then practice it instantly on real charts. No subscription.' },
 ]
 
 export default function Home() {
@@ -93,7 +84,9 @@ export default function Home() {
         .card:hover { transform:translateY(-4px) }
         .navlink { transition:color .2s }
         .navlink:hover { color:#dce8f0 !important }
+        @media(max-width:980px){ .grid4{grid-template-columns:repeat(2,1fr)!important} }
         @media(max-width:760px){ .hide-sm{display:none!important} .grid3{grid-template-columns:1fr!important} .grid2{grid-template-columns:1fr!important} .weap{grid-template-columns:1fr 1fr!important} }
+        @media(max-width:560px){ .grid4{grid-template-columns:1fr!important} .weap{grid-template-columns:1fr!important} .foot{grid-template-columns:1fr 1fr!important} }
       `}</style>
 
       {/* CINEMATIC BACKGROUND */}
@@ -135,12 +128,12 @@ export default function Home() {
             FOUNDED BY NEIL GILANI &amp; YANNAI RICHTER
           </div>
 
-          <h1 style={{ fontSize: 'clamp(40px,7vw,82px)', fontWeight: 900, lineHeight: 0.98, letterSpacing: '-3px', color: '#eaf4fa', maxWidth: 900, margin: '0 auto' }}>
-            Trade with an<br /><span className="grad">institutional edge.</span>
+          <h1 style={{ fontSize: 'clamp(42px,7.5vw,88px)', fontWeight: 900, lineHeight: 0.96, letterSpacing: '-3px', color: '#eaf4fa', maxWidth: 920, margin: '0 auto' }}>
+            Outtrade<br /><span className="grad">Wall Street.</span>
           </h1>
 
-          <p style={{ fontSize: 'clamp(15px,1.8vw,19px)', color: '#6a8497', lineHeight: 1.7, maxWidth: 560, margin: '26px auto 0' }}>
-            {"The AI research desk that reads the market for you — analyzer, intelligence suite and a live agent network. Built to close the gap between you and Wall Street."}
+          <p style={{ fontSize: 'clamp(15px,1.8vw,19px)', color: '#6a8497', lineHeight: 1.7, maxWidth: 580, margin: '26px auto 0' }}>
+            {"An entire AI research desk in your pocket — analyzer, intelligence suite, live agents and prop-grade algorithms. The edge they gatekeep, free to start."}
           </p>
 
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginTop: 40 }}>
@@ -181,32 +174,34 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FEATURES */}
+      {/* THE ARSENAL — full product grid */}
       <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(70px,10vw,120px) 24px' }}>
-        <div style={{ maxWidth: 1140, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: 56 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 14 }}>THE PLATFORM</div>
-              <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', maxWidth: 640, margin: '0 auto', lineHeight: 1.08 }}>
-                Everything an analyst team does — for one person.
+            <div style={{ textAlign: 'center', marginBottom: 52 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 14 }}>THE ARSENAL</div>
+              <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', maxWidth: 680, margin: '0 auto', lineHeight: 1.08 }}>
+                Everything Wall Street has — minus the gatekeeping.
               </h2>
             </div>
           </Reveal>
 
-          <div className="grid3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20 }}>
-            {FEATURES.map((f, i) => (
-              <Reveal key={f.tag} delay={i * 90}>
-                <Link href={f.href} className="card" style={{
-                  display: 'block', height: '100%', textDecoration: 'none', borderRadius: 20, padding: '32px 28px',
+          <div className="grid4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
+            {PRODUCTS.map((p, i) => (
+              <Reveal key={p.tag} delay={(i % 4) * 70}>
+                <Link href={p.href} className="card" style={{
+                  display: 'block', height: '100%', textDecoration: 'none', borderRadius: 16, padding: '24px 22px',
                   background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.07)', backdropFilter: 'blur(12px)',
                 }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = `${f.clr}55`; e.currentTarget.style.background = `${f.clr}0d` }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = `${p.clr}55`; e.currentTarget.style.background = `${p.clr}0d` }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.07)'; e.currentTarget.style.background = 'rgba(255,255,255,.025)' }}
                 >
-                  <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '1.5px', color: f.clr, marginBottom: 18 }}>{f.tag}</div>
-                  <h3 style={{ fontSize: 21, fontWeight: 800, color: '#eaf4fa', lineHeight: 1.2, marginBottom: 12, letterSpacing: '-.5px' }}>{f.title}</h3>
-                  <p style={{ fontSize: 14, color: '#6a8497', lineHeight: 1.65, marginBottom: 22 }}>{f.body}</p>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: f.clr }}>{f.cta} →</div>
+                  <div style={{ width: 34, height: 34, borderRadius: 9, marginBottom: 14, background: `${p.clr}18`, border: `1px solid ${p.clr}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.clr, boxShadow: `0 0 10px ${p.clr}` }} />
+                  </div>
+                  <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '1px', color: p.clr, marginBottom: 9 }}>{p.tag.toUpperCase()}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#eaf4fa', lineHeight: 1.2, marginBottom: 8, letterSpacing: '-.3px' }}>{p.title}</div>
+                  <div style={{ fontSize: 13, color: '#6a8497', lineHeight: 1.6 }}>{p.body}</div>
                 </Link>
               </Reveal>
             ))}
@@ -325,18 +320,37 @@ export default function Home() {
       </section>
 
       {/* FOOTER */}
-      <footer style={{ position: 'relative', zIndex: 1, borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(3,6,12,.7)', backdropFilter: 'blur(8px)' }}>
-        <div style={{ maxWidth: 1140, margin: '0 auto', padding: '34px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
-            <YNMark size={22} />
-            <span style={{ fontSize: 13.5, fontWeight: 800, color: '#dce8f0' }}>YN Finance</span>
-          </Link>
-          <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap' }}>
-            {[['Analyzer', '/analyzer'], ['Intelligence', '/intelligence'], ['Agents', '/agents'], ['Courses', '/courses'], ['Privacy', '/privacy'], ['Terms', '/terms']].map(([l, h]) => (
-              <Link key={h} href={h} className="navlink" style={{ fontSize: 12.5, color: '#3a5566', textDecoration: 'none', fontWeight: 600 }}>{l}</Link>
+      <footer style={{ position: 'relative', zIndex: 1, borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(3,6,12,.75)', backdropFilter: 'blur(8px)' }}>
+        <div style={{ maxWidth: 1140, margin: '0 auto', padding: '52px 24px 28px' }}>
+          <div className="foot" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr', gap: 28, marginBottom: 40 }}>
+            <div>
+              <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', marginBottom: 14 }}>
+                <YNMark size={24} glow />
+                <span style={{ fontSize: 15, fontWeight: 800, color: '#dce8f0' }}>YN Finance</span>
+              </Link>
+              <p style={{ fontSize: 12.5, color: '#3a5566', lineHeight: 1.65, maxWidth: 260 }}>
+                {"The AI research desk that closes the gap between you and Wall Street."}
+              </p>
+            </div>
+            {([
+              ['Product', [['AI Analyzer', '/analyzer'], ['Intelligence Suite', '/intelligence'], ['Agent Network', '/agents'], ['Algorithms', '/algorithms'], ['YN Arena', '/arena'], ['Daily Intel', '/daily'], ['Courses', '/courses']]],
+              ['Company', [['About', '/company'], ['Careers', '/careers'], ['Press', '/press'], ['Investors', '/investors']]],
+              ['Resources', [['Research', '/research'], ['Developer API', '/developers'], ['Brand Kit', '/brand'], ['Find your type', '/quiz'], ['Privacy', '/privacy'], ['Terms', '/terms']]],
+            ] as [string, [string, string][]][]).map(([col, links]) => (
+              <div key={col}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: '#5a7488', marginBottom: 14 }}>{col.toUpperCase()}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {links.map(([l, h]) => (
+                    <Link key={h} href={h} className="navlink" style={{ fontSize: 13, color: '#3a5566', textDecoration: 'none', fontWeight: 600 }}>{l}</Link>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
-          <div style={{ fontSize: 11, color: '#2a4050' }}>© {new Date().getFullYear()} YN Finance</div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,.05)', paddingTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 11.5, color: '#2a4050' }}>© {new Date().getFullYear()} YN Finance · ynfinance.org</div>
+            <div style={{ fontSize: 11, color: '#2a4050' }}>Built by Neil Gilani &amp; Yannai Richter</div>
+          </div>
         </div>
       </footer>
     </div>
