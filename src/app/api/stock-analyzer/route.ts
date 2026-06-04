@@ -14,20 +14,60 @@ async function fh(path: string) {
   } catch { return null }
 }
 
+function tryParse(s: string): Record<string, unknown> | null {
+  try { return JSON.parse(s) as Record<string, unknown> } catch { return null }
+}
+
+// Repairs truncated JSON: closes a cut-off string, drops a dangling "key":,
+// strips trailing commas, and appends any missing closing brackets.
+function repairJson(s: string): Record<string, unknown> | null {
+  let inStr = false, esc = false
+  const stack: string[] = []
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (esc) { esc = false; continue }
+    if (c === '\\') { esc = true; continue }
+    if (c === '"') { inStr = !inStr; continue }
+    if (inStr) continue
+    if (c === '{') stack.push('}')
+    else if (c === '[') stack.push(']')
+    else if (c === '}' || c === ']') stack.pop()
+  }
+  let out = s
+  if (inStr) out += '"'
+  out = out.replace(/,\s*$/, '')
+  out = out.replace(/"[^"]*"\s*:\s*$/, '')
+  out = out.replace(/,\s*$/, '')
+  for (let i = stack.length - 1; i >= 0; i--) out += stack[i]
+  return tryParse(out)
+}
+
 function extractJson(raw: string): Record<string, unknown> {
-  const s = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
-  const start = s.indexOf('{')
+  const s0 = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+  const start = s0.indexOf('{')
   if (start === -1) throw new Error('No JSON found')
+  const s = s0.slice(start)
+
+  // 1) clean parse
+  const direct = tryParse(s)
+  if (direct) return direct
+
+  // 2) balanced-brace slice (handles trailing junk after the object)
   let depth = 0, inStr = false, esc = false
-  for (let i = start; i < s.length; i++) {
+  for (let i = 0; i < s.length; i++) {
     const c = s[i]
     if (esc)                 { esc = false; continue }
     if (c === '\\' && inStr) { esc = true;  continue }
     if (c === '"')           { inStr = !inStr; continue }
     if (inStr)               continue
     if (c === '{') depth++
-    if (c === '}') { depth--; if (depth === 0) return JSON.parse(s.slice(start, i + 1)) }
+    if (c === '}') { depth--; if (depth === 0) { const p = tryParse(s.slice(0, i + 1)); if (p) return p } }
   }
+
+  // 3) repair truncation
+  const repaired = repairJson(s)
+  if (repaired) return repaired
+
   throw new Error('Malformed JSON')
 }
 
@@ -173,6 +213,7 @@ REQUIREMENTS
 - Compare ${sym} directly to the named peers: where it is cheap or expensive on valuation, growth and margins, and the single clearest reason it stands out (or lags). Reference peers by ticker.
 - Options section is the priority. Pick a structure that fits THIS volatility regime and your directional view. Use the expected move above to justify the strikes. Explain it the way a real options trader thinks: IV vs realized vol, theta decay, the move you need versus the expected move, and probability. Also give one alternative income play.
 - All price levels based on $${price.toFixed(2)}. No lazy round numbers.
+- Keep every text field to 1-2 tight sentences. Max 3 items each for vs_competitors, risks and catalysts. Be dense, not wordy.
 
 Return EXACTLY this JSON shape (fill every field):
 {"rating":"Buy","confidence":72,"price_target":0.0,"price_target_bear":0.0,"price_target_bull":0.0,"time_horizon":"3-6 months","executive_summary":"...","investment_thesis":"...","why_it_stands_out":"...","relative_valuation":"...","institutional_view":"...","vs_competitors":[{"ticker":"XXX","take":"..."},{"ticker":"YYY","take":"..."}],"bull_case":"...","bear_case":"...","entry_low":0.0,"entry_high":0.0,"stop_loss":0.0,"take_profit_1":0.0,"take_profit_2":0.0,"position_size_pct":2,"key_levels":{"strong_support":0.0,"support":0.0,"resistance":0.0,"strong_resistance":0.0},"risks":["...","...","..."],"catalysts":["...","..."],"sentiment":"Bullish","fundamentals_score":7,"technical_score":6,"sentiment_score":7,"analyst_consensus":"Hold","vs_sector":"Outperform","timeframes":{"1_week":"Bullish","1_month":"Bullish","3_months":"Neutral","6_months":"Bullish"},"options":{"directional_bias":"Bullish","strategy":"Bull Call Spread","type":"CALL","structure":"Debit Spread","long_strike_pct":2,"short_strike_pct":9,"expiry_days":45,"iv_environment":"${ivLabel} IV — ...","thesis":"...","reasoning":"...","income_play":"..."}}`
