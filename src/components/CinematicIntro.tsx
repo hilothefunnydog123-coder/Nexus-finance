@@ -2,16 +2,22 @@
 
 import { useEffect, useState } from 'react'
 
-// Order tuned for a build-up: world → markets → execution → mind → code → payoff
+// Order tuned for a build-up: world → markets → execution → AI/mind → payoff
 const SCENES = [
-  { src: '/landing/wallst.png',   kb: 'kbA' },
-  { src: '/landing/chart.png',    kb: 'kbB' },
-  { src: '/landing/terminal.png', kb: 'kbA' },
-  { src: '/landing/brain.png',    kb: 'kbB' },
-  { src: '/landing/code.png',     kb: 'kbA' },
-  { src: '/landing/money.png',    kb: 'kbB' },
+  { src: '/landing/earth.png',      kb: 'kbA' },
+  { src: '/landing/wallst.png',     kb: 'kbB' },
+  { src: '/landing/greenchart.png', kb: 'kbA' },
+  { src: '/landing/chart.png',      kb: 'kbB' },
+  { src: '/landing/growth.png',     kb: 'kbA' },
+  { src: '/landing/terminal.png',   kb: 'kbB' },
+  { src: '/landing/code.png',       kb: 'kbA' },
+  { src: '/landing/aibrain.png',    kb: 'kbB' },
+  { src: '/landing/brain.png',      kb: 'kbA' },
+  { src: '/landing/aihead.png',     kb: 'kbB' },
+  { src: '/landing/cash.png',       kb: 'kbA' },
+  { src: '/landing/money.png',      kb: 'kbB' },
 ]
-const SCENE_MS = 1150
+const SCENE_MS = 1550
 const TOTAL = SCENE_MS * SCENES.length
 
 export default function CinematicIntro() {
@@ -67,7 +73,7 @@ export default function CinematicIntro() {
 
       {/* Boot caption — bottom corner, cycles a hype line per scene */}
       <div style={{ position: 'absolute', left: 24, bottom: 22, fontFamily: '"SF Mono",ui-monospace,monospace', fontSize: 11, letterSpacing: '3px', color: '#00d4aa' }}>
-        {['MAPPING WALL STREET','READING THE TAPE','LIVE EXECUTION','QUANT ENGINE ONLINE','COMPILING EDGE','OUTPERFORM'].map((t, i) => (
+        {['SCANNING THE GLOBE','MAPPING WALL STREET','READING THE TAPE','PRICING THE MARKET','MODELING THE EDGE','LIVE EXECUTION','COMPILING STRATEGY','NEURAL ENGINE ONLINE','QUANT INTELLIGENCE','THINKING IN MILLISECONDS','CAPITAL DEPLOYED','OUTPERFORM'].map((t, i) => (
           <span key={t} style={{ position: 'absolute', left: 0, bottom: 0, whiteSpace: 'nowrap', opacity: 0, animation: `ynBootText ${SCENE_MS}ms ${i * SCENE_MS}ms ease both` }}>
             ▶ {t}
           </span>
