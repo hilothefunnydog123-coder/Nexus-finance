@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { rateLimit } from '@/lib/ratelimit'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,8 @@ function calcRR(entry: number, sl: number, tp: number, dir: string) {
 }
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { limit: 15, windowMs: 60000, tag: 'tradean' })
+  if (!rl.ok) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } })
   const key = process.env.GEMINI_API_KEY
   if (!key) return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 })
 

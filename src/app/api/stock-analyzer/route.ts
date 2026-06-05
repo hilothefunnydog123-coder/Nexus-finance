@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { rateLimit } from '@/lib/ratelimit'
 
 const FH = process.env.FINNHUB_API_KEY
 const GM = process.env.GEMINI_API_KEY
@@ -29,6 +30,8 @@ function extractJson(raw: string): Record<string, unknown> {
 }
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { limit: 12, windowMs: 60000, tag: 'analyze' })
+  if (!rl.ok) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } })
   try {
     const body = await req.json()
     const sym  = (body.ticker ?? '').toUpperCase().trim()

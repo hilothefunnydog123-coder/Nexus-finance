@@ -50,7 +50,6 @@ export default function AIChartVision() {
 
 If the chart is unclear or has no clean setup, set signal to "NO TRADE" and null out price fields. Base entry/sl/tp on visible price levels in the chart.`
 
-      const key = process.env.NEXT_PUBLIC_GEMINI_KEY
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

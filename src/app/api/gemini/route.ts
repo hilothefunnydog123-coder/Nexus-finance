@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { rateLimit } from '@/lib/ratelimit'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 const GEMINI_SEARCH_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
@@ -40,6 +41,8 @@ async function callGemini(prompt: string, imageBase64?: string, tokens = 350): P
 }
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { limit: 20, windowMs: 60000, tag: 'gemini' })
+  if (!rl.ok) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } })
   const { type, data } = await req.json()
   let result: Record<string, string> = {}
 
