@@ -1,86 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export const dynamic = 'force-dynamic'
-export const maxDuration = 26
-
 const FH = process.env.FINNHUB_API_KEY
 const GM = process.env.GEMINI_API_KEY
 
 async function fh(path: string) {
   try {
-    const r = await fetch(`https://finnhub.io/api/v1${path}&token=${FH}`, { cache: 'no-store', signal: AbortSignal.timeout(4500) })
+    const r = await fetch(`https://finnhub.io/api/v1${path}&token=${FH}`, { cache: 'no-store' })
     if (!r.ok) return null
     return r.json()
   } catch { return null }
 }
 
-function tryParse(s: string): Record<string, unknown> | null {
-  try { return JSON.parse(s) as Record<string, unknown> } catch { return null }
-}
-
-// Repairs truncated JSON: closes a cut-off string, drops a dangling "key":,
-// strips trailing commas, and appends any missing closing brackets.
-function repairJson(s: string): Record<string, unknown> | null {
-  let inStr = false, esc = false
-  const stack: string[] = []
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i]
-    if (esc) { esc = false; continue }
-    if (c === '\\') { esc = true; continue }
-    if (c === '"') { inStr = !inStr; continue }
-    if (inStr) continue
-    if (c === '{') stack.push('}')
-    else if (c === '[') stack.push(']')
-    else if (c === '}' || c === ']') stack.pop()
-  }
-  let out = s
-  if (inStr) out += '"'
-  out = out.replace(/,\s*$/, '')
-  out = out.replace(/"[^"]*"\s*:\s*$/, '')
-  out = out.replace(/,\s*$/, '')
-  for (let i = stack.length - 1; i >= 0; i--) out += stack[i]
-  return tryParse(out)
-}
-
 function extractJson(raw: string): Record<string, unknown> {
-  const s0 = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
-  const start = s0.indexOf('{')
+  const s = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+  const start = s.indexOf('{')
   if (start === -1) throw new Error('No JSON found')
-  const s = s0.slice(start)
-
-  // 1) clean parse
-  const direct = tryParse(s)
-  if (direct) return direct
-
-  // 2) balanced-brace slice (handles trailing junk after the object)
   let depth = 0, inStr = false, esc = false
-  for (let i = 0; i < s.length; i++) {
+  for (let i = start; i < s.length; i++) {
     const c = s[i]
     if (esc)                 { esc = false; continue }
     if (c === '\\' && inStr) { esc = true;  continue }
     if (c === '"')           { inStr = !inStr; continue }
     if (inStr)               continue
     if (c === '{') depth++
-    if (c === '}') { depth--; if (depth === 0) { const p = tryParse(s.slice(0, i + 1)); if (p) return p } }
+    if (c === '}') { depth--; if (depth === 0) return JSON.parse(s.slice(start, i + 1)) }
   }
-
-  // 3) repair truncation
-  const repaired = repairJson(s)
-  if (repaired) return repaired
-
   throw new Error('Malformed JSON')
 }
-
-// Standard normal CDF (erf approximation) — used for probability-of-profit
-function Phi(x: number): number {
-  const s = x < 0 ? -1 : 1
-  const z = Math.abs(x) / Math.SQRT2
-  const t = 1 / (1 + 0.3275911 * z)
-  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z)
-  return 0.5 * (1 + s * y)
-}
-const r2 = (n: number) => Math.round(n * 100) / 100
-const r0 = (n: number) => Math.round(n)
 
 export async function POST(req: NextRequest) {
   try {
@@ -95,19 +41,18 @@ export async function POST(req: NextRequest) {
     const toUnix   = Math.floor(Date.now() / 1000)
     const frUnix   = Math.floor((Date.now() - tfDays * 86400000) / 1000)
 
-    const [quote, profile, news, rec, earnings, peers, metric] = await Promise.all([
+    // Fetch market data + earnings
+    const [quote, profile, news, rec, earnings] = await Promise.all([
       fh(`/quote?symbol=${sym}`),
       fh(`/stock/profile2?symbol=${sym}`),
       fh(`/company-news?symbol=${sym}&from=${weekAgo}&to=${todayStr}`),
       fh(`/stock/recommendation?symbol=${sym}`),
       fh(`/stock/earnings?symbol=${sym}&limit=4`),
-      fh(`/stock/peers?symbol=${sym}`),
-      fh(`/stock/metric?symbol=${sym}&metric=all`),
     ])
 
-    // Candles non-blocking
+    // Candles non-blocking — won't break analysis if slow
     const candlePromise = fh(`/stock/candle?symbol=${sym}&resolution=D&from=${frUnix}&to=${toUnix}`)
-    const candleTimeout = new Promise<null>(r => setTimeout(() => r(null), 3000))
+    const candleTimeout = new Promise<null>(r => setTimeout(() => r(null), 5000))
     const candles = await Promise.race([candlePromise, candleTimeout])
 
     const price     = Number(quote?.c  ?? 0)
@@ -121,10 +66,10 @@ export async function POST(req: NextRequest) {
     const pe        = Number(profile?.peRatio ?? 0)
     const beta      = Number(profile?.beta ?? 1)
 
-    const r0rec       = Array.isArray(rec) && rec[0]
-    const analystBuy  = r0rec ? Number(r0rec.buy ?? 0) + Number(r0rec.strongBuy ?? 0) : 0
-    const analystHold = r0rec ? Number(r0rec.hold ?? 0) : 0
-    const analystSell = r0rec ? Number(r0rec.sell ?? 0) + Number(r0rec.strongSell ?? 0) : 0
+    const r0          = Array.isArray(rec) && rec[0]
+    const analystBuy  = r0 ? Number(r0.buy ?? 0) + Number(r0.strongBuy ?? 0) : 0
+    const analystHold = r0 ? Number(r0.hold ?? 0) : 0
+    const analystSell = r0 ? Number(r0.sell ?? 0) + Number(r0.strongSell ?? 0) : 0
     const analystTotal= analystBuy + analystHold + analystSell
 
     const candleArr: { t: number; o: number; h: number; l: number; c: number }[] = []
@@ -134,56 +79,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const headlines = (Array.isArray(news) ? news : []).slice(0, 6)
+    const headlines = (Array.isArray(news) ? news : []).slice(0, 5)
       .map((n: { headline?: string }) => `- ${n.headline ?? ''}`)
       .join('\n') || '- No recent news'
 
     const pct52 = high52 > low52 ? (((price - low52) / (high52 - low52)) * 100).toFixed(0) : '50'
-
-    // ── Fundamentals (Finnhub metric) ──
-    const M = (metric && (metric as { metric?: Record<string, unknown> }).metric) || {}
-    const mNum = (k: string) => { const v = Number((M as Record<string, unknown>)[k]); return isFinite(v) && v !== 0 ? v : null }
-    const grossM = mNum('grossMarginTTM'), netM = mNum('netProfitMarginTTM')
-    const revG   = mNum('revenueGrowthTTMYoy'), roe = mNum('roeTTM')
-    const de     = mNum('totalDebt/totalEquityAnnual') ?? mNum('totalDebt/totalEquityQuarterly')
-    const psTTM  = mNum('psTTM')
-    const fundStr = [
-      grossM != null ? `Gross margin ${grossM.toFixed(1)}%` : null,
-      netM   != null ? `Net margin ${netM.toFixed(1)}%`     : null,
-      revG   != null ? `Rev growth YoY ${revG.toFixed(1)}%` : null,
-      roe    != null ? `ROE ${roe.toFixed(1)}%`             : null,
-      psTTM  != null ? `P/S ${psTTM.toFixed(1)}`            : null,
-      de     != null ? `Debt/Equity ${de.toFixed(2)}`       : null,
-    ].filter(Boolean).join(' | ') || 'Limited fundamentals available'
-
-    // ── Peers ──
-    const peerSyms = (Array.isArray(peers) ? peers : []).filter((p: unknown) => typeof p === 'string' && (p as string).toUpperCase() !== sym).slice(0, 3) as string[]
-    const peerProfiles = await Promise.all(peerSyms.map(p => fh(`/stock/profile2?symbol=${p}`)))
-    const peerRows = peerSyms.map((p, i) => ({
-      ticker: p,
-      pe:   Number(peerProfiles[i]?.peRatio ?? 0),
-      mcap: Number(peerProfiles[i]?.marketCapitalization ?? 0),
-    }))
-    const peerStr = peerRows.length
-      ? peerRows.map(r => `${r.ticker} P/E ${r.pe > 0 ? r.pe.toFixed(1) : 'N/A'} MCap $${(r.mcap / 1000).toFixed(1)}B`).join(' | ')
-      : 'No peer data available'
-
-    // ── Realized volatility + expected move ──
-    const closes = candleArr.map(c => c.c).filter(x => x > 0)
-    let annVol = 0
-    if (closes.length > 20) {
-      const rets: number[] = []
-      for (let i = 1; i < closes.length; i++) if (closes[i - 1] > 0) rets.push(Math.log(closes[i] / closes[i - 1]))
-      if (rets.length > 5) {
-        const mean = rets.reduce((a, b) => a + b, 0) / rets.length
-        const variance = rets.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (rets.length - 1)
-        annVol = Math.sqrt(variance) * Math.sqrt(252)
-      }
-    }
-    if (annVol <= 0) annVol = Math.max(0.2, Math.abs(beta) * 0.18) // fallback proxy
-    const emPctD = (d: number) => annVol * Math.sqrt(d / 365) * 100
-    const em1w = emPctD(7), em1m = emPctD(30)
-    const ivLabel = annVol > 0.6 ? 'High' : annVol > 0.4 ? 'Elevated' : annVol > 0.25 ? 'Moderate' : 'Low'
 
     // Earnings context
     const earningsArr = Array.isArray(earnings) ? earnings : []
@@ -195,28 +95,23 @@ export async function POST(req: NextRequest) {
       ? `Next earnings: ${nextEarnings}${epsSurprise ? ` | Last EPS surprise: ${epsSurprise}%` : ''}`
       : 'Earnings date: N/A'
 
-    const prompt = `You are a senior equity + derivatives analyst writing an institutional research note on ${sym} (${name}, ${industry}) for active traders and options traders. Be specific, opinionated and quantitative. No generic filler. Return ONLY raw JSON.
+    const prompt = `You are a senior equity & options analyst writing a sharp research note on ${sym} (${name}, ${industry}) for active traders. Return ONLY raw JSON, no markdown. Be specific and quantitative — no filler.
 
-LIVE DATA
-Price $${price.toFixed(2)} | 1D ${change1d.toFixed(2)}% | 52W $${low52.toFixed(2)}-$${high52.toFixed(2)} (${pct52}% of range)
-Market cap $${(marketCap/1000).toFixed(1)}B | P/E ${pe>0?pe.toFixed(1):'N/A'} | Beta ${beta.toFixed(2)}
-Fundamentals: ${fundStr}
-Peers: ${peerStr}
-Analysts: ${analystTotal>0?`${analystBuy} buy / ${analystHold} hold / ${analystSell} sell`:'n/a'}
+DATA:
+Price $${price.toFixed(2)} | Change ${change1d.toFixed(2)}% | 52W $${low52.toFixed(2)}-$${high52.toFixed(2)} (${pct52}% of range)
+MarketCap $${(marketCap/1000).toFixed(1)}B | P/E ${pe>0?pe.toFixed(1):'N/A'} | Beta ${beta.toFixed(2)}
+Analysts: ${analystTotal>0?`${analystBuy}B/${analystHold}H/${analystSell}S`:'none'}
 ${earningsCtx}
-Volatility: realized ${(annVol*100).toFixed(0)}% annualized (${ivLabel}). Expected move +/-${em1w.toFixed(1)}% over 1 week, +/-${em1m.toFixed(1)}% over 1 month.
-Recent news:
-${headlines}
+News: ${headlines}
 
-REQUIREMENTS
-- Give reasons traders actually act on: catalysts WITH timing, positioning, order flow, relative strength, and what the market is mispricing right now. No textbook fluff.
-- Compare ${sym} directly to the named peers: where it is cheap or expensive on valuation, growth and margins, and the single clearest reason it stands out (or lags). Reference peers by ticker.
-- Options section is the priority. Pick a structure that fits THIS volatility regime and your directional view. Use the expected move above to justify the strikes. Explain it the way a real options trader thinks: IV vs realized vol, theta decay, the move you need versus the expected move, and probability. Also give one alternative income play.
-- All price levels based on $${price.toFixed(2)}. No lazy round numbers.
-- Keep every text field to 1-2 tight sentences. Max 3 items each for vs_competitors, risks and catalysts. Be dense, not wordy.
+REQUIREMENTS:
+- Give reasons traders ACTUALLY act on: catalysts with timing, positioning, order flow, relative strength, and what the market is mispricing. No textbook fluff.
+- Name ${sym}'s main competitors and compare directly: who is cheaper or growing faster, and the single clearest reason ${sym} stands out (or lags).
+- Put EXTRA weight on the options play: pick a structure that fits the volatility regime and your directional view, justify the strikes with the expected move, and explain it the way an options trader thinks — IV vs realized vol, theta, the move you need versus the expected move, and probability of profit.
+- Keep every text field to 1-2 tight sentences. All price levels based on $${price.toFixed(2)}. No lazy round numbers.
 
-Return EXACTLY this JSON shape (fill every field):
-{"rating":"Buy","confidence":72,"price_target":0.0,"price_target_bear":0.0,"price_target_bull":0.0,"time_horizon":"3-6 months","executive_summary":"...","investment_thesis":"...","why_it_stands_out":"...","relative_valuation":"...","institutional_view":"...","vs_competitors":[{"ticker":"XXX","take":"..."},{"ticker":"YYY","take":"..."}],"bull_case":"...","bear_case":"...","entry_low":0.0,"entry_high":0.0,"stop_loss":0.0,"take_profit_1":0.0,"take_profit_2":0.0,"position_size_pct":2,"key_levels":{"strong_support":0.0,"support":0.0,"resistance":0.0,"strong_resistance":0.0},"risks":["...","...","..."],"catalysts":["...","..."],"sentiment":"Bullish","fundamentals_score":7,"technical_score":6,"sentiment_score":7,"analyst_consensus":"Hold","vs_sector":"Outperform","timeframes":{"1_week":"Bullish","1_month":"Bullish","3_months":"Neutral","6_months":"Bullish"},"options":{"directional_bias":"Bullish","strategy":"Bull Call Spread","type":"CALL","structure":"Debit Spread","long_strike_pct":2,"short_strike_pct":9,"expiry_days":45,"iv_environment":"${ivLabel} IV — ...","thesis":"...","reasoning":"...","income_play":"..."}}`
+Return EXACTLY this JSON:
+{"rating":"Buy","confidence":72,"price_target":0.0,"price_target_bear":0.0,"price_target_bull":0.0,"time_horizon":"3-6 months","executive_summary":"...","investment_thesis":"...","why_it_stands_out":"...","relative_valuation":"...","institutional_view":"...","vs_competitors":[{"ticker":"XXX","take":"..."},{"ticker":"YYY","take":"..."}],"bull_case":"...","bear_case":"...","entry_low":0.0,"entry_high":0.0,"stop_loss":0.0,"take_profit_1":0.0,"take_profit_2":0.0,"position_size_pct":2,"key_levels":{"strong_support":0.0,"support":0.0,"resistance":0.0,"strong_resistance":0.0},"risks":["...","...","..."],"catalysts":["...","..."],"sentiment":"Bullish","fundamentals_score":7,"technical_score":6,"sentiment_score":7,"analyst_consensus":"Hold","vs_sector":"Outperform","timeframes":{"1_week":"Bullish","1_month":"Bullish","3_months":"Neutral","6_months":"Bullish"},"options":{"directional_bias":"Bullish","strategy":"Bull Call Spread","type":"CALL","structure":"Debit Spread","strike_pct":3,"short_strike_pct":9,"expiry_days":45,"expected_move_pct":8.5,"pop_pct":55,"max_profit":420,"iv_environment":"Low IV — good to buy premium","thesis":"...","reasoning":"...","income_play":"..."}}`
 
     const gemRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GM}`,
@@ -225,7 +120,7 @@ Return EXACTLY this JSON shape (fill every field):
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.65, maxOutputTokens: 5000, responseMimeType: 'application/json' },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 4096, responseMimeType: 'application/json' },
         }),
       }
     )
@@ -240,106 +135,43 @@ Return EXACTLY this JSON shape (fill every field):
     if (!rawText) return NextResponse.json({ error: 'Gemini returned empty response' }, { status: 500 })
 
     let analysis: Record<string, unknown>
-    try { analysis = extractJson(rawText) }
-    catch { return NextResponse.json({ error: `JSON parse failed. Raw: ${rawText.slice(0, 300)}` }, { status: 500 }) }
-
-    // ── Guarantee a complete analysis object (repaired/partial JSON must never
-    //    leave a field undefined, or the UI crashes on .toFixed) ──
-    const N = (v: unknown, d: number) => { const n = Number(v); return isFinite(n) ? n : d }
-    const S = (v: unknown, d: string) => (typeof v === 'string' && v.trim() ? (v as string) : d)
-    analysis.rating             = S(analysis.rating, 'Hold')
-    analysis.confidence         = N(analysis.confidence, 55)
-    analysis.price_target       = N(analysis.price_target, price)
-    analysis.price_target_bear  = N(analysis.price_target_bear, r2(price * 0.90))
-    analysis.price_target_bull  = N(analysis.price_target_bull, r2(price * 1.15))
-    analysis.time_horizon       = S(analysis.time_horizon, '3-6 months')
-    analysis.executive_summary  = S(analysis.executive_summary, 'Summary unavailable for this ticker.')
-    analysis.investment_thesis  = S(analysis.investment_thesis, '')
-    analysis.bull_case          = S(analysis.bull_case, '')
-    analysis.bear_case          = S(analysis.bear_case, '')
-    analysis.entry_low          = N(analysis.entry_low, r2(price * 0.985))
-    analysis.entry_high         = N(analysis.entry_high, r2(price * 1.005))
-    analysis.stop_loss          = N(analysis.stop_loss, r2(price * 0.93))
-    analysis.take_profit_1      = N(analysis.take_profit_1, r2(price * 1.08))
-    analysis.take_profit_2      = N(analysis.take_profit_2, r2(price * 1.18))
-    analysis.position_size_pct  = N(analysis.position_size_pct, 2)
-    analysis.fundamentals_score = N(analysis.fundamentals_score, 5)
-    analysis.technical_score    = N(analysis.technical_score, 5)
-    analysis.sentiment_score    = N(analysis.sentiment_score, 5)
-    analysis.sentiment          = S(analysis.sentiment, 'Neutral')
-    analysis.vs_sector          = S(analysis.vs_sector, 'In-line')
-    analysis.analyst_consensus  = S(analysis.analyst_consensus, 'Hold')
-    analysis.risks              = Array.isArray(analysis.risks)     ? analysis.risks     : []
-    analysis.catalysts          = Array.isArray(analysis.catalysts) ? analysis.catalysts : []
-    const kl = (analysis.key_levels ?? {}) as Record<string, unknown>
-    analysis.key_levels = {
-      strong_support:    N(kl.strong_support,    r2(price * 0.90)),
-      support:           N(kl.support,           r2(price * 0.96)),
-      resistance:        N(kl.resistance,        r2(price * 1.04)),
-      strong_resistance: N(kl.strong_resistance, r2(price * 1.10)),
-    }
-    const tfO = (analysis.timeframes ?? {}) as Record<string, unknown>
-    analysis.timeframes = {
-      '1_week':   S(tfO['1_week'],   'Neutral'),
-      '1_month':  S(tfO['1_month'],  'Neutral'),
-      '3_months': S(tfO['3_months'], 'Neutral'),
-      '6_months': S(tfO['6_months'], 'Neutral'),
+    try {
+      analysis = extractJson(rawText)
+    } catch {
+      return NextResponse.json({ error: `JSON parse failed. Raw: ${rawText.slice(0, 300)}` }, { status: 500 })
     }
 
-    // ── Options math (server-side, grounded in realized vol) ──
-    const opts     = (analysis.options ?? {}) as Record<string, unknown>
-    const oType    = String(opts.type) === 'PUT' ? 'PUT' : 'CALL'
-    const structure= String(opts.structure ?? 'Single')
-    const isSpread = /spread/i.test(structure) || opts.short_strike_pct != null
-    const expiry   = Math.max(1, Number(opts.expiry_days ?? 45))
-    const longPct  = Math.abs(Number(opts.long_strike_pct ?? opts.strike_pct ?? 3)) || 3
-    const longStrike  = oType === 'CALL' ? r2(price * (1 + longPct / 100)) : r2(price * (1 - longPct / 100))
-    const shortPct = Math.abs(Number(opts.short_strike_pct ?? (longPct + 6))) || (longPct + 6)
-    const shortStrike = isSpread ? (oType === 'CALL' ? r2(price * (1 + shortPct / 100)) : r2(price * (1 - shortPct / 100))) : 0
-
-    const emExp  = price > 0 ? price * annVol * Math.sqrt(expiry / 365) : price * 0.05  // 1 std-dev $ move by expiry
-    const premAt = (k: number) => Math.max(0.4 * emExp - 0.5 * Math.abs(k - price), price * 0.004)
-    const premLong  = premAt(longStrike)
-    const premShort = isSpread ? premAt(shortStrike) : 0
-    const debit  = Math.max(isSpread ? premLong - premShort : premLong, price * 0.003)
-    const breakeven = oType === 'CALL' ? r2(longStrike + debit) : r2(longStrike - debit)
-    const width  = isSpread ? Math.abs(shortStrike - longStrike) : 0
-    const maxLoss   = r0(debit * 100)
-    const maxProfit = isSpread ? r0((width - debit) * 100) : -1  // -1 => uncapped
-    const z      = (breakeven - price) / (emExp || 1)
-    const popRaw = oType === 'CALL' ? 1 - Phi(z) : Phi(z)
-    const popPct = r0(Math.max(5, Math.min(95, popRaw * 100)))
-    const emExpPct = price > 0 ? r2(emExp / price * 100) : 0
+    const opts      = (analysis.options ?? {}) as Record<string, unknown>
+    const isBull    = (opts.type as string) !== 'PUT'
+    const strikePct = Number(opts.strike_pct ?? 5)
+    const strike    = parseFloat((price * (isBull ? 1 + strikePct/100 : 1 - strikePct/100)).toFixed(2))
+    const estPrem   = parseFloat((price * 0.025).toFixed(2))
+    const shortStrike = opts.short_strike_pct != null
+      ? parseFloat((price * (isBull ? 1 + Number(opts.short_strike_pct)/100 : 1 - Number(opts.short_strike_pct)/100)).toFixed(2))
+      : undefined
+    const emPct        = Number(opts.expected_move_pct ?? 0)
+    const expectedMove = emPct > 0 ? parseFloat((price * emPct / 100).toFixed(2)) : undefined
+    const breakeven    = parseFloat((isBull ? strike + estPrem : strike - estPrem).toFixed(2))
 
     return NextResponse.json({
       ticker: sym, name, price, change1d, prevClose,
       high52, low52, pe, marketCap, beta, industry,
       analystBuy, analystHold, analystSell, analystTotal,
       nextEarnings, lastEPS, estEPS, epsSurprise,
-      realized_vol_pct: r0(annVol * 100),
-      expected_move_1w_pct: r2(em1w),
-      expected_move_1m_pct: r2(em1m),
-      peers: peerRows,
       candles: candleArr.slice(-120),
       timeframe: tf,
       analysis: {
         ...analysis,
         options: {
-          ...opts,
-          type: oType,
-          structure,
-          strike: longStrike,
-          short_strike: shortStrike,
-          expiry_days: expiry,
-          est_premium: r2(debit),
+          ...opts, strike,
+          short_strike:   shortStrike,
+          expiry_days:    Number(opts.expiry_days ?? 45),
+          est_premium:    estPrem,
           breakeven,
-          breakeven_call: oType === 'CALL' ? breakeven : r2(longStrike + debit),
-          breakeven_put:  oType === 'PUT'  ? breakeven : r2(longStrike - debit),
-          max_loss: maxLoss,
-          max_profit: maxProfit,
-          pop_pct: popPct,
-          expected_move: r2(emExp),
-          expected_move_pct: emExpPct,
+          breakeven_call: parseFloat((strike + estPrem).toFixed(2)),
+          breakeven_put:  parseFloat((strike - estPrem).toFixed(2)),
+          max_loss:       parseFloat((estPrem * 100).toFixed(0)),
+          expected_move:  expectedMove,
         },
       },
     })
