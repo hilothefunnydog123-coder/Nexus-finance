@@ -34,7 +34,10 @@ const NAV = [
   { label: 'Intelligence', href: '/intelligence' },
   { label: 'Agents',       href: '/agents' },
   { label: 'Algorithms',   href: '/algorithms' },
+  { label: 'Research',     href: '/research' },
   { label: 'Courses',      href: '/courses' },
+  { label: 'Developers',   href: '/developers' },
+  { label: 'Company',      href: '/company' },
 ]
 
 const WEAPONS = [
@@ -109,9 +112,9 @@ export default function Home() {
           <YNMark size={28} glow />
           <span style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-.5px' }}>YN Finance</span>
         </Link>
-        <div className="hide-sm" style={{ display: 'flex', alignItems: 'center', gap: 30 }}>
+        <div className="hide-sm" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           {NAV.map(n => (
-            <Link key={n.href} href={n.href} className="navlink" style={{ fontSize: 13.5, fontWeight: 600, color: '#6a8497', textDecoration: 'none' }}>{n.label}</Link>
+            <Link key={n.href} href={n.href} className="navlink" style={{ fontSize: 13, fontWeight: 600, color: '#6a8497', textDecoration: 'none', whiteSpace: 'nowrap' }}>{n.label}</Link>
           ))}
         </div>
         <Link href="/courses" style={{
