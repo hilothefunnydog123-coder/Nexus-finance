@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import { YNMark } from '@/components/YNLogo'
 
 const ThreeScene = dynamic(() => import('@/components/ThreeScene'), { ssr: false })
+const CinematicIntro = dynamic(() => import('@/components/CinematicIntro'), { ssr: false })
 
 // ── Scroll reveal ───────────────────────────────────────────────────────────
 function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -98,6 +99,9 @@ export default function Home() {
       </div>
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
         background: 'radial-gradient(circle at 50% 0%, rgba(0,212,170,.10), transparent 55%), linear-gradient(180deg, rgba(4,10,18,.2), rgba(4,10,18,.85))' }} />
+
+      {/* Cinematic intro montage — plays once, then fades into the Three.js background above */}
+      <CinematicIntro />
 
       {/* NAV */}
       <nav style={{
