@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, type CSSProperties } from 'react'
 import Link from 'next/link'
 
 const POPULAR = ['AAPL','NVDA','TSLA','MSFT','AMZN','META','AMD','GOOGL','SPY','QQQ','JPM','NFLX']
@@ -525,6 +525,99 @@ function Ring({pct,clr,size=88}:{pct:number;clr:string;size?:number}) {
   )
 }
 
+// ── ANIMATED COUNT-UP NUMBER ──────────────────────────────────────────────────
+function AnimatedNum({value,prefix='',suffix='',decimals=2,style}:{value:number;prefix?:string;suffix?:string;decimals?:number;style?:CSSProperties}){
+  const [n,setN]=useState(0)
+  useEffect(()=>{
+    let raf=0; const dur=950; const start=performance.now()
+    const tick=(t:number)=>{const p=Math.min(1,(t-start)/dur); const e=1-Math.pow(1-p,3); setN(value*e); if(p<1)raf=requestAnimationFrame(tick)}
+    raf=requestAnimationFrame(tick); return ()=>cancelAnimationFrame(raf)
+  },[value])
+  return <span style={style}>{prefix}{n.toFixed(decimals)}{suffix}</span>
+}
+
+// ── CONVICTION TUG-OF-WAR ──────────────────────────────────────────────────────
+function ConvictionMeter({rating,confidence,fund,tech,sent}:{rating:string;confidence:number;fund:number;tech:number;sent:number}){
+  const scoreAvg=(fund+tech+sent)/3
+  let bull=scoreAvg*10+(((RATING_SCORE[rating]??3)-3)*8)
+  bull=Math.max(6,Math.min(94,Math.round(bull)))
+  const bear=100-bull
+  const honest = confidence<60 ? 'LOW CONVICTION — treat as a lean, not a layup' : confidence<75 ? 'MODERATE CONVICTION' : 'HIGH CONVICTION'
+  const hClr = confidence<60?'#ff9500':confidence<75?'#00d4ff':'#00ff88'
+  return (
+    <div style={{marginTop:4}}>
+      <div style={{display:'flex',justifyContent:'space-between',fontSize:10,fontFamily:'monospace',marginBottom:6,letterSpacing:'.5px'}}>
+        <span style={{color:'#00ff88',fontWeight:800}}>🐂 BULLS {bull}%</span>
+        <span style={{color:'#ff2d78',fontWeight:800}}>{bear}% BEARS 🐻</span>
+      </div>
+      <div style={{position:'relative',height:10,borderRadius:6,overflow:'hidden',display:'flex',border:'1px solid #00ff8820'}}>
+        <div style={{width:`${bull}%`,background:'linear-gradient(90deg,#00ff8830,#00ff88)',boxShadow:'0 0 12px #00ff8860',transition:'width 1s cubic-bezier(.22,1,.36,1)'}}/>
+        <div style={{flex:1,background:'linear-gradient(90deg,#ff2d78,#ff2d7830)',boxShadow:'0 0 12px #ff2d7860'}}/>
+        <div style={{position:'absolute',top:-2,left:`calc(${bull}% - 1px)`,width:2,height:14,background:'#fff',boxShadow:'0 0 8px #fff',transition:'left 1s cubic-bezier(.22,1,.36,1)'}}/>
+      </div>
+      <div style={{fontSize:9.5,color:hClr,letterSpacing:'1px',marginTop:7,fontWeight:700}}>● {honest} · {confidence}% CONFIDENCE</div>
+    </div>
+  )
+}
+
+// ── OPTIONS PAYOFF DIAGRAM ─────────────────────────────────────────────────────
+function OptionsPayoff({type,strike,premium,spot}:{type:string;strike:number;premium:number;spot:number}){
+  if((type!=='CALL'&&type!=='PUT')||!strike||!premium||!spot) return null
+  const lo=Math.min(spot,strike)*0.82, hi=Math.max(spot,strike)*1.18
+  const N=64
+  const pts:{s:number;pl:number}[]=[]
+  for(let i=0;i<=N;i++){const s=lo+(hi-lo)*i/N; const intr=type==='CALL'?Math.max(0,s-strike):Math.max(0,strike-s); pts.push({s,pl:intr-premium})}
+  const pls=pts.map(p=>p.pl), maxPl=Math.max(...pls), minPl=Math.min(...pls)
+  const be=type==='CALL'?strike+premium:strike-premium
+  const W=600,H=200,ML=8,MR=8,MT=14,MB=22, cw=W-ML-MR, ch=H-MT-MB
+  const x=(s:number)=>ML+(s-lo)/(hi-lo)*cw
+  const y=(pl:number)=>MT+ch-(pl-minPl)/((maxPl-minPl)||1)*ch
+  const zeroY=y(0)
+  const line=pts.map((p,i)=>`${i?'L':'M'}${x(p.s).toFixed(1)} ${y(p.pl).toFixed(1)}`).join(' ')
+  const area=(pos:boolean)=>{const seg=pts.filter(p=>pos?p.pl>=0:p.pl<=0); if(seg.length<2)return ''
+    return seg.map((p,i)=>`${i?'L':'M'}${x(p.s).toFixed(1)} ${y(p.pl).toFixed(1)}`).join(' ')+' '+seg.slice().reverse().map(p=>`L${x(p.s).toFixed(1)} ${zeroY.toFixed(1)}`).join(' ')+' Z'}
+  const movePct=((be-spot)/spot*100)
+  const mk=(s:number,c:string,lbl:string)=>(
+    <g key={lbl}>
+      <line x1={x(s)} y1={MT} x2={x(s)} y2={H-MB} stroke={c} strokeWidth={1} strokeDasharray="3 3" opacity={0.7}/>
+      <text x={x(s)} y={MT-3} fill={c} fontSize={9} fontFamily="monospace" textAnchor="middle">{lbl}</text>
+    </g>
+  )
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:'auto',display:'block'}}>
+        <path d={area(true)}  fill="#00ff8818"/>
+        <path d={area(false)} fill="#ff2d7818"/>
+        <line x1={ML} y1={zeroY} x2={W-MR} y2={zeroY} stroke="#4a7a6a" strokeWidth={1} strokeDasharray="2 4"/>
+        <path d={line} fill="none" stroke="#a855f7" strokeWidth={2} style={{filter:'drop-shadow(0 0 6px #a855f7)'}}/>
+        {mk(strike,'#ffffff','STRIKE')}
+        {mk(be,'#ff9500','B/E')}
+        {mk(spot,'#00d4ff','SPOT')}
+      </svg>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginTop:8}}>
+        {[
+          {l:'BREAKEVEN',v:`$${be.toFixed(2)}`,c:'#ff9500'},
+          {l:'MOVE NEEDED',v:`${movePct>=0?'+':''}${movePct.toFixed(1)}%`,c:Math.abs(movePct)<5?'#00ff88':'#ff9500'},
+          {l:'MAX LOSS / CONTRACT',v:`$${(premium*100).toFixed(0)}`,c:'#ff2d78'},
+        ].map(({l,v,c})=>(
+          <div key={l} style={{background:'rgba(0,20,10,.6)',border:`1px solid ${c}25`,borderRadius:2,padding:'8px 10px',textAlign:'center'}}>
+            <div style={{fontSize:8,color:'#4a7a6a',letterSpacing:'.5px',marginBottom:3}}>{l}</div>
+            <div style={{fontSize:13,fontWeight:800,fontFamily:'monospace',color:c}}>{v}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{fontSize:9,color:'#1a4a2a',letterSpacing:'.5px',marginTop:8,textAlign:'center'}}>// 1 CONTRACT = 100 SHARES · P/L AT EXPIRY · EST. PREMIUM FROM REALIZED VOL</div>
+    </div>
+  )
+}
+
+// ── EARNINGS COUNTDOWN HELPER ──────────────────────────────────────────────────
+function daysUntil(dateStr?:string|null):number|null{
+  if(!dateStr) return null
+  const d=new Date(dateStr); if(isNaN(d.getTime())) return null
+  return Math.ceil((d.getTime()-Date.now())/86400000)
+}
+
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function AIStocksPage() {
   const [mode,setMode]           = useState<'analyze'|'scan'>('analyze')
@@ -546,6 +639,11 @@ export default function AIStocksPage() {
   const intervalRef = useRef<NodeJS.Timeout|null>(null)
   const resultsRef  = useRef<HTMLDivElement>(null)
   const FREE_LIMIT  = 3
+
+  // ── Head-to-head compare ──
+  const [cmpInput,setCmpInput]   = useState('')
+  const [cmp,setCmp]             = useState<Result|null>(null)
+  const [cmpLoading,setCmpLoading] = useState(false)
 
   // ── Ticker autocomplete ──
   const [sug,setSug]             = useState<{symbol:string;description:string}[]>([])
@@ -629,7 +727,7 @@ export default function AIStocksPage() {
       if (count >= FREE_LIMIT) { setShowPaywall(true); return }
     }
 
-    setInput(t); setLoading(true); setResult(null); setError(''); setNotFound(false); setShowSug(false)
+    setInput(t); setLoading(true); setResult(null); setCmp(null); setCmpInput(''); setError(''); setNotFound(false); setShowSug(false)
     let idx=0; intervalRef.current=setInterval(()=>{idx=(idx+1)%AGENTS.length;setAgentIdx(idx)},900)
     try {
       const r=await fetch('/api/stock-analyzer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:t,timeframe})})
@@ -662,6 +760,43 @@ export default function AIStocksPage() {
     finally {if(intervalRef.current)clearInterval(intervalRef.current);setLoading(false)}
   },[timeframe, isPro])
 
+  // Run a head-to-head comparison ticker (reuses the same analyzer endpoint)
+  const runCompare = useCallback(async (sym:string)=>{
+    const t=sym.trim().toUpperCase(); if(!t||!result||t===result.ticker) return
+    setCmpLoading(true); setCmp(null)
+    try {
+      const r=await fetch('/api/stock-analyzer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:t,timeframe})})
+      const d=await r.json()
+      if(r.ok&&!d.error) setCmp(d)
+    } catch {/* ignore — compare is best-effort */}
+    finally { setCmpLoading(false) }
+  },[result,timeframe])
+
+  // Export a branded verdict card as a PNG (free marketing on every share)
+  const downloadCard = useCallback(()=>{
+    if(!result||!result.analysis) return
+    const a2=result.analysis
+    const c=document.createElement('canvas'); c.width=1200; c.height=630
+    const x=c.getContext('2d'); if(!x) return
+    const clrMap:Record<string,string>={'Strong Buy':'#00ff88','Buy':'#00c896','Hold':'#ff9500','Sell':'#ff6b35','Strong Sell':'#ff2d78'}
+    const vc=clrMap[a2.rating]??'#00ff88'
+    const g=x.createLinearGradient(0,0,1200,630); g.addColorStop(0,'#020806'); g.addColorStop(1,'#04140c')
+    x.fillStyle=g; x.fillRect(0,0,1200,630)
+    x.strokeStyle=vc+'40'; x.lineWidth=2; x.strokeRect(24,24,1152,582)
+    x.fillStyle='#00ff88'; x.font='bold 30px monospace'; x.fillText('YN FINANCE', 60, 90)
+    x.fillStyle='#4a7a6a'; x.font='18px monospace'; x.fillText('AI STOCK ANALYZER', 60, 118)
+    x.fillStyle='#ffffff'; x.font='bold 120px monospace'; x.fillText(result.ticker, 56, 250)
+    x.fillStyle='#a0ffcc'; x.font='22px monospace'; x.fillText(`${result.name}  ·  $${result.price.toFixed(2)}`, 60, 300)
+    x.fillStyle=vc; x.font='bold 96px monospace'; x.fillText(a2.rating.toUpperCase(), 56, 420)
+    x.fillStyle='#4a7a6a'; x.font='20px monospace'
+    x.fillText(`CONVICTION ${a2.confidence}%`, 60, 480)
+    x.fillText(`12M TARGET $${a2.price_target.toFixed(2)}  (${((a2.price_target-result.price)/result.price*100>=0?'+':'')}${((a2.price_target-result.price)/result.price*100).toFixed(1)}%)`, 60, 515)
+    x.fillText(`HORIZON ${a2.time_horizon}`, 60, 550)
+    x.fillStyle=vc+'18'; x.fillRect(56,575,1088,2)
+    x.fillStyle='#4a7a6a'; x.font='16px monospace'; x.fillText('ynfinance.org · Not financial advice · DYOR', 60, 595)
+    c.toBlob(b=>{ if(!b)return; const u=URL.createObjectURL(b); const link=document.createElement('a'); link.href=u; link.download=`${result.ticker}-yn-verdict.png`; link.click(); URL.revokeObjectURL(u) })
+  },[result])
+
   const a     = result?.analysis
   const rCfg  = RATING_CFG[a?.rating??''] ?? RATING_CFG['Hold']
   const sClr  = SENT_CLR[a?.sentiment??''] ?? '#ff9500'
@@ -683,6 +818,21 @@ export default function AIStocksPage() {
         @keyframes fadeUp {from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
         @keyframes ticker {0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
         @keyframes border-flow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+        @keyframes pricePulse{0%{opacity:.5}100%{opacity:1}}
+        /* Staggered cinematic reveal of result panels — feels like the agents stream in */
+        .results-stream>*{animation:fadeUp .55s both}
+        .results-stream>*:nth-child(1){animation-delay:.04s}
+        .results-stream>*:nth-child(2){animation-delay:.12s}
+        .results-stream>*:nth-child(3){animation-delay:.20s}
+        .results-stream>*:nth-child(4){animation-delay:.28s}
+        .results-stream>*:nth-child(5){animation-delay:.36s}
+        .results-stream>*:nth-child(6){animation-delay:.44s}
+        .results-stream>*:nth-child(7){animation-delay:.52s}
+        .results-stream>*:nth-child(8){animation-delay:.60s}
+        .results-stream>*:nth-child(9){animation-delay:.68s}
+        .results-stream>*:nth-child(10){animation-delay:.76s}
+        .results-stream>*:nth-child(n+11){animation-delay:.84s}
+        @media(prefers-reduced-motion:reduce){.results-stream>*{animation:none}}
         :root { --green: #00ff88; --cyan: #00d4ff; --purple: #a855f7; --orange: #ff9500; --pink: #ff2d78; }
         html { scroll-behavior: smooth; }
         .nav-link{color:#4a7a6a;text-decoration:none;font-size:12px;transition:color .2s;letter-spacing:.5px}
@@ -751,7 +901,7 @@ export default function AIStocksPage() {
               <div className="terminal-row"><span className="t-prompt">sys@yn-ai:~$</span><span className="t-cmd"> ./start_analyzer.sh</span></div>
               <div className="terminal-row"><span className="t-out">[OK] Loading 5-agent model...</span></div>
               <div className="terminal-row"><span className="t-out">[OK] Finnhub data stream connected</span></div>
-              <div className="terminal-row"><span className="t-out">[OK] Gemini 2.0 ready<span style={{animation:'blink 1s infinite'}}>_</span></span></div>
+              <div className="terminal-row"><span className="t-out">[OK] Gemini 2.5 ready<span style={{animation:'blink 1s infinite'}}>_</span></span></div>
             </div>
 
             <h1 style={{fontSize:'clamp(38px,6vw,72px)',fontWeight:900,lineHeight:.95,letterSpacing:'-2px',marginBottom:16,animation:'glitch 6s infinite'}}>
@@ -929,7 +1079,7 @@ export default function AIStocksPage() {
 
       {/* ══ RESULTS ══════════════════════════════════════════════════════════ */}
       {result && a && !loading && (
-        <div ref={resultsRef} style={{maxWidth:1060,margin:'0 auto 80px',padding:'0 20px',position:'relative',zIndex:2}}>
+        <div ref={resultsRef} className="results-stream" style={{maxWidth:1060,margin:'0 auto 80px',padding:'0 20px',position:'relative',zIndex:2}}>
 
           {/* SYSTEM OUTPUT HEADER */}
           <div style={{fontFamily:'monospace',fontSize:11,marginBottom:20,padding:'12px 16px',background:'rgba(3,12,6,.9)',border:'1px solid #00ff8820',borderRadius:2,display:'flex',flexWrap:'wrap',gap:12,alignItems:'center'}}>
@@ -941,9 +1091,10 @@ export default function AIStocksPage() {
             </div>
             {result.nextEarnings && (
               <div style={{marginLeft:'auto',display:'flex',gap:12,flexWrap:'wrap'}}>
-                <span style={{color:'#f59e0b',background:'rgba(245,158,11,.1)',padding:'3px 10px',borderRadius:2,border:'1px solid rgba(245,158,11,.3)'}}>
-                  📅 EARNINGS {result.nextEarnings}
-                </span>
+                {(()=>{const dte=daysUntil(result.nextEarnings); const soon=dte!==null&&dte>=0&&dte<=10; const c=soon?'#ff2d78':'#f59e0b'; return (
+                <span style={{color:c,background:`${c}1a`,padding:'3px 10px',borderRadius:2,border:`1px solid ${c}4d`}}>
+                  📅 EARNINGS {result.nextEarnings}{dte!==null&&dte>=0?` · in ${dte}d`:''}{soon?' ⚠ EVENT RISK':''}
+                </span>)})()}
                 {result.epsSurprise && (
                   <span style={{color:Number(result.epsSurprise)>0?'#00ff88':'#ff2d78',background:Number(result.epsSurprise)>0?'rgba(0,255,136,.1)':'rgba(255,45,120,.1)',padding:'3px 10px',borderRadius:2,border:`1px solid ${Number(result.epsSurprise)>0?'rgba(0,255,136,.3)':'rgba(255,45,120,.3)'}`}}>
                     Last EPS: {Number(result.epsSurprise)>0?'+':''}{result.epsSurprise}% vs est
@@ -953,30 +1104,103 @@ export default function AIStocksPage() {
             )}
           </div>
 
-          {/* VERDICT ROW */}
-          <div style={{display:'grid',gridTemplateColumns:'auto 1fr auto',gap:16,alignItems:'center',marginBottom:16}} className="grid-2">
-            {/* Confidence ring */}
-            <div style={{position:'relative',width:88,height:88}}>
-              <Ring pct={a.confidence} clr={rCfg.clr} size={88}/>
-              <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
-                <span style={{fontSize:17,fontWeight:900,color:rCfg.clr,fontFamily:'monospace',textShadow:`0 0 12px ${rCfg.clr}`}}>{a.confidence}</span>
-                <span style={{fontSize:7,color:'#4a7a6a',letterSpacing:1}}>CONF%</span>
+          {/* ═══ VERDICT HERO — the punchline up top ═══ */}
+          <div className="card" style={{padding:'22px 24px',marginBottom:14,borderColor:`${rCfg.clr}40`,background:`linear-gradient(135deg, ${rCfg.clr}0e, rgba(3,12,6,.92))`,boxShadow:`0 0 44px ${rCfg.glow}`}}>
+            <div style={{display:'grid',gridTemplateColumns:'auto 1fr auto',gap:20,alignItems:'center'}} className="grid-2">
+              {/* Confidence ring */}
+              <div style={{position:'relative',width:96,height:96}}>
+                <Ring pct={a.confidence} clr={rCfg.clr} size={96}/>
+                <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+                  <AnimatedNum value={a.confidence} decimals={0} style={{fontSize:20,fontWeight:900,color:rCfg.clr,fontFamily:'monospace',textShadow:`0 0 12px ${rCfg.clr}`}}/>
+                  <span style={{fontSize:7,color:'#4a7a6a',letterSpacing:1}}>CONF%</span>
+                </div>
+              </div>
+
+              <div>
+                <div style={{fontSize:10,color:'#4a7a6a',letterSpacing:'1px',marginBottom:6}}>// PORTFOLIO MANAGER VERDICT</div>
+                <div style={{fontSize:38,fontWeight:900,letterSpacing:'-1px',color:rCfg.clr,textShadow:`0 0 30px ${rCfg.glow},0 0 60px ${rCfg.glow}`,animation:'glitch 8s infinite',lineHeight:1}}>{a.rating}</div>
+                <div style={{fontSize:11,color:'#4a7a6a',marginTop:6,letterSpacing:'.5px'}}>{a.time_horizon} · {a.sentiment} sentiment</div>
+              </div>
+
+              <div style={{textAlign:'right'}}>
+                <div style={{fontSize:10,color:'#4a7a6a',letterSpacing:'1px',marginBottom:6}}>// 12-MONTH TARGET</div>
+                <AnimatedNum value={a.price_target} prefix="$" style={{fontSize:34,fontWeight:900,color:'#00d4ff',fontFamily:'monospace',textShadow:'0 0 20px #00d4ff',display:'block'}}/>
+                <div style={{fontSize:12,color:((a.price_target-result.price)/result.price*100)>=0?'#00ff88':'#ff2d78',fontWeight:700,marginTop:4}}>
+                  {((a.price_target-result.price)/result.price*100)>=0?'+':''}{((a.price_target-result.price)/result.price*100).toFixed(1)}% upside
+                </div>
+                <button onClick={downloadCard} style={{marginTop:10,background:'transparent',border:`1px solid ${rCfg.clr}50`,color:rCfg.clr,borderRadius:2,padding:'5px 12px',fontSize:10,fontWeight:700,cursor:'pointer',fontFamily:'inherit',letterSpacing:'1px'}}>📸 SHARE VERDICT</button>
               </div>
             </div>
 
-            <div>
-              <div style={{fontSize:10,color:'#4a7a6a',letterSpacing:'1px',marginBottom:6}}>// PORTFOLIO MANAGER VERDICT</div>
-              <div style={{fontSize:36,fontWeight:900,letterSpacing:'-1px',color:rCfg.clr,textShadow:`0 0 30px ${rCfg.glow},0 0 60px ${rCfg.glow}`,animation:'glitch 8s infinite'}}>{a.rating}</div>
-              <div style={{fontSize:11,color:'#4a7a6a',marginTop:4,letterSpacing:'.5px'}}>{a.time_horizon} · {a.sentiment} sentiment</div>
+            {/* Conviction tug-of-war */}
+            <div style={{marginTop:16,paddingTop:16,borderTop:`1px solid ${rCfg.clr}1f`}}>
+              <ConvictionMeter rating={a.rating} confidence={a.confidence} fund={a.fundamentals_score} tech={a.technical_score} sent={a.sentiment_score}/>
             </div>
 
-            <div style={{textAlign:'right'}}>
-              <div style={{fontSize:10,color:'#4a7a6a',letterSpacing:'1px',marginBottom:6}}>// 12-MONTH TARGET</div>
-              <div style={{fontSize:32,fontWeight:900,color:'#00d4ff',fontFamily:'monospace',textShadow:'0 0 20px #00d4ff'}}>${a.price_target.toFixed(2)}</div>
-              <div style={{fontSize:12,color:((a.price_target-result.price)/result.price*100)>=0?'#00ff88':'#ff2d78',fontWeight:700,marginTop:4}}>
-                {((a.price_target-result.price)/result.price*100).toFixed(1)}% upside
-              </div>
+            {/* Target ladder — bear / base / bull, up top */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginTop:16}}>
+              {[
+                {label:'BEAR TARGET',val:a.price_target_bear,clr:'#ff2d78'},
+                {label:'BASE TARGET',val:a.price_target,     clr:'#00d4ff'},
+                {label:'BULL TARGET',val:a.price_target_bull,clr:'#00ff88'},
+              ].map(({label,val,clr})=>{
+                const up=result.price>0?((val-result.price)/result.price*100):0
+                return (
+                  <div key={label} style={{background:`${clr}0c`,border:`1px solid ${clr}30`,borderRadius:2,padding:'10px 12px',textAlign:'center'}}>
+                    <div style={{fontSize:8,color:'#4a7a6a',letterSpacing:'1px',marginBottom:4}}>{label}</div>
+                    <AnimatedNum value={val??0} prefix="$" style={{fontSize:17,fontWeight:900,fontFamily:'monospace',color:clr,textShadow:`0 0 14px ${clr}80`,display:'block'}}/>
+                    <div style={{fontSize:10,color:up>=0?'#00ff88':'#ff2d78',fontWeight:700,marginTop:3}}>{up>=0?'+':''}{up.toFixed(1)}%</div>
+                  </div>
+                )
+              })}
             </div>
+          </div>
+
+          {/* ═══ HEAD-TO-HEAD COMPARE ═══ */}
+          <div className="card" style={{padding:'14px 18px',marginBottom:14,borderColor:'#a855f730'}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+              <span style={{fontSize:11,fontWeight:800,color:'#a855f7',letterSpacing:'1px'}}>⚔ COMPARE {result.ticker} VS</span>
+              <input value={cmpInput} onChange={e=>setCmpInput(e.target.value.toUpperCase().replace(/[^A-Z0-9.\-]/g,''))} onKeyDown={e=>e.key==='Enter'&&runCompare(cmpInput)}
+                placeholder="TICKER" style={{width:120,background:'rgba(0,20,10,.9)',border:'1px solid #a855f740',borderRadius:2,padding:'8px 12px',color:'#a855f7',fontSize:13,fontFamily:'monospace',fontWeight:800,letterSpacing:'2px',outline:'none'}}/>
+              <button onClick={()=>runCompare(cmpInput)} disabled={cmpLoading||!cmpInput.trim()}
+                style={{background:cmpLoading||!cmpInput.trim()?'transparent':'#a855f7',border:'1px solid #a855f7',color:cmpLoading||!cmpInput.trim()?'#a855f7':'#fff',borderRadius:2,padding:'8px 16px',fontSize:11,fontWeight:800,cursor:cmpLoading||!cmpInput.trim()?'not-allowed':'pointer',fontFamily:'inherit',letterSpacing:'1px'}}>
+                {cmpLoading?'···':'COMPARE'}
+              </button>
+              {cmp && <button onClick={()=>{setCmp(null);setCmpInput('')}} style={{background:'transparent',border:'1px solid #4a7a6a40',color:'#4a7a6a',borderRadius:2,padding:'8px 12px',fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>CLEAR</button>}
+            </div>
+            {cmp && cmp.analysis && (()=>{
+              const b=cmp.analysis
+              const upA=(a.price_target-result.price)/result.price*100
+              const upB=(b.price_target-cmp.price)/cmp.price*100
+              const rows:[string,string|number,string|number,boolean][]=[
+                ['RATING',a.rating,b.rating,(RATING_SCORE[a.rating]??0)>=(RATING_SCORE[b.rating]??0)],
+                ['CONVICTION',`${a.confidence}%`,`${b.confidence}%`,a.confidence>=b.confidence],
+                ['12M UPSIDE',`${upA>=0?'+':''}${upA.toFixed(1)}%`,`${upB>=0?'+':''}${upB.toFixed(1)}%`,upA>=upB],
+                ['FUNDAMENTALS',`${a.fundamentals_score}/10`,`${b.fundamentals_score}/10`,a.fundamentals_score>=b.fundamentals_score],
+                ['TECHNICALS',`${a.technical_score}/10`,`${b.technical_score}/10`,a.technical_score>=b.technical_score],
+                ['SENTIMENT',`${a.sentiment_score}/10`,`${b.sentiment_score}/10`,a.sentiment_score>=b.sentiment_score],
+              ]
+              const winsA=rows.filter(r=>r[3]).length
+              return (
+                <div style={{marginTop:14}}>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:8,alignItems:'center',marginBottom:8}}>
+                    <div style={{textAlign:'center',fontSize:18,fontWeight:900,fontFamily:'monospace',color:winsA>=3?'#00ff88':'#4a7a6a'}}>{result.ticker}</div>
+                    <div style={{fontSize:11,color:'#4a7a6a',letterSpacing:'1px'}}>{winsA} – {6-winsA}</div>
+                    <div style={{textAlign:'center',fontSize:18,fontWeight:900,fontFamily:'monospace',color:winsA<3?'#00ff88':'#4a7a6a'}}>{cmp.ticker}</div>
+                  </div>
+                  {rows.map(([lbl,va,vb,aWins])=>(
+                    <div key={lbl} style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:8,alignItems:'center',padding:'7px 0',borderTop:'1px solid #a855f714'}}>
+                      <div style={{textAlign:'right',fontSize:12,fontWeight:700,fontFamily:'monospace',color:aWins?'#00ff88':'#4a7a6a'}}>{va}{aWins?' ◀':''}</div>
+                      <div style={{fontSize:8,color:'#4a7a6a',letterSpacing:'1px',minWidth:96,textAlign:'center'}}>{lbl}</div>
+                      <div style={{textAlign:'left',fontSize:12,fontWeight:700,fontFamily:'monospace',color:!aWins?'#00ff88':'#4a7a6a'}}>{!aWins?'▶ ':''}{vb}</div>
+                    </div>
+                  ))}
+                  <div style={{textAlign:'center',marginTop:10,fontSize:11,color:'#a855f7',letterSpacing:'1px'}}>
+                    EDGE: <b style={{color:winsA>=3?'#00ff88':'#00ff88'}}>{winsA>=3?result.ticker:cmp.ticker}</b> wins {Math.max(winsA,6-winsA)} of 6 categories
+                  </div>
+                </div>
+              )
+            })()}
           </div>
 
           {/* CANDLESTICK CHART */}
@@ -1015,22 +1239,28 @@ export default function AIStocksPage() {
             <div style={{fontSize:11,color:rCfg.clr,letterSpacing:'2px',marginBottom:10,fontWeight:800}}>// THE THESIS</div>
             <p style={{fontSize:14.5,lineHeight:1.8,color:'#cdffe6',letterSpacing:'.2px',marginBottom:14}}>{a.executive_summary}</p>
             <p style={{fontSize:13,lineHeight:1.8,color:'#a0ffcc',letterSpacing:'.2px'}}>{a.investment_thesis}</p>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginTop:18}}>
-              {[
-                {label:'BEAR TARGET',val:a.price_target_bear,clr:'#ff2d78'},
-                {label:'BASE TARGET',val:a.price_target,     clr:'#00d4ff'},
-                {label:'BULL TARGET',val:a.price_target_bull,clr:'#00ff88'},
-              ].map(({label,val,clr})=>{
-                const up=result.price>0?((val-result.price)/result.price*100):0
-                return (
-                  <div key={label} style={{background:`${clr}0c`,border:`1px solid ${clr}30`,borderRadius:2,padding:'12px 14px',textAlign:'center'}}>
-                    <div style={{fontSize:8,color:'#4a7a6a',letterSpacing:'1px',marginBottom:5}}>{label}</div>
-                    <div style={{fontSize:18,fontWeight:900,fontFamily:'monospace',color:clr,textShadow:`0 0 14px ${clr}80`}}>${(val??0).toFixed(2)}</div>
-                    <div style={{fontSize:10,color:up>=0?'#00ff88':'#ff2d78',fontWeight:700,marginTop:3}}>{up>=0?'+':''}{up.toFixed(1)}%</div>
+
+            {/* Show-your-work — the data behind the call, collapsed by default */}
+            <details style={{marginTop:16}}>
+              <summary style={{cursor:'pointer',fontSize:10,color:rCfg.clr,letterSpacing:'1px',fontWeight:700,listStyle:'none',userSelect:'none'}}>▸ SHOW THE DATA BEHIND THIS CALL</summary>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:8,marginTop:12}}>
+                {[
+                  ['FUNDAMENTALS',`${a.fundamentals_score}/10`,'#00ff88'],
+                  ['TECHNICALS',`${a.technical_score}/10`,'#00d4ff'],
+                  ['SENTIMENT',`${a.sentiment_score}/10`,'#a855f7'],
+                  ['P/E RATIO',result.pe>0?result.pe.toFixed(1):'N/A','#a0ffcc'],
+                  ['VS SECTOR',a.vs_sector,'#a0ffcc'],
+                  ['WALL ST.',a.analyst_consensus,'#a0ffcc'],
+                  ['52W POSITION',`${result.high52>result.low52?Math.round((result.price-result.low52)/(result.high52-result.low52)*100):50}%`,'#a0ffcc'],
+                  ['ANALYSTS',result.analystTotal>0?`${result.analystBuy}B/${result.analystHold}H/${result.analystSell}S`:'N/A','#a0ffcc'],
+                ].map(([l,v,c])=>(
+                  <div key={l} style={{background:'rgba(0,20,10,.5)',border:'1px solid #00ff8815',borderRadius:2,padding:'8px 10px'}}>
+                    <div style={{fontSize:8,color:'#4a7a6a',letterSpacing:'.5px',marginBottom:3}}>{l}</div>
+                    <div style={{fontSize:12,fontWeight:700,fontFamily:'monospace',color:c as string}}>{v}</div>
                   </div>
-                )
-              })}
-            </div>
+                ))}
+              </div>
+            </details>
           </div>
 
           {/* ═══ THE EVIDENCE ═══ */}
@@ -1160,6 +1390,13 @@ export default function AIStocksPage() {
                 </div>
               ))}
             </div>
+            {/* Payoff diagram — what options traders actually screenshot */}
+            {(a.options.type==='CALL'||a.options.type==='PUT') && (
+              <div style={{background:'rgba(0,20,10,.5)',border:'1px solid #a855f725',borderRadius:2,padding:'14px 14px 10px',marginBottom:12}}>
+                <div style={{fontSize:9,color:'#a855f7',letterSpacing:'1px',marginBottom:8,fontWeight:700}}>// P/L AT EXPIRY — LONG {a.options.type}</div>
+                <OptionsPayoff type={a.options.type} strike={a.options.strike} premium={a.options.est_premium} spot={result.price}/>
+              </div>
+            )}
             <div style={{background:'rgba(0,20,10,.8)',border:'1px solid #00ff8815',borderRadius:2,padding:'10px 14px',fontSize:12,lineHeight:1.7,letterSpacing:'.2px'}}>
               <span style={{color:'#4a7a6a',fontSize:9,letterSpacing:'1px',display:'block',marginBottom:4}}>// WHY THIS PLAY</span>
               <span style={{color:'#a0ffcc'}}>{a.options.reasoning}</span>
@@ -1230,6 +1467,7 @@ export default function AIStocksPage() {
               <span>BASE TARGET <b style={{color:'#00d4ff'}}>${a.price_target.toFixed(2)}</b></span>
               <span>HORIZON <b style={{color:'#a0ffcc'}}>{a.time_horizon}</b></span>
             </div>
+            <button onClick={downloadCard} style={{marginTop:16,background:`${rCfg.clr}15`,border:`1px solid ${rCfg.clr}50`,color:rCfg.clr,borderRadius:2,padding:'9px 20px',fontSize:11,fontWeight:800,cursor:'pointer',fontFamily:'inherit',letterSpacing:'1px'}}>📸 SHARE THIS VERDICT CARD</button>
           </div>
 
           <div style={{textAlign:'center',marginTop:24}}>
