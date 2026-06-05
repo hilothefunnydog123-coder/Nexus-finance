@@ -243,6 +243,49 @@ Return EXACTLY this JSON shape (fill every field):
     try { analysis = extractJson(rawText) }
     catch { return NextResponse.json({ error: `JSON parse failed. Raw: ${rawText.slice(0, 300)}` }, { status: 500 }) }
 
+    // ── Guarantee a complete analysis object (repaired/partial JSON must never
+    //    leave a field undefined, or the UI crashes on .toFixed) ──
+    const N = (v: unknown, d: number) => { const n = Number(v); return isFinite(n) ? n : d }
+    const S = (v: unknown, d: string) => (typeof v === 'string' && v.trim() ? (v as string) : d)
+    analysis.rating             = S(analysis.rating, 'Hold')
+    analysis.confidence         = N(analysis.confidence, 55)
+    analysis.price_target       = N(analysis.price_target, price)
+    analysis.price_target_bear  = N(analysis.price_target_bear, r2(price * 0.90))
+    analysis.price_target_bull  = N(analysis.price_target_bull, r2(price * 1.15))
+    analysis.time_horizon       = S(analysis.time_horizon, '3-6 months')
+    analysis.executive_summary  = S(analysis.executive_summary, 'Summary unavailable for this ticker.')
+    analysis.investment_thesis  = S(analysis.investment_thesis, '')
+    analysis.bull_case          = S(analysis.bull_case, '')
+    analysis.bear_case          = S(analysis.bear_case, '')
+    analysis.entry_low          = N(analysis.entry_low, r2(price * 0.985))
+    analysis.entry_high         = N(analysis.entry_high, r2(price * 1.005))
+    analysis.stop_loss          = N(analysis.stop_loss, r2(price * 0.93))
+    analysis.take_profit_1      = N(analysis.take_profit_1, r2(price * 1.08))
+    analysis.take_profit_2      = N(analysis.take_profit_2, r2(price * 1.18))
+    analysis.position_size_pct  = N(analysis.position_size_pct, 2)
+    analysis.fundamentals_score = N(analysis.fundamentals_score, 5)
+    analysis.technical_score    = N(analysis.technical_score, 5)
+    analysis.sentiment_score    = N(analysis.sentiment_score, 5)
+    analysis.sentiment          = S(analysis.sentiment, 'Neutral')
+    analysis.vs_sector          = S(analysis.vs_sector, 'In-line')
+    analysis.analyst_consensus  = S(analysis.analyst_consensus, 'Hold')
+    analysis.risks              = Array.isArray(analysis.risks)     ? analysis.risks     : []
+    analysis.catalysts          = Array.isArray(analysis.catalysts) ? analysis.catalysts : []
+    const kl = (analysis.key_levels ?? {}) as Record<string, unknown>
+    analysis.key_levels = {
+      strong_support:    N(kl.strong_support,    r2(price * 0.90)),
+      support:           N(kl.support,           r2(price * 0.96)),
+      resistance:        N(kl.resistance,        r2(price * 1.04)),
+      strong_resistance: N(kl.strong_resistance, r2(price * 1.10)),
+    }
+    const tfO = (analysis.timeframes ?? {}) as Record<string, unknown>
+    analysis.timeframes = {
+      '1_week':   S(tfO['1_week'],   'Neutral'),
+      '1_month':  S(tfO['1_month'],  'Neutral'),
+      '3_months': S(tfO['3_months'], 'Neutral'),
+      '6_months': S(tfO['6_months'], 'Neutral'),
+    }
+
     // ── Options math (server-side, grounded in realized vol) ──
     const opts     = (analysis.options ?? {}) as Record<string, unknown>
     const oType    = String(opts.type) === 'PUT' ? 'PUT' : 'CALL'
