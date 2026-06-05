@@ -83,6 +83,12 @@ export async function POST(req: NextRequest) {
       .map((n: { headline?: string }) => `- ${n.headline ?? ''}`)
       .join('\n') || '- No recent news'
 
+    const newsArr = (Array.isArray(news) ? news : []).slice(0, 6)
+      .map((n: { headline?: string; source?: string; url?: string; datetime?: number }) => ({
+        headline: n.headline ?? '', source: n.source ?? '', url: n.url ?? '', datetime: n.datetime ?? 0,
+      }))
+      .filter(n => n.headline)
+
     const pct52 = high52 > low52 ? (((price - low52) / (high52 - low52)) * 100).toFixed(0) : '50'
 
     // Earnings context
@@ -147,6 +153,7 @@ Return exactly this JSON:
       high52, low52, pe, marketCap, beta, industry,
       analystBuy, analystHold, analystSell, analystTotal,
       nextEarnings, lastEPS, estEPS, epsSurprise,
+      news: newsArr,
       candles: candleArr.slice(-120),
       timeframe: tf,
       analysis: {
