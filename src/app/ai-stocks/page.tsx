@@ -536,6 +536,34 @@ export default function AIStocksPage() {
   const resultsRef  = useRef<HTMLDivElement>(null)
   const FREE_LIMIT  = 3
 
+  // ── Ticker autocomplete ──
+  const [sug,setSug]             = useState<{symbol:string;description:string}[]>([])
+  const [showSug,setShowSug]     = useState(false)
+  const [sugLoading,setSugLoading] = useState(false)
+  const [notFound,setNotFound]   = useState(false)
+  const sugTimer = useRef<ReturnType<typeof setTimeout>|null>(null)
+
+  function onTickerType(v: string) {
+    const val = v.toUpperCase().replace(/[^A-Z0-9.\-]/g,'')
+    setInput(val); setNotFound(false)
+    if (sugTimer.current) clearTimeout(sugTimer.current)
+    if (val.trim().length < 1) { setSug([]); setShowSug(false); setSugLoading(false); return }
+    setSugLoading(true); setShowSug(true)
+    sugTimer.current = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/symbol-search?q=${encodeURIComponent(val.trim())}`)
+        const d = await r.json()
+        const list = (d.results ?? []) as {symbol:string;description:string}[]
+        setSug(list)
+        setNotFound(!d.unavailable && list.length === 0)
+      } catch { setSug([]); setNotFound(false) }
+      finally { setSugLoading(false) }
+    }, 250)
+  }
+  function pickTicker(sym: string) {
+    setInput(sym); setSug([]); setShowSug(false); setNotFound(false)
+  }
+
   // Load usage from localStorage + check for pro activation
   useEffect(() => {
     const month = new Date().toISOString().slice(0,7)
@@ -590,7 +618,7 @@ export default function AIStocksPage() {
       if (count >= FREE_LIMIT) { setShowPaywall(true); return }
     }
 
-    setInput(t); setLoading(true); setResult(null); setError('')
+    setInput(t); setLoading(true); setResult(null); setError(''); setNotFound(false); setShowSug(false)
     let idx=0; intervalRef.current=setInterval(()=>{idx=(idx+1)%AGENTS.length;setAgentIdx(idx)},900)
     try {
       const r=await fetch('/api/stock-analyzer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:t,timeframe})})
@@ -740,16 +768,44 @@ export default function AIStocksPage() {
             {/* SEARCH BAR + CHIPS (analyze mode only) */}
             {mode === 'analyze' && <>
             <div style={{marginBottom:16,position:'relative'}}>
-              <div style={{display:'flex',background:'rgba(0,20,10,.95)',border:`1px solid ${loading?'#00ff88':'#00ff8840'}`,borderRadius:2,overflow:'hidden',boxShadow:loading?'0 0 40px rgba(0,255,136,.3)':'none',transition:'all .4s'}}>
+              <div style={{display:'flex',background:'rgba(0,20,10,.95)',border:`1px solid ${notFound?'#ff2d7860':loading?'#00ff88':'#00ff8840'}`,borderRadius:2,overflow:'hidden',boxShadow:loading?'0 0 40px rgba(0,255,136,.3)':'none',transition:'all .4s'}}>
                 <span style={{padding:'16px 16px',fontSize:13,color:'#00ff8860',flexShrink:0,borderRight:'1px solid #00ff8820',letterSpacing:'1px'}}>$</span>
-                <input value={input} onChange={e=>setInput(e.target.value.toUpperCase())} onKeyDown={e=>e.key==='Enter'&&analyze(input)}
-                  placeholder="ENTER TICKER..." style={{flex:1,background:'transparent',border:'none',padding:'16px 16px',fontSize:16,color:'#00ff88',fontFamily:'inherit',fontWeight:800,letterSpacing:'3px',outline:'none'}}/>
-                <button onClick={()=>analyze(input)} disabled={loading}
-                  style={{background:loading?'transparent':'#00ff88',border:'none',borderLeft:'1px solid #00ff8840',padding:'0 24px',cursor:loading?'not-allowed':'pointer',color:'#030a06',fontWeight:900,fontSize:12,letterSpacing:'1px',fontFamily:'inherit',transition:'all .2s',whiteSpace:'nowrap',boxShadow:loading?'none':'inset 0 0 20px #00000030'}}>
+                <input value={input}
+                  onChange={e=>onTickerType(e.target.value)}
+                  onFocus={()=>{ if(input.trim()&&sug.length) setShowSug(true) }}
+                  onBlur={()=>setTimeout(()=>setShowSug(false),150)}
+                  onKeyDown={e=>{ if(e.key==='Enter'&&!notFound&&input.trim()){ setShowSug(false); analyze(input) } if(e.key==='Escape') setShowSug(false) }}
+                  placeholder="ENTER TICKER..." autoComplete="off" style={{flex:1,background:'transparent',border:'none',padding:'16px 16px',fontSize:16,color:'#00ff88',fontFamily:'inherit',fontWeight:800,letterSpacing:'3px',outline:'none'}}/>
+                <button onClick={()=>analyze(input)} disabled={loading||notFound||!input.trim()}
+                  style={{background:loading||notFound||!input.trim()?'transparent':'#00ff88',border:'none',borderLeft:'1px solid #00ff8840',padding:'0 24px',cursor:loading||notFound||!input.trim()?'not-allowed':'pointer',color:loading||notFound||!input.trim()?'#1a4a2a':'#030a06',fontWeight:900,fontSize:12,letterSpacing:'1px',fontFamily:'inherit',transition:'all .2s',whiteSpace:'nowrap',boxShadow:loading?'none':'inset 0 0 20px #00000030'}}>
                   {loading?<span style={{color:'#00ff8880'}}>···</span>:'ANALYZE'}
                 </button>
               </div>
               {loading && <div style={{position:'absolute',bottom:0,left:0,right:0,height:2,background:'linear-gradient(90deg,#00ff88,#00d4ff,#a855f7,#00ff88)',backgroundSize:'200%',animation:'holo .8s linear infinite'}}/>}
+
+              {/* Autocomplete dropdown */}
+              {showSug && input.trim() && !loading && (sugLoading || sug.length > 0 || notFound) && (
+                <div style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,zIndex:50,background:'rgba(2,12,7,.98)',border:'1px solid #00ff8830',borderRadius:2,boxShadow:'0 12px 40px rgba(0,0,0,.6)',overflow:'hidden',backdropFilter:'blur(8px)'}}>
+                  {sugLoading && sug.length===0 && !notFound && (
+                    <div style={{padding:'12px 16px',fontSize:11,color:'#1a4a2a',letterSpacing:'1px'}}>SEARCHING…</div>
+                  )}
+                  {notFound && (
+                    <div style={{padding:'12px 16px',fontSize:12,color:'#ff2d78',letterSpacing:'.5px',display:'flex',alignItems:'center',gap:8}}>
+                      <span style={{fontWeight:800}}>⚠ Ticker not found</span>
+                      <span style={{color:'#4a7a6a',fontSize:11}}>— check the symbol</span>
+                    </div>
+                  )}
+                  {sug.map(s=>(
+                    <button key={s.symbol} onMouseDown={e=>{e.preventDefault();pickTicker(s.symbol)}}
+                      style={{display:'flex',alignItems:'center',gap:12,width:'100%',textAlign:'left',background:'transparent',border:'none',borderBottom:'1px solid #00ff8810',padding:'10px 16px',cursor:'pointer',transition:'background .15s'}}
+                      onMouseEnter={e=>e.currentTarget.style.background='rgba(0,255,136,.07)'}
+                      onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                      <span style={{fontSize:13,fontWeight:800,fontFamily:'monospace',color:'#00ff88',letterSpacing:'1px',minWidth:64}}>{s.symbol}</span>
+                      <span style={{fontSize:12,color:'#4a7a6a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.description}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* TIMEFRAME */}
