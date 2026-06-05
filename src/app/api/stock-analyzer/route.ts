@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       ? `Next earnings: ${nextEarnings}${epsSurprise ? ` | Last EPS surprise: ${epsSurprise}%` : ''}`
       : 'Earnings date: N/A'
 
-    const prompt = `You are a senior equity & options analyst writing a sharp research note on ${sym} (${name}, ${industry}) for active traders. Return ONLY raw JSON, no markdown. Be specific and quantitative — no filler.
+    const prompt = `Analyze ${sym} (${name}, ${industry}) as a hedge fund team. Return ONLY raw JSON, no markdown, no explanation.
 
 DATA:
 Price $${price.toFixed(2)} | Change ${change1d.toFixed(2)}% | 52W $${low52.toFixed(2)}-$${high52.toFixed(2)} (${pct52}% of range)
@@ -104,14 +104,10 @@ Analysts: ${analystTotal>0?`${analystBuy}B/${analystHold}H/${analystSell}S`:'non
 ${earningsCtx}
 News: ${headlines}
 
-REQUIREMENTS:
-- Give reasons traders ACTUALLY act on: catalysts with timing, positioning, order flow, relative strength, and what the market is mispricing. No textbook fluff.
-- Name ${sym}'s main competitors and compare directly: who is cheaper or growing faster, and the single clearest reason ${sym} stands out (or lags).
-- Put EXTRA weight on the options play: pick a structure that fits the volatility regime and your directional view, justify the strikes with the expected move, and explain it the way an options trader thinks — IV vs realized vol, theta, the move you need versus the expected move, and probability of profit.
-- Keep every text field to 1-2 tight sentences. All price levels based on $${price.toFixed(2)}. No lazy round numbers.
+Rules: All price levels must be based on $${price.toFixed(2)}. No round numbers. Be specific to ${sym}.
 
-Return EXACTLY this JSON:
-{"rating":"Buy","confidence":72,"price_target":0.0,"price_target_bear":0.0,"price_target_bull":0.0,"time_horizon":"3-6 months","executive_summary":"...","investment_thesis":"...","why_it_stands_out":"...","relative_valuation":"...","institutional_view":"...","vs_competitors":[{"ticker":"XXX","take":"..."},{"ticker":"YYY","take":"..."}],"bull_case":"...","bear_case":"...","entry_low":0.0,"entry_high":0.0,"stop_loss":0.0,"take_profit_1":0.0,"take_profit_2":0.0,"position_size_pct":2,"key_levels":{"strong_support":0.0,"support":0.0,"resistance":0.0,"strong_resistance":0.0},"risks":["...","...","..."],"catalysts":["...","..."],"sentiment":"Bullish","fundamentals_score":7,"technical_score":6,"sentiment_score":7,"analyst_consensus":"Hold","vs_sector":"Outperform","timeframes":{"1_week":"Bullish","1_month":"Bullish","3_months":"Neutral","6_months":"Bullish"},"options":{"directional_bias":"Bullish","strategy":"Bull Call Spread","type":"CALL","structure":"Debit Spread","strike_pct":3,"short_strike_pct":9,"expiry_days":45,"expected_move_pct":8.5,"pop_pct":55,"max_profit":420,"iv_environment":"Low IV — good to buy premium","thesis":"...","reasoning":"...","income_play":"..."}}`
+Return exactly this JSON:
+{"rating":"Buy","confidence":72,"price_target":0.0,"price_target_bear":0.0,"price_target_bull":0.0,"time_horizon":"3-6 months","executive_summary":"...","investment_thesis":"...","bull_case":"...","bear_case":"...","entry_low":0.0,"entry_high":0.0,"stop_loss":0.0,"take_profit_1":0.0,"take_profit_2":0.0,"position_size_pct":2,"key_levels":{"strong_support":0.0,"support":0.0,"resistance":0.0,"strong_resistance":0.0},"risks":["...","...","..."],"catalysts":["...","..."],"sentiment":"Bullish","fundamentals_score":7,"technical_score":6,"sentiment_score":7,"analyst_consensus":"Hold","vs_sector":"Outperform","timeframes":{"1_week":"Bullish","1_month":"Bullish","3_months":"Neutral","6_months":"Bullish"},"options":{"strategy":"Buy Calls","type":"CALL","strike_pct":5,"expiry_days":45,"iv_environment":"Low — good to buy premium","reasoning":"..."}}`
 
     const gemRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GM}`,
@@ -120,7 +116,7 @@ Return EXACTLY this JSON:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 6000, responseMimeType: 'application/json' },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 4096, responseMimeType: 'application/json' },
         }),
       }
     )
@@ -143,15 +139,8 @@ Return EXACTLY this JSON:
 
     const opts      = (analysis.options ?? {}) as Record<string, unknown>
     const isBull    = (opts.type as string) !== 'PUT'
-    const strikePct = Number(opts.strike_pct ?? 5)
-    const strike    = parseFloat((price * (isBull ? 1 + strikePct/100 : 1 - strikePct/100)).toFixed(2))
+    const strike    = parseFloat((price * (isBull ? 1 + Number(opts.strike_pct??5)/100 : 1 - Number(opts.strike_pct??5)/100)).toFixed(2))
     const estPrem   = parseFloat((price * 0.025).toFixed(2))
-    const shortStrike = opts.short_strike_pct != null
-      ? parseFloat((price * (isBull ? 1 + Number(opts.short_strike_pct)/100 : 1 - Number(opts.short_strike_pct)/100)).toFixed(2))
-      : undefined
-    const emPct        = Number(opts.expected_move_pct ?? 0)
-    const expectedMove = emPct > 0 ? parseFloat((price * emPct / 100).toFixed(2)) : undefined
-    const breakeven    = parseFloat((isBull ? strike + estPrem : strike - estPrem).toFixed(2))
 
     return NextResponse.json({
       ticker: sym, name, price, change1d, prevClose,
@@ -164,14 +153,11 @@ Return EXACTLY this JSON:
         ...analysis,
         options: {
           ...opts, strike,
-          short_strike:   shortStrike,
           expiry_days:    Number(opts.expiry_days ?? 45),
           est_premium:    estPrem,
-          breakeven,
           breakeven_call: parseFloat((strike + estPrem).toFixed(2)),
           breakeven_put:  parseFloat((strike - estPrem).toFixed(2)),
           max_loss:       parseFloat((estPrem * 100).toFixed(0)),
-          expected_move:  expectedMove,
         },
       },
     })

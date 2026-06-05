@@ -26,33 +26,22 @@ const SENT_CLR: Record<string,string> = {
 const TF_CLR: Record<string,string> = {Bullish:'#00ff88',Neutral:'#ff9500',Bearish:'#ff2d78'}
 
 type KeyLevels  = {strong_support:number;support:number;resistance:number;strong_resistance:number}
-type Options    = {
-  strategy:string;type:string;structure?:string;directional_bias?:string
-  strike:number;short_strike?:number;expiry_days:number;est_premium:number
-  breakeven:number;breakeven_call:number;breakeven_put:number
-  max_loss:number;max_profit?:number;pop_pct?:number
-  expected_move?:number;expected_move_pct?:number
-  iv_environment:string;thesis?:string;reasoning:string;income_play?:string
-}
-type Competitor = {ticker:string;take:string}
+type Options    = {strategy:string;type:string;strike:number;expiry_days:number;est_premium:number;breakeven_call:number;breakeven_put:number;max_loss:number;iv_environment:string;reasoning:string}
 type Timeframes = {'1_week':string;'1_month':string;'3_months':string;'6_months':string}
 type Analysis   = {
   rating:string;confidence:number;price_target:number;price_target_bear:number;price_target_bull:number
   time_horizon:string;executive_summary:string;investment_thesis:string;bull_case:string;bear_case:string
-  why_it_stands_out?:string;relative_valuation?:string;institutional_view?:string;vs_competitors?:Competitor[]
   entry_low:number;entry_high:number;stop_loss:number;take_profit_1:number;take_profit_2:number
   position_size_pct:number;key_levels:KeyLevels;risks:string[];catalysts:string[]
   sentiment:string;fundamentals_score:number;technical_score:number;sentiment_score:number
   analyst_consensus:string;vs_sector:string;timeframes:Timeframes;options:Options
 }
 type Candle = { t:number; o:number; h:number; l:number; c:number }
-type Peer   = { ticker:string; pe:number; mcap:number }
 type Result = {
   ticker:string;name:string;price:number;change1d:number;prevClose:number
   high52:number;low52:number;pe:number;marketCap:number;beta:number;industry:string
   analystBuy:number;analystHold:number;analystSell:number;analystTotal:number
   nextEarnings:string|null;lastEPS:number|null;estEPS:number|null;epsSurprise:string|null
-  realized_vol_pct?:number;expected_move_1w_pct?:number;expected_move_1m_pct?:number;peers?:Peer[]
   candles:Candle[];timeframe:string;analysis:Analysis
 }
 
@@ -1003,50 +992,6 @@ export default function AIStocksPage() {
             </div>
           </div>
 
-          {/* EDGE vs COMPETITORS */}
-          {(a.why_it_stands_out || a.relative_valuation || a.institutional_view || (a.vs_competitors?.length ?? 0) > 0 || (result.peers?.length ?? 0) > 0) && (
-            <div className="card" style={{padding:'20px 22px',marginBottom:12}}>
-              <div style={{fontSize:9,color:'#4a7a6a',letterSpacing:'2px',marginBottom:12}}>// EDGE_vs_COMPETITORS</div>
-              {a.why_it_stands_out && (
-                <div style={{marginBottom:14}}>
-                  <div style={{fontSize:9,color:'#00ff88',letterSpacing:'1px',marginBottom:6}}>// WHY_IT_STANDS_OUT</div>
-                  <p style={{fontSize:13,color:'#a0ffcc',lineHeight:1.7}}>{a.why_it_stands_out}</p>
-                </div>
-              )}
-              {a.relative_valuation && (
-                <div style={{marginBottom:14}}>
-                  <div style={{fontSize:9,color:'#00d4ff',letterSpacing:'1px',marginBottom:6}}>// RELATIVE_VALUATION</div>
-                  <p style={{fontSize:12,color:'#a0ffcc',lineHeight:1.65}}>{a.relative_valuation}</p>
-                </div>
-              )}
-              {a.institutional_view && (
-                <div style={{marginBottom:14}}>
-                  <div style={{fontSize:9,color:'#a855f7',letterSpacing:'1px',marginBottom:6}}>// INSTITUTIONAL_FLOW</div>
-                  <p style={{fontSize:12,color:'#a0ffcc',lineHeight:1.65}}>{a.institutional_view}</p>
-                </div>
-              )}
-              {(a.vs_competitors?.length ?? 0) > 0 && (
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:8,marginTop:4}}>
-                  {a.vs_competitors!.map((c,i)=>(
-                    <div key={i} style={{background:'rgba(0,20,10,.7)',border:'1px solid #00ff8820',borderRadius:2,padding:'10px 12px'}}>
-                      <div style={{fontSize:11,fontWeight:800,color:'#00ff88',fontFamily:'monospace',marginBottom:4,letterSpacing:'.5px'}}>vs {c.ticker}</div>
-                      <div style={{fontSize:11,color:'#a0ffcc',lineHeight:1.5}}>{c.take}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {(result.peers?.length ?? 0) > 0 && (
-                <div style={{marginTop:14,display:'flex',gap:8,flexWrap:'wrap'}}>
-                  {result.peers!.map(p=>(
-                    <div key={p.ticker} style={{background:'rgba(0,212,255,.06)',border:'1px solid rgba(0,212,255,.2)',borderRadius:2,padding:'6px 12px',fontSize:10,color:'#a0ffcc',fontFamily:'monospace'}}>
-                      <span style={{color:'#00d4ff',fontWeight:800}}>{p.ticker}</span> · P/E {p.pe>0?p.pe.toFixed(1):'N/A'} · ${(p.mcap/1000).toFixed(0)}B
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* ENTRY/EXIT */}
           <div className="card" style={{padding:'18px 22px',marginBottom:12}}>
             <div style={{fontSize:9,color:'#4a7a6a',letterSpacing:'2px',marginBottom:14}}>// ENTRY_EXIT_STRATEGY</div>
@@ -1070,53 +1015,34 @@ export default function AIStocksPage() {
           {/* OPTIONS + POSITION CALC */}
           <div className="grid-2" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
             <div className="card" style={{padding:'20px 22px',borderColor:a.options.type==='CALL'?'#00ff8840':a.options.type==='PUT'?'#ff2d7840':'#00ff8820'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}}>
                 <div>
-                  <div style={{fontSize:9,color:'#4a7a6a',letterSpacing:'2px',marginBottom:5}}>// OPTIONS_DESK{a.options.directional_bias?` · ${a.options.directional_bias.toUpperCase()}`:''}</div>
+                  <div style={{fontSize:9,color:'#4a7a6a',letterSpacing:'2px',marginBottom:5}}>// OPTIONS_PLAY</div>
                   <div style={{fontSize:18,fontWeight:900,color:a.options.type==='CALL'?'#00ff88':a.options.type==='PUT'?'#ff2d78':'#ff9500',textShadow:`0 0 20px ${a.options.type==='CALL'?'#00ff88':a.options.type==='PUT'?'#ff2d78':'#ff9500'}`}}>{a.options.strategy}</div>
-                  {a.options.structure && <div style={{fontSize:10,color:'#4a7a6a',letterSpacing:'.5px',marginTop:2}}>{a.options.structure}</div>}
                 </div>
                 <div style={{background:a.options.type==='CALL'?'#00ff8815':'#ff2d7815',border:`1px solid ${a.options.type==='CALL'?'#00ff8840':'#ff2d7840'}`,borderRadius:2,padding:'5px 14px',fontSize:12,fontWeight:900,color:a.options.type==='CALL'?'#00ff88':'#ff2d78',fontFamily:'monospace',letterSpacing:'1px'}}>
                   {a.options.type}
                 </div>
               </div>
-
-              {a.options.expected_move_pct!=null && (
-                <div style={{background:'rgba(168,85,247,.08)',border:'1px solid rgba(168,85,247,.25)',borderRadius:2,padding:'8px 12px',marginBottom:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <span style={{fontSize:9,color:'#a855f7',letterSpacing:'1px'}}>// EXPECTED_MOVE_BY_EXPIRY</span>
-                  <span style={{fontSize:12,fontWeight:800,fontFamily:'monospace',color:'#c9a0ff'}}>±${(a.options.expected_move??0).toFixed(2)} (±{(a.options.expected_move_pct??0).toFixed(1)}%)</span>
-                </div>
-              )}
-
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:12}}>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
                 {[
-                  {label:'LONG_STRIKE', val:`$${a.options.strike.toFixed(2)}`},
-                  ...(a.options.short_strike?[{label:'SHORT_STRIKE',val:`$${a.options.short_strike.toFixed(2)}`}]:[]),
-                  {label:'EXPIRY',      val:`${a.options.expiry_days}d`},
-                  {label:'EST_DEBIT',   val:`$${a.options.est_premium.toFixed(2)}`},
-                  {label:'BREAKEVEN',   val:`$${(a.options.breakeven??a.options.breakeven_call).toFixed(2)}`},
-                  {label:'MAX_LOSS',    val:`$${a.options.max_loss}`},
-                  {label:'MAX_PROFIT',  val:a.options.max_profit===-1||a.options.max_profit==null?'Uncapped':`$${a.options.max_profit}`},
-                  {label:'PROB_PROFIT', val:a.options.pop_pct!=null?`${a.options.pop_pct}%`:'N/A'},
-                  {label:'IV_ENV',      val:a.options.iv_environment?.split(/[—-]/)[0]?.trim()||'N/A'},
+                  {label:'STRIKE',  val:`$${a.options.strike.toFixed(2)}`},
+                  {label:'EXPIRY',  val:`${a.options.expiry_days}d`},
+                  {label:'PREMIUM', val:`$${a.options.est_premium.toFixed(2)}`},
+                  {label:'B/EVEN',  val:`$${(a.options.type==='CALL'?a.options.breakeven_call:a.options.breakeven_put).toFixed(2)}`},
+                  {label:'MAX_LOSS',val:`$${a.options.max_loss}`},
+                  {label:'IV_ENV',  val:a.options.iv_environment?.split(' — ')[0]??'N/A'},
                 ].map(({label,val})=>(
-                  <div key={label} style={{background:'rgba(0,20,10,.8)',border:'1px solid #00ff8815',borderRadius:2,padding:'9px 11px'}}>
-                    <div style={{fontSize:8,color:'#4a7a6a',letterSpacing:'.5px',marginBottom:4}}>{label}</div>
-                    <div style={{fontSize:12,fontWeight:700,fontFamily:'monospace',color:'#a0ffcc'}}>{val}</div>
+                  <div key={label} style={{background:'rgba(0,20,10,.8)',border:'1px solid #00ff8815',borderRadius:2,padding:'9px 12px'}}>
+                    <div style={{fontSize:9,color:'#4a7a6a',letterSpacing:'.5px',marginBottom:4}}>{label}</div>
+                    <div style={{fontSize:13,fontWeight:700,fontFamily:'monospace',color:'#a0ffcc'}}>{val}</div>
                   </div>
                 ))}
               </div>
-
-              <div style={{background:'rgba(0,20,10,.8)',border:'1px solid #00ff8815',borderRadius:2,padding:'10px 14px',fontSize:12,lineHeight:1.7,letterSpacing:'.2px',marginBottom:8}}>
-                <span style={{color:'#4a7a6a',fontSize:9,letterSpacing:'1px',display:'block',marginBottom:4}}>// THE_PLAY</span>
-                <span style={{color:'#a0ffcc'}}>{a.options.thesis||a.options.reasoning}</span>
+              <div style={{background:'rgba(0,20,10,.8)',border:'1px solid #00ff8815',borderRadius:2,padding:'10px 14px',fontSize:12,color:'#4a7a6a',lineHeight:1.7,letterSpacing:'.2px'}}>
+                <span style={{color:'#4a7a6a',fontSize:9,letterSpacing:'1px',display:'block',marginBottom:4}}>// REASONING</span>
+                <span style={{color:'#a0ffcc'}}>{a.options.reasoning}</span>
               </div>
-              {a.options.income_play && (
-                <div style={{background:'rgba(255,149,0,.06)',border:'1px solid rgba(255,149,0,.2)',borderRadius:2,padding:'10px 14px',fontSize:12,lineHeight:1.6}}>
-                  <span style={{color:'#ff9500',fontSize:9,letterSpacing:'1px',display:'block',marginBottom:4}}>// INCOME_ALTERNATIVE</span>
-                  <span style={{color:'#a0ffcc'}}>{a.options.income_play}</span>
-                </div>
-              )}
             </div>
 
             <div className="card" style={{padding:'20px 22px'}}>
