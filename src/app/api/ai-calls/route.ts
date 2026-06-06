@@ -42,10 +42,36 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET — fetch track record with live prices
-export async function GET() {
+// GET — full track record, or a single ticker's history with ?ticker=AAPL
+export async function GET(req: NextRequest) {
+  const tickerParam = new URL(req.url).searchParams.get('ticker')?.toUpperCase()
+
   if (!sb) {
-    return NextResponse.json({ calls: [], stats: { total: 0, winRate: 0, avgReturn: 0 }, demo: true })
+    return tickerParam
+      ? NextResponse.json({ ticker: tickerParam, calls: [], count: 0, demo: true })
+      : NextResponse.json({ calls: [], stats: { total: 0, winRate: 0, avgReturn: 0 }, demo: true })
+  }
+
+  // Per-ticker memory: "last time we rated X, here's what happened"
+  if (tickerParam) {
+    try {
+      const { data: tcalls } = await sb
+        .from('ai_calls').select('*').eq('ticker', tickerParam)
+        .order('analyzed_at', { ascending: false }).limit(8)
+      const cur = await getPrice(tickerParam)
+      const enriched = (tcalls ?? []).map((c: Record<string, unknown>) => {
+        const entry = Number(c.price_at_analysis)
+        const ret = cur && entry ? parseFloat((((cur - entry) / entry) * 100).toFixed(2)) : null
+        const isBull = ['Strong Buy', 'Buy'].includes(c.rating as string)
+        const correct = ret !== null ? (isBull ? ret > 0 : ret < 0) : null
+        return { id: c.id, rating: c.rating, analyzed_at: c.analyzed_at, price_at_analysis: entry, price_target: Number(c.price_target), confidence: Number(c.confidence), return_pct: ret, correct }
+      })
+      const scored = enriched.filter(c => c.correct !== null)
+      const hitRate = scored.length ? Math.round((scored.filter(c => c.correct).length / scored.length) * 100) : null
+      return NextResponse.json({ ticker: tickerParam, current: cur, count: enriched.length, hitRate, calls: enriched })
+    } catch (e) {
+      return NextResponse.json({ ticker: tickerParam, calls: [], count: 0, error: String(e) })
+    }
   }
 
   try {

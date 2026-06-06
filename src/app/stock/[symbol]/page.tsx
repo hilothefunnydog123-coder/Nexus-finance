@@ -2,90 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { POPULAR_TICKERS, isLikelyTicker } from '@/lib/tickers'
+import { getStock, fmtCap, consensus, COMPARE_PAIRS } from '@/lib/stockSeo'
 import SiteFooter from '@/components/SiteFooter'
 
 export const revalidate = 3600 // ISR — refresh each ticker page hourly
 
-const FH = process.env.FINNHUB_API_KEY ?? ''
 const BASE = 'https://ynfinance.org'
-
-type StockData = {
-  symbol: string; name: string; industry: string; logo: string; weburl: string
-  price: number; change: number; changePct: number; high: number; low: number; open: number; prevClose: number
-  marketCap: number; pe: number; high52: number; low52: number; beta: number
-  rec: { strongBuy: number; buy: number; hold: number; sell: number; strongSell: number } | null
-  news: { headline: string; source: string; url: string; datetime: number }[]
-}
-
-async function fh<T>(url: string): Promise<T | null> {
-  if (!FH) return null
-  try {
-    const r = await fetch(url, { next: { revalidate: 3600 } })
-    if (!r.ok) return null
-    return (await r.json()) as T
-  } catch { return null }
-}
-
-async function getStock(symbol: string): Promise<StockData | null> {
-  const s = symbol.toUpperCase()
-  const now = Math.floor(Date.now() / 1000)
-  const from = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10)
-  const to = new Date().toISOString().slice(0, 10)
-
-  const [quote, profile, metricRes, recArr, newsArr] = await Promise.all([
-    fh<{ c: number; d: number; dp: number; h: number; l: number; o: number; pc: number }>(`https://finnhub.io/api/v1/quote?symbol=${s}&token=${FH}`),
-    fh<{ name: string; finnhubIndustry: string; logo: string; weburl: string; marketCapitalization: number }>(`https://finnhub.io/api/v1/stock/profile2?symbol=${s}&token=${FH}`),
-    fh<{ metric: Record<string, number> }>(`https://finnhub.io/api/v1/stock/metric?symbol=${s}&metric=all&token=${FH}`),
-    fh<{ strongBuy: number; buy: number; hold: number; sell: number; strongSell: number }[]>(`https://finnhub.io/api/v1/stock/recommendation?symbol=${s}&token=${FH}`),
-    fh<{ headline: string; source: string; url: string; datetime: number }[]>(`https://finnhub.io/api/v1/company-news?symbol=${s}&from=${from}&to=${to}&token=${FH}`),
-  ])
-
-  // No price and no profile name → not a real/tradeable ticker
-  if ((!quote || !quote.c) && (!profile || !profile.name)) return null
-  void now
-
-  const m = metricRes?.metric ?? {}
-  return {
-    symbol: s,
-    name: profile?.name ?? s,
-    industry: profile?.finnhubIndustry ?? '—',
-    logo: profile?.logo ?? '',
-    weburl: profile?.weburl ?? '',
-    price: quote?.c ?? 0,
-    change: quote?.d ?? 0,
-    changePct: quote?.dp ?? 0,
-    high: quote?.h ?? 0,
-    low: quote?.l ?? 0,
-    open: quote?.o ?? 0,
-    prevClose: quote?.pc ?? 0,
-    marketCap: profile?.marketCapitalization ?? 0,
-    pe: m.peNormalizedAnnual ?? m.peTTM ?? 0,
-    high52: m['52WeekHigh'] ?? 0,
-    low52: m['52WeekLow'] ?? 0,
-    beta: m.beta ?? 0,
-    rec: recArr && recArr.length ? recArr[0] : null,
-    news: (newsArr ?? []).filter(n => n.headline).slice(0, 5),
-  }
-}
-
-function fmtCap(millions: number): string {
-  if (!millions) return '—'
-  if (millions >= 1e6) return `$${(millions / 1e6).toFixed(2)}T`
-  if (millions >= 1e3) return `$${(millions / 1e3).toFixed(1)}B`
-  return `$${millions.toFixed(0)}M`
-}
-
-function consensus(rec: StockData['rec']): { label: string; clr: string } {
-  if (!rec) return { label: 'No coverage', clr: '#6a8497' }
-  const bull = rec.strongBuy + rec.buy
-  const bear = rec.sell + rec.strongSell
-  const total = bull + rec.hold + bear || 1
-  const bullPct = bull / total
-  if (bullPct >= 0.66) return { label: 'Strong Buy', clr: '#00d4aa' }
-  if (bullPct >= 0.45) return { label: 'Buy', clr: '#22c55e' }
-  if (bear / total >= 0.45) return { label: 'Sell', clr: '#ff2d78' }
-  return { label: 'Hold', clr: '#f59e0b' }
-}
 
 export async function generateStaticParams() {
   return POPULAR_TICKERS.map(symbol => ({ symbol }))
@@ -273,6 +195,18 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
           <p style={{ fontSize: 14, color: '#6a8497', maxWidth: 440, margin: '0 auto 20px', lineHeight: 1.6 }}>3 free analyses, no card required. See exactly why the AI rates {d.symbol} the way it does.</p>
           <Link href={`/ai-stocks?ticker=${d.symbol}`} style={{ display: 'inline-block', background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', color: '#06121f', padding: '15px 34px', borderRadius: 12, fontSize: 15, fontWeight: 900, textDecoration: 'none' }}>Analyze {d.symbol} free →</Link>
         </div>
+
+        {/* Head-to-head comparisons featuring this ticker */}
+        {(()=>{ const pairs=COMPARE_PAIRS.filter(([x,y])=>x===d.symbol||y===d.symbol); if(!pairs.length) return null; return (
+          <>
+            <h2 style={{ fontSize: 15, fontWeight: 800, color: '#6a8497', marginBottom: 14 }}>Compare {d.symbol}</h2>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 30 }}>
+              {pairs.map(([x,y])=>(
+                <Link key={`${x}${y}`} href={`/compare/${x.toLowerCase()}-vs-${y.toLowerCase()}`} className="lnk" style={{ fontSize: 12.5, fontWeight: 700, color: '#00d4aa', background: 'rgba(0,212,170,.06)', border: '1px solid rgba(0,212,170,.2)', borderRadius: 8, padding: '7px 13px', textDecoration: 'none' }}>{x} vs {y} →</Link>
+              ))}
+            </div>
+          </>
+        )})()}
 
         {/* Internal links — crawl depth + related tickers */}
         <h2 style={{ fontSize: 15, fontWeight: 800, color: '#6a8497', marginBottom: 14 }}>Explore other stocks</h2>

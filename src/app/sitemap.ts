@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { POPULAR_TICKERS } from '@/lib/tickers'
+import { COMPARE_PAIRS } from '@/lib/stockSeo'
 
 const base = 'https://ynfinance.org'
 const now  = new Date()
@@ -7,6 +8,9 @@ const now  = new Date()
 export default function sitemap(): MetadataRoute.Sitemap {
   const tickerPages: MetadataRoute.Sitemap = POPULAR_TICKERS.map(t => ({
     url: `${base}/stock/${t}`, lastModified: now, changeFrequency: 'daily', priority: 0.7,
+  }))
+  const comparePages: MetadataRoute.Sitemap = COMPARE_PAIRS.map(([a, b]) => ({
+    url: `${base}/compare/${a.toLowerCase()}-vs-${b.toLowerCase()}`, lastModified: now, changeFrequency: 'weekly', priority: 0.6,
   }))
 
   return [
@@ -16,6 +20,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/stock`,             lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
     { url: `${base}/courses`,           lastModified: now, changeFrequency: 'weekly',  priority: 0.9 },
     { url: `${base}/algorithms`,        lastModified: now, changeFrequency: 'weekly',  priority: 0.9 },
+    { url: `${base}/compare`,           lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${base}/methodology`,       lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${base}/affiliates`,        lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${base}/app`,               lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${base}/arena`,             lastModified: now, changeFrequency: 'daily',   priority: 0.8 },
@@ -23,8 +29,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/agents`,            lastModified: now, changeFrequency: 'daily',   priority: 0.8 },
     { url: `${base}/analyzer`,          lastModified: now, changeFrequency: 'weekly',  priority: 0.7 },
 
-    // Programmatic ticker pages
+    // Programmatic ticker + comparison pages
     ...tickerPages,
+    ...comparePages,
 
     // Daily Intel
     { url: `${base}/daily`,             lastModified: now, changeFrequency: 'daily',   priority: 0.7 },

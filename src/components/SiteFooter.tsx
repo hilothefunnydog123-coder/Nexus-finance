@@ -2,9 +2,9 @@ import Link from 'next/link'
 
 // One consistent, content-rich footer across the marketing site — a major cohesion/trust signal.
 const COLS: [string, [string, string][]][] = [
-  ['Product', [['AI Stock Analyzer', '/ai-stocks'], ['Stock Forecasts', '/stock'], ['Courses', '/courses'], ['Algorithms', '/algorithms'], ['AI Track Record', '/performance'], ['Intelligence Suite', '/intelligence'], ['Agent Network', '/agents'], ['Daily Intel', '/daily']]],
+  ['Product', [['AI Stock Analyzer', '/ai-stocks'], ['Stock Forecasts', '/stock'], ['Compare Stocks', '/compare'], ['Courses', '/courses'], ['Algorithms', '/algorithms'], ['AI Track Record', '/performance'], ['Intelligence Suite', '/intelligence'], ['Agent Network', '/agents']]],
   ['Company', [['About', '/company'], ['Affiliate Program', '/affiliates'], ['Careers', '/careers'], ['Press', '/press'], ['Investors', '/investors']]],
-  ['Resources', [['Research', '/research'], ['Embed Widget', '/embed'], ['Developer API', '/developers'], ['Brand Kit', '/brand'], ['Privacy', '/privacy'], ['Terms', '/terms']]],
+  ['Resources', [['How the AI Works', '/methodology'], ['Research', '/research'], ['Embed Widget', '/embed'], ['Developer API', '/developers'], ['Privacy', '/privacy'], ['Terms', '/terms']]],
 ]
 
 export default function SiteFooter() {

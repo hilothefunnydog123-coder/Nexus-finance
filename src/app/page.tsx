@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import { YNMark } from '@/components/YNLogo'
 import { Icon } from '@/components/Icons'
 import SiteFooter from '@/components/SiteFooter'
+import LiveTrackStat from '@/components/LiveTrackStat'
 
 const ThreeScene = dynamic(() => import('@/components/ThreeScene'), { ssr: false })
 const CinematicIntro = dynamic(() => import('@/components/CinematicIntro'), { ssr: false })
@@ -271,9 +272,10 @@ export default function Home() {
           <Reveal>
             <div style={{ textAlign: 'center', marginBottom: 50 }}>
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 14 }}>WHY TRUST IT</div>
-              <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', maxWidth: 640, margin: '0 auto', lineHeight: 1.08 }}>
+              <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', maxWidth: 640, margin: '0 auto 22px', lineHeight: 1.08 }}>
                 Built to be checked, not just believed.
               </h2>
+              <LiveTrackStat />
             </div>
           </Reveal>
           <div className="grid3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }}>

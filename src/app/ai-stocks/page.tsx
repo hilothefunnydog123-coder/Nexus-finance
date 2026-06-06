@@ -666,6 +666,22 @@ export default function AIStocksPage() {
   const [canShare,setCanShare]   = useState(false)
   useEffect(()=>{ setCanShare(typeof navigator!=='undefined' && typeof navigator.canShare==='function') },[])
 
+  // ── First-visit onboarding ──
+  const [showIntro,setShowIntro] = useState(false)
+  useEffect(()=>{ try{ if(!localStorage.getItem('yn_analyzer_intro')) setShowIntro(true) }catch{} },[])
+  const dismissIntro = ()=>{ try{ localStorage.setItem('yn_analyzer_intro','1') }catch{}; setShowIntro(false) }
+
+  // ── Per-ticker AI memory ("last time we rated X…") ──
+  type TickerHist = { count:number; hitRate:number|null; current:number|null; calls:{id:string;rating:string;analyzed_at:string;price_at_analysis:number;confidence:number;return_pct:number|null;correct:boolean|null}[] }
+  const [tickerHist,setTickerHist] = useState<TickerHist|null>(null)
+  useEffect(()=>{
+    const tk=result?.ticker
+    if(!tk){ setTickerHist(null); return }
+    let cancelled=false
+    fetch(`/api/ai-calls?ticker=${encodeURIComponent(tk)}`).then(r=>r.json()).then((d:TickerHist&{count:number})=>{ if(!cancelled) setTickerHist(d&&d.count>0?d:null) }).catch(()=>{})
+    return ()=>{ cancelled=true }
+  },[result?.ticker])
+
   // ── Ticker autocomplete ──
   const [sug,setSug]             = useState<{symbol:string;description:string}[]>([])
   const [showSug,setShowSug]     = useState(false)
@@ -1431,6 +1447,30 @@ export default function AIStocksPage() {
             })()}
           </div>
 
+          {/* AI MEMORY — prior calls on this ticker */}
+          {tickerHist && tickerHist.count>0 && (
+            <div className="card" style={{padding:'16px 18px',marginBottom:12,borderColor:'#00d4ff30'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',marginBottom:tickerHist.calls.length?10:0}}>
+                <span style={{fontSize:11,fontWeight:800,color:'#00d4ff',letterSpacing:'1px'}}>🧠 AI&apos;S MEMORY ON {result.ticker}</span>
+                <span style={{fontSize:11,color:'#4a7a6a'}}>{tickerHist.count} prior call{tickerHist.count>1?'s':''} logged</span>
+                {tickerHist.hitRate!==null && <span style={{marginLeft:'auto',fontSize:11,fontWeight:800,color:tickerHist.hitRate>=50?'#00ff88':'#ff9500'}}>{tickerHist.hitRate}% went the right way</span>}
+              </div>
+              {tickerHist.calls.slice(0,5).map(c=>{
+                const d=new Date(c.analyzed_at)
+                const rc=RATING_CLR[c.rating]??'#a0ffcc'
+                return (
+                  <div key={c.id} style={{display:'grid',gridTemplateColumns:'78px 1fr auto auto',gap:10,alignItems:'center',padding:'7px 0',borderTop:'1px solid #00ff8410',fontSize:12}}>
+                    <span style={{color:'#4a7a6a',fontFamily:'monospace'}}>{d.getMonth()+1}/{d.getDate()}/{String(d.getFullYear()).slice(2)}</span>
+                    <span style={{fontWeight:700,color:rc}}>{c.rating} <span style={{color:'#1a4a2a',fontWeight:400}}>@ ${c.price_at_analysis.toFixed(2)}</span></span>
+                    <span style={{fontFamily:'monospace',fontWeight:800,color:c.return_pct===null?'#4a7a6a':c.return_pct>=0?'#00ff88':'#ff2d78'}}>{c.return_pct===null?'—':`${c.return_pct>=0?'+':''}${c.return_pct}%`}</span>
+                    <span style={{fontSize:11,color:c.correct===null?'#4a7a6a':c.correct?'#00ff88':'#ff2d78'}}>{c.correct===null?'open':c.correct?'✓':'✗'}</span>
+                  </div>
+                )
+              })}
+              <div style={{fontSize:9,color:'#1a4a2a',letterSpacing:'.5px',marginTop:8}}>// RETURN MEASURED FROM ENTRY PRICE TO TODAY · <a href="/performance" style={{color:'#4a7a6a'}}>full track record →</a></div>
+            </div>
+          )}
+
           {/* CANDLESTICK CHART */}
           {result.candles && result.candles.length > 5 && (
             <div className="card" style={{padding:'8px',marginBottom:12,overflow:'hidden'}}>
@@ -1733,6 +1773,36 @@ export default function AIStocksPage() {
       <div style={{textAlign:'center',padding:'20px',borderTop:'1px solid #00ff8810',fontSize:9,color:'#1a4a2a',position:'relative',zIndex:2,letterSpacing:'2px',background:'rgba(3,10,6,.9)',backdropFilter:'blur(12px)'}}>
         // NOT FINANCIAL ADVICE · EDUCATIONAL PURPOSES ONLY · ALWAYS DYOR
       </div>
+
+      {/* ══ ONBOARDING ═════════════════════════════════════════════════════════ */}
+      {showIntro && (
+        <div style={{position:'fixed',inset:0,zIndex:9500,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(3,10,6,.94)',backdropFilter:'blur(16px)',padding:20}}
+          onClick={e=>{if(e.target===e.currentTarget)dismissIntro()}}>
+          <div style={{background:'#030a06',border:'1px solid #00ff8840',borderRadius:6,padding:'34px 32px',maxWidth:460,width:'100%',position:'relative',overflow:'hidden'}}>
+            <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:'linear-gradient(90deg,#00ff88,#00d4ff,#a855f7)'}}/>
+            <div style={{fontSize:9,color:'#4a7a6a',letterSpacing:'3px',marginBottom:14}}>// WELCOME</div>
+            <h2 style={{fontSize:24,fontWeight:900,color:'#00ff88',textShadow:'0 0 24px #00ff8860',letterSpacing:'-.5px',marginBottom:8}}>The AI Stock Analyzer</h2>
+            <p style={{fontSize:13,color:'#4a7a6a',lineHeight:1.6,marginBottom:22}}>Institutional-grade research on any stock, in about 15 seconds. Here&apos;s the flow:</p>
+            <div style={{display:'flex',flexDirection:'column',gap:14,marginBottom:26}}>
+              {[
+                ['1','Type any ticker','Search a symbol — we autocomplete and validate it for you.'],
+                ['2','Five AI agents go to work','Fundamentals, technicals, sentiment, risk & a portfolio manager return a rating, bull/bear targets, key levels and an options play.'],
+                ['3','Share or compare','Export a verdict card or a cinematic video, compare two tickers head-to-head, and check the call against our public track record.'],
+              ].map(([n,t,d])=>(
+                <div key={n} style={{display:'flex',gap:13,alignItems:'flex-start'}}>
+                  <div style={{flexShrink:0,width:24,height:24,borderRadius:5,background:'#00ff8818',border:'1px solid #00ff8840',color:'#00ff88',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:12,fontFamily:'monospace'}}>{n}</div>
+                  <div>
+                    <div style={{fontSize:13.5,fontWeight:800,color:'#cdffe6'}}>{t}</div>
+                    <div style={{fontSize:12,color:'#4a7a6a',lineHeight:1.55,marginTop:2}}>{d}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button onClick={dismissIntro} style={{width:'100%',background:'#00ff88',border:'none',borderRadius:3,padding:'13px',color:'#030a06',fontWeight:900,fontSize:13,cursor:'pointer',fontFamily:'inherit',letterSpacing:'1px'}}>START ANALYZING — 3 FREE →</button>
+            <div style={{fontSize:10,color:'#1a4a2a',textAlign:'center',marginTop:12,letterSpacing:'.5px'}}>No card required · Not financial advice</div>
+          </div>
+        </div>
+      )}
 
       {/* ══ PAYWALL MODAL ══════════════════════════════════════════════════════ */}
       {showPaywall && (
