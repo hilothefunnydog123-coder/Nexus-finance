@@ -333,6 +333,21 @@ function roundRect(ctx: CanvasRenderingContext2D, x:number, y:number, w:number, 
   ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath()
 }
 
+// Canvas text helpers for share card / video
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = String(text||'').split(/\s+/); const lines: string[] = []; let line = ''
+  for (const w of words) { const test = line ? line+' '+w : w; if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w } else line = test }
+  if (line) lines.push(line); return lines
+}
+function oneLine(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+  let s = String(text||''); if (ctx.measureText(s).width <= maxWidth) return s
+  while (s.length > 1 && ctx.measureText(s+'…').width > maxWidth) s = s.slice(0, -1)
+  return s.trim()+'…'
+}
+function splitSentences(t?: string): string[] {
+  return String(t||'').split(/(?<=[.!?])\s+/).map(s=>s.trim()).filter(s=>s.length > 12)
+}
+
 // ── MATRIX RAIN CANVAS ────────────────────────────────────────────────────────
 function MatrixCanvas() {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -645,6 +660,12 @@ export default function AIStocksPage() {
   const [cmp,setCmp]             = useState<Result|null>(null)
   const [cmpLoading,setCmpLoading] = useState(false)
 
+  // ── Share (card + video) ──
+  const [shareBusy,setShareBusy] = useState<''|'video'|'both'>('')
+  const [vidPct,setVidPct]       = useState(0)
+  const [canShare,setCanShare]   = useState(false)
+  useEffect(()=>{ setCanShare(typeof navigator!=='undefined' && typeof navigator.canShare==='function') },[])
+
   // ── Ticker autocomplete ──
   const [sug,setSug]             = useState<{symbol:string;description:string}[]>([])
   const [showSug,setShowSug]     = useState(false)
@@ -785,30 +806,224 @@ export default function AIStocksPage() {
     finally { setCmpLoading(false) }
   },[result,timeframe])
 
-  // Export a branded verdict card as a PNG (free marketing on every share)
-  const downloadCard = useCallback(()=>{
+  // Draw + return a branded verdict card as a PNG blob (shared by download & native-share)
+  const makeCardBlob = useCallback(()=> new Promise<Blob|null>(resolve=>{
+    if(!result||!result.analysis){ resolve(null); return }
+    const r=result, a2=result.analysis
+    const W=1200,H=630
+    const c=document.createElement('canvas'); c.width=W; c.height=H
+    const x=c.getContext('2d'); if(!x){ resolve(null); return }
+    const vc=RATING_CLR[a2.rating]??'#00ff88'
+    const up=r.price>0?(a2.price_target-r.price)/r.price*100:0
+
+    // Background + cinematic glow + grid
+    x.fillStyle='#050b10'; x.fillRect(0,0,W,H)
+    const rg=x.createRadialGradient(W*0.8,H*0.18,0,W*0.8,H*0.18,720)
+    rg.addColorStop(0,vc+'2e'); rg.addColorStop(1,'transparent'); x.fillStyle=rg; x.fillRect(0,0,W,H)
+    x.strokeStyle='rgba(255,255,255,.035)'; x.lineWidth=1
+    for(let gx=0;gx<=W;gx+=40){ x.beginPath(); x.moveTo(gx,0); x.lineTo(gx,H); x.stroke() }
+    for(let gy=0;gy<=H;gy+=40){ x.beginPath(); x.moveTo(0,gy); x.lineTo(W,gy); x.stroke() }
+    x.strokeStyle=vc+'55'; x.lineWidth=2; roundRect(x,16,16,W-32,H-32,18); x.stroke()
+    x.fillStyle=vc; roundRect(x,56,50,42,42,10); x.fill()
+    x.fillStyle='#050b10'; x.textAlign='center'; x.font='900 19px Inter,system-ui,sans-serif'; x.fillText('YN',77,79)
+    x.textAlign='left'; x.fillStyle='#eaf4fa'; x.font='800 22px Inter,system-ui,sans-serif'; x.fillText('YN FINANCE',110,70)
+    x.fillStyle='#6a8497'; x.font='600 12px Inter,system-ui,sans-serif'; x.fillText('AI STOCK ANALYZER',110,89)
+
+    // Ticker block
+    x.fillStyle='#ffffff'; x.font='900 122px "SF Mono",ui-monospace,monospace'; x.fillText(r.ticker,52,238)
+    x.fillStyle='#8aa0b2'; x.font='600 23px Inter,system-ui,sans-serif'; x.fillText(oneLine(x,r.name,560),56,280)
+    x.fillStyle=up>=0?'#00ff88':'#ff2d78'; x.font='800 24px "SF Mono",ui-monospace,monospace'; x.fillText(`$${r.price.toFixed(2)}`,56,320)
+
+    // Verdict (right)
+    x.textAlign='right'
+    x.fillStyle='#6a8497'; x.font='700 14px Inter,system-ui,sans-serif'; x.fillText('AI VERDICT', W-64, 148)
+    x.shadowBlur=42; x.shadowColor=vc; x.fillStyle=vc; x.font='900 78px Inter,system-ui,sans-serif'; x.fillText(a2.rating.toUpperCase(), W-64, 222); x.shadowBlur=0
+    x.fillStyle='#8aa0b2'; x.font='700 17px "SF Mono",ui-monospace,monospace'; x.fillText(`CONVICTION ${a2.confidence}%`, W-64, 256)
+    x.textAlign='left'
+    const barW=360, barX=W-64-barW, barY=272
+    x.fillStyle='rgba(255,255,255,.08)'; roundRect(x,barX,barY,barW,10,5); x.fill()
+    x.fillStyle=vc; roundRect(x,barX,barY,barW*Math.max(0,Math.min(100,a2.confidence))/100,10,5); x.fill()
+
+    // Why
+    x.fillStyle='#6a8497'; x.font='700 13px Inter,system-ui,sans-serif'; x.fillText('THE WHY', 56, 372)
+    const whyText=(a2.catalysts&&a2.catalysts[0]) || splitSentences(a2.executive_summary)[0] || a2.investment_thesis || ''
+    x.fillStyle='#b8cad8'; x.font='500 19px Inter,system-ui,sans-serif'
+    wrapText(x, whyText, W-112).slice(0,2).forEach((ln,i)=> x.fillText(ln, 56, 400+i*28))
+
+    // Target ladder
+    const ty=466, gap=12, tw=(W-112-gap*2)/3
+    ;([['BEAR',a2.price_target_bear,'#ff2d78'],['BASE',a2.price_target,'#00d4ff'],['BULL',a2.price_target_bull,'#00ff88']] as [string,number,string][]).forEach(([lbl,val,clr],i)=>{
+      const tx=56+i*(tw+gap)
+      x.fillStyle=clr+'14'; roundRect(x,tx,ty,tw,74,10); x.fill()
+      x.strokeStyle=clr+'40'; x.lineWidth=1; roundRect(x,tx,ty,tw,74,10); x.stroke()
+      x.fillStyle='#6a8497'; x.font='700 12px Inter,system-ui,sans-serif'; x.fillText(`${lbl} TARGET`, tx+16, ty+27)
+      x.fillStyle=clr; x.font='900 31px "SF Mono",ui-monospace,monospace'; x.fillText(`$${Number(val||0).toFixed(2)}`, tx+16, ty+60)
+    })
+
+    // Footer
+    x.fillStyle='#3a5566'; x.font='600 15px Inter,system-ui,sans-serif'
+    x.fillText('ynfinance.org   ·   Free AI analysis on any stock   ·   Not financial advice', 56, H-34)
+    x.textAlign='right'; x.fillStyle=vc; x.font='800 16px Inter,system-ui,sans-serif'; x.fillText(`BASE ${up>=0?'+':''}${up.toFixed(1)}%`, W-64, H-34); x.textAlign='left'
+
+    c.toBlob(b=>resolve(b),'image/png')
+  }),[result])
+
+  const downloadCard = useCallback(async()=>{
+    const b=await makeCardBlob(); if(!b||!result) return
+    const u=URL.createObjectURL(b); const link=document.createElement('a'); link.href=u; link.download=`${result.ticker}-yn-verdict.png`; link.click(); URL.revokeObjectURL(u)
+  },[makeCardBlob,result])
+
+  // Native share (mobile) — shares the actual PNG, biggest virality lever on phones
+  const shareNative = useCallback(async()=>{
+    const b=await makeCardBlob(); if(!b||!result||!result.analysis) return
+    try{
+      const file=new File([b], `${result.ticker}-yn-verdict.png`, {type:'image/png'})
+      const data: ShareData & {files?:File[]} = {
+        title:`${result.ticker} — ${result.analysis.rating}`,
+        text:`AI verdict on ${result.ticker}: ${result.analysis.rating} (${result.analysis.confidence}% conviction). Analyze any stock free →`,
+        url:'https://ynfinance.org/ai-stocks',
+      }
+      if(navigator.canShare?.({files:[file]})){ data.files=[file]; await navigator.share(data) }
+      else await navigator.share(data)
+    }catch{/* user cancelled */}
+  },[makeCardBlob,result])
+
+  // Record a cinematic ~9s animated breakdown (verdict → conviction → why → targets) → downloadable video
+  const recordVideo = useCallback(async()=>{
     if(!result||!result.analysis) return
-    const a2=result.analysis
-    const c=document.createElement('canvas'); c.width=1200; c.height=630
-    const x=c.getContext('2d'); if(!x) return
-    const clrMap:Record<string,string>={'Strong Buy':'#00ff88','Buy':'#00c896','Hold':'#ff9500','Sell':'#ff6b35','Strong Sell':'#ff2d78'}
-    const vc=clrMap[a2.rating]??'#00ff88'
-    const g=x.createLinearGradient(0,0,1200,630); g.addColorStop(0,'#020806'); g.addColorStop(1,'#04140c')
-    x.fillStyle=g; x.fillRect(0,0,1200,630)
-    x.strokeStyle=vc+'40'; x.lineWidth=2; x.strokeRect(24,24,1152,582)
-    x.fillStyle='#00ff88'; x.font='bold 30px monospace'; x.fillText('YN FINANCE', 60, 90)
-    x.fillStyle='#4a7a6a'; x.font='18px monospace'; x.fillText('AI STOCK ANALYZER', 60, 118)
-    x.fillStyle='#ffffff'; x.font='bold 120px monospace'; x.fillText(result.ticker, 56, 250)
-    x.fillStyle='#a0ffcc'; x.font='22px monospace'; x.fillText(`${result.name}  ·  $${result.price.toFixed(2)}`, 60, 300)
-    x.fillStyle=vc; x.font='bold 96px monospace'; x.fillText(a2.rating.toUpperCase(), 56, 420)
-    x.fillStyle='#4a7a6a'; x.font='20px monospace'
-    x.fillText(`CONVICTION ${a2.confidence}%`, 60, 480)
-    x.fillText(`12M TARGET $${a2.price_target.toFixed(2)}  (${((a2.price_target-result.price)/result.price*100>=0?'+':'')}${((a2.price_target-result.price)/result.price*100).toFixed(1)}%)`, 60, 515)
-    x.fillText(`HORIZON ${a2.time_horizon}`, 60, 550)
-    x.fillStyle=vc+'18'; x.fillRect(56,575,1088,2)
-    x.fillStyle='#4a7a6a'; x.font='16px monospace'; x.fillText('ynfinance.org · Not financial advice · DYOR', 60, 595)
-    c.toBlob(b=>{ if(!b)return; const u=URL.createObjectURL(b); const link=document.createElement('a'); link.href=u; link.download=`${result.ticker}-yn-verdict.png`; link.click(); URL.revokeObjectURL(u) })
+    const r=result, a2=result.analysis
+    const S=1080, FPS=30, DUR=9.5
+    const canvas=document.createElement('canvas'); canvas.width=S; canvas.height=S
+    const ctx=canvas.getContext('2d'); if(!ctx) return
+    if(typeof canvas.captureStream!=='function' || typeof MediaRecorder==='undefined'){ alert('Video export needs a recent Chrome, Edge or Firefox.'); return }
+    const mimes=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']
+    const mime=mimes.find(m=>{ try{ return MediaRecorder.isTypeSupported(m) }catch{ return false } })
+    if(!mime){ alert('Your browser can’t export video. Try Chrome or Edge.'); return }
+    const ext=mime.startsWith('video/mp4')?'mp4':'webm'
+
+    const vc=RATING_CLR[a2.rating]??'#00ff88'
+    const up=r.price>0?(a2.price_target-r.price)/r.price*100:0
+    const why=((a2.catalysts&&a2.catalysts.length>=2)?a2.catalysts:splitSentences(a2.executive_summary).length?splitSentences(a2.executive_summary):[a2.investment_thesis]).filter(Boolean).slice(0,3)
+
+    const stream=canvas.captureStream(FPS)
+    let ac:AudioContext|null=null
+    try{
+      const ACtor=(window.AudioContext|| (window as unknown as {webkitAudioContext:typeof AudioContext}).webkitAudioContext)
+      ac=new ACtor()
+      const dest=ac.createMediaStreamDestination()
+      const master=ac.createGain(); master.gain.value=0.0001
+      const filt=ac.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=850
+      filt.connect(master); master.connect(dest)
+      ;[110,164.81,220].forEach((f,i)=>{ const o=ac!.createOscillator(); o.type='sine'; o.frequency.value=f; const g=ac!.createGain(); g.gain.value=0.5/(i+1); o.connect(g); g.connect(filt); o.start() })
+      const t0=ac.currentTime
+      master.gain.setValueAtTime(0.0001,t0)
+      master.gain.exponentialRampToValueAtTime(0.05,t0+1.4)
+      master.gain.setValueAtTime(0.05,t0+DUR-1.3)
+      master.gain.exponentialRampToValueAtTime(0.0001,t0+DUR)
+      dest.stream.getAudioTracks().forEach(tr=>stream.addTrack(tr))
+    }catch{ ac=null }
+
+    const chunks:BlobPart[]=[]
+    const rec=new MediaRecorder(stream,{mimeType:mime, videoBitsPerSecond:9_000_000})
+    rec.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data) }
+    const stopped=new Promise<void>(res=>{ rec.onstop=()=>res() })
+
+    const clamp=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v))
+    const ease=(p:number)=>1-Math.pow(1-clamp(p,0,1),3)
+    const appear=(t:number,start:number,dur=0.6)=>{ const e=ease((t-start)/dur); return {a:e, dy:(1-e)*26} }
+    const M=70
+
+    function frame(t:number){
+      if(!ctx) return
+      // bg
+      ctx.fillStyle='#050b10'; ctx.fillRect(0,0,S,S)
+      const gx=S*0.5+Math.cos(t*0.5)*120, gy=S*0.32+Math.sin(t*0.5)*90
+      const rg=ctx.createRadialGradient(gx,gy,0,gx,gy,760); rg.addColorStop(0,vc+'26'); rg.addColorStop(1,'transparent'); ctx.fillStyle=rg; ctx.fillRect(0,0,S,S)
+      ctx.strokeStyle='rgba(255,255,255,.03)'; ctx.lineWidth=1
+      for(let i=0;i<=S;i+=45){ ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,S); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(S,i); ctx.stroke() }
+      const sy=((t*0.16)%1)*S; ctx.fillStyle=vc+'10'; ctx.fillRect(0,sy,S,2)
+      ctx.strokeStyle=vc+'55'; ctx.lineWidth=2; roundRect(ctx,18,18,S-36,S-36,22); ctx.stroke()
+
+      // brand (always)
+      const b=appear(t,0,0.5); ctx.globalAlpha=b.a
+      ctx.fillStyle=vc; roundRect(ctx,M,M-14,40,40,10); ctx.fill()
+      ctx.fillStyle='#050b10'; ctx.textAlign='center'; ctx.font='900 18px Inter,system-ui,sans-serif'; ctx.fillText('YN',M+20,M+12)
+      ctx.textAlign='left'; ctx.fillStyle='#eaf4fa'; ctx.font='800 22px Inter,system-ui,sans-serif'; ctx.fillText('YN FINANCE',M+52,M+4)
+      ctx.fillStyle='#6a8497'; ctx.font='600 12px Inter,system-ui,sans-serif'; ctx.fillText('AI STOCK ANALYSIS',M+52,M+22)
+      ctx.globalAlpha=1
+
+      // ticker
+      const tk=appear(t,0.4,0.7); ctx.globalAlpha=tk.a
+      ctx.fillStyle='#ffffff'; ctx.font='900 128px "SF Mono",ui-monospace,monospace'; ctx.fillText(r.ticker, M, 250+tk.dy)
+      ctx.fillStyle='#8aa0b2'; ctx.font='600 26px Inter,system-ui,sans-serif'; ctx.fillText(oneLine(ctx,r.name,S-M*2), M, 296+tk.dy)
+      ctx.fillStyle=up>=0?'#00ff88':'#ff2d78'; ctx.font='800 28px "SF Mono",ui-monospace,monospace'; ctx.fillText(`$${r.price.toFixed(2)}`, M, 340+tk.dy)
+      ctx.globalAlpha=1
+
+      // verdict
+      const vd=appear(t,1.6,0.7); ctx.globalAlpha=vd.a
+      ctx.fillStyle='#6a8497'; ctx.font='700 16px Inter,system-ui,sans-serif'; ctx.fillText('AI VERDICT', M, 418)
+      ctx.shadowBlur=30+Math.sin(t*4)*12; ctx.shadowColor=vc; ctx.fillStyle=vc; ctx.font='900 92px Inter,system-ui,sans-serif'; ctx.fillText(a2.rating.toUpperCase(), M, 496); ctx.shadowBlur=0
+      ctx.globalAlpha=1
+
+      // conviction
+      const cv=appear(t,2.6,0.5); ctx.globalAlpha=cv.a
+      ctx.fillStyle='#8aa0b2'; ctx.font='700 18px "SF Mono",ui-monospace,monospace'; ctx.fillText(`CONVICTION ${a2.confidence}%`, M, 542)
+      const cbW=S-M*2
+      ctx.fillStyle='rgba(255,255,255,.08)'; roundRect(ctx,M,556,cbW,12,6); ctx.fill()
+      const fill=ease((t-2.7)/1.0)*Math.max(0,Math.min(100,a2.confidence))/100
+      ctx.fillStyle=vc; roundRect(ctx,M,556,cbW*fill,12,6); ctx.fill()
+      ctx.globalAlpha=1
+
+      // why
+      const wh=appear(t,3.9,0.4); ctx.globalAlpha=wh.a
+      ctx.fillStyle='#6a8497'; ctx.font='700 16px Inter,system-ui,sans-serif'; ctx.fillText('WHY', M, 632)
+      ctx.globalAlpha=1
+      why.forEach((reason,i)=>{
+        const ln=appear(t,4.2+i*0.7,0.55); if(ln.a<=0.01) return
+        ctx.globalAlpha=ln.a
+        ctx.fillStyle=vc; ctx.font='800 22px "SF Mono",ui-monospace,monospace'; ctx.fillText(`${i+1}`, M, 678+i*52+ln.dy)
+        ctx.fillStyle='#cdd9e3'; ctx.font='500 24px Inter,system-ui,sans-serif'; ctx.fillText(oneLine(ctx,reason,S-M*2-44), M+38, 678+i*52+ln.dy)
+        ctx.globalAlpha=1
+      })
+
+      // targets
+      const tg=appear(t,6.7,0.6); ctx.globalAlpha=tg.a
+      const gap=14, tw=(S-M*2-gap*2)/3, ty=854
+      ;([['BEAR',a2.price_target_bear,'#ff2d78'],['BASE',a2.price_target,'#00d4ff'],['BULL',a2.price_target_bull,'#00ff88']] as [string,number,string][]).forEach(([lbl,val,clr],i)=>{
+        const tx=M+i*(tw+gap)
+        ctx.fillStyle=clr+'14'; roundRect(ctx,tx,ty+tg.dy,tw,96,12); ctx.fill()
+        ctx.strokeStyle=clr+'45'; ctx.lineWidth=1; roundRect(ctx,tx,ty+tg.dy,tw,96,12); ctx.stroke()
+        ctx.fillStyle='#6a8497'; ctx.font='700 13px Inter,system-ui,sans-serif'; ctx.fillText(`${lbl} TARGET`, tx+16, ty+30+tg.dy)
+        ctx.fillStyle=clr; ctx.font='900 34px "SF Mono",ui-monospace,monospace'; ctx.fillText(`$${Number(val||0).toFixed(2)}`, tx+16, ty+72+tg.dy)
+      })
+      ctx.globalAlpha=1
+
+      // outro CTA
+      const ou=appear(t,8.2,0.6); ctx.globalAlpha=ou.a
+      ctx.textAlign='center'
+      ctx.fillStyle=vc; ctx.font='900 26px Inter,system-ui,sans-serif'; ctx.fillText('Analyze any stock free →', S/2, 1004)
+      ctx.fillStyle='#6a8497'; ctx.font='700 18px "SF Mono",ui-monospace,monospace'; ctx.fillText('ynfinance.org', S/2, 1034)
+      ctx.textAlign='left'; ctx.globalAlpha=1
+    }
+
+    rec.start()
+    const start=performance.now()
+    await new Promise<void>(resolve=>{
+      const loop=()=>{ const t=(performance.now()-start)/1000; frame(t); setVidPct(Math.min(99,Math.round(t/DUR*100))); if(t>=DUR){ resolve(); return } requestAnimationFrame(loop) }
+      requestAnimationFrame(loop)
+    })
+    rec.stop(); await stopped
+    try{ await ac?.close() }catch{}
+    const blob=new Blob(chunks,{type:mime})
+    const u=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=u; link.download=`${r.ticker}-yn-analysis.${ext}`; link.click(); URL.revokeObjectURL(u)
   },[result])
+
+  const shareVideo = useCallback(async(mode:'video'|'both')=>{
+    if(shareBusy) return
+    setShareBusy(mode); setVidPct(0)
+    try{ if(mode==='both') await downloadCard(); await recordVideo() }
+    finally{ setShareBusy(''); setVidPct(0) }
+  },[shareBusy,downloadCard,recordVideo])
 
   const a     = result?.analysis
   const rCfg  = RATING_CFG[a?.rating??''] ?? RATING_CFG['Hold']
@@ -1480,7 +1695,30 @@ export default function AIStocksPage() {
               <span>BASE TARGET <b style={{color:'#00d4ff'}}>${a.price_target.toFixed(2)}</b></span>
               <span>HORIZON <b style={{color:'#a0ffcc'}}>{a.time_horizon}</b></span>
             </div>
-            <button onClick={downloadCard} style={{marginTop:16,background:`${rCfg.clr}15`,border:`1px solid ${rCfg.clr}50`,color:rCfg.clr,borderRadius:2,padding:'9px 20px',fontSize:11,fontWeight:800,cursor:'pointer',fontFamily:'inherit',letterSpacing:'1px'}}>📸 SHARE THIS VERDICT CARD</button>
+            {/* SHARE TOOLKIT — card + cinematic video, the viral loop */}
+            <div style={{marginTop:20,paddingTop:18,borderTop:`1px solid ${rCfg.clr}1f`}}>
+              <div style={{fontSize:10,color:'#4a7a6a',letterSpacing:'2px',marginBottom:12}}>// SHARE THIS ANALYSIS</div>
+              <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
+                <button onClick={downloadCard} disabled={!!shareBusy}
+                  style={{background:'rgba(0,212,255,.1)',border:'1px solid #00d4ff50',color:'#00d4ff',borderRadius:3,padding:'11px 18px',fontSize:12,fontWeight:800,cursor:shareBusy?'not-allowed':'pointer',fontFamily:'inherit',letterSpacing:'.5px',opacity:shareBusy?.5:1}}>🖼 IMAGE CARD</button>
+                <button onClick={()=>shareVideo('video')} disabled={!!shareBusy}
+                  style={{background:'rgba(168,85,247,.12)',border:'1px solid #a855f760',color:'#c98bff',borderRadius:3,padding:'11px 18px',fontSize:12,fontWeight:800,cursor:shareBusy?'not-allowed':'pointer',fontFamily:'inherit',letterSpacing:'.5px',opacity:shareBusy?.5:1}}>🎬 VIDEO (THE WHY)</button>
+                <button onClick={()=>shareVideo('both')} disabled={!!shareBusy}
+                  style={{background:`${rCfg.clr}18`,border:`1px solid ${rCfg.clr}60`,color:rCfg.clr,borderRadius:3,padding:'11px 18px',fontSize:12,fontWeight:900,cursor:shareBusy?'not-allowed':'pointer',fontFamily:'inherit',letterSpacing:'.5px',opacity:shareBusy?.5:1}}>⚡ BOTH</button>
+                {canShare && <button onClick={shareNative} disabled={!!shareBusy}
+                  style={{background:'transparent',border:'1px solid #4a7a6a50',color:'#a0ffcc',borderRadius:3,padding:'11px 18px',fontSize:12,fontWeight:800,cursor:shareBusy?'not-allowed':'pointer',fontFamily:'inherit',letterSpacing:'.5px',opacity:shareBusy?.5:1}}>↗ SHARE</button>}
+              </div>
+              {shareBusy ? (
+                <div style={{marginTop:12}}>
+                  <div style={{fontSize:11,color:'#c98bff',letterSpacing:'.5px',marginBottom:6}}>Rendering cinematic video… {vidPct}% <span style={{color:'#4a7a6a'}}>(~10s — keep this tab open)</span></div>
+                  <div style={{height:4,background:'#041810',borderRadius:2,overflow:'hidden',maxWidth:320,margin:'0 auto'}}>
+                    <div style={{height:'100%',width:`${vidPct}%`,background:'linear-gradient(90deg,#a855f7,#00d4ff)',transition:'width .2s'}}/>
+                  </div>
+                </div>
+              ) : (
+                <div style={{fontSize:9,color:'#1a4a2a',letterSpacing:'.5px',marginTop:10}}>VIDEO = a ~9s animated breakdown (verdict · conviction · the why · targets) · captioned, muted-friendly for socials</div>
+              )}
+            </div>
           </div>
 
           <div style={{textAlign:'center',marginTop:24}}>
