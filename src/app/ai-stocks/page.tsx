@@ -682,6 +682,18 @@ export default function AIStocksPage() {
     return ()=>{ cancelled=true }
   },[result?.ticker])
 
+  // ── Live options chain (Polygon) — real Greeks/IV/premium, falls back silently ──
+  type LiveOpt = { ticker:string; type:string; strike:number; expiration:string|null; dte:number|null; premium:number|null; bid:number|null; ask:number|null; iv:number|null; delta:number|null; gamma:number|null; theta:number|null; vega:number|null; openInterest:number|null; volume:number|null; breakeven:number|null; underlying:number|null }
+  const [liveOpt,setLiveOpt] = useState<LiveOpt|null>(null)
+  useEffect(()=>{
+    const o=result?.analysis?.options
+    if(!result?.ticker||!o||(o.type!=='CALL'&&o.type!=='PUT')||!o.strike){ setLiveOpt(null); return }
+    let cancelled=false; setLiveOpt(null)
+    fetch(`/api/options?symbol=${encodeURIComponent(result.ticker)}&type=${o.type}&strike=${o.strike}&expiry=${o.expiry_days||30}`)
+      .then(r=>r.json()).then((d:{ok:boolean;contract:LiveOpt})=>{ if(!cancelled&&d&&d.ok&&d.contract) setLiveOpt(d.contract) }).catch(()=>{})
+    return ()=>{ cancelled=true }
+  },[result?.ticker])
+
   // ── Ticker autocomplete ──
   const [sug,setSug]             = useState<{symbol:string;description:string}[]>([])
   const [showSug,setShowSug]     = useState(false)
@@ -1641,8 +1653,42 @@ export default function AIStocksPage() {
                 <div style={{fontSize:9,color:'#4a7a6a',letterSpacing:'2px',marginBottom:5}}>// SUGGESTED_PLAY</div>
                 <div style={{fontSize:20,fontWeight:900,color:a.options.type==='CALL'?'#00ff88':a.options.type==='PUT'?'#ff2d78':'#ff9500',textShadow:`0 0 20px ${a.options.type==='CALL'?'#00ff88':a.options.type==='PUT'?'#ff2d78':'#ff9500'}`}}>{a.options.strategy}</div>
               </div>
-              <div style={{background:a.options.type==='CALL'?'#00ff8815':'#ff2d7815',border:`1px solid ${a.options.type==='CALL'?'#00ff8840':'#ff2d7840'}`,borderRadius:2,padding:'5px 14px',fontSize:12,fontWeight:900,color:a.options.type==='CALL'?'#00ff88':'#ff2d78',fontFamily:'monospace',letterSpacing:'1px'}}>{a.options.type}</div>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                {liveOpt && <span style={{fontSize:9,fontWeight:800,color:'#00d4ff',background:'#00d4ff12',border:'1px solid #00d4ff40',borderRadius:2,padding:'4px 8px',letterSpacing:'1px'}}>● LIVE CHAIN</span>}
+                <div style={{background:a.options.type==='CALL'?'#00ff8815':'#ff2d7815',border:`1px solid ${a.options.type==='CALL'?'#00ff8840':'#ff2d7840'}`,borderRadius:2,padding:'5px 14px',fontSize:12,fontWeight:900,color:a.options.type==='CALL'?'#00ff88':'#ff2d78',fontFamily:'monospace',letterSpacing:'1px'}}>{a.options.type}</div>
+              </div>
             </div>
+
+            {/* LIVE OPTIONS CHAIN — real contract from Polygon nearest the AI's suggested strike */}
+            {liveOpt && (
+              <div style={{background:'rgba(0,212,255,.06)',border:'1px solid #00d4ff40',borderRadius:3,padding:'14px',marginBottom:12}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10,flexWrap:'wrap'}}>
+                  <span style={{width:7,height:7,borderRadius:'50%',background:'#00d4ff',boxShadow:'0 0 8px #00d4ff'}}/>
+                  <span style={{fontSize:10,fontWeight:800,color:'#00d4ff',letterSpacing:'1px'}}>LIVE OPTIONS CHAIN · POLYGON</span>
+                  <span style={{marginLeft:'auto',fontSize:10,color:'#4a7a6a',fontFamily:'monospace'}}>{liveOpt.type} ${liveOpt.strike} · exp {liveOpt.expiration}{liveOpt.dte!=null?` (${liveOpt.dte}d)`:''}</span>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(88px,1fr))',gap:8}}>
+                  {[
+                    {l:'MID PREMIUM',v:liveOpt.premium!=null?`$${liveOpt.premium.toFixed(2)}`:'—'},
+                    {l:'BID/ASK',v:liveOpt.bid!=null&&liveOpt.ask!=null?`${liveOpt.bid.toFixed(2)}/${liveOpt.ask.toFixed(2)}`:'—'},
+                    {l:'IV',v:liveOpt.iv!=null?`${liveOpt.iv}%`:'—'},
+                    {l:'DELTA',v:liveOpt.delta!=null?liveOpt.delta.toFixed(2):'—'},
+                    {l:'THETA',v:liveOpt.theta!=null?liveOpt.theta.toFixed(2):'—'},
+                    {l:'BREAKEVEN',v:liveOpt.breakeven!=null?`$${liveOpt.breakeven.toFixed(2)}`:'—'},
+                    {l:'OPEN_INT',v:liveOpt.openInterest!=null?liveOpt.openInterest.toLocaleString():'—'},
+                    {l:'VOLUME',v:liveOpt.volume!=null?liveOpt.volume.toLocaleString():'—'},
+                  ].map(({l,v})=>(
+                    <div key={l} style={{background:'rgba(0,20,10,.6)',border:'1px solid #00d4ff20',borderRadius:2,padding:'8px 10px'}}>
+                      <div style={{fontSize:8,color:'#4a7a6a',letterSpacing:'.5px',marginBottom:3}}>{l}</div>
+                      <div style={{fontSize:13,fontWeight:800,fontFamily:'monospace',color:'#cdf3ff'}}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{fontSize:8,color:'#1a4a2a',letterSpacing:'.5px',marginTop:8}}>// REAL CONTRACT NEAREST THE AI&apos;S TARGET STRIKE · GREEKS &amp; IV FROM POLYGON (≤15min delayed)</div>
+              </div>
+            )}
+
+            <div style={{fontSize:9,color:'#4a7a6a',letterSpacing:'1px',marginBottom:6}}>{liveOpt?'// AI’S INTENDED STRUCTURE (model estimate)':''}</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(110px,1fr))',gap:8,marginBottom:12}}>
               {[
                 {label:'STRIKE',  val:`$${a.options.strike.toFixed(2)}`},
@@ -1661,8 +1707,8 @@ export default function AIStocksPage() {
             {/* Payoff diagram — what options traders actually screenshot */}
             {(a.options.type==='CALL'||a.options.type==='PUT') && (
               <div style={{background:'rgba(0,20,10,.5)',border:'1px solid #a855f725',borderRadius:2,padding:'14px 14px 10px',marginBottom:12}}>
-                <div style={{fontSize:9,color:'#a855f7',letterSpacing:'1px',marginBottom:8,fontWeight:700}}>// P/L AT EXPIRY — LONG {a.options.type}</div>
-                <OptionsPayoff type={a.options.type} strike={a.options.strike} premium={a.options.est_premium} spot={result.price}/>
+                <div style={{fontSize:9,color:'#a855f7',letterSpacing:'1px',marginBottom:8,fontWeight:700}}>// P/L AT EXPIRY — LONG {a.options.type} {liveOpt?'· LIVE PREMIUM':'· EST. PREMIUM'}</div>
+                <OptionsPayoff type={a.options.type} strike={liveOpt?.strike ?? a.options.strike} premium={liveOpt?.premium ?? a.options.est_premium} spot={result.price}/>
               </div>
             )}
             <div style={{background:'rgba(0,20,10,.8)',border:'1px solid #00ff8815',borderRadius:2,padding:'10px 14px',fontSize:12,lineHeight:1.7,letterSpacing:'.2px'}}>
