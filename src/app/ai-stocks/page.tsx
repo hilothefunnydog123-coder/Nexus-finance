@@ -760,6 +760,19 @@ export default function AIStocksPage() {
     finally {if(intervalRef.current)clearInterval(intervalRef.current);setLoading(false)}
   },[timeframe, isPro])
 
+  // Auto-run analysis when arriving from a /stock/[symbol] SEO page (?ticker=AAPL)
+  const analyzeRef = useRef(analyze); analyzeRef.current = analyze
+  useEffect(()=>{
+    const p = new URLSearchParams(window.location.search).get('ticker')
+    if(!p) return
+    const sym = p.toUpperCase().replace(/[^A-Z0-9.\-]/g,'')
+    if(!sym) return
+    setInput(sym)
+    window.history.replaceState({}, '', '/ai-stocks')
+    const id = setTimeout(()=>analyzeRef.current(sym), 350) // let pro-detection settle first
+    return ()=>clearTimeout(id)
+  },[])
+
   // Run a head-to-head comparison ticker (reuses the same analyzer endpoint)
   const runCompare = useCallback(async (sym:string)=>{
     const t=sym.trim().toUpperCase(); if(!t||!result||t===result.ticker) return

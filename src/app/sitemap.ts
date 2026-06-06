@@ -1,19 +1,30 @@
 import { MetadataRoute } from 'next'
+import { POPULAR_TICKERS } from '@/lib/tickers'
 
 const base = 'https://ynfinance.org'
 const now  = new Date()
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const tickerPages: MetadataRoute.Sitemap = POPULAR_TICKERS.map(t => ({
+    url: `${base}/stock/${t}`, lastModified: now, changeFrequency: 'daily', priority: 0.7,
+  }))
+
   return [
-    // Core — highest priority
+    // Core — highest priority (spearhead: Analyzer · Courses · Algorithms)
     { url: base,                        lastModified: now, changeFrequency: 'daily',   priority: 1.0 },
-    { url: `${base}/app`,               lastModified: now, changeFrequency: 'weekly',  priority: 0.9 },
-    { url: `${base}/arena`,             lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
-    { url: `${base}/intelligence`,      lastModified: now, changeFrequency: 'weekly',  priority: 0.9 },
-    { url: `${base}/agents`,            lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
-    { url: `${base}/courses`,           lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
-    { url: `${base}/ai-stocks`,         lastModified: now, changeFrequency: 'daily',   priority: 0.8 },
-    { url: `${base}/analyzer`,          lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${base}/ai-stocks`,         lastModified: now, changeFrequency: 'daily',   priority: 0.95 },
+    { url: `${base}/stock`,             lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
+    { url: `${base}/courses`,           lastModified: now, changeFrequency: 'weekly',  priority: 0.9 },
+    { url: `${base}/algorithms`,        lastModified: now, changeFrequency: 'weekly',  priority: 0.9 },
+    { url: `${base}/affiliates`,        lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/app`,               lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${base}/arena`,             lastModified: now, changeFrequency: 'daily',   priority: 0.8 },
+    { url: `${base}/intelligence`,      lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${base}/agents`,            lastModified: now, changeFrequency: 'daily',   priority: 0.8 },
+    { url: `${base}/analyzer`,          lastModified: now, changeFrequency: 'weekly',  priority: 0.7 },
+
+    // Programmatic ticker pages
+    ...tickerPages,
 
     // Daily Intel
     { url: `${base}/daily`,             lastModified: now, changeFrequency: 'daily',   priority: 0.7 },

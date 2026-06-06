@@ -32,33 +32,27 @@ function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 
 const NAV = [
   { label: 'Analyzer',     href: '/ai-stocks' },
-  { label: 'Intelligence', href: '/intelligence' },
-  { label: 'Agents',       href: '/agents' },
-  { label: 'Algorithms',   href: '/algorithms' },
-  { label: 'Research',     href: '/research' },
+  { label: 'Stocks',       href: '/stock' },
   { label: 'Courses',      href: '/courses' },
-  { label: 'Developers',   href: '/developers' },
-  { label: 'Company',      href: '/company' },
+  { label: 'Algorithms',   href: '/algorithms' },
+  { label: 'Track Record', href: '/performance' },
 ]
 
-const WEAPONS = [
-  { name: 'Lock-Up Assassin', desc: 'Times insider lock-up expiries before the dump hits.', clr: '#ff2d78' },
-  { name: 'Lie Detector',     desc: 'Earnings forensics — what management is really saying.', clr: '#1e90ff' },
-  { name: 'Galaxy Brain',     desc: 'Maps one macro event into the stocks it will move.',     clr: '#a855f7' },
-  { name: 'Forced Flow',      desc: 'Detects mechanical, non-discretionary institutional buying.', clr: '#00d4aa' },
-  { name: 'Signal Radar',     desc: 'Cross-asset correlation breaks, surfaced in real time.', clr: '#f59e0b' },
-  { name: 'Filing X-Ray',     desc: 'Pulls the buried numbers out of dense SEC filings.',     clr: '#22c55e' },
+// The three pillars — the only thing the landing really sells
+const PILLARS = [
+  { tag: '01 · ANALYZE', href: '/ai-stocks', clr: '#00d4aa', title: 'AI Stock Analyzer', body: 'Type any ticker, get a full institutional read in ~15 seconds — rating, bull & bear targets, conviction, an options payoff diagram and key levels. 3 free, no card.', cta: 'Analyze a stock' },
+  { tag: '02 · LEARN', href: '/courses', clr: '#1e90ff', title: 'Courses from 9 pros', body: 'Real strategy from world-class traders for $0.99 a course. Watch the method, then practice it instantly on live charts.', cta: 'Browse courses' },
+  { tag: '03 · AUTOMATE', href: '/algorithms', clr: '#22c55e', title: 'Algorithms', body: 'The strategies the courses teach — turned into prop-grade bots with backtests, trailing exits and webhook autotrade. The course teaches it; the algo runs it for you.', cta: 'Get the algos' },
 ]
 
-const PRODUCTS = [
-  { tag: 'AI Stock Analyzer', href: '/ai-stocks',    clr: '#00d4aa', title: 'Full AI rating on any stock', body: 'Rating, bull & bear price targets, conviction, thesis and key levels — any ticker in seconds.' },
-  { tag: 'Intelligence Suite',href: '/intelligence', clr: '#1e90ff', title: 'Six institutional weapons',  body: 'Insider timing, earnings forensics, macro mapping & filing intel — one click each.' },
-  { tag: 'Agent Network',     href: '/agents',       clr: '#a855f7', title: 'Nine agents, 24/7',          body: 'Congress, insiders, options flow, dark pools and macro — watched and pushed to you.' },
-  { tag: 'Algorithms',        href: '/algorithms',   clr: '#22c55e', title: 'Prop-grade trading bots',    body: 'Copy-paste strategies with backtest stats, trailing exits and webhook autotrade.' },
-  { tag: 'Research',          href: '/research',     clr: '#eab308', title: 'Deep-dive reports',          body: 'Long-form market intelligence and AI research on the names that actually matter.' },
-  { tag: 'YN Arena',          href: '/arena',        clr: '#ec4899', title: 'Compete for real prizes',    body: 'DraftKings-style trading tournaments. Climb the board, win the pool.' },
-  { tag: 'Daily Intel',       href: '/daily',        clr: '#f59e0b', title: 'Your morning edge',          body: 'An AI market briefing before the bell. Know the whole day in two minutes.' },
-  { tag: 'Courses',           href: '/courses',      clr: '#06b6d4', title: '$0.99 from 9 pros',          body: 'Learn the strategy, then practice it instantly on real charts. No subscription.' },
+// Everything else still exists — just demoted to a quiet strip + the footer
+const OTHERS = [
+  { name: 'Intelligence Suite', href: '/intelligence', clr: '#ff2d78' },
+  { name: 'Agent Network',      href: '/agents',       clr: '#a855f7' },
+  { name: 'Daily Intel',        href: '/daily',        clr: '#f59e0b' },
+  { name: 'Research',           href: '/research',     clr: '#eab308' },
+  { name: 'YN Arena',           href: '/arena',        clr: '#ec4899' },
+  { name: 'Track Record',       href: '/performance',  clr: '#00d4aa' },
 ]
 
 export default function Home() {
@@ -140,15 +134,15 @@ export default function Home() {
           </h1>
 
           <p style={{ fontSize: 'clamp(15px,1.8vw,19px)', color: '#6a8497', lineHeight: 1.7, maxWidth: 580, margin: '26px auto 0' }}>
-            {"An entire AI research desk in your pocket — analyzer, intelligence suite, live agents and prop-grade algorithms. The edge they gatekeep, free to start."}
+            {"AI-rate any stock in 15 seconds. Learn the strategy from 9 pro traders. Automate it with prop-grade algorithms. The edge Wall Street gatekeeps — free to start."}
           </p>
 
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginTop: 40 }}>
             <Link href="/ai-stocks" className="btn-primary" style={{ background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', color: '#06121f', padding: '16px 38px', borderRadius: 14, fontSize: 15.5, fontWeight: 900, textDecoration: 'none', boxShadow: '0 0 50px #00d4aa40, 0 16px 36px rgba(0,0,0,.45)', letterSpacing: '-.3px' }}>
               Try the AI Analyzer
             </Link>
-            <Link href="/intelligence" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', color: '#dce8f0', padding: '16px 34px', borderRadius: 14, fontSize: 15, fontWeight: 700, textDecoration: 'none', backdropFilter: 'blur(10px)' }}>
-              Explore the Suite
+            <Link href="/courses" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', color: '#dce8f0', padding: '16px 34px', borderRadius: 14, fontSize: 15, fontWeight: 700, textDecoration: 'none', backdropFilter: 'blur(10px)' }}>
+              Browse the courses
             </Link>
           </div>
 
@@ -181,34 +175,35 @@ export default function Home() {
         </div>
       </section>
 
-      {/* THE ARSENAL — full product grid */}
+      {/* THE THREE PILLARS — analyze · learn · automate */}
       <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(70px,10vw,120px) 24px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <Reveal>
             <div style={{ textAlign: 'center', marginBottom: 52 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 14 }}>THE ARSENAL</div>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 14 }}>HOW IT WORKS</div>
               <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', maxWidth: 680, margin: '0 auto', lineHeight: 1.08 }}>
-                Everything Wall Street has — minus the gatekeeping.
+                Analyze it. Learn it. Automate it.
               </h2>
+              <p style={{ fontSize: 15, color: '#6a8497', maxWidth: 520, margin: '16px auto 0', lineHeight: 1.7 }}>
+                {"One loop: the AI finds the trade, the courses teach the strategy, and the algorithms run it for you."}
+              </p>
             </div>
           </Reveal>
 
-          <div className="grid4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
-            {PRODUCTS.map((p, i) => (
-              <Reveal key={p.tag} delay={(i % 4) * 70}>
+          <div className="grid3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }}>
+            {PILLARS.map((p, i) => (
+              <Reveal key={p.tag} delay={i * 90}>
                 <Link href={p.href} className="card" style={{
-                  display: 'block', height: '100%', textDecoration: 'none', borderRadius: 16, padding: '24px 22px',
-                  background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.07)', backdropFilter: 'blur(12px)',
+                  display: 'flex', flexDirection: 'column', height: '100%', textDecoration: 'none', borderRadius: 18, padding: '30px 26px',
+                  background: `${p.clr}0a`, border: `1px solid ${p.clr}28`, backdropFilter: 'blur(12px)',
                 }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = `${p.clr}55`; e.currentTarget.style.background = `${p.clr}0d` }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.07)'; e.currentTarget.style.background = 'rgba(255,255,255,.025)' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = `${p.clr}66`; e.currentTarget.style.background = `${p.clr}14` }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = `${p.clr}28`; e.currentTarget.style.background = `${p.clr}0a` }}
                 >
-                  <div style={{ width: 34, height: 34, borderRadius: 9, marginBottom: 14, background: `${p.clr}18`, border: `1px solid ${p.clr}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.clr, boxShadow: `0 0 10px ${p.clr}` }} />
-                  </div>
-                  <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '1px', color: p.clr, marginBottom: 9 }}>{p.tag.toUpperCase()}</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#eaf4fa', lineHeight: 1.2, marginBottom: 8, letterSpacing: '-.3px' }}>{p.title}</div>
-                  <div style={{ fontSize: 13, color: '#6a8497', lineHeight: 1.6 }}>{p.body}</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: p.clr, marginBottom: 16 }}>{p.tag}</div>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: '#eaf4fa', lineHeight: 1.15, marginBottom: 12, letterSpacing: '-.5px' }}>{p.title}</div>
+                  <div style={{ fontSize: 14, color: '#8aa0b2', lineHeight: 1.7, marginBottom: 22, flex: 1 }}>{p.body}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: p.clr }}>{p.cta} →</div>
                 </Link>
               </Reveal>
             ))}
@@ -216,38 +211,31 @@ export default function Home() {
         </div>
       </section>
 
-      {/* INTELLIGENCE SUITE — CINEMATIC */}
-      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(70px,10vw,120px) 24px', background: 'linear-gradient(180deg, transparent, rgba(10,4,20,.55), transparent)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      {/* ALSO INSIDE — everything else, demoted to a quiet strip */}
+      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(40px,6vw,70px) 24px' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
           <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: 50 }}>
-              <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 800, letterSpacing: '4px', color: '#ff2d78', border: '1px solid rgba(255,45,120,.3)', borderRadius: 100, padding: '6px 16px', marginBottom: 18 }}>CLASSIFIED · INTELLIGENCE SUITE</div>
-              <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', lineHeight: 1.08 }}>Six weapons. One click each.</h2>
-              <p style={{ fontSize: 15, color: '#6a8497', maxWidth: 520, margin: '16px auto 0', lineHeight: 1.7 }}>
-                {"The asymmetric information Wall Street guards — decoded and handed to you."}
+            <div style={{ textAlign: 'center', marginBottom: 28 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '3px', color: '#5a7488', marginBottom: 8 }}>ALSO INSIDE YN FINANCE</div>
+              <p style={{ fontSize: 13.5, color: '#6a8497', maxWidth: 480, margin: '0 auto', lineHeight: 1.6 }}>
+                {"Pro tools that come with the platform — the intelligence suite, live agent network and more."}
               </p>
             </div>
           </Reveal>
-
-          <div className="weap" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-            {WEAPONS.map((w, i) => (
-              <Reveal key={w.name} delay={i * 70}>
-                <div className="card" style={{ height: '100%', borderRadius: 16, padding: '24px 22px', background: 'rgba(6,10,18,.55)', border: '1px solid rgba(255,255,255,.07)', backdropFilter: 'blur(10px)' }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, marginBottom: 16, background: `${w.clr}18`, border: `1px solid ${w.clr}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: w.clr, boxShadow: `0 0 12px ${w.clr}` }} />
-                  </div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#eaf4fa', marginBottom: 7, letterSpacing: '-.3px' }}>{w.name}</div>
-                  <div style={{ fontSize: 13, color: '#6a8497', lineHeight: 1.6 }}>{w.desc}</div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-
-          <Reveal>
-            <div style={{ textAlign: 'center', marginTop: 44 }}>
-              <Link href="/intelligence" style={{ display: 'inline-block', background: 'rgba(255,45,120,.1)', border: '1px solid rgba(255,45,120,.35)', color: '#ff6b9d', padding: '14px 32px', borderRadius: 12, fontSize: 14, fontWeight: 800, textDecoration: 'none' }}>
-                Enter the Intelligence Suite →
-              </Link>
+          <Reveal delay={80}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10 }}>
+              {OTHERS.map(o => (
+                <Link key={o.href} href={o.href} className="card" style={{
+                  textDecoration: 'none', borderRadius: 100, padding: '10px 20px',
+                  background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.08)',
+                  display: 'flex', alignItems: 'center', gap: 9, fontSize: 13.5, fontWeight: 700, color: '#8aa0b2',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = `${o.clr}55`; e.currentTarget.style.color = '#dce8f0' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.08)'; e.currentTarget.style.color = '#8aa0b2' }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: o.clr, boxShadow: `0 0 8px ${o.clr}` }} />
+                  {o.name}
+                </Link>
+              ))}
             </div>
           </Reveal>
         </div>
@@ -340,9 +328,9 @@ export default function Home() {
               </p>
             </div>
             {([
-              ['Product', [['AI Stock Analyzer', '/ai-stocks'], ['Trade Analyzer', '/analyzer'], ['Intelligence Suite', '/intelligence'], ['Agent Network', '/agents'], ['Algorithms', '/algorithms'], ['YN Arena', '/arena'], ['Daily Intel', '/daily'], ['Courses', '/courses']]],
-              ['Company', [['About', '/company'], ['Careers', '/careers'], ['Press', '/press'], ['Investors', '/investors']]],
-              ['Resources', [['Research', '/research'], ['Developer API', '/developers'], ['Brand Kit', '/brand'], ['Find your type', '/quiz'], ['Privacy', '/privacy'], ['Terms', '/terms']]],
+              ['Product', [['AI Stock Analyzer', '/ai-stocks'], ['Stock Forecasts', '/stock'], ['Courses', '/courses'], ['Algorithms', '/algorithms'], ['AI Track Record', '/performance'], ['Intelligence Suite', '/intelligence'], ['Agent Network', '/agents'], ['Daily Intel', '/daily'], ['Trade Analyzer', '/analyzer'], ['YN Arena', '/arena']]],
+              ['Company', [['About', '/company'], ['Affiliate Program', '/affiliates'], ['Careers', '/careers'], ['Press', '/press'], ['Investors', '/investors']]],
+              ['Resources', [['Research', '/research'], ['Embed Widget', '/embed'], ['Developer API', '/developers'], ['Brand Kit', '/brand'], ['Find your type', '/quiz'], ['Privacy', '/privacy'], ['Terms', '/terms']]],
             ] as [string, [string, string][]][]).map(([col, links]) => (
               <div key={col}>
                 <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: '#5a7488', marginBottom: 14 }}>{col.toUpperCase()}</div>

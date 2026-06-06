@@ -406,7 +406,7 @@ export default function WidgetPage() {
 
       {/* FOOTER */}
       <div style={{ height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(2,8,14,.98)' }}>
-        <span style={{ fontSize: 8, color: '#0a1a24', letterSpacing: '1.5px', fontFamily: 'monospace' }}>YN INTELLIGENCE PORTAL · GEMINI 2.0</span>
+        <span style={{ fontSize: 8, color: '#0a1a24', letterSpacing: '1.5px', fontFamily: 'monospace' }}>YN INTELLIGENCE PORTAL · GEMINI 2.5</span>
       </div>
     </div>
   )
