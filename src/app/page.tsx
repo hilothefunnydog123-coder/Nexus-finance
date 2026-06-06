@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { YNMark } from '@/components/YNLogo'
+import { Icon } from '@/components/Icons'
+import SiteFooter from '@/components/SiteFooter'
 
 const ThreeScene = dynamic(() => import('@/components/ThreeScene'), { ssr: false })
 const CinematicIntro = dynamic(() => import('@/components/CinematicIntro'), { ssr: false })
@@ -40,9 +42,24 @@ const NAV = [
 
 // The three pillars — the only thing the landing really sells
 const PILLARS = [
-  { tag: '01 · ANALYZE', href: '/ai-stocks', clr: '#00d4aa', title: 'AI Stock Analyzer', body: 'Type any ticker, get a full institutional read in ~15 seconds — rating, bull & bear targets, conviction, an options payoff diagram and key levels. 3 free, no card.', cta: 'Analyze a stock' },
-  { tag: '02 · LEARN', href: '/courses', clr: '#1e90ff', title: 'Courses from 9 pros', body: 'Real strategy from world-class traders for $0.99 a course. Watch the method, then practice it instantly on live charts.', cta: 'Browse courses' },
-  { tag: '03 · AUTOMATE', href: '/algorithms', clr: '#22c55e', title: 'Algorithms', body: 'The strategies the courses teach — turned into prop-grade bots with backtests, trailing exits and webhook autotrade. The course teaches it; the algo runs it for you.', cta: 'Get the algos' },
+  { tag: '01 · ANALYZE', icon: 'analyze', href: '/ai-stocks', clr: '#00d4aa', title: 'AI Stock Analyzer', body: 'Type any ticker, get a full institutional read in ~15 seconds — rating, bull & bear targets, conviction, an options payoff diagram and key levels. 3 free, no card.', cta: 'Analyze a stock' },
+  { tag: '02 · LEARN', icon: 'learn', href: '/courses', clr: '#1e90ff', title: 'Courses from 9 pros', body: 'Real strategy from world-class traders for $0.99 a course. Watch the method, then practice it instantly on live charts.', cta: 'Browse courses' },
+  { tag: '03 · AUTOMATE', icon: 'automate', href: '/algorithms', clr: '#22c55e', title: 'Algorithms', body: 'The strategies the courses teach — turned into prop-grade bots with backtests, trailing exits and webhook autotrade. The course teaches it; the algo runs it for you.', cta: 'Get the algos' },
+]
+
+const TRUST = [
+  { icon: 'pulse', clr: '#00d4aa', title: 'A public, verified track record', body: 'Every AI call is logged the moment it’s made — entry price, timestamp, live P/L. We don’t delete the losers. Judge the AI on its record, not our marketing.', href: '/performance', cta: 'View the track record' },
+  { icon: 'shield', clr: '#1e90ff', title: 'Bank-grade security', body: 'Payments run through Stripe — we never see or store your card. Your data is encrypted in transit and at rest, and you can cancel in one click.' },
+  { icon: 'trending', clr: '#a855f7', title: 'Real institutional data', body: 'Live quotes, fundamentals and filings via Finnhub — the same class of market data professional desks rely on. No made-up numbers.' },
+]
+
+const FAQ: [string, string][] = [
+  ['Is YN Finance free?', 'Yes — start free with 3 full AI analyses every month, no card required. Unlimited access is $19/month, and individual courses are just $0.99.'],
+  ['Is this financial advice?', 'No. YN Finance is an education and research platform. Our AI and tools give you data, structure and reasoning — every trading decision stays yours.'],
+  ['How accurate is the AI?', 'We don’t ask you to take our word for it. Every call the AI makes is logged publicly with the entry price and timestamp, and scored on live prices. See the full track record.'],
+  ['Where does the data come from?', 'Real-time quotes, fundamentals, analyst ratings and company news come from Finnhub. Charts are live. Nothing on the analyzer is mocked or hard-coded.'],
+  ['Can I cancel anytime?', 'Yes — one click, no emails, no retention games. Billing is handled securely by Stripe.'],
+  ['Who is behind YN Finance?', 'It’s built by Neil Gilani (CEO) and Yannai Richter (CTO) — the full platform, AI pipeline and data infrastructure, plus nine world-class instructors.'],
 ]
 
 // Everything else still exists — just demoted to a quiet strip + the footer
@@ -82,6 +99,10 @@ export default function Home() {
         .card:hover { transform:translateY(-4px) }
         .navlink { transition:color .2s }
         .navlink:hover { color:#dce8f0 !important }
+        .trust-badge:hover { background:rgba(0,212,170,.14)!important; border-color:rgba(0,212,170,.45)!important }
+        details.faq summary { list-style:none; cursor:pointer }
+        details.faq summary::-webkit-details-marker { display:none }
+        details.faq[open] .faq-plus { transform:rotate(45deg) }
         @media(max-width:980px){ .grid4{grid-template-columns:repeat(2,1fr)!important} }
         @media(max-width:760px){ .hide-sm{display:none!important} .grid3{grid-template-columns:1fr!important} .grid2{grid-template-columns:1fr!important} .weap{grid-template-columns:1fr 1fr!important} }
         @media(max-width:560px){ .grid4{grid-template-columns:1fr!important} .weap{grid-template-columns:1fr!important} .foot{grid-template-columns:1fr 1fr!important} }
@@ -124,10 +145,10 @@ export default function Home() {
       {/* HERO */}
       <section style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '110px 24px 80px' }}>
         <div style={{ animation: 'fadeUp .8s ease both' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.22)', borderRadius: 100, padding: '7px 18px', marginBottom: 30, fontSize: 11, color: '#f59e0b', fontWeight: 700, letterSpacing: '1px' }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', animation: 'pulseDot 1.6s infinite' }} />
-            FOUNDED BY NEIL GILANI &amp; YANNAI RICHTER
-          </div>
+          <Link href="/performance" className="trust-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: 'rgba(0,212,170,.08)', border: '1px solid rgba(0,212,170,.25)', borderRadius: 100, padding: '7px 18px', marginBottom: 30, fontSize: 11, color: '#00d4aa', fontWeight: 700, letterSpacing: '1px', textDecoration: 'none', transition: 'all .2s' }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#00d4aa', animation: 'pulseDot 1.6s infinite' }} />
+            EVERY AI CALL IS PUBLIC · SEE THE TRACK RECORD →
+          </Link>
 
           <h1 style={{ fontSize: 'clamp(42px,7.5vw,88px)', fontWeight: 900, lineHeight: 0.96, letterSpacing: '-3px', color: '#eaf4fa', maxWidth: 920, margin: '0 auto' }}>
             Outtrade<br /><span className="grad">Wall Street.</span>
@@ -200,7 +221,10 @@ export default function Home() {
                   onMouseEnter={e => { e.currentTarget.style.borderColor = `${p.clr}66`; e.currentTarget.style.background = `${p.clr}14` }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = `${p.clr}28`; e.currentTarget.style.background = `${p.clr}0a` }}
                 >
-                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: p.clr, marginBottom: 16 }}>{p.tag}</div>
+                  <div style={{ width: 48, height: 48, borderRadius: 13, marginBottom: 20, background: `${p.clr}16`, border: `1px solid ${p.clr}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: p.clr }}>
+                    <Icon name={p.icon} size={24} />
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: p.clr, marginBottom: 12 }}>{p.tag}</div>
                   <div style={{ fontSize: 22, fontWeight: 900, color: '#eaf4fa', lineHeight: 1.15, marginBottom: 12, letterSpacing: '-.5px' }}>{p.title}</div>
                   <div style={{ fontSize: 14, color: '#8aa0b2', lineHeight: 1.7, marginBottom: 22, flex: 1 }}>{p.body}</div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: p.clr }}>{p.cta} →</div>
@@ -238,6 +262,34 @@ export default function Home() {
               ))}
             </div>
           </Reveal>
+        </div>
+      </section>
+
+      {/* TRUST — honest credibility, no fabricated social proof */}
+      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(60px,9vw,110px) 24px', background: 'linear-gradient(180deg, transparent, rgba(4,12,20,.55), transparent)' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: 50 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 14 }}>WHY TRUST IT</div>
+              <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', maxWidth: 640, margin: '0 auto', lineHeight: 1.08 }}>
+                Built to be checked, not just believed.
+              </h2>
+            </div>
+          </Reveal>
+          <div className="grid3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }}>
+            {TRUST.map((t, i) => (
+              <Reveal key={t.title} delay={i * 90}>
+                <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 18, padding: '28px 26px', background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.08)', backdropFilter: 'blur(12px)' }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 12, marginBottom: 18, background: `${t.clr}16`, border: `1px solid ${t.clr}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.clr }}>
+                    <Icon name={t.icon} size={23} />
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#eaf4fa', marginBottom: 10, letterSpacing: '-.3px' }}>{t.title}</div>
+                  <div style={{ fontSize: 13.5, color: '#6a8497', lineHeight: 1.7, flex: 1 }}>{t.body}</div>
+                  {t.href && <Link href={t.href} style={{ marginTop: 16, fontSize: 13, fontWeight: 800, color: t.clr, textDecoration: 'none' }}>{t.cta} →</Link>}
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -294,6 +346,31 @@ export default function Home() {
         </div>
       </section>
 
+      {/* FAQ */}
+      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(50px,8vw,90px) 24px' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: 40 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 14 }}>QUESTIONS</div>
+              <h2 style={{ fontSize: 'clamp(26px,3.6vw,40px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', lineHeight: 1.1 }}>Everything you’d want to ask.</h2>
+            </div>
+          </Reveal>
+          <Reveal delay={80}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {FAQ.map(([q, ans]) => (
+                <details key={q} className="faq card" style={{ borderRadius: 14, background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.08)', padding: '0 22px' }}>
+                  <summary style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '20px 0', fontSize: 15.5, fontWeight: 700, color: '#eaf4fa' }}>
+                    {q}
+                    <span className="faq-plus" style={{ flexShrink: 0, fontSize: 20, color: '#00d4aa', transition: 'transform .25s', lineHeight: 1 }}>+</span>
+                  </summary>
+                  <p style={{ fontSize: 14, color: '#6a8497', lineHeight: 1.75, padding: '0 0 22px', maxWidth: 640 }}>{ans}</p>
+                </details>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* FINAL CTA */}
       <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(80px,12vw,150px) 24px', textAlign: 'center' }}>
         <Reveal>
@@ -315,39 +392,7 @@ export default function Home() {
       </section>
 
       {/* FOOTER */}
-      <footer style={{ position: 'relative', zIndex: 1, borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(3,6,12,.75)', backdropFilter: 'blur(8px)' }}>
-        <div style={{ maxWidth: 1140, margin: '0 auto', padding: '52px 24px 28px' }}>
-          <div className="foot" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr', gap: 28, marginBottom: 40 }}>
-            <div>
-              <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', marginBottom: 14 }}>
-                <YNMark size={24} glow />
-                <span style={{ fontSize: 15, fontWeight: 800, color: '#dce8f0' }}>YN Finance</span>
-              </Link>
-              <p style={{ fontSize: 12.5, color: '#3a5566', lineHeight: 1.65, maxWidth: 260 }}>
-                {"The AI research desk that closes the gap between you and Wall Street."}
-              </p>
-            </div>
-            {([
-              ['Product', [['AI Stock Analyzer', '/ai-stocks'], ['Stock Forecasts', '/stock'], ['Courses', '/courses'], ['Algorithms', '/algorithms'], ['AI Track Record', '/performance'], ['Intelligence Suite', '/intelligence'], ['Agent Network', '/agents'], ['Daily Intel', '/daily'], ['Trade Analyzer', '/analyzer'], ['YN Arena', '/arena']]],
-              ['Company', [['About', '/company'], ['Affiliate Program', '/affiliates'], ['Careers', '/careers'], ['Press', '/press'], ['Investors', '/investors']]],
-              ['Resources', [['Research', '/research'], ['Embed Widget', '/embed'], ['Developer API', '/developers'], ['Brand Kit', '/brand'], ['Find your type', '/quiz'], ['Privacy', '/privacy'], ['Terms', '/terms']]],
-            ] as [string, [string, string][]][]).map(([col, links]) => (
-              <div key={col}>
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: '#5a7488', marginBottom: 14 }}>{col.toUpperCase()}</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {links.map(([l, h]) => (
-                    <Link key={h} href={h} className="navlink" style={{ fontSize: 13, color: '#3a5566', textDecoration: 'none', fontWeight: 600 }}>{l}</Link>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,.05)', paddingTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-            <div style={{ fontSize: 11.5, color: '#2a4050' }}>© {new Date().getFullYear()} YN Finance · ynfinance.org</div>
-            <div style={{ fontSize: 11, color: '#2a4050' }}>Built by Neil Gilani &amp; Yannai Richter</div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { POPULAR_TICKERS, isLikelyTicker } from '@/lib/tickers'
+import SiteFooter from '@/components/SiteFooter'
 
 export const revalidate = 3600 // ISR — refresh each ticker page hourly
 
@@ -285,6 +286,7 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
           Data via Finnhub, refreshed hourly. Not financial advice — for educational purposes only. Past performance does not guarantee future results. Always do your own research before trading {d.symbol}.
         </p>
       </div>
+      <SiteFooter />
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import SiteFooter from '@/components/SiteFooter'
 
 const ThreeScene = dynamic(() => import('@/components/ThreeScene'), { ssr: false })
 
@@ -407,11 +408,7 @@ export default function PerformancePage() {
 
       </div>
 
-      <footer style={{ borderTop:'1px solid rgba(255,255,255,.04)', padding:'28px 24px', position:'relative', zIndex:1, background:'rgba(3,10,16,.9)', backdropFilter:'blur(20px)', textAlign:'center' }}>
-        <p style={{ fontSize:11, color:'#1a3550' }}>
-          Not financial advice · Educational purposes only · Past performance does not guarantee future results · Always do your own research before trading
-        </p>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

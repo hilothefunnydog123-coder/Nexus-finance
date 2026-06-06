@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import SiteFooter from '@/components/SiteFooter'
 
 const BASE = 'https://ynfinance.org'
 
@@ -120,6 +121,7 @@ export default function AffiliatesPage() {
           Commission terms may evolve as the program grows. Self-serve dashboard coming soon — early partners get grandfathered rates.
         </p>
       </div>
+      <SiteFooter />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { POPULAR_TICKERS } from '@/lib/tickers'
+import SiteFooter from '@/components/SiteFooter'
 
 export const revalidate = 86400
 
@@ -43,6 +44,7 @@ export default function StockIndex() {
           Not financial advice — educational purposes only. Data via Finnhub. Don&apos;t see your ticker? Search any symbol in the <Link href="/ai-stocks" className="lnk" style={{ color: '#6a8497', textDecoration: 'none' }}>AI Analyzer</Link>.
         </p>
       </div>
+      <SiteFooter />
     </div>
   )
 }

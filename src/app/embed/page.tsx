@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import SiteFooter from '@/components/SiteFooter'
 
 const SNIPPET = `<iframe src="https://ynfinance.org/embed/analyzer"
   width="340" height="420" style="border:0;border-radius:12px;overflow:hidden"
@@ -54,6 +55,7 @@ export default function EmbedDocs() {
           </div>
         </div>
       </div>
+      <SiteFooter />
     </div>
   )
 }
