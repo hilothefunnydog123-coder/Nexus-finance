@@ -683,7 +683,7 @@ export default function AIStocksPage() {
   },[result?.ticker])
 
   // ── Live options chain (Polygon) — real Greeks/IV/premium, falls back silently ──
-  type LiveOpt = { ticker:string; type:string; strike:number; expiration:string|null; dte:number|null; premium:number|null; bid:number|null; ask:number|null; iv:number|null; delta:number|null; gamma:number|null; theta:number|null; vega:number|null; openInterest:number|null; volume:number|null; breakeven:number|null; underlying:number|null }
+  type LiveOpt = { source?:string; ticker:string; type:string; strike:number; expiration:string|null; dte:number|null; premium:number|null; bid:number|null; ask:number|null; iv:number|null; delta:number|null; gamma:number|null; theta:number|null; vega:number|null; openInterest:number|null; volume:number|null; breakeven:number|null; underlying:number|null }
   const [liveOpt,setLiveOpt] = useState<LiveOpt|null>(null)
   useEffect(()=>{
     const o=result?.analysis?.options
@@ -1664,7 +1664,7 @@ export default function AIStocksPage() {
               <div style={{background:'rgba(0,212,255,.06)',border:'1px solid #00d4ff40',borderRadius:3,padding:'14px',marginBottom:12}}>
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10,flexWrap:'wrap'}}>
                   <span style={{width:7,height:7,borderRadius:'50%',background:'#00d4ff',boxShadow:'0 0 8px #00d4ff'}}/>
-                  <span style={{fontSize:10,fontWeight:800,color:'#00d4ff',letterSpacing:'1px'}}>LIVE OPTIONS CHAIN · POLYGON</span>
+                  <span style={{fontSize:10,fontWeight:800,color:'#00d4ff',letterSpacing:'1px'}}>LIVE OPTIONS CHAIN · {(liveOpt.source||'live').toUpperCase()}</span>
                   <span style={{marginLeft:'auto',fontSize:10,color:'#4a7a6a',fontFamily:'monospace'}}>{liveOpt.type} ${liveOpt.strike} · exp {liveOpt.expiration}{liveOpt.dte!=null?` (${liveOpt.dte}d)`:''}</span>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(88px,1fr))',gap:8}}>
@@ -1684,7 +1684,7 @@ export default function AIStocksPage() {
                     </div>
                   ))}
                 </div>
-                <div style={{fontSize:8,color:'#1a4a2a',letterSpacing:'.5px',marginTop:8}}>// REAL CONTRACT NEAREST THE AI&apos;S TARGET STRIKE · GREEKS &amp; IV FROM POLYGON (≤15min delayed)</div>
+                <div style={{fontSize:8,color:'#1a4a2a',letterSpacing:'.5px',marginTop:8}}>// REAL CONTRACT NEAREST THE AI&apos;S TARGET STRIKE · LIVE GREEKS &amp; IV (quotes may be delayed)</div>
               </div>
             )}
 
