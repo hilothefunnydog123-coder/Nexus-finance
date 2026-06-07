@@ -315,6 +315,33 @@ export default function Home() {
         </div>
       </section>
 
+      {/* MANIFESTO — the soul */}
+      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(72px,11vw,140px) 24px' }}>
+        <div style={{ maxWidth: 860, margin: '0 auto', textAlign: 'center' }}>
+          <Reveal>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 24 }}>WHY WE EXIST</div>
+            <h2 style={{ fontSize: 'clamp(26px,4.2vw,46px)', fontWeight: 900, letterSpacing: '-1.5px', lineHeight: 1.16, color: '#eaf4fa' }}>
+              The financial system rewards the few who understand it — and quietly drains everyone else.{' '}
+              <span className="grad">We&apos;re here to flip that.</span>
+            </h2>
+          </Reveal>
+          <Reveal delay={120}>
+            <p style={{ fontSize: 'clamp(15px,1.9vw,19px)', color: '#8aa0b2', lineHeight: 1.85, margin: '28px auto 0', maxWidth: 720 }}>
+              {"The wealthy have smart money — private bankers, advisors, every dollar working. Everyone else's money just sits there, drained by fees, interest, inflation and fine print nobody explained. We don't think that's fair. And for the first time, AI means it doesn't have to be."}
+            </p>
+            <p style={{ fontSize: 'clamp(15px,1.9vw,19px)', color: '#8aa0b2', lineHeight: 1.85, margin: '20px auto 0', maxWidth: 720 }}>
+              {"So we're building the money brain we wish we'd had — one with no products to push, that proves every call it makes, and treats your first $1,000 with the seriousness Wall Street saves for its biggest clients."}
+            </p>
+          </Reveal>
+          <Reveal delay={240}>
+            <div style={{ marginTop: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic', fontSize: 'clamp(20px,3vw,26px)', color: '#eaf4fa', letterSpacing: '.3px' }}>Neil Gilani &amp; Yannai Richter</div>
+              <div style={{ fontSize: 11.5, letterSpacing: '2px', color: '#3a5566', textTransform: 'uppercase' }}>Founders, YN Finance</div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* FOUNDERS */}
       <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(60px,9vw,110px) 24px' }}>
         <div style={{ maxWidth: 980, margin: '0 auto' }}>
