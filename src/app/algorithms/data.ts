@@ -3287,7 +3287,7 @@ if showDash and barstate.islast
     id: 'orb630',
     instructor: 'YN Finance Quant Desk',
     strategy: '6:30 Opening Range Breakout + Retest',
-    tagline: 'First three 5-minute candles set the range; trade the break-and-close, enter on the retest. Fixed 50pt stop / 100pt target (2:1).',
+    tagline: 'First three 5-min candles set the range. Wait for a close beyond it, a real run away, then a confirmed retest — long OR short, whichever sets up. Fixed 50/100 (2:1).',
     assets: ['Futures (MNQ/NQ/MES/ES)', 'Indices'],
     timeframes: ['5m'],
     propFirms: ['Topstep', 'Apex', 'MyFundedFutures', 'Take Profit Trader'],
@@ -3295,8 +3295,8 @@ if showDash and barstate.islast
     riskPerTrade: '50 pts (fixed)',
     color: '#00d4aa',
     init: '630',
-    overview: 'A clean opening-range breakout for the US cash open. At 6:30 PT it marks the high and low of the first three 5-minute candles (the 6:30, 6:35 and 6:40 bars; the range locks at 6:45). It then waits for a 5-minute candle to CLOSE beyond the range — that locks the direction — and enters only on the retest of the broken level. Risk is fixed: a 50-point stop and a 100-point target (2:1). One trade per day by default, auto-resetting each session. Same long/short trade boxes as the rest of the suite — dashed entry line, green target zone, red stop zone and a reasoning label.',
-    propNotes: 'Built for index futures (MNQ/NQ/MES/ES) where points map 1:1 to price. Times use the America/Los_Angeles zone so 6:30 stays at the US open through daylight-saving changes. Apply on the 5-minute chart. For prop evaluations the fixed 50/100 keeps risk identical on every trade — size your contracts so 50 points equals your per-trade risk limit. If no clean break-and-retest forms, the system simply does not trade that day.',
+    overview: 'A clean opening-range breakout for the US cash open with a STRICT retest. At 6:30 PT it marks the high and low of the first three 5-minute candles (range locks at 6:45). A trade needs three things: (1) a 5-minute candle that CLOSES beyond the range, (2) a genuine run away from the level (price must travel at least "departure" points past it — this is what stops it firing on the very next candle), and (3) a retest where price comes back to the level and the candle closes back beyond it. Both directions are tracked independently — if the upside breaks but never retests and price reverses, the downside can still trigger (and vice-versa). Risk is fixed: 50-point stop, 100-point target (2:1). One trade per day by default. Same long/short trade boxes as the rest of the suite.',
+    propNotes: 'Built for index futures (MNQ/NQ/MES/ES) where points map 1:1 to price. Times use America/Los_Angeles so 6:30 stays at the US open through DST. Apply on the 5-minute chart. The two filters that define the retest are "Min run past level before retest (points)" (departure — raise it to demand a bigger move before a retest counts) and "Retest must close back beyond the level" (set it off to enter on the first touch instead of a confirmed close). Tune departure to your instrument: ~15 points suits NQ; drop it for MES/ES. If no clean break + run + retest forms on either side, it simply does not trade that day.',
     auto: {
       tradingview: `//@version=5
 strategy("YN Finance — 6:30 ORB Retest (Backtest)", overlay=true, calc_on_every_tick=false, default_qty_type=strategy.fixed, default_qty_value=1, pyramiding=0, max_boxes_count=500, max_labels_count=500, max_lines_count=500)
@@ -3305,6 +3305,8 @@ strategy("YN Finance — 6:30 ORB Retest (Backtest)", overlay=true, calc_on_ever
 tz        = "America/Los_Angeles"
 sess      = input.session("0630-1300", "Trading session (PT)")
 orCandles = input.int(3, "Opening-range candles", minval=1)
+departurePts = input.float(15.0, "Min run past level before retest (points)", minval=0.0)
+confirmClose = input.bool(true, "Retest must close back beyond the level")
 stopPts   = input.float(50.0, "Stop (points)", minval=0.0)
 tpPts     = input.float(100.0, "Target (points)", minval=0.0)
 oneTrade  = input.bool(true, "One trade per day")
@@ -3318,9 +3320,10 @@ var float orHi   = na
 var float orLo   = na
 var int   cnt    = 0
 var bool  orDone = false
-var bool  upBrk  = false
-var bool  dnBrk  = false
-var int   brkBar = na
+var bool  lBroke = false
+var bool  lValid = false
+var bool  sBroke = false
+var bool  sValid = false
 var bool  traded = false
 
 if newSess
@@ -3328,9 +3331,10 @@ if newSess
     orLo   := na
     cnt    := 0
     orDone := false
-    upBrk  := false
-    dnBrk  := false
-    brkBar := na
+    lBroke := false
+    lValid := false
+    sBroke := false
+    sValid := false
     traded := false
 
 if inSess
@@ -3341,27 +3345,36 @@ if inSess
         if cnt == orCandles
             orDone := true
 
-if inSess and orDone and not upBrk and not dnBrk
+// Break = a candle CLOSE beyond the range. Both sides are tracked independently,
+// so if one side breaks but never retests, the other side can still set up.
+if inSess and orDone
     if close > orHi
-        upBrk  := true
-        brkBar := bar_index
-    else if close < orLo
-        dnBrk  := true
-        brkBar := bar_index
+        lBroke := true
+    if close < orLo
+        sBroke := true
+    // Departure: price must actually RUN past the level before a retest counts
+    if lBroke and high >= orHi + departurePts
+        lValid := true
+    if sBroke and low <= orLo - departurePts
+        sValid := true
 
 canTrade = inSess and orDone and (not traded or not oneTrade)
-goLong   = canTrade and upBrk and bar_index > brkBar and low  <= orHi
-goShort  = canTrade and dnBrk and bar_index > brkBar and high >= orLo
+// Real retest: departure confirmed on a PRIOR bar (lValid[1]), price returns to the
+// level, and — if confirmClose — the candle closes back beyond it to prove it holds.
+goLong   = canTrade and lValid[1] and low  <= orHi and (not confirmClose or close > orHi)
+goShort  = canTrade and sValid[1] and high >= orLo and (not confirmClose or close < orLo)
 
 if goLong
     traded := true
+    eL = confirmClose ? close : orHi
     strategy.entry("Long", strategy.long)
-    strategy.exit("Long X", "Long", stop=orHi - stopPts, limit=orHi + tpPts)
+    strategy.exit("Long X", "Long", stop=eL - stopPts, limit=eL + tpPts)
 
 if goShort
     traded := true
+    eS = confirmClose ? close : orLo
     strategy.entry("Short", strategy.short)
-    strategy.exit("Short X", "Short", stop=orLo + stopPts, limit=orLo - tpPts)
+    strategy.exit("Short X", "Short", stop=eS + stopPts, limit=eS - tpPts)
 
 // Flatten anything left open at session end
 if not inSess and inSess[1]
@@ -3381,19 +3394,21 @@ CTrade trade;
 input int    OR_StartHour   = 16;     // server-time hour matching 6:30 PT (broker dependent)
 input int    OR_StartMin    = 30;
 input int    OR_Candles     = 3;
-input int    SessionMinutes = 390;    // 6.5 hours
+input int    SessionMinutes  = 390;    // 6.5 hours
+input double DeparturePoints = 15.0;   // min run past level before a retest counts
+input bool   ConfirmClose    = true;   // retest candle must close back beyond level
 input double StopPoints      = 50.0;
 input double TpPoints        = 100.0;
 input double Lots            = 1.0;
 input bool   OneTradePerDay  = true;
 
 double   orHi=0.0, orLo=0.0;
-bool     orDone=false, upBrk=false, dnBrk=false, traded=false;
+bool     orDone=false, lBroke=false, lValid=false, sBroke=false, sValid=false, traded=false;
 datetime curDay=0, lastBar=0;
 
 int OnInit(){ return(INIT_SUCCEEDED); }
 
-void ResetDay(){ orHi=0.0; orLo=0.0; orDone=false; upBrk=false; dnBrk=false; traded=false; }
+void ResetDay(){ orHi=0.0; orLo=0.0; orDone=false; lBroke=false; lValid=false; sBroke=false; sValid=false; traded=false; }
 
 void OnTick()
 {
@@ -3428,13 +3443,16 @@ void OnTick()
    }
    if(!orDone) return;
 
-   // Break-and-close locks direction
-   if(!upBrk && !dnBrk)
-   {
-      if(cC>orHi) upBrk=true;
-      else if(cC<orLo) dnBrk=true;
-      return;
-   }
+   // Departure status BEFORE this bar updates it, so a retest can't fire on the
+   // same bar that validates the breakout (forces a real wait).
+   bool lWasValid = lValid;
+   bool sWasValid = sValid;
+
+   // Break-and-close (both sides, independent) + departure validation
+   if(cC>orHi) lBroke=true;
+   if(cC<orLo) sBroke=true;
+   if(lBroke && cH>=orHi+DeparturePoints) lValid=true;
+   if(sBroke && cL<=orLo-DeparturePoints) sValid=true;
 
    if(OneTradePerDay && traded) return;
    if(PositionSelect(_Symbol)) return;
@@ -3442,15 +3460,17 @@ void OnTick()
    double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
 
-   // Retest entries
-   if(upBrk && cL<=orHi)
+   // Real retest: validated earlier, price returns to the level, (optional) closes back beyond
+   if(lWasValid && cL<=orHi && (!ConfirmClose || cC>orHi))
    {
-      if(trade.Buy(Lots, _Symbol, ask, orHi-StopPoints, orHi+TpPoints, "ORB retest long"))
+      double e = ConfirmClose ? cC : orHi;
+      if(trade.Buy(Lots, _Symbol, ask, e-StopPoints, e+TpPoints, "ORB retest long"))
          traded=true;
    }
-   else if(dnBrk && cH>=orLo)
+   else if(sWasValid && cH>=orLo && (!ConfirmClose || cC<orLo))
    {
-      if(trade.Sell(Lots, _Symbol, bid, orLo+StopPoints, orLo-TpPoints, "ORB retest short"))
+      double e = ConfirmClose ? cC : orLo;
+      if(trade.Sell(Lots, _Symbol, bid, e+StopPoints, e-TpPoints, "ORB retest short"))
          traded=true;
    }
 }`,
@@ -3470,6 +3490,8 @@ indicator("YN Finance — 6:30 ORB Retest (5m Signals)", overlay=true, max_boxes
 tz        = "America/Los_Angeles"
 sess      = input.session("0630-1300", "Trading session (PT)")
 orCandles = input.int(3, "Opening-range candles", minval=1)
+departurePts = input.float(15.0, "Min run past level before retest (points)", minval=0.0)
+confirmClose = input.bool(true, "Retest must close back beyond the level")
 stopPts   = input.float(50.0, "Stop (points)", minval=0.0)
 tpPts     = input.float(100.0, "Target (points)", minval=0.0)
 oneTrade  = input.bool(true, "One trade per day")
@@ -3484,9 +3506,10 @@ var float orHi   = na
 var float orLo   = na
 var int   cnt    = 0
 var bool  orDone = false
-var bool  upBrk  = false
-var bool  dnBrk  = false
-var int   brkBar = na
+var bool  lBroke = false
+var bool  lValid = false
+var bool  sBroke = false
+var bool  sValid = false
 var bool  traded = false
 
 if newSess
@@ -3494,9 +3517,10 @@ if newSess
     orLo   := na
     cnt    := 0
     orDone := false
-    upBrk  := false
-    dnBrk  := false
-    brkBar := na
+    lBroke := false
+    lValid := false
+    sBroke := false
+    sValid := false
     traded := false
 
 if inSess
@@ -3507,22 +3531,29 @@ if inSess
         if cnt == orCandles
             orDone := true
 
-if inSess and orDone and not upBrk and not dnBrk
+// Break = a candle CLOSE beyond the range. Both sides are tracked independently,
+// so if one side breaks but never retests, the other side can still set up.
+if inSess and orDone
     if close > orHi
-        upBrk  := true
-        brkBar := bar_index
-    else if close < orLo
-        dnBrk  := true
-        brkBar := bar_index
+        lBroke := true
+    if close < orLo
+        sBroke := true
+    // Departure: price must actually RUN past the level before a retest counts
+    if lBroke and high >= orHi + departurePts
+        lValid := true
+    if sBroke and low <= orLo - departurePts
+        sValid := true
 
 canTrade = inSess and orDone and (not traded or not oneTrade)
-goLong   = canTrade and upBrk and bar_index > brkBar and low  <= orHi
-goShort  = canTrade and dnBrk and bar_index > brkBar and high >= orLo
+// Real retest: departure confirmed on a PRIOR bar (lValid[1]), price returns to the
+// level, and — if confirmClose — the candle closes back beyond it to prove it holds.
+goLong   = canTrade and lValid[1] and low  <= orHi and (not confirmClose or close > orHi)
+goShort  = canTrade and sValid[1] and high >= orLo and (not confirmClose or close < orLo)
 
 f_fmt(x) => str.tostring(x, format.mintick)
 
 if goLong
-    eL = orHi
+    eL = confirmClose ? close : orHi
     sL = eL - stopPts
     tL = eL + tpPts
     traded := true
@@ -3533,7 +3564,7 @@ if goLong
     alert("ORB LONG " + syminfo.ticker + " | Entry " + f_fmt(eL) + " | SL " + f_fmt(sL) + " | TP " + f_fmt(tL), alert.freq_once_per_bar)
 
 if goShort
-    eS = orLo
+    eS = confirmClose ? close : orLo
     sS = eS + stopPts
     tS = eS - tpPts
     traded := true
@@ -3556,10 +3587,10 @@ if barstate.islast and timeframe.period != "5"
       steps: [
         'Add the indicator to a 5-minute chart of your future (MNQ, NQ, MES, ES). The session and 6:30 PT open are handled automatically via the America/Los_Angeles timezone.',
         'At the open it captures the high and low of the first 3 five-minute candles, then plots the opening-range high (aqua) and low (orange).',
-        'It waits for a 5-minute candle to CLOSE above the range (long bias) or below it (short bias). The first break locks the direction for the day.',
-        'On the retest of that level it fires the signal and draws the trade box: dashed entry line, green target zone (+100), red stop zone (-50), plus a reasoning label.',
+        'It waits for a 5-minute candle to CLOSE beyond the range, then for price to RUN at least "Min run" points past the level (so it never fires on the next candle), then for a retest that closes back beyond the level. Both directions are watched independently — if one side breaks without retesting, the other can still trigger.',
+        'On that confirmed retest it fires the signal and draws the trade box: dashed entry line, green target zone (+100), red stop zone (-50), plus a reasoning label.',
         'Create an alert: Condition = this indicator, choose "Any alert() function call", Once Per Bar Close. The alert carries the ticker, entry, stop and target.',
-        'One trade per day by default. Turn off "One trade per day" for re-entries, and set Stop / Target points per instrument.',
+        'Tune "Min run past level before retest" (raise to demand a bigger move; ~15 for NQ, lower for MES/ES) and toggle "Retest must close back beyond the level" off if you prefer entering on the first touch. One trade/day by default.',
       ],
     },
   }
