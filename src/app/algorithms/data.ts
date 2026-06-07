@@ -3295,11 +3295,11 @@ if showDash and barstate.islast
     riskPerTrade: '50 pts (fixed)',
     color: '#00d4aa',
     init: '630',
-    overview: 'A clean opening-range breakout for the US cash open with a STRICT retest. At 6:30 PT it marks the high and low of the first three 5-minute candles (range locks at 6:45). A trade needs three things: (1) a 5-minute candle that CLOSES beyond the range, (2) a genuine run away from the level (price must travel at least "departure" points past it — this is what stops it firing on the very next candle), and (3) a retest where price comes back to the level and the candle closes back beyond it. Both directions are tracked independently — if the upside breaks but never retests and price reverses, the downside can still trigger (and vice-versa). Risk is fixed: 50-point stop, 100-point target (2:1). One trade per day by default. Same long/short trade boxes as the rest of the suite.',
-    propNotes: 'Built for index futures (MNQ/NQ/MES/ES) where points map 1:1 to price. Times use America/Los_Angeles so 6:30 stays at the US open through DST. Apply on the 5-minute chart. The two filters that define the retest are "Min run past level before retest (points)" (departure — raise it to demand a bigger move before a retest counts) and "Retest must close back beyond the level" (set it off to enter on the first touch instead of a confirmed close). Tune departure to your instrument: ~15 points suits NQ; drop it for MES/ES. If no clean break + run + retest forms on either side, it simply does not trade that day.',
+    overview: 'A clean opening-range breakout for the US cash open with a STRICT retest. At 6:30 PT it marks the high and low of the first three 5-minute candles (range locks at 6:45). A trade needs three things: (1) a 5-minute candle that CLOSES beyond the range, (2) a genuine run away from the level (price must travel at least "departure" points past it — this is what stops it firing on the very next candle), and (3) a retest where price comes back to the level and the candle closes back beyond it. Both directions are tracked independently — if the upside breaks but never retests and price reverses, the downside can still trigger (and vice-versa). Two win-rate filters are built in and toggleable: a VWAP filter (only longs above session VWAP, only shorts below — trades with the intraday bias) and scale-out management (bank a partial at +1R and ratchet the stop to breakeven, so most trades end breakeven-or-better and the runner goes for the full target). Risk is fixed: 50-point stop, 100-point target. One trade per day by default. Same long/short trade boxes as the rest of the suite.',
+    propNotes: 'Built for index futures (MNQ/NQ/MES/ES) where points map 1:1 to price. Times use America/Los_Angeles so 6:30 stays at the US open through DST. Apply on the 5-minute chart. The two filters that define the retest are "Min run past level before retest (points)" (departure — raise it to demand a bigger move before a retest counts) and "Retest must close back beyond the level" (set it off to enter on the first touch instead of a confirmed close). Tune departure to your instrument: ~15 points suits NQ; drop it for MES/ES. Two extra filters target a higher win rate: "VWAP filter" (skips counter-VWAP trades — the single biggest hit-rate booster) and "Scale out at +1R" (partial + breakeven, which collapses the full-loss rate). Backtest each ON vs OFF one at a time — and over 6–12 months, not one — since each filter also cuts trade count. If no clean break + run + retest forms on either side, it simply does not trade that day.',
     auto: {
       tradingview: `//@version=5
-strategy("YN Finance — 6:30 ORB Retest (Backtest)", overlay=true, calc_on_every_tick=false, default_qty_type=strategy.fixed, default_qty_value=1, pyramiding=0, max_boxes_count=500, max_labels_count=500, max_lines_count=500)
+strategy("YN Finance — 6:30 ORB Retest (Backtest)", overlay=true, calc_on_every_tick=false, default_qty_type=strategy.fixed, default_qty_value=2, pyramiding=0, max_boxes_count=500, max_labels_count=500, max_lines_count=500)
 
 // ===== Inputs =====
 tz        = "America/Los_Angeles"
@@ -3310,10 +3310,14 @@ confirmClose = input.bool(true, "Retest must close back beyond the level")
 stopPts   = input.float(50.0, "Stop (points)", minval=0.0)
 tpPts     = input.float(100.0, "Target (points)", minval=0.0)
 oneTrade  = input.bool(true, "One trade per day")
+useVwap    = input.bool(true, "VWAP filter — long only above VWAP, short below")
+usePartial = input.bool(true, "Scale out at +1R and move stop to breakeven")
+partialPct = input.int(50, "Scale-out size at +1R (%)", minval=1, maxval=99)
 showOR    = input.bool(true, "Show opening-range lines")
 
 inSess  = not na(time(timeframe.period, sess, tz))
 newSess = inSess and not inSess[1]
+vwapVal = ta.vwap(hlc3)
 
 // ===== State =====
 var float orHi   = na
@@ -3361,27 +3365,65 @@ if inSess and orDone
 canTrade = inSess and orDone and (not traded or not oneTrade)
 // Real retest: departure confirmed on a PRIOR bar (lValid[1]), price returns to the
 // level, and — if confirmClose — the candle closes back beyond it to prove it holds.
-goLong   = canTrade and lValid[1] and low  <= orHi and (not confirmClose or close > orHi)
-goShort  = canTrade and sValid[1] and high >= orLo and (not confirmClose or close < orLo)
+goLong   = canTrade and lValid[1] and low  <= orHi and (not confirmClose or close > orHi) and (not useVwap or close > vwapVal)
+goShort  = canTrade and sValid[1] and high >= orLo and (not confirmClose or close < orLo) and (not useVwap or close < vwapVal)
+
+// ===== Trade-management state =====
+var float ePx     = na
+var float slPx    = na
+var float tpPx    = na
+var float tp1Px   = na
+var int   dir     = 0
+var bool  beMoved = false
+
+if newSess
+    dir     := 0
+    beMoved := false
 
 if goLong
-    traded := true
-    eL = confirmClose ? close : orHi
+    traded  := true
+    dir     := 1
+    beMoved := false
+    ePx     := confirmClose ? close : orHi
+    slPx    := ePx - stopPts
+    tpPx    := ePx + tpPts
+    tp1Px   := ePx + stopPts
     strategy.entry("Long", strategy.long)
-    strategy.exit("Long X", "Long", stop=eL - stopPts, limit=eL + tpPts)
 
 if goShort
-    traded := true
-    eS = confirmClose ? close : orLo
+    traded  := true
+    dir     := -1
+    beMoved := false
+    ePx     := confirmClose ? close : orLo
+    slPx    := ePx + stopPts
+    tpPx    := ePx - tpPts
+    tp1Px   := ePx - stopPts
     strategy.entry("Short", strategy.short)
-    strategy.exit("Short X", "Short", stop=eS + stopPts, limit=eS - tpPts)
+
+// Once price reaches +1R, the scale-out fills and the stop ratchets to breakeven
+if usePartial and dir != 0 and not beMoved
+    if (dir == 1 and high >= tp1Px) or (dir == -1 and low <= tp1Px)
+        beMoved := true
+
+// Exits — re-issued each bar while in a position (stop moves to BE after the partial)
+if strategy.position_size != 0 and dir != 0
+    curStop = beMoved ? ePx : slPx
+    if dir == 1
+        if usePartial
+            strategy.exit("TP1 L", from_entry="Long", qty_percent=partialPct, limit=tp1Px, stop=slPx)
+        strategy.exit("Exit L", from_entry="Long", limit=tpPx, stop=curStop)
+    else
+        if usePartial
+            strategy.exit("TP1 S", from_entry="Short", qty_percent=partialPct, limit=tp1Px, stop=slPx)
+        strategy.exit("Exit S", from_entry="Short", limit=tpPx, stop=curStop)
 
 // Flatten anything left open at session end
 if not inSess and inSess[1]
     strategy.close_all()
 
 plot(showOR and inSess and orDone ? orHi : na, "OR High", color=color.aqua,   style=plot.style_linebr, linewidth=1)
-plot(showOR and inSess and orDone ? orLo : na, "OR Low",  color=color.orange, style=plot.style_linebr, linewidth=1)`,
+plot(showOR and inSess and orDone ? orLo : na, "OR Low",  color=color.orange, style=plot.style_linebr, linewidth=1)
+plot(useVwap ? vwapVal : na, "VWAP", color=color.new(color.fuchsia, 0), linewidth=1)`,
       mt5: `//+------------------------------------------------------------------+
 //|  YN Finance - 6:30 ORB Retest EA                                 |
 //|  OR = first OR_Candles M5 bars after session start.              |
@@ -3401,14 +3443,17 @@ input double StopPoints      = 50.0;
 input double TpPoints        = 100.0;
 input double Lots            = 1.0;
 input bool   OneTradePerDay  = true;
+input bool   UseVwap         = true;   // long only above session VWAP, short below
+input bool   UsePartial      = true;   // scale out at +1R and move stop to breakeven
+input int    PartialPct      = 50;     // scale-out size at +1R (%)
 
-double   orHi=0.0, orLo=0.0;
-bool     orDone=false, lBroke=false, lValid=false, sBroke=false, sValid=false, traded=false;
+double   orHi=0.0, orLo=0.0, cumPV=0.0, cumV=0.0, entryPx=0.0;
+bool     orDone=false, lBroke=false, lValid=false, sBroke=false, sValid=false, traded=false, beMoved=false;
 datetime curDay=0, lastBar=0;
 
 int OnInit(){ return(INIT_SUCCEEDED); }
 
-void ResetDay(){ orHi=0.0; orLo=0.0; orDone=false; lBroke=false; lValid=false; sBroke=false; sValid=false; traded=false; }
+void ResetDay(){ orHi=0.0; orLo=0.0; cumPV=0.0; cumV=0.0; entryPx=0.0; orDone=false; lBroke=false; lValid=false; sBroke=false; sValid=false; traded=false; beMoved=false; }
 
 void OnTick()
 {
@@ -3433,6 +3478,12 @@ void OnTick()
    bool inSess = (cmins>=start && cmins < start+SessionMinutes);
    if(!inSess) return;
 
+   // Session VWAP accumulation (every in-session closed bar, including the OR)
+   double tpx = (cH+cL+cC)/3.0;
+   double vol = (double)iVolume(_Symbol, PERIOD_M5, 1);
+   cumPV += tpx*vol;
+   cumV  += vol;
+
    // Build the opening range
    if(idx>=0 && idx<OR_Candles)
    {
@@ -3454,30 +3505,49 @@ void OnTick()
    if(lBroke && cH>=orHi+DeparturePoints) lValid=true;
    if(sBroke && cL<=orLo-DeparturePoints) sValid=true;
 
+   // Manage an open position: scale out at +1R, then move stop to breakeven
+   if(UsePartial && !beMoved && entryPx>0.0 && PositionSelect(_Symbol))
+   {
+      long ptype = (long)PositionGetInteger(POSITION_TYPE);
+      bool reached = (ptype==POSITION_TYPE_BUY) ? (cH>=entryPx+StopPoints) : (cL<=entryPx-StopPoints);
+      if(reached)
+      {
+         double pvol = NormalizeDouble(Lots*PartialPct/100.0, 2);
+         if(pvol>0.0) trade.PositionClosePartial(_Symbol, pvol);
+         trade.PositionModify(_Symbol, entryPx, PositionGetDouble(POSITION_TP));
+         beMoved=true;
+      }
+   }
+
    if(OneTradePerDay && traded) return;
    if(PositionSelect(_Symbol)) return;
 
-   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double ask  = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double bid  = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double vwap = (cumV>0.0) ? cumPV/cumV : cC;
 
-   // Real retest: validated earlier, price returns to the level, (optional) closes back beyond
-   if(lWasValid && cL<=orHi && (!ConfirmClose || cC>orHi))
+   // Real retest (+ VWAP filter): validated earlier, price returns to level, (optional) closes back beyond
+   if(lWasValid && cL<=orHi && (!ConfirmClose || cC>orHi) && (!UseVwap || cC>vwap))
    {
       double e = ConfirmClose ? cC : orHi;
       if(trade.Buy(Lots, _Symbol, ask, e-StopPoints, e+TpPoints, "ORB retest long"))
-         traded=true;
+      {
+         entryPx=e; beMoved=false; traded=true;
+      }
    }
-   else if(sWasValid && cH>=orLo && (!ConfirmClose || cC<orLo))
+   else if(sWasValid && cH>=orLo && (!ConfirmClose || cC<orLo) && (!UseVwap || cC<vwap))
    {
       double e = ConfirmClose ? cC : orLo;
       if(trade.Sell(Lots, _Symbol, bid, e+StopPoints, e-TpPoints, "ORB retest short"))
-         traded=true;
+      {
+         entryPx=e; beMoved=false; traded=true;
+      }
    }
 }`,
       steps: [
         'TradingView (backtest): add the strategy to a 5-minute futures chart (MNQ, NQ, MES, ES). The 6:30 PT open is handled automatically via the America/Los_Angeles timezone — no chart-time setup needed.',
         'Open the Strategy Tester to see historical trades, win rate and net P/L. Set Stop (points) and Target (points) to match your instrument; defaults are 50 / 100 for a 2:1.',
-        'Entries are market on the retest of the broken opening-range level; exits are a fixed stop and limit, and any open position is flattened at session end.',
+        'Entries are market on the retest; exits use a fixed stop and limit. With "Scale out at +1R" on, half the position closes at +1R and the stop ratchets to breakeven (the default quantity is 2 so 50% = 1 contract — keep it even). "VWAP filter" only takes longs above session VWAP and shorts below. Any open position flattens at session end.',
         'MT5 EA: set OR_StartHour / OR_StartMin to the BROKER SERVER TIME that equals 6:30 PT (check your broker; servers are often UTC+2/+3). Attach to an M5 chart and enable AutoTrading.',
         'Forward-test on a demo first. Points map 1:1 to price on index futures — size contracts so 50 points equals your per-trade risk.',
       ],
@@ -3495,11 +3565,15 @@ confirmClose = input.bool(true, "Retest must close back beyond the level")
 stopPts   = input.float(50.0, "Stop (points)", minval=0.0)
 tpPts     = input.float(100.0, "Target (points)", minval=0.0)
 oneTrade  = input.bool(true, "One trade per day")
+useVwap    = input.bool(true, "VWAP filter — long only above VWAP, short below")
+usePartial = input.bool(true, "Scale out at +1R and move stop to breakeven")
+partialPct = input.int(50, "Scale-out size at +1R (%)", minval=1, maxval=99)
 boxBars   = input.int(24, "Trade-box width (bars)", minval=4)
 showOR    = input.bool(true, "Show opening-range lines")
 
 inSess  = not na(time(timeframe.period, sess, tz))
 newSess = inSess and not inSess[1]
+vwapVal = ta.vwap(hlc3)
 
 // ===== State =====
 var float orHi   = na
@@ -3547,37 +3621,77 @@ if inSess and orDone
 canTrade = inSess and orDone and (not traded or not oneTrade)
 // Real retest: departure confirmed on a PRIOR bar (lValid[1]), price returns to the
 // level, and — if confirmClose — the candle closes back beyond it to prove it holds.
-goLong   = canTrade and lValid[1] and low  <= orHi and (not confirmClose or close > orHi)
-goShort  = canTrade and sValid[1] and high >= orLo and (not confirmClose or close < orLo)
+goLong   = canTrade and lValid[1] and low  <= orHi and (not confirmClose or close > orHi) and (not useVwap or close > vwapVal)
+goShort  = canTrade and sValid[1] and high >= orLo and (not confirmClose or close < orLo) and (not useVwap or close < vwapVal)
 
 f_fmt(x) => str.tostring(x, format.mintick)
 
+// ===== Trade-management state =====
+var float ePx       = na
+var float slPx      = na
+var float tpPx      = na
+var float tp1Px     = na
+var int   dir       = 0
+var bool  beMoved   = false
+var bool  tradeOpen = false
+
+if newSess
+    dir       := 0
+    beMoved   := false
+    tradeOpen := false
+
 if goLong
-    eL = confirmClose ? close : orHi
-    sL = eL - stopPts
-    tL = eL + tpPts
-    traded := true
-    box.new(bar_index, tL, bar_index + boxBars, eL, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
-    box.new(bar_index, eL, bar_index + boxBars, sL, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
-    line.new(bar_index, eL, bar_index + boxBars, eL, color=color.white, style=line.style_dashed)
-    label.new(bar_index, tL, "LONG  ORB retest | Entry " + f_fmt(eL) + " | TP " + f_fmt(tL) + " | SL " + f_fmt(sL) + " | 2:1", style=label.style_label_down, color=color.new(color.lime, 20), textcolor=color.black, size=size.small)
-    alert("ORB LONG " + syminfo.ticker + " | Entry " + f_fmt(eL) + " | SL " + f_fmt(sL) + " | TP " + f_fmt(tL), alert.freq_once_per_bar)
+    traded    := true
+    tradeOpen := true
+    dir       := 1
+    beMoved   := false
+    ePx   := confirmClose ? close : orHi
+    slPx  := ePx - stopPts
+    tpPx  := ePx + tpPts
+    tp1Px := ePx + stopPts
+    box.new(bar_index, tpPx, bar_index + boxBars, ePx, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+    box.new(bar_index, ePx, bar_index + boxBars, slPx, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+    line.new(bar_index, ePx, bar_index + boxBars, ePx, color=color.white, style=line.style_dashed)
+    line.new(bar_index, tp1Px, bar_index + boxBars, tp1Px, color=color.new(color.aqua, 0), style=line.style_dotted)
+    label.new(bar_index, tpPx, "LONG  ORB | Entry " + f_fmt(ePx) + " | TP " + f_fmt(tpPx) + " | SL " + f_fmt(slPx) + (usePartial ? "  (scale " + str.tostring(partialPct) + "% @ " + f_fmt(tp1Px) + " -> BE)" : ""), style=label.style_label_down, color=color.new(color.lime, 20), textcolor=color.black, size=size.small)
+    alert("ORB LONG " + syminfo.ticker + " | Entry " + f_fmt(ePx) + " | SL " + f_fmt(slPx) + " | TP " + f_fmt(tpPx), alert.freq_once_per_bar)
 
 if goShort
-    eS = confirmClose ? close : orLo
-    sS = eS + stopPts
-    tS = eS - tpPts
-    traded := true
-    box.new(bar_index, eS, bar_index + boxBars, tS, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
-    box.new(bar_index, sS, bar_index + boxBars, eS, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
-    line.new(bar_index, eS, bar_index + boxBars, eS, color=color.white, style=line.style_dashed)
-    label.new(bar_index, tS, "SHORT  ORB retest | Entry " + f_fmt(eS) + " | TP " + f_fmt(tS) + " | SL " + f_fmt(sS) + " | 2:1", style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
-    alert("ORB SHORT " + syminfo.ticker + " | Entry " + f_fmt(eS) + " | SL " + f_fmt(sS) + " | TP " + f_fmt(tS), alert.freq_once_per_bar)
+    traded    := true
+    tradeOpen := true
+    dir       := -1
+    beMoved   := false
+    ePx   := confirmClose ? close : orLo
+    slPx  := ePx + stopPts
+    tpPx  := ePx - tpPts
+    tp1Px := ePx - stopPts
+    box.new(bar_index, ePx, bar_index + boxBars, tpPx, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+    box.new(bar_index, slPx, bar_index + boxBars, ePx, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+    line.new(bar_index, ePx, bar_index + boxBars, ePx, color=color.white, style=line.style_dashed)
+    line.new(bar_index, tp1Px, bar_index + boxBars, tp1Px, color=color.new(color.aqua, 0), style=line.style_dotted)
+    label.new(bar_index, tpPx, "SHORT  ORB | Entry " + f_fmt(ePx) + " | TP " + f_fmt(tpPx) + " | SL " + f_fmt(slPx) + (usePartial ? "  (scale " + str.tostring(partialPct) + "% @ " + f_fmt(tp1Px) + " -> BE)" : ""), style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+    alert("ORB SHORT " + syminfo.ticker + " | Entry " + f_fmt(ePx) + " | SL " + f_fmt(slPx) + " | TP " + f_fmt(tpPx), alert.freq_once_per_bar)
+
+// ===== Management: scale at +1R -> breakeven, then exit alerts =====
+if tradeOpen and usePartial and not beMoved and (dir == 1 ? high >= tp1Px : low <= tp1Px)
+    beMoved := true
+    alert("ORB " + (dir == 1 ? "LONG" : "SHORT") + " " + syminfo.ticker + " | +1R reached -> scale out " + str.tostring(partialPct) + "% and move stop to breakeven " + f_fmt(ePx), alert.freq_once_per_bar)
+
+curStop = beMoved ? ePx : slPx
+if tradeOpen and (dir == 1 ? high >= tpPx : low <= tpPx)
+    tradeOpen := false
+    dir := 0
+    alert("ORB " + syminfo.ticker + " | TARGET hit " + f_fmt(tpPx), alert.freq_once_per_bar)
+else if tradeOpen and (dir == 1 ? low <= curStop : high >= curStop)
+    tradeOpen := false
+    dir := 0
+    alert("ORB " + syminfo.ticker + " | " + (beMoved ? "Breakeven" : "Stop") + " hit " + f_fmt(curStop), alert.freq_once_per_bar)
 
 plotshape(goLong,  title="Long",  style=shape.triangleup,   location=location.belowbar, color=color.lime, size=size.small)
 plotshape(goShort, title="Short", style=shape.triangledown, location=location.abovebar, color=color.red,  size=size.small)
 plot(showOR and inSess and orDone ? orHi : na, "OR High", color=color.aqua,   style=plot.style_linebr, linewidth=1)
 plot(showOR and inSess and orDone ? orLo : na, "OR Low",  color=color.orange, style=plot.style_linebr, linewidth=1)
+plot(useVwap ? vwapVal : na, "VWAP", color=color.new(color.fuchsia, 0), linewidth=1)
 
 alertcondition(goLong,  "ORB Long Entry",  "ORB retest LONG")
 alertcondition(goShort, "ORB Short Entry", "ORB retest SHORT")
@@ -3590,7 +3704,7 @@ if barstate.islast and timeframe.period != "5"
         'It waits for a 5-minute candle to CLOSE beyond the range, then for price to RUN at least "Min run" points past the level (so it never fires on the next candle), then for a retest that closes back beyond the level. Both directions are watched independently — if one side breaks without retesting, the other can still trigger.',
         'On that confirmed retest it fires the signal and draws the trade box: dashed entry line, green target zone (+100), red stop zone (-50), plus a reasoning label.',
         'Create an alert: Condition = this indicator, choose "Any alert() function call", Once Per Bar Close. The alert carries the ticker, entry, stop and target.',
-        'Tune "Min run past level before retest" (raise to demand a bigger move; ~15 for NQ, lower for MES/ES) and toggle "Retest must close back beyond the level" off if you prefer entering on the first touch. One trade/day by default.',
+        'Win-rate filters (both default ON): "VWAP filter" skips counter-trend trades (longs only above session VWAP, shorts below), and "Scale out at +1R" banks a partial and moves the stop to breakeven — you will get extra alerts when +1R is reached (scale + BE) and when the target or stop is hit. Also tune "Min run past level" (~15 for NQ, lower for MES/ES). Backtest each filter ON vs OFF, one at a time, over 6–12 months.',
       ],
     },
   }
