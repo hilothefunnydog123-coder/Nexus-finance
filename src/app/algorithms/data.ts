@@ -3279,5 +3279,288 @@ if showDash and barstate.islast
         'Honest check: if the dashboard shows most profit from one source only, just trade that one. The combo is for coverage, not for hiding a dead engine inside a live one.',
       ]
     }
+  },
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 9. YN — 6:30 OPENING RANGE BREAKOUT + RETEST (5m)
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    id: 'orb630',
+    instructor: 'YN Finance Quant Desk',
+    strategy: '6:30 Opening Range Breakout + Retest',
+    tagline: 'First three 5-minute candles set the range; trade the break-and-close, enter on the retest. Fixed 50pt stop / 100pt target (2:1).',
+    assets: ['Futures (MNQ/NQ/MES/ES)', 'Indices'],
+    timeframes: ['5m'],
+    propFirms: ['Topstep', 'Apex', 'MyFundedFutures', 'Take Profit Trader'],
+    winTarget: '~45% (2:1 R:R)',
+    riskPerTrade: '50 pts (fixed)',
+    color: '#00d4aa',
+    init: '630',
+    overview: 'A clean opening-range breakout for the US cash open. At 6:30 PT it marks the high and low of the first three 5-minute candles (the 6:30, 6:35 and 6:40 bars; the range locks at 6:45). It then waits for a 5-minute candle to CLOSE beyond the range — that locks the direction — and enters only on the retest of the broken level. Risk is fixed: a 50-point stop and a 100-point target (2:1). One trade per day by default, auto-resetting each session. Same long/short trade boxes as the rest of the suite — dashed entry line, green target zone, red stop zone and a reasoning label.',
+    propNotes: 'Built for index futures (MNQ/NQ/MES/ES) where points map 1:1 to price. Times use the America/Los_Angeles zone so 6:30 stays at the US open through daylight-saving changes. Apply on the 5-minute chart. For prop evaluations the fixed 50/100 keeps risk identical on every trade — size your contracts so 50 points equals your per-trade risk limit. If no clean break-and-retest forms, the system simply does not trade that day.',
+    auto: {
+      tradingview: `//@version=5
+strategy("YN Finance — 6:30 ORB Retest (Backtest)", overlay=true, calc_on_every_tick=false, default_qty_type=strategy.fixed, default_qty_value=1, pyramiding=0, max_boxes_count=500, max_labels_count=500, max_lines_count=500)
+
+// ===== Inputs =====
+tz        = "America/Los_Angeles"
+sess      = input.session("0630-1300", "Trading session (PT)")
+orCandles = input.int(3, "Opening-range candles", minval=1)
+stopPts   = input.float(50.0, "Stop (points)", minval=0.0)
+tpPts     = input.float(100.0, "Target (points)", minval=0.0)
+oneTrade  = input.bool(true, "One trade per day")
+showOR    = input.bool(true, "Show opening-range lines")
+
+inSess  = not na(time(timeframe.period, sess, tz))
+newSess = inSess and not inSess[1]
+
+// ===== State =====
+var float orHi   = na
+var float orLo   = na
+var int   cnt    = 0
+var bool  orDone = false
+var bool  upBrk  = false
+var bool  dnBrk  = false
+var int   brkBar = na
+var bool  traded = false
+
+if newSess
+    orHi   := na
+    orLo   := na
+    cnt    := 0
+    orDone := false
+    upBrk  := false
+    dnBrk  := false
+    brkBar := na
+    traded := false
+
+if inSess
+    cnt += 1
+    if cnt <= orCandles
+        orHi := na(orHi) ? high : math.max(orHi, high)
+        orLo := na(orLo) ? low  : math.min(orLo, low)
+        if cnt == orCandles
+            orDone := true
+
+if inSess and orDone and not upBrk and not dnBrk
+    if close > orHi
+        upBrk  := true
+        brkBar := bar_index
+    else if close < orLo
+        dnBrk  := true
+        brkBar := bar_index
+
+canTrade = inSess and orDone and (not traded or not oneTrade)
+goLong   = canTrade and upBrk and bar_index > brkBar and low  <= orHi
+goShort  = canTrade and dnBrk and bar_index > brkBar and high >= orLo
+
+if goLong
+    traded := true
+    strategy.entry("Long", strategy.long)
+    strategy.exit("Long X", "Long", stop=orHi - stopPts, limit=orHi + tpPts)
+
+if goShort
+    traded := true
+    strategy.entry("Short", strategy.short)
+    strategy.exit("Short X", "Short", stop=orLo + stopPts, limit=orLo - tpPts)
+
+// Flatten anything left open at session end
+if not inSess and inSess[1]
+    strategy.close_all()
+
+plot(showOR and inSess and orDone ? orHi : na, "OR High", color=color.aqua,   style=plot.style_linebr, linewidth=1)
+plot(showOR and inSess and orDone ? orLo : na, "OR Low",  color=color.orange, style=plot.style_linebr, linewidth=1)`,
+      mt5: `//+------------------------------------------------------------------+
+//|  YN Finance - 6:30 ORB Retest EA                                 |
+//|  OR = first OR_Candles M5 bars after session start.              |
+//|  Set OR_StartHour/OR_StartMin in BROKER SERVER TIME to 6:30 PT.  |
+//+------------------------------------------------------------------+
+#property strict
+#include <Trade\\Trade.mqh>
+CTrade trade;
+
+input int    OR_StartHour   = 16;     // server-time hour matching 6:30 PT (broker dependent)
+input int    OR_StartMin    = 30;
+input int    OR_Candles     = 3;
+input int    SessionMinutes = 390;    // 6.5 hours
+input double StopPoints      = 50.0;
+input double TpPoints        = 100.0;
+input double Lots            = 1.0;
+input bool   OneTradePerDay  = true;
+
+double   orHi=0.0, orLo=0.0;
+bool     orDone=false, upBrk=false, dnBrk=false, traded=false;
+datetime curDay=0, lastBar=0;
+
+int OnInit(){ return(INIT_SUCCEEDED); }
+
+void ResetDay(){ orHi=0.0; orLo=0.0; orDone=false; upBrk=false; dnBrk=false; traded=false; }
+
+void OnTick()
+{
+   datetime bt = iTime(_Symbol, PERIOD_M5, 0);
+   if(bt==lastBar) return;            // act once per new M5 bar
+   lastBar = bt;
+
+   // Evaluate the just-closed bar (shift 1)
+   datetime ct = iTime(_Symbol, PERIOD_M5, 1);
+   double   cH = iHigh(_Symbol, PERIOD_M5, 1);
+   double   cL = iLow(_Symbol, PERIOD_M5, 1);
+   double   cC = iClose(_Symbol, PERIOD_M5, 1);
+
+   MqlDateTime dt;
+   TimeToStruct(ct, dt);
+   datetime day = StringToTime(StringFormat("%04d.%02d.%02d", dt.year, dt.mon, dt.day));
+   if(day!=curDay){ curDay=day; ResetDay(); }
+
+   int  cmins  = dt.hour*60 + dt.min;
+   int  start  = OR_StartHour*60 + OR_StartMin;
+   int  idx    = (cmins - start)/5;   // 0-based M5 index since open
+   bool inSess = (cmins>=start && cmins < start+SessionMinutes);
+   if(!inSess) return;
+
+   // Build the opening range
+   if(idx>=0 && idx<OR_Candles)
+   {
+      if(orHi==0.0 || cH>orHi) orHi=cH;
+      if(orLo==0.0 || cL<orLo) orLo=cL;
+      if(idx==OR_Candles-1) orDone=true;
+      return;
+   }
+   if(!orDone) return;
+
+   // Break-and-close locks direction
+   if(!upBrk && !dnBrk)
+   {
+      if(cC>orHi) upBrk=true;
+      else if(cC<orLo) dnBrk=true;
+      return;
+   }
+
+   if(OneTradePerDay && traded) return;
+   if(PositionSelect(_Symbol)) return;
+
+   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+
+   // Retest entries
+   if(upBrk && cL<=orHi)
+   {
+      if(trade.Buy(Lots, _Symbol, ask, orHi-StopPoints, orHi+TpPoints, "ORB retest long"))
+         traded=true;
+   }
+   else if(dnBrk && cH>=orLo)
+   {
+      if(trade.Sell(Lots, _Symbol, bid, orLo+StopPoints, orLo-TpPoints, "ORB retest short"))
+         traded=true;
+   }
+}`,
+      steps: [
+        'TradingView (backtest): add the strategy to a 5-minute futures chart (MNQ, NQ, MES, ES). The 6:30 PT open is handled automatically via the America/Los_Angeles timezone — no chart-time setup needed.',
+        'Open the Strategy Tester to see historical trades, win rate and net P/L. Set Stop (points) and Target (points) to match your instrument; defaults are 50 / 100 for a 2:1.',
+        'Entries are market on the retest of the broken opening-range level; exits are a fixed stop and limit, and any open position is flattened at session end.',
+        'MT5 EA: set OR_StartHour / OR_StartMin to the BROKER SERVER TIME that equals 6:30 PT (check your broker; servers are often UTC+2/+3). Attach to an M5 chart and enable AutoTrading.',
+        'Forward-test on a demo first. Points map 1:1 to price on index futures — size contracts so 50 points equals your per-trade risk.',
+      ],
+    },
+    signals: {
+      tradingview: `//@version=5
+indicator("YN Finance — 6:30 ORB Retest (5m Signals)", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+
+// ===== Inputs =====
+tz        = "America/Los_Angeles"
+sess      = input.session("0630-1300", "Trading session (PT)")
+orCandles = input.int(3, "Opening-range candles", minval=1)
+stopPts   = input.float(50.0, "Stop (points)", minval=0.0)
+tpPts     = input.float(100.0, "Target (points)", minval=0.0)
+oneTrade  = input.bool(true, "One trade per day")
+boxBars   = input.int(24, "Trade-box width (bars)", minval=4)
+showOR    = input.bool(true, "Show opening-range lines")
+
+inSess  = not na(time(timeframe.period, sess, tz))
+newSess = inSess and not inSess[1]
+
+// ===== State =====
+var float orHi   = na
+var float orLo   = na
+var int   cnt    = 0
+var bool  orDone = false
+var bool  upBrk  = false
+var bool  dnBrk  = false
+var int   brkBar = na
+var bool  traded = false
+
+if newSess
+    orHi   := na
+    orLo   := na
+    cnt    := 0
+    orDone := false
+    upBrk  := false
+    dnBrk  := false
+    brkBar := na
+    traded := false
+
+if inSess
+    cnt += 1
+    if cnt <= orCandles
+        orHi := na(orHi) ? high : math.max(orHi, high)
+        orLo := na(orLo) ? low  : math.min(orLo, low)
+        if cnt == orCandles
+            orDone := true
+
+if inSess and orDone and not upBrk and not dnBrk
+    if close > orHi
+        upBrk  := true
+        brkBar := bar_index
+    else if close < orLo
+        dnBrk  := true
+        brkBar := bar_index
+
+canTrade = inSess and orDone and (not traded or not oneTrade)
+goLong   = canTrade and upBrk and bar_index > brkBar and low  <= orHi
+goShort  = canTrade and dnBrk and bar_index > brkBar and high >= orLo
+
+f_fmt(x) => str.tostring(x, format.mintick)
+
+if goLong
+    eL = orHi
+    sL = eL - stopPts
+    tL = eL + tpPts
+    traded := true
+    box.new(bar_index, tL, bar_index + boxBars, eL, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+    box.new(bar_index, eL, bar_index + boxBars, sL, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+    line.new(bar_index, eL, bar_index + boxBars, eL, color=color.white, style=line.style_dashed)
+    label.new(bar_index, tL, "LONG  ORB retest | Entry " + f_fmt(eL) + " | TP " + f_fmt(tL) + " | SL " + f_fmt(sL) + " | 2:1", style=label.style_label_down, color=color.new(color.lime, 20), textcolor=color.black, size=size.small)
+    alert("ORB LONG " + syminfo.ticker + " | Entry " + f_fmt(eL) + " | SL " + f_fmt(sL) + " | TP " + f_fmt(tL), alert.freq_once_per_bar)
+
+if goShort
+    eS = orLo
+    sS = eS + stopPts
+    tS = eS - tpPts
+    traded := true
+    box.new(bar_index, eS, bar_index + boxBars, tS, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+    box.new(bar_index, sS, bar_index + boxBars, eS, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+    line.new(bar_index, eS, bar_index + boxBars, eS, color=color.white, style=line.style_dashed)
+    label.new(bar_index, tS, "SHORT  ORB retest | Entry " + f_fmt(eS) + " | TP " + f_fmt(tS) + " | SL " + f_fmt(sS) + " | 2:1", style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+    alert("ORB SHORT " + syminfo.ticker + " | Entry " + f_fmt(eS) + " | SL " + f_fmt(sS) + " | TP " + f_fmt(tS), alert.freq_once_per_bar)
+
+plotshape(goLong,  title="Long",  style=shape.triangleup,   location=location.belowbar, color=color.lime, size=size.small)
+plotshape(goShort, title="Short", style=shape.triangledown, location=location.abovebar, color=color.red,  size=size.small)
+plot(showOR and inSess and orDone ? orHi : na, "OR High", color=color.aqua,   style=plot.style_linebr, linewidth=1)
+plot(showOR and inSess and orDone ? orLo : na, "OR Low",  color=color.orange, style=plot.style_linebr, linewidth=1)
+
+alertcondition(goLong,  "ORB Long Entry",  "ORB retest LONG")
+alertcondition(goShort, "ORB Short Entry", "ORB retest SHORT")
+
+if barstate.islast and timeframe.period != "5"
+    label.new(bar_index, high, "Apply on the 5-minute chart", style=label.style_label_down, color=color.orange, textcolor=color.black, size=size.normal)`,
+      steps: [
+        'Add the indicator to a 5-minute chart of your future (MNQ, NQ, MES, ES). The session and 6:30 PT open are handled automatically via the America/Los_Angeles timezone.',
+        'At the open it captures the high and low of the first 3 five-minute candles, then plots the opening-range high (aqua) and low (orange).',
+        'It waits for a 5-minute candle to CLOSE above the range (long bias) or below it (short bias). The first break locks the direction for the day.',
+        'On the retest of that level it fires the signal and draws the trade box: dashed entry line, green target zone (+100), red stop zone (-50), plus a reasoning label.',
+        'Create an alert: Condition = this indicator, choose "Any alert() function call", Once Per Bar Close. The alert carries the ticker, entry, stop and target.',
+        'One trade per day by default. Turn off "One trade per day" for re-entries, and set Stop / Target points per instrument.',
+      ],
+    },
   }
 ]
