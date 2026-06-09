@@ -1157,6 +1157,16 @@ function getClient() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 }
 
+// Strip third-party social handles/brands from any course before it leaves the server
+// (legal hygiene — YN Finance is not affiliated with the named traders).
+function scrubHandle<T>(c: T): T {
+  if (!c || typeof c !== 'object') return c
+  return { ...(c as Record<string, unknown>), trader_handle: '' } as T
+}
+function scrubHandles<T>(list: T[]): T[] {
+  return list.map(scrubHandle)
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const slug = searchParams.get('slug')
@@ -1164,9 +1174,9 @@ export async function GET(req: NextRequest) {
   if (!SUPABASE_ENABLED) {
     if (slug) {
       const course = SEED_COURSES.find(c => c.slug === slug)
-      return NextResponse.json({ course: course || null, sections: course?.sections || [], demo: true })
+      return NextResponse.json({ course: scrubHandle(course) || null, sections: course?.sections || [], demo: true })
     }
-    return NextResponse.json({ courses: SEED_COURSES, demo: true })
+    return NextResponse.json({ courses: scrubHandles(SEED_COURSES), demo: true })
   }
 
   const sb = getClient()!
@@ -1176,12 +1186,12 @@ export async function GET(req: NextRequest) {
     const { data: sections } = await sb.from('course_sections').select('*').eq('course_id', course?.id).order('order_index')
     if (!course) {
       const seed = SEED_COURSES.find(c => c.slug === slug)
-      return NextResponse.json({ course: seed || null, sections: seed?.sections || [], demo: true })
+      return NextResponse.json({ course: scrubHandle(seed) || null, sections: seed?.sections || [], demo: true })
     }
-    return NextResponse.json({ course, sections: sections || [] })
+    return NextResponse.json({ course: scrubHandle(course), sections: sections || [] })
   }
 
   const { data: courses } = await sb.from('courses').select('*').eq('is_published', true).order('enrollment_count', { ascending: false })
   if (!courses?.length) return NextResponse.json({ courses: SEED_COURSES, demo: true })
-  return NextResponse.json({ courses, demo: false })
+  return NextResponse.json({ courses: scrubHandles(courses), demo: false })
 }

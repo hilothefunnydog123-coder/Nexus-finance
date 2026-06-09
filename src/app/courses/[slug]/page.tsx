@@ -351,8 +351,8 @@ function CoursePageInner({ params }: { params: Promise<{ slug: string }> }) {
                   {course.trader_name.slice(0,2).toUpperCase()}
                 </div>
                 <div>
+                  <div style={{ fontSize: 9, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Strategy popularized by</div>
                   <div style={{ fontWeight: 700, color: '#cdd6f4', fontSize: 12 }}>{course.trader_name}</div>
-                  <div style={{ color: '#4a5e7a', fontSize: 10 }}>{course.trader_bio?.slice(0, 60)}...</div>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#ffa502' }}>
@@ -368,6 +368,13 @@ function CoursePageInner({ params }: { params: Promise<{ slug: string }> }) {
                 <span>{sections.reduce((s, sec) => s + (sec.duration_mins || 5), 0)} min total</span>
               </div>
             </div>
+          </div>
+
+          {/* Legal disclaimer */}
+          <div style={{ background: '#071220', border: '1px solid #1a2d4a', borderRadius: 10, padding: '10px 14px', marginBottom: 20 }}>
+            <p style={{ fontSize: 10.5, color: '#4a5e7a', margin: 0, lineHeight: 1.5 }}>
+              ⚖️ Independent educational course covering a publicly taught strategy. YN Finance is not affiliated with, endorsed by, or created in partnership with {course.trader_name}. Not financial advice.
+            </p>
           </div>
 
           {/* Section content */}

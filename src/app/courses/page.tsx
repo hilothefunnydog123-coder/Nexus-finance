@@ -116,7 +116,7 @@ export default function CoursesPage() {
             </span>
           </div>
           <h1 style={{ fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 900, color: '#fff', letterSpacing: -2, lineHeight: 1.05, marginBottom: 16, maxWidth: 700 }}>
-            Learn from real traders.<br />
+            Learn real trading strategies.<br />
             <span style={{ background: 'linear-gradient(90deg, #00d4aa, #1e90ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               Practice it instantly.
             </span>
@@ -127,7 +127,7 @@ export default function CoursesPage() {
 
           {/* Stats */}
           <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap' }}>
-            {[['12', 'Expert Instructors'], ['60+', 'Hours of Content'], ['$0.99', 'Per Course'], ['Built-in', 'Practice Mode']].map(([v, l]) => (
+            {[['12', 'Pro Strategies'], ['60+', 'Hours of Content'], ['$0.99', 'Per Course'], ['Built-in', 'Practice Mode']].map(([v, l]) => (
               <div key={l}>
                 <div style={{ fontSize: 24, fontWeight: 900, color: '#00d4aa', fontFamily: 'monospace' }}>{v}</div>
                 <div style={{ fontSize: 11, color: '#4a5e7a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{l}</div>
@@ -148,7 +148,7 @@ export default function CoursesPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#071220', border: '1px solid #1a2d4a', borderRadius: 10, padding: '10px 16px', flex: '1', minWidth: 240 }}>
             <Search size={14} color="#4a5e7a" />
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search by strategy or instructor name..."
+              placeholder="Search by strategy or trader..."
               style={{ background: 'none', border: 'none', outline: 'none', color: '#cdd6f4', fontSize: 13, flex: 1 }} />
           </div>
           <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
@@ -236,6 +236,7 @@ export default function CoursesPage() {
                         {course.trader_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 1, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>Strategy of</div>
                         <div style={{ fontWeight: 800, color: '#fff', fontSize: 14, lineHeight: 1.2, marginBottom: 3, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{course.trader_name}</div>
                         <div style={{ fontSize: 11, color: course.thumbnail_color, fontWeight: 600 }}>{course.strategy_type}</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 4 }}>
