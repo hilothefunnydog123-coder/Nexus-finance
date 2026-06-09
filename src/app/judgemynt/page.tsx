@@ -1,10 +1,7 @@
 'use client'
 
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { ArrowUpRight, Award, Crown, X, Check, ChevronLeft, Lock, Sparkles } from 'lucide-react'
-
-const VIDEO_SRC =
-  'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260606_154941_df1a96e1-a06f-450c-bd02-d863414cc1a0.mp4'
 
 const TEAL = '#00d4aa'
 const BLUE = '#1e90ff'
@@ -252,16 +249,9 @@ export default function JudgemyntPage() {
       {/* ===================== HERO ===================== */}
       {stage === 'hero' && (
         <section className="relative h-screen w-full overflow-hidden">
-          <video
-            className="absolute inset-0 h-full w-full object-cover"
-            src={VIDEO_SRC}
-            autoPlay
-            muted
-            loop
-            playsInline
-          />
-          <div className="absolute inset-0 bg-black/55" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#040a12] via-[#040a12]/30 to-transparent" />
+          <BrainCanvas />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#040a12]/85 via-[#040a12]/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#040a12] via-transparent to-transparent" />
 
           {/* navbar */}
           <nav className="relative z-20 flex items-center justify-between px-6 sm:px-10 lg:px-16 py-5 lg:py-7">
@@ -661,6 +651,138 @@ export default function JudgemyntPage() {
 }
 
 /* ---------------- sub-components ---------------- */
+
+function BrainCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const canvas = ref.current
+    const ctx = canvas?.getContext('2d')
+    if (!canvas || !ctx) return
+    let raf = 0
+    let w = 0
+    let h = 0
+    type Pt = { x: number; y: number; vx: number; vy: number; r: number; ph: number }
+    type Sig = { a: number; b: number; t: number; speed: number }
+    let nodes: Pt[] = []
+    let signals: Sig[] = []
+    const DIST = 120
+
+    function build() {
+      const count = Math.round(Math.min(120, Math.max(55, (w * h) / 14000)))
+      const cx = w / 2
+      const cy = h * 0.45
+      nodes = []
+      for (let i = 0; i < count; i++) {
+        const ang = Math.random() * Math.PI * 2
+        const rad = Math.pow(Math.random(), 0.6) * Math.min(w, h) * 0.5
+        nodes.push({
+          x: cx + Math.cos(ang) * rad * 1.4 + (Math.random() - 0.5) * w * 0.1,
+          y: cy + Math.sin(ang) * rad + (Math.random() - 0.5) * h * 0.1,
+          vx: (Math.random() - 0.5) * 0.15,
+          vy: (Math.random() - 0.5) * 0.15,
+          r: Math.random() * 1.6 + 0.6,
+          ph: Math.random() * Math.PI * 2,
+        })
+      }
+      signals = []
+    }
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      w = canvas!.clientWidth
+      h = canvas!.clientHeight
+      canvas!.width = w * dpr
+      canvas!.height = h * dpr
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
+      build()
+    }
+
+    function frame() {
+      ctx!.clearRect(0, 0, w, h)
+      const cx = w / 2
+      const cy = h * 0.45
+      const glow = ctx!.createRadialGradient(cx, cy, 0, cx, cy, Math.min(w, h) * 0.55)
+      glow.addColorStop(0, 'rgba(0,212,170,0.10)')
+      glow.addColorStop(1, 'rgba(0,212,170,0)')
+      ctx!.fillStyle = glow
+      ctx!.fillRect(0, 0, w, h)
+
+      for (const n of nodes) {
+        n.x += n.vx
+        n.y += n.vy
+        n.ph += 0.02
+        if (n.x < 0 || n.x > w) n.vx *= -1
+        if (n.y < 0 || n.y > h) n.vy *= -1
+      }
+
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const a = nodes[i]
+          const b = nodes[j]
+          const d = Math.hypot(a.x - b.x, a.y - b.y)
+          if (d < DIST) {
+            ctx!.strokeStyle = `rgba(120,180,255,${(1 - d / DIST) * 0.22})`
+            ctx!.lineWidth = 0.6
+            ctx!.beginPath()
+            ctx!.moveTo(a.x, a.y)
+            ctx!.lineTo(b.x, b.y)
+            ctx!.stroke()
+          }
+        }
+      }
+
+      for (const n of nodes) {
+        const pulse = (Math.sin(n.ph) + 1) / 2
+        ctx!.beginPath()
+        ctx!.arc(n.x, n.y, n.r + pulse * 0.6, 0, Math.PI * 2)
+        ctx!.fillStyle = `rgba(180,230,255,${0.5 + pulse * 0.4})`
+        ctx!.fill()
+      }
+
+      if (signals.length < 22 && Math.random() < 0.35 && nodes.length) {
+        const a = Math.floor(Math.random() * nodes.length)
+        const near: number[] = []
+        for (let j = 0; j < nodes.length; j++) {
+          if (j === a) continue
+          if (Math.hypot(nodes[a].x - nodes[j].x, nodes[a].y - nodes[j].y) < DIST) near.push(j)
+        }
+        if (near.length)
+          signals.push({ a, b: near[Math.floor(Math.random() * near.length)], t: 0, speed: 0.015 + Math.random() * 0.02 })
+      }
+
+      signals = signals.filter((s) => s.t < 1)
+      for (const s of signals) {
+        s.t += s.speed
+        const a = nodes[s.a]
+        const b = nodes[s.b]
+        if (!a || !b) {
+          s.t = 1
+          continue
+        }
+        const x = a.x + (b.x - a.x) * s.t
+        const y = a.y + (b.y - a.y) * s.t
+        ctx!.shadowColor = 'rgba(0,255,200,0.8)'
+        ctx!.shadowBlur = 8
+        ctx!.beginPath()
+        ctx!.arc(x, y, 1.8, 0, Math.PI * 2)
+        ctx!.fillStyle = `rgba(0,255,200,${1 - s.t})`
+        ctx!.fill()
+        ctx!.shadowBlur = 0
+      }
+
+      raf = requestAnimationFrame(frame)
+    }
+
+    resize()
+    raf = requestAnimationFrame(frame)
+    window.addEventListener('resize', resize)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', resize)
+    }
+  }, [])
+  return <canvas ref={ref} className="absolute inset-0 h-full w-full" />
+}
 
 function Shell({ children, onHome, onCerts }: { children: ReactNode; onHome: () => void; onCerts: () => void }) {
   return (
