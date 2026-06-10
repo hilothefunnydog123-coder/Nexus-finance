@@ -133,8 +133,22 @@ Reply as the assistant now. If you output code, put it in a single fenced \`\`\`
           ? 'they RAN OUT OF TIME (locked out)'
           : 'they submitted'
 
+    const userTurns = history.filter((m) => m.role === 'user' && (m.content || '').trim().length > 0).length
+    if (userTurns === 0) {
+      return NextResponse.json({
+        overall: 0,
+        verdict: 'Nothing submitted',
+        dimensions: { creativity: 0, efficiency: 0, quality: 0 },
+        steps: [],
+        analysis: 'You submitted without giving the AI a single instruction or producing any solution. There is nothing to evaluate.',
+        hire: 'No — you did not attempt the task.',
+      })
+    }
+
     const tx = transcript(history, 11000)
     const prompt = `You are the lead examiner for Judgemynt — an AI-employment exam that tests whether a person can be trusted to do real work by directing AI. Be strict and fair, like a senior engineer deciding whether to hire.
+
+CRITICAL: Judge ONLY what literally appears in the transcript below. NEVER invent instructions, steps, or code the candidate did not actually send. The candidate sent ${userTurns} instruction(s) total — if that is few or vague, the scores MUST be low. A high score requires real, specific direction that is visible in the transcript.
 
 THE TASK: ${TASK.brief}
 REQUIREMENTS (the final solution must satisfy ALL):

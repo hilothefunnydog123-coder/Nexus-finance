@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, Cpu, Clock, Zap, CornerDownLeft } from 'lucide-react'
+import { ChevronLeft, Cpu, Clock, Zap, CornerDownLeft, Crown } from 'lucide-react'
 
 const TEAL = '#00d4aa'
 const BLUE = '#1e90ff'
@@ -16,6 +16,12 @@ const MODEL_INFO: Record<string, { tag: string; mult: number; blurb: string }> =
 const MODEL_IDS = Object.keys(MODEL_INFO)
 const tagOf = (id: string) => MODEL_INFO[id]?.tag || 'AI'
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
+const FALLBACK_TASK = {
+  title: 'Ship a production-grade slugify()',
+  brief:
+    'Direct the AI to write a JavaScript function slugify(text) that turns any string into a clean URL slug. It MUST: (1) lowercase everything, (2) turn spaces and underscores into single hyphens, (3) remove every character except a-z, 0-9 and hyphens, (4) collapse repeated hyphens into one, (5) trim leading/trailing hyphens, (6) return an empty string for empty or whitespace-only input. You drive — the AI writes the code. Get it correct AND clean, then /submit.',
+}
 
 interface Msg {
   role: 'user' | 'assistant' | 'system'
@@ -34,7 +40,8 @@ interface Grade {
 export default function Assessment({ onExit }: { onExit: () => void }) {
   const [phase, setPhase] = useState<'intro' | 'run' | 'result'>('intro')
   const [model, setModel] = useState('claude')
-  const [task, setTask] = useState<{ title: string; brief: string } | null>(null)
+  const [task, setTask] = useState<{ title: string; brief: string }>(FALLBACK_TASK)
+  const [certName, setCertName] = useState('')
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [used, setUsed] = useState(0)
@@ -51,13 +58,19 @@ export default function Assessment({ onExit }: { onExit: () => void }) {
   const timeColor = secondsLeft > 60 ? '#cdd6f4' : '#ff5470'
 
   useEffect(() => {
+    try {
+      const n = localStorage.getItem('judgemynt-name')
+      if (n) setCertName(n)
+    } catch {}
     fetch('/api/judgemynt/assess', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'task' }),
     })
       .then((r) => r.json())
-      .then((d) => setTask(d.task))
+      .then((d) => {
+        if (d?.task) setTask(d.task)
+      })
       .catch(() => {})
   }, [])
 
@@ -88,9 +101,10 @@ export default function Assessment({ onExit }: { onExit: () => void }) {
   function begin() {
     setPhase('run')
     setMessages([
+      { role: 'system', content: `TASK — ${task.title}\n\n${task.brief}` },
       {
         role: 'assistant',
-        content: `I'm ${tagOf(model)}. I'll write the code — you direct me. Type /help for commands, or just tell me what to build.`,
+        content: `I'm ${tagOf(model)}. I'll write the code — you direct me. Tell me what to build, or type /help.`,
       },
     ])
   }
@@ -229,6 +243,14 @@ export default function Assessment({ onExit }: { onExit: () => void }) {
           Run out of either and you&apos;re locked out. At the end, the examiner scores how you actually performed — not what you claim.
         </p>
 
+        <div className="mt-6 rounded-xl border p-5" style={{ background: 'rgba(0,212,170,.05)', borderColor: 'rgba(0,212,170,.25)' }}>
+          <div className="text-[11px] uppercase tracking-widest mb-2" style={{ color: TEAL }}>
+            Your task
+          </div>
+          <div className="font-semibold text-white">{task.title}</div>
+          <p className="text-white/65 text-sm mt-1.5 leading-relaxed">{task.brief}</p>
+        </div>
+
         <div className="grid sm:grid-cols-3 gap-3 mt-8">
           {[
             ['10,000', 'token budget', <Zap key="z" className="w-4 h-4" />],
@@ -306,6 +328,33 @@ export default function Assessment({ onExit }: { onExit: () => void }) {
               </div>
               <div className="text-white/55 text-sm">&ldquo;{grade.verdict}&rdquo;</div>
             </div>
+
+            {grade.overall >= 70 && (
+              <div
+                className="max-w-xl mx-auto rounded-2xl p-6 text-center mb-6"
+                style={{ background: 'linear-gradient(160deg,#06121f,#0a1726)', border: `1px solid ${TEAL}44`, boxShadow: '0 0 40px rgba(0,212,170,.12)' }}
+              >
+                <Crown className="w-8 h-8 mx-auto" style={{ color: TEAL }} />
+                <div className="text-[10px] uppercase tracking-[0.3em] text-white/40 mt-2">Degree earned</div>
+                <div className="font-podium text-2xl uppercase mt-1" style={{ color: TEAL }}>
+                  AI Operator
+                </div>
+                <input
+                  value={certName}
+                  onChange={(e) => {
+                    setCertName(e.target.value)
+                    try {
+                      localStorage.setItem('judgemynt-name', e.target.value)
+                    } catch {}
+                  }}
+                  placeholder="Your name"
+                  className="w-full text-center bg-transparent border-b border-white/20 focus:border-white/50 outline-none text-white text-lg py-1.5 mt-3 placeholder:text-white/25"
+                />
+                <div className="text-white/45 text-xs mt-3">
+                  Certified at {grade.overall}/100 · {new Date().toLocaleDateString()} · screenshot to share
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4 max-w-xl mx-auto">
               {dims &&
@@ -398,6 +447,11 @@ export default function Assessment({ onExit }: { onExit: () => void }) {
           /submit
         </button>
       </div>
+
+      {/* task strip */}
+      <button onClick={() => command('/task')} className="w-full text-left px-4 sm:px-6 py-2 border-b border-white/5 text-[11px] text-white/45 hover:text-white/70 truncate">
+        🎯 {task.title} — tap or type <span style={{ color: TEAL }}>/task</span> for the full brief
+      </button>
 
       {/* transcript */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4" style={{ fontFamily: mono }}>
