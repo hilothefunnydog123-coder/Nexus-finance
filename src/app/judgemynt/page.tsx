@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { ArrowUpRight, Award, Crown, X, Check, ChevronLeft, Lock, Sparkles } from 'lucide-react'
 import Assessment from './Assessment'
 import { useAuth } from '@/hooks/useAuth'
+import Link from 'next/link'
 
 const TEAL = '#00d4aa'
 const BLUE = '#1e90ff'
@@ -156,6 +157,7 @@ export default function JudgemyntPage() {
   const [grade, setGrade] = useState<Grade | null>(null)
   const [progress, setProgress] = useState<Record<string, number>>({})
   const [viewDegree, setViewDegree] = useState<string | null>(null)
+  const [invite, setInvite] = useState<string | null>(null)
   const { user, signInWithGoogle, updateName, signOut, isLoggedIn } = useAuth()
   const meta = (user?.user_metadata || {}) as Record<string, string>
   const fullName = `${meta.first_name || ''} ${meta.last_name || ''}`.trim()
@@ -168,6 +170,17 @@ export default function JudgemyntPage() {
       if (raw) setProgress(JSON.parse(raw))
     } catch {}
   }, [])
+
+  useEffect(() => {
+    try {
+      const inv = new URLSearchParams(window.location.search).get('invite')
+      if (inv) setInvite(inv)
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    if (invite && stage === 'hero') setStage('assess')
+  }, [invite, stage])
 
   function saveScore(id: string, score: number) {
     setProgress((prev) => {
@@ -276,6 +289,12 @@ export default function JudgemyntPage() {
                   {l.label}
                 </button>
               ))}
+              <Link
+                href="/judgemynt/employers"
+                className="font-inter text-sm uppercase tracking-widest text-white/80 hover:text-white transition"
+              >
+                For Employers
+              </Link>
             </div>
             <button
               onClick={() => go('curriculum')}
@@ -393,7 +412,13 @@ export default function JudgemyntPage() {
 
       {stage === 'assess' &&
         (ready ? (
-          <Assessment onExit={() => go('hero')} userName={fullName} onDownloadDegree={downloadDegree} />
+          <Assessment
+            onExit={() => go('hero')}
+            userName={fullName}
+            onDownloadDegree={downloadDegree}
+            inviteToken={invite || undefined}
+            candidate={{ name: fullName, email: user?.email || '' }}
+          />
         ) : (
           <Shell onHome={() => go('hero')} onCerts={() => go('certs')}>
             <div className="jm-fade-up text-xs uppercase tracking-[0.3em]" style={{ color: TEAL }}>

@@ -41,10 +41,14 @@ export default function Assessment({
   onExit,
   userName,
   onDownloadDegree,
+  inviteToken,
+  candidate,
 }: {
   onExit: () => void
   userName?: string
   onDownloadDegree?: (title: string, name: string, sub: string) => void
+  inviteToken?: string
+  candidate?: { name: string; email: string }
 }) {
   const [phase, setPhase] = useState<'intro' | 'run' | 'result'>('intro')
   const [model, setModel] = useState('claude')
@@ -134,7 +138,27 @@ export default function Assessment({
         }),
       })
       const d = await res.json()
-      if (res.ok) setGrade(d as Grade)
+      if (res.ok) {
+        setGrade(d as Grade)
+        if (inviteToken) {
+          const grd = d as Grade
+          fetch('/api/judgemynt/enterprise', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'result',
+              token: inviteToken,
+              candidate_name: candidate?.name || userName || '',
+              candidate_email: candidate?.email || '',
+              score: grd.overall,
+              creativity: grd.dimensions?.creativity,
+              efficiency: grd.dimensions?.efficiency,
+              quality: grd.dimensions?.quality,
+              verdict: grd.verdict,
+            }),
+          }).catch(() => {})
+        }
+      }
     } catch {
       /* ignore */
     }
