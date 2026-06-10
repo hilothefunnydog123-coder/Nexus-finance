@@ -37,11 +37,18 @@ interface Grade {
   hire: string
 }
 
-export default function Assessment({ onExit }: { onExit: () => void }) {
+export default function Assessment({
+  onExit,
+  userName,
+  onDownloadDegree,
+}: {
+  onExit: () => void
+  userName?: string
+  onDownloadDegree?: (title: string, name: string, sub: string) => void
+}) {
   const [phase, setPhase] = useState<'intro' | 'run' | 'result'>('intro')
   const [model, setModel] = useState('claude')
   const [task, setTask] = useState<{ title: string; brief: string }>(FALLBACK_TASK)
-  const [certName, setCertName] = useState('')
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [used, setUsed] = useState(0)
@@ -58,10 +65,6 @@ export default function Assessment({ onExit }: { onExit: () => void }) {
   const timeColor = secondsLeft > 60 ? '#cdd6f4' : '#ff5470'
 
   useEffect(() => {
-    try {
-      const n = localStorage.getItem('judgemynt-name')
-      if (n) setCertName(n)
-    } catch {}
     fetch('/api/judgemynt/assess', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -339,20 +342,19 @@ export default function Assessment({ onExit }: { onExit: () => void }) {
                 <div className="font-podium text-2xl uppercase mt-1" style={{ color: TEAL }}>
                   AI Operator
                 </div>
-                <input
-                  value={certName}
-                  onChange={(e) => {
-                    setCertName(e.target.value)
-                    try {
-                      localStorage.setItem('judgemynt-name', e.target.value)
-                    } catch {}
-                  }}
-                  placeholder="Your name"
-                  className="w-full text-center bg-transparent border-b border-white/20 focus:border-white/50 outline-none text-white text-lg py-1.5 mt-3 placeholder:text-white/25"
-                />
-                <div className="text-white/45 text-xs mt-3">
-                  Certified at {grade.overall}/100 · {new Date().toLocaleDateString()} · screenshot to share
+                <div className="text-white text-lg mt-2">{userName || 'Your Name'}</div>
+                <div className="text-white/45 text-xs mt-2">
+                  Certified at {grade.overall}/100 · {new Date().toLocaleDateString()}
                 </div>
+                {onDownloadDegree && (
+                  <button
+                    onClick={() => onDownloadDegree('AI Operator', userName || '', `Certified at ${grade.overall}/100`)}
+                    className="mt-4 rounded-xl px-5 py-2.5 text-sm font-semibold text-[#06121f]"
+                    style={{ background: `linear-gradient(110deg, ${TEAL}, ${BLUE})` }}
+                  >
+                    Download degree (PNG)
+                  </button>
+                )}
               </div>
             )}
 

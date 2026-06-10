@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { ArrowUpRight, Award, Crown, X, Check, ChevronLeft, Lock, Sparkles } from 'lucide-react'
 import Assessment from './Assessment'
+import { useAuth } from '@/hooks/useAuth'
 
 const TEAL = '#00d4aa'
 const BLUE = '#1e90ff'
@@ -155,15 +156,16 @@ export default function JudgemyntPage() {
   const [grade, setGrade] = useState<Grade | null>(null)
   const [progress, setProgress] = useState<Record<string, number>>({})
   const [viewDegree, setViewDegree] = useState<string | null>(null)
-  const [certName, setCertName] = useState('')
+  const { user, signInWithGoogle, updateName, signOut, isLoggedIn } = useAuth()
+  const meta = (user?.user_metadata || {}) as Record<string, string>
+  const fullName = `${meta.first_name || ''} ${meta.last_name || ''}`.trim()
+  const ready = isLoggedIn && fullName.length > 0
 
   // load saved progress
   useEffect(() => {
     try {
       const raw = localStorage.getItem('judgemynt-progress-v1')
       if (raw) setProgress(JSON.parse(raw))
-      const n = localStorage.getItem('judgemynt-name')
-      if (n) setCertName(n)
     } catch {}
   }, [])
 
@@ -384,7 +386,21 @@ export default function JudgemyntPage() {
         </section>
       )}
 
-      {stage === 'assess' && <Assessment onExit={() => go('hero')} />}
+      {stage === 'assess' &&
+        (ready ? (
+          <Assessment onExit={() => go('hero')} userName={fullName} onDownloadDegree={downloadDegree} />
+        ) : (
+          <Shell onHome={() => go('hero')} onCerts={() => go('certs')}>
+            <div className="jm-fade-up text-xs uppercase tracking-[0.3em]" style={{ color: TEAL }}>
+              AI Employment Exam
+            </div>
+            <h2 className="font-podium text-[clamp(1.8rem,5vw,3rem)] uppercase leading-[0.95] mt-3">Sign in to take it</h2>
+            <p className="text-white/60 text-sm mt-3 max-w-md">
+              The exam issues a real, downloadable credential — so you need an account and your real name first.
+            </p>
+            <AccountGate isLoggedIn={isLoggedIn} user={user} onGoogle={signInWithGoogle} onSaveName={updateName} />
+          </Shell>
+        ))}
 
       {/* ===================== CURRICULUM ===================== */}
       {stage === 'curriculum' && (
@@ -606,7 +622,21 @@ export default function JudgemyntPage() {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4 mt-10">
+          {!ready && (
+            <AccountGate isLoggedIn={isLoggedIn} user={user} onGoogle={signInWithGoogle} onSaveName={updateName} />
+          )}
+
+          {ready && (
+          <>
+          <div className="flex items-center justify-between mt-8 mb-1 text-xs">
+            <span className="text-white/50">
+              Signed in as <span className="text-white">{fullName}</span>
+            </span>
+            <button onClick={() => signOut()} className="text-white/40 hover:text-white">
+              Sign out
+            </button>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4 mt-4">
             {LEVELS.map((lvl) => {
               const earned = levelPassed(lvl.n)
               return (
@@ -638,6 +668,8 @@ export default function JudgemyntPage() {
           >
             <ChevronLeft className="w-4 h-4" /> Back to curriculum
           </button>
+          </>
+          )}
         </Shell>
       )}
 
@@ -645,13 +677,8 @@ export default function JudgemyntPage() {
       {viewDegree && (
         <Diploma
           degree={viewDegree}
-          name={certName}
-          onName={(v) => {
-            setCertName(v)
-            try {
-              localStorage.setItem('judgemynt-name', v)
-            } catch {}
-          }}
+          name={fullName}
+          onDownload={() => downloadDegree(viewDegree, fullName, 'Judgemynt verified degree')}
           onClose={() => setViewDegree(null)}
         />
       )}
@@ -894,12 +921,12 @@ function DegreeCard({
 function Diploma({
   degree,
   name,
-  onName,
+  onDownload,
   onClose,
 }: {
   degree: string
   name: string
-  onName: (v: string) => void
+  onDownload: () => void
   onClose: () => void
 }) {
   const id = 'JM-' + Math.abs(hashStr(degree + (name || 'x'))).toString(36).toUpperCase().slice(0, 8)
@@ -923,12 +950,7 @@ function Diploma({
           <div className="text-[10px] uppercase tracking-[0.3em] text-white/40 mt-1">Certified Judgment · AI Era</div>
 
           <div className="text-white/50 text-xs uppercase tracking-widest mt-8">This certifies that</div>
-          <input
-            value={name}
-            onChange={(e) => onName(e.target.value)}
-            placeholder="Your name"
-            className="w-full text-center bg-transparent border-b border-white/20 focus:border-white/50 outline-none font-podium text-3xl sm:text-4xl uppercase text-white py-2 mt-2 placeholder:text-white/25"
-          />
+          <div className="font-podium text-3xl sm:text-4xl uppercase text-white py-2 mt-2">{name || 'Your Name'}</div>
           <div className="text-white/50 text-xs uppercase tracking-widest mt-6">has earned the degree of</div>
           <div className="font-podium text-2xl sm:text-3xl uppercase mt-2" style={{ color: TEAL }}>
             {degree}
@@ -949,12 +971,153 @@ function Diploma({
             judgemynt — proof you can tell when AI is wrong
           </div>
         </div>
-        <p className="text-center text-white/40 text-xs mt-4">
-          Type your name, then screenshot it. Real version will be verifiable + shareable.
-        </p>
+        <button
+          onClick={onDownload}
+          className="mt-4 w-full rounded-xl py-3 font-semibold text-sm text-[#06121f]"
+          style={{ background: `linear-gradient(110deg, ${TEAL}, ${BLUE})` }}
+        >
+          Download degree (PNG)
+        </button>
       </div>
     </div>
   )
+}
+
+function GoogleMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.8 6.1C12.2 13.3 17.6 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.3-4 6.8-9.9 6.8-17.4z" />
+      <path fill="#FBBC05" d="M10.3 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.8-6.1C.9 16.3 0 20 0 24s.9 7.7 2.5 10.7l7.8-6.1z" />
+      <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.3-5.7c-2 1.4-4.7 2.3-7.9 2.3-6.4 0-11.8-3.8-13.7-9.3l-7.8 6.1C6.4 42.6 14.6 48 24 48z" />
+    </svg>
+  )
+}
+
+function AccountGate({
+  isLoggedIn,
+  user,
+  onGoogle,
+  onSaveName,
+}: {
+  isLoggedIn: boolean
+  user: { user_metadata?: Record<string, string> } | null
+  onGoogle: () => void
+  onSaveName: (first: string, last: string) => Promise<{ error?: string }>
+}) {
+  const m = user?.user_metadata || {}
+  const guessFirst = m.first_name || m.given_name || (m.full_name || m.name || '').split(' ')[0] || ''
+  const guessLast = m.last_name || m.family_name || (m.full_name || m.name || '').split(' ').slice(1).join(' ') || ''
+  const [first, setFirst] = useState(guessFirst)
+  const [last, setLast] = useState(guessLast)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  if (!isLoggedIn) {
+    return (
+      <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center max-w-md mx-auto">
+        <Crown className="w-9 h-9 mx-auto" style={{ color: TEAL }} />
+        <div className="font-podium text-xl uppercase mt-3">Claim your degree</div>
+        <p className="text-white/55 text-sm mt-2">Sign in to earn a verifiable degree with your real name on it.</p>
+        <button
+          onClick={onGoogle}
+          className="mt-5 w-full rounded-xl py-3 font-semibold text-sm bg-white text-[#1f2937] flex items-center justify-center gap-2"
+        >
+          <GoogleMark /> Continue with Google
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] p-8 max-w-md mx-auto">
+      <div className="font-podium text-xl uppercase">Your real name</div>
+      <p className="text-white/55 text-sm mt-1">This goes on your certificate exactly as you type it — use your real first and last name.</p>
+      <div className="grid grid-cols-2 gap-3 mt-5">
+        <input value={first} onChange={(e) => setFirst(e.target.value)} placeholder="First name" className="bg-white/[0.04] border border-white/10 focus:border-white/30 rounded-xl px-3 py-2.5 text-sm outline-none" />
+        <input value={last} onChange={(e) => setLast(e.target.value)} placeholder="Last name" className="bg-white/[0.04] border border-white/10 focus:border-white/30 rounded-xl px-3 py-2.5 text-sm outline-none" />
+      </div>
+      {err && <div className="text-[#ff5470] text-xs mt-2">{err}</div>}
+      <button
+        onClick={async () => {
+          if (first.trim().length < 1 || last.trim().length < 1) {
+            setErr('Enter your first and last name.')
+            return
+          }
+          setSaving(true)
+          setErr('')
+          const r = await onSaveName(first.trim(), last.trim())
+          setSaving(false)
+          if (r?.error) setErr(r.error)
+        }}
+        disabled={saving}
+        className="mt-4 w-full rounded-xl py-3 font-semibold text-sm text-[#06121f] disabled:opacity-60"
+        style={{ background: `linear-gradient(110deg, ${TEAL}, ${BLUE})` }}
+      >
+        {saving ? 'Saving…' : 'Save & continue'}
+      </button>
+    </div>
+  )
+}
+
+function downloadDegree(title: string, name: string, sub: string) {
+  const W = 1200
+  const H = 820
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const x = c.getContext('2d')
+  if (!x) return
+  x.fillStyle = '#06121f'
+  x.fillRect(0, 0, W, H)
+  const g = x.createRadialGradient(W / 2, H * 0.33, 0, W / 2, H * 0.33, W * 0.55)
+  g.addColorStop(0, 'rgba(0,212,170,0.14)')
+  g.addColorStop(1, 'rgba(0,212,170,0)')
+  x.fillStyle = g
+  x.fillRect(0, 0, W, H)
+  x.strokeStyle = 'rgba(0,212,170,0.45)'
+  x.lineWidth = 3
+  x.strokeRect(44, 44, W - 88, H - 88)
+  x.textAlign = 'center'
+  const f = (px: number, w = 400) => `${w} ${px}px Inter, system-ui, sans-serif`
+  x.fillStyle = TEAL
+  x.font = f(30, 700)
+  x.fillText('JUDGEMYNT', W / 2, 150)
+  x.fillStyle = 'rgba(255,255,255,0.45)'
+  x.font = f(15)
+  x.fillText('CERTIFIED JUDGMENT · AI ERA', W / 2, 184)
+  x.fillStyle = 'rgba(255,255,255,0.6)'
+  x.font = f(17)
+  x.fillText('This certifies that', W / 2, 330)
+  x.fillStyle = '#ffffff'
+  x.font = f(66, 900)
+  x.fillText(name || 'Your Name', W / 2, 405)
+  x.fillStyle = 'rgba(255,255,255,0.6)'
+  x.font = f(17)
+  x.fillText('has earned the degree of', W / 2, 470)
+  x.fillStyle = TEAL
+  x.font = f(46, 900)
+  x.fillText(title.toUpperCase(), W / 2, 532)
+  x.fillStyle = 'rgba(255,255,255,0.55)'
+  x.font = f(15)
+  x.fillText(sub, W / 2, 580)
+  const id = 'JM-' + Math.abs(hashStr(name + title)).toString(36).toUpperCase().slice(0, 8)
+  const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  x.fillStyle = 'rgba(255,255,255,0.4)'
+  x.font = f(14)
+  x.fillText(`Issued ${date}      ·      Credential ${id}`, W / 2, 700)
+  x.fillStyle = 'rgba(255,255,255,0.3)'
+  x.font = f(12)
+  x.fillText('judgemynt — proof you can tell when AI is wrong', W / 2, 740)
+  c.toBlob((blob) => {
+    if (!blob) return
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `judgemynt-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`
+    a.click()
+    URL.revokeObjectURL(url)
+  })
 }
 
 function menuItemStyle(open: boolean, i: number): CSSProperties {

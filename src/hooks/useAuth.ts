@@ -41,11 +41,27 @@ export function useAuth() {
     setUser(null)
   }
 
+  const signInWithGoogle = async () => {
+    if (!supabase) return { error: 'Supabase not configured' }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: typeof window !== 'undefined' ? window.location.href : undefined },
+    })
+    return { error: error?.message }
+  }
+
+  const updateName = async (firstName: string, lastName: string) => {
+    if (!supabase) return { error: 'Supabase not configured' }
+    const { data, error } = await supabase.auth.updateUser({ data: { first_name: firstName, last_name: lastName } })
+    if (data?.user) setUser(data.user)
+    return { error: error?.message }
+  }
+
   const getToken = async () => {
     if (!supabase) return null
     const { data } = await supabase.auth.getSession()
     return data.session?.access_token || null
   }
 
-  return { user, loading, signIn, signUp, signOut, getToken, isLoggedIn: !!user }
+  return { user, loading, signIn, signUp, signOut, signInWithGoogle, updateName, getToken, isLoggedIn: !!user }
 }
