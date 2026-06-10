@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { ArrowUpRight, Award, Crown, X, Check, ChevronLeft, Lock, Sparkles } from 'lucide-react'
+import Assessment from './Assessment'
 
 const TEAL = '#00d4aa'
 const BLUE = '#1e90ff'
@@ -145,7 +146,7 @@ function band(score: number): { label: string; color: string } {
 }
 
 export default function JudgemyntPage() {
-  const [stage, setStage] = useState<'hero' | 'curriculum' | 'challenge' | 'result' | 'certs'>('hero')
+  const [stage, setStage] = useState<'hero' | 'curriculum' | 'challenge' | 'result' | 'certs' | 'assess'>('hero')
   const [menuOpen, setMenuOpen] = useState(false)
   const [active, setActive] = useState<Challenge | null>(null)
   const [submission, setSubmission] = useState('')
@@ -225,7 +226,7 @@ export default function JudgemyntPage() {
 
   const navLinks = [
     { label: 'Curriculum', to: 'curriculum' as const },
-    { label: 'The Exam', to: 'curriculum' as const },
+    { label: 'AI Exam', to: 'assess' as const },
     { label: 'Degrees', to: 'certs' as const },
   ]
 
@@ -316,6 +317,12 @@ export default function JudgemyntPage() {
                 Take the exam
                 <ArrowUpRight className="w-4 h-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </button>
+              <button
+                onClick={() => go('assess')}
+                className="flex items-center gap-2 border border-white/30 hover:border-white/60 hover:bg-white/10 px-5 sm:px-7 py-3 sm:py-4 text-[11px] sm:text-xs uppercase tracking-widest text-white transition"
+              >
+                AI Employment Exam
+              </button>
               <div className="hidden sm:flex items-center gap-3">
                 <Award className="w-8 h-8 text-white/50" />
                 <div className="text-xs uppercase tracking-wider text-white/60 leading-tight">
@@ -376,6 +383,8 @@ export default function JudgemyntPage() {
           </div>
         </section>
       )}
+
+      {stage === 'assess' && <Assessment onExit={() => go('hero')} />}
 
       {/* ===================== CURRICULUM ===================== */}
       {stage === 'curriculum' && (
