@@ -184,6 +184,11 @@ export default function JudgemyntPage() {
   const capstoneEarned = [1, 2, 3].every((n) => levelPassed(n))
 
   function go(s: typeof stage) {
+    // Judgemynt requires an account — any action while signed out triggers Google sign-in.
+    if (!isLoggedIn && s !== 'hero') {
+      signInWithGoogle()
+      return
+    }
     setMenuOpen(false)
     setStage(s)
     if (typeof window !== 'undefined') window.scrollTo(0, 0)
