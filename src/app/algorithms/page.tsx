@@ -40,10 +40,33 @@ const BBG_TICKS: [string, string, string, boolean][] = [
   ['CL1', '78.40', '+0.95%', true], ['EURUSD', '1.0842', '-0.11%', false], ['VIX', '13.21', '-3.40%', false],
 ]
 function TickerTape() {
+  const [ticks, setTicks] = useState<[string, string, string, boolean][]>(BBG_TICKS)
+  useEffect(() => {
+    let alive = true
+    const load = () =>
+      fetch('/api/market')
+        .then((r) => r.json())
+        .then((d: { quotes?: { symbol: string; price: number; changePercent: number }[] }) => {
+          if (!alive || !d.quotes?.length) return
+          setTicks(
+            d.quotes.map(
+              (q) =>
+                [q.symbol, Number(q.price).toFixed(2), (q.changePercent >= 0 ? '+' : '') + Number(q.changePercent).toFixed(2) + '%', q.changePercent >= 0] as [string, string, string, boolean]
+            )
+          )
+        })
+        .catch(() => {})
+    load()
+    const id = setInterval(load, 30000)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [])
   return (
     <div style={{ background: '#000', borderBottom: '1px solid #141414', overflow: 'hidden', fontFamily: 'ui-monospace,monospace' }}>
       <div style={{ display: 'flex', gap: 28, whiteSpace: 'nowrap', padding: '5px 0', width: 'max-content', animation: 'bbg-mq 44s linear infinite' }}>
-        {[...BBG_TICKS, ...BBG_TICKS, ...BBG_TICKS].map((t, i) => (
+        {[...ticks, ...ticks, ...ticks].map((t, i) => (
           <span key={i} style={{ fontSize: 12 }}>
             <span style={{ color: '#cfc79a', fontWeight: 700 }}>{t[0]}</span>{' '}
             <span style={{ color: '#9a9a9a' }}>{t[1]}</span>{' '}

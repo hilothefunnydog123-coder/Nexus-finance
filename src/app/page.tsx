@@ -223,6 +223,31 @@ export default function Home() {
   const [menu, setMenu] = useState(false)
   const [sel, setSel] = useState<string | null>(null)
   const chosen = PRODUCTS.find((p) => p.id === sel)
+  const [ticks, setTicks] = useState(TICKERS)
+  useEffect(() => {
+    let alive = true
+    const load = () =>
+      fetch('/api/market')
+        .then((r) => r.json())
+        .then((d: { quotes?: { symbol: string; price: number; changePercent: number }[] }) => {
+          if (!alive || !d.quotes?.length) return
+          setTicks(
+            d.quotes.map((q) => ({
+              s: q.symbol,
+              p: Number(q.price).toFixed(2),
+              up: q.changePercent >= 0,
+              c: Math.abs(Number(q.changePercent)).toFixed(2) + '%',
+            }))
+          )
+        })
+        .catch(() => {})
+    load()
+    const id = setInterval(load, 30000)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [])
 
   return (
     <div className="relative min-h-screen overflow-x-hidden font-sans text-[#16161f] antialiased" style={{ background: 'linear-gradient(155deg,#f1ecff 0%,#fdeef7 38%,#eaf3ff 70%,#eafff4 100%)' }}>
@@ -330,7 +355,7 @@ export default function Home() {
       {/* ---------- live ticker ---------- */}
       <div className="fixed top-[58px] inset-x-0 z-20 overflow-hidden border-y border-black/[0.07] bg-white/50 backdrop-blur">
         <div className="flex gap-8 py-2 whitespace-nowrap" style={{ animation: 'mq 42s linear infinite', width: 'max-content' }}>
-          {[...TICKERS, ...TICKERS, ...TICKERS].map((t, i) => (
+          {[...ticks, ...ticks, ...ticks].map((t, i) => (
             <span key={i} className="inline-flex items-center gap-2 font-mono text-[12.5px]">
               <span className="font-semibold text-[#16161f]">{t.s}</span>
               <span className="text-[#7a7a84]">{t.p}</span>
