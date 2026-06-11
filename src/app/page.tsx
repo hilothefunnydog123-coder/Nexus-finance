@@ -1,426 +1,360 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
-import { YNMark } from '@/components/YNLogo'
-import { Icon } from '@/components/Icons'
+import { ArrowUpRight, Check, Sparkles, LineChart, GraduationCap, Bot, Menu, X, ArrowRight } from 'lucide-react'
 import SiteFooter from '@/components/SiteFooter'
-import LiveTrackStat from '@/components/LiveTrackStat'
 
-const ThreeScene = dynamic(() => import('@/components/ThreeScene'), { ssr: false })
-const CinematicIntro = dynamic(() => import('@/components/CinematicIntro'), { ssr: false })
+/* ---------- typewriter ---------- */
+function useTypewriter(text: string, speed = 45, startDelay = 500) {
+  const [displayed, setDisplayed] = useState('')
+  const [done, setDone] = useState(false)
+  useEffect(() => {
+    let i = 0
+    let interval: ReturnType<typeof setInterval> | undefined
+    const t = setTimeout(() => {
+      interval = setInterval(() => {
+        i++
+        setDisplayed(text.slice(0, i))
+        if (i >= text.length) {
+          if (interval) clearInterval(interval)
+          setDone(true)
+        }
+      }, speed)
+    }, startDelay)
+    return () => {
+      clearTimeout(t)
+      if (interval) clearInterval(interval)
+    }
+  }, [text, speed, startDelay])
+  return { displayed, done }
+}
 
-// ── Scroll reveal ───────────────────────────────────────────────────────────
-function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+/* ---------- scroll reveal ---------- */
+function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; delay?: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const [shown, setShown] = useState(false)
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const o = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) { setShown(true); o.disconnect() }
-    }, { threshold: 0.15 })
+    const o = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setShown(true)
+          o.disconnect()
+        }
+      },
+      { threshold: 0.18 }
+    )
     o.observe(el)
     return () => o.disconnect()
   }, [])
   return (
-    <div ref={ref} style={{
-      opacity: shown ? 1 : 0,
-      transform: shown ? 'translateY(0)' : 'translateY(28px)',
-      transition: `opacity .7s cubic-bezier(.16,1,.3,1) ${delay}ms, transform .7s cubic-bezier(.16,1,.3,1) ${delay}ms`,
-    }}>{children}</div>
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: shown ? 1 : 0,
+        transform: shown ? 'translateY(0)' : 'translateY(28px)',
+        transition: `opacity .9s cubic-bezier(.16,1,.3,1) ${delay}ms, transform .9s cubic-bezier(.16,1,.3,1) ${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
   )
 }
 
+const ACCENT = 'linear-gradient(110deg,#6366f1,#a855f7,#ec4899)'
+
 const NAV = [
-  { label: 'Analyzer',     href: '/ai-stocks' },
-  { label: 'Stocks',       href: '/stock' },
-  { label: 'Courses',      href: '/courses' },
-  { label: 'Algorithms',   href: '/algorithms' },
-  { label: 'Track Record', href: '/performance' },
+  { label: 'Analyzer', href: '/ai-stocks' },
+  { label: 'Courses', href: '/courses' },
+  { label: 'Algorithms', href: '/algorithms' },
+  { label: 'Company', href: '/company' },
 ]
 
-// The three pillars — the only thing the landing really sells
-const PILLARS = [
-  { tag: '01 · ANALYZE', icon: 'analyze', href: '/ai-stocks', clr: '#00d4aa', title: 'AI Stock Analyzer', body: 'Type any ticker, get a full institutional read in ~15 seconds — rating, bull & bear targets, conviction, an options payoff diagram and key levels. 3 free, no card.', cta: 'Analyze a stock' },
-  { tag: '02 · LEARN', icon: 'learn', href: '/courses', clr: '#1e90ff', title: 'Courses from 9 pros', body: 'Real strategy from world-class traders for $0.99 a course. Watch the method, then practice it instantly on live charts.', cta: 'Browse courses' },
-  { tag: '03 · AUTOMATE', icon: 'automate', href: '/algorithms', clr: '#22c55e', title: 'Algorithms', body: 'The strategies the courses teach — turned into prop-grade bots with backtests, trailing exits and webhook autotrade. The course teaches it; the algo runs it for you.', cta: 'Get the algos' },
-]
-
-const TRUST = [
-  { icon: 'pulse', clr: '#00d4aa', title: 'A public, verified track record', body: 'Every AI call is logged the moment it’s made — entry price, timestamp, live P/L. We don’t delete the losers. Judge the AI on its record, not our marketing.', href: '/performance', cta: 'View the track record' },
-  { icon: 'shield', clr: '#1e90ff', title: 'Bank-grade security', body: 'Payments run through Stripe — we never see or store your card. Your data is encrypted in transit and at rest, and you can cancel in one click.' },
-  { icon: 'trending', clr: '#a855f7', title: 'Real institutional data', body: 'Live quotes, fundamentals and filings via Finnhub — the same class of market data professional desks rely on. No made-up numbers.' },
-]
-
-const FAQ: [string, string][] = [
-  ['Is YN Finance free?', 'Yes — start free with 3 full AI analyses every month, no card required. Unlimited access is $19/month, and individual courses are just $0.99.'],
-  ['Is this financial advice?', 'No. YN Finance is an education and research platform. Our AI and tools give you data, structure and reasoning — every trading decision stays yours.'],
-  ['How accurate is the AI?', 'We don’t ask you to take our word for it. Every call the AI makes is logged publicly with the entry price and timestamp, and scored on live prices. See the full track record.'],
-  ['Where does the data come from?', 'Real-time quotes, fundamentals, analyst ratings and company news come from Finnhub. Charts are live. Nothing on the analyzer is mocked or hard-coded.'],
-  ['Can I cancel anytime?', 'Yes — one click, no emails, no retention games. Billing is handled securely by Stripe.'],
-  ['Who is behind YN Finance?', 'It’s built by Neil Gilani (CEO) and Yannai Richter (CTO) — the full platform, AI pipeline and data infrastructure, plus nine world-class instructors.'],
-]
-
-// Everything else still exists — just demoted to a quiet strip + the footer
-const OTHERS = [
-  { name: 'Intelligence Suite', href: '/intelligence', clr: '#ff2d78' },
-  { name: 'Agent Network',      href: '/agents',       clr: '#a855f7' },
-  { name: 'Daily Intel',        href: '/daily',        clr: '#f59e0b' },
-  { name: 'Research',           href: '/research',     clr: '#eab308' },
-  { name: 'YN Arena',           href: '/arena',        clr: '#ec4899' },
-  { name: 'Track Record',       href: '/performance',  clr: '#00d4aa' },
+const PRODUCTS = [
+  {
+    id: 'analyze',
+    label: 'Analyze a stock',
+    title: 'AI Stock Analyzer',
+    blurb: 'A 15-second institutional read on any ticker — verdict, conviction, payoff math, in plain English.',
+    href: '/ai-stocks',
+    cta: 'Open the Analyzer',
+    icon: LineChart,
+    grad: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+  },
+  {
+    id: 'learn',
+    label: 'Learn to trade',
+    title: 'Courses',
+    blurb: 'Short, practical courses in the styles of pro traders — with quizzes and a built-in simulator.',
+    href: '/courses',
+    cta: 'Browse courses',
+    icon: GraduationCap,
+    grad: 'linear-gradient(135deg,#ec4899,#f97316)',
+  },
+  {
+    id: 'automate',
+    label: 'Automate a strategy',
+    title: 'Algorithms',
+    blurb: 'Prop-grade strategies with ready-to-run code and one-click TradingView alerts.',
+    href: '/algorithms',
+    cta: 'Get the algorithms',
+    icon: Bot,
+    grad: 'linear-gradient(135deg,#10b981,#06b6d4)',
+  },
 ]
 
 export default function Home() {
-  const [scrolled, setScrolled] = useState(false)
-  const [scrollY, setScrollY] = useState(0)
-  useEffect(() => {
-    const onScroll = () => { setScrollY(window.scrollY); setScrolled(window.scrollY > 24) }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  const { displayed, done } = useTypewriter('Trade with an\nunfair advantage.', 48, 450)
+  const [menu, setMenu] = useState(false)
+  const [sel, setSel] = useState<string | null>(null)
+  const chosen = PRODUCTS.find((p) => p.id === sel)
 
   return (
-    <div style={{ background: '#040a12', color: '#dce8f0', fontFamily: '"Inter",system-ui,sans-serif', overflowX: 'hidden', position: 'relative' }}>
+    <div className="relative min-h-screen overflow-x-hidden font-sans text-[#16161f] antialiased" style={{ background: '#fcfcfe' }}>
       <style>{`
-        @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes pulseDot { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:1;transform:scale(1.25)} }
-        @keyframes floatY { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-        @keyframes shimmer { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
-        * { box-sizing:border-box; margin:0; padding:0 }
-        ::selection { background:#00d4aa33 }
-        html { scroll-behavior:smooth }
-        a { -webkit-tap-highlight-color:transparent }
-        .grad { background:linear-gradient(110deg,#00d4aa,#1e90ff,#a855f7,#00d4aa); background-size:200% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation:shimmer 6s linear infinite }
-        .btn-primary { transition:transform .2s ease, box-shadow .2s ease }
-        .btn-primary:hover { transform:translateY(-2px); box-shadow:0 0 70px #00d4aa55, 0 18px 40px rgba(0,0,0,.5) }
-        .card { transition:transform .25s cubic-bezier(.16,1,.3,1), border-color .25s, background .25s }
-        .card:hover { transform:translateY(-4px) }
-        .navlink { transition:color .2s }
-        .navlink:hover { color:#dce8f0 !important }
-        .trust-badge:hover { background:rgba(0,212,170,.14)!important; border-color:rgba(0,212,170,.45)!important }
-        details.faq summary { list-style:none; cursor:pointer }
-        details.faq summary::-webkit-details-marker { display:none }
-        details.faq[open] .faq-plus { transform:rotate(45deg) }
-        @media(max-width:980px){ .grid4{grid-template-columns:repeat(2,1fr)!important} }
-        @media(max-width:760px){ .hide-sm{display:none!important} .grid3{grid-template-columns:1fr!important} .grid2{grid-template-columns:1fr!important} .weap{grid-template-columns:1fr 1fr!important} }
-        @media(max-width:560px){ .grid4{grid-template-columns:1fr!important} .weap{grid-template-columns:1fr!important} .foot{grid-template-columns:1fr 1fr!important} }
+        @keyframes ln-up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+        .ln-up{opacity:0;animation:ln-up .95s cubic-bezier(.16,1,.3,1) forwards}
+        .ln-d1{animation-delay:.1s}.ln-d2{animation-delay:.24s}.ln-d3{animation-delay:.38s}.ln-d4{animation-delay:.52s}.ln-d5{animation-delay:.66s}
+        @keyframes ln-blob{0%{transform:translate(0,0) scale(1)}33%{transform:translate(5%,-4%) scale(1.12)}66%{transform:translate(-4%,5%) scale(.93)}100%{transform:translate(0,0) scale(1)}}
+        @keyframes ln-blink{0%,100%{opacity:1}50%{opacity:0}}
+        .ln-cursor{animation:ln-blink 1s step-end infinite}
+        @keyframes ln-pop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.18)}100%{transform:scale(1);opacity:1}}
+        .ln-pop{animation:ln-pop .34s cubic-bezier(.34,1.56,.64,1) both}
+        @keyframes ln-pan{to{background-position:200% center}}
+        .ln-grad{background:linear-gradient(110deg,#6366f1,#a855f7,#ec4899,#6366f1);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:ln-pan 6s linear infinite}
       `}</style>
 
-      {/* CINEMATIC BACKGROUND */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, opacity: 0.9 }}>
-        <ThreeScene scrollY={scrollY} />
+      {/* ---------- soft animated colour mesh ---------- */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        {[
+          { c: '#a5b4fc', x: '-8%', y: '-10%', s: 620, d: 22, delay: 0 },
+          { c: '#f0abfc', x: '58%', y: '-14%', s: 680, d: 26, delay: 2 },
+          { c: '#fbcfe8', x: '30%', y: '40%', s: 720, d: 30, delay: 1 },
+          { c: '#a7f3d0', x: '-6%', y: '52%', s: 560, d: 24, delay: 3 },
+          { c: '#bae6fd', x: '66%', y: '50%', s: 600, d: 28, delay: 1.5 },
+          { c: '#fed7aa', x: '40%', y: '8%', s: 480, d: 20, delay: 2.5 },
+        ].map((b, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: b.x,
+              top: b.y,
+              width: b.s,
+              height: b.s,
+              background: `radial-gradient(circle at center, ${b.c} 0%, transparent 68%)`,
+              filter: 'blur(60px)',
+              opacity: 0.55,
+              animation: `ln-blob ${b.d}s ease-in-out ${b.delay}s infinite`,
+            }}
+          />
+        ))}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(252,252,254,.55), rgba(252,252,254,.2) 40%, rgba(252,252,254,.75))' }} />
       </div>
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
-        background: 'radial-gradient(circle at 50% 0%, rgba(0,212,170,.10), transparent 55%), linear-gradient(180deg, rgba(4,10,18,.2), rgba(4,10,18,.85))' }} />
 
-      {/* Cinematic intro montage — plays once, then fades into the Three.js background above */}
-      <CinematicIntro />
-
-      {/* NAV */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, height: 64,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 clamp(16px,4vw,40px)',
-        background: scrolled ? 'rgba(4,10,18,.82)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(16px)' : 'none',
-        borderBottom: scrolled ? '1px solid rgba(255,255,255,.06)' : '1px solid transparent',
-        transition: 'all .3s ease',
-      }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <YNMark size={28} glow />
-          <span style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-.5px' }}>YN Finance</span>
+      {/* ---------- nav ---------- */}
+      <header className="fixed top-0 inset-x-0 z-30 px-5 sm:px-8 py-4 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2.5 select-none">
+          <span className="w-8 h-8 rounded-[10px] flex items-center justify-center text-white font-extrabold text-[13px]" style={{ background: ACCENT, boxShadow: '0 6px 20px rgba(139,92,246,.35)' }}>
+            YN
+          </span>
+          <span className="text-[17px] font-semibold tracking-tight">YN&nbsp;Finance</span>
         </Link>
-        <div className="hide-sm" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          {NAV.map(n => (
-            <Link key={n.href} href={n.href} className="navlink" style={{ fontSize: 13, fontWeight: 600, color: '#6a8497', textDecoration: 'none', whiteSpace: 'nowrap' }}>{n.label}</Link>
+
+        <nav className="hidden md:flex items-center gap-8 text-[15px] text-[#42424f]">
+          {NAV.map((l) => (
+            <Link key={l.label} href={l.href} className="hover:text-[#16161f] transition-colors">
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="hidden md:flex items-center gap-3">
+          <Link href="/ai-stocks" className="text-[15px] text-[#42424f] hover:text-[#16161f] transition-colors">
+            Sign in
+          </Link>
+          <Link
+            href="/app"
+            className="text-[14px] font-medium text-white rounded-full px-5 py-2.5 transition-transform hover:-translate-y-0.5"
+            style={{ background: ACCENT, boxShadow: '0 8px 24px rgba(139,92,246,.3)' }}
+          >
+            Open app
+          </Link>
+        </div>
+
+        <button onClick={() => setMenu(true)} className="md:hidden w-10 h-10 -mr-2 flex items-center justify-center" aria-label="Menu">
+          <Menu className="w-6 h-6" />
+        </button>
+      </header>
+
+      {/* mobile menu */}
+      <div
+        className={`fixed inset-0 z-40 bg-white/90 backdrop-blur-md transition-all duration-300 md:hidden ${menu ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+      >
+        <div className="flex items-center justify-between px-5 py-4">
+          <span className="text-[17px] font-semibold tracking-tight">YN Finance</span>
+          <button onClick={() => setMenu(false)} aria-label="Close" className="w-10 h-10 flex items-center justify-center">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="flex flex-col items-start gap-6 px-7 pt-10">
+          {NAV.map((l) => (
+            <Link key={l.label} href={l.href} onClick={() => setMenu(false)} className="text-3xl font-medium tracking-tight">
+              {l.label}
+            </Link>
+          ))}
+          <Link href="/app" onClick={() => setMenu(false)} className="mt-4 text-base font-medium text-white rounded-full px-6 py-3" style={{ background: ACCENT }}>
+            Open app
+          </Link>
+        </div>
+      </div>
+
+      {/* ---------- hero ---------- */}
+      <main className="relative z-10 max-w-6xl mx-auto px-6 pt-36 pb-24 sm:pt-44">
+        <div className="ln-up ln-d1 inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur border border-black/[0.06] px-3.5 py-1.5 text-[13px] text-[#42424f] mb-8" style={{ boxShadow: '0 4px 16px rgba(99,102,241,.08)' }}>
+          <Sparkles className="w-3.5 h-3.5" style={{ color: '#8b5cf6' }} />
+          AI stock analysis · live for everyone
+        </div>
+
+        <h1 className="text-[clamp(2.6rem,7vw,5.2rem)] font-semibold tracking-[-0.03em] leading-[1.04] whitespace-pre-wrap select-none" style={{ minHeight: '2.2em' }}>
+          {displayed.split('\n').map((line, i) => (
+            <span key={i} className="block">
+              {i === 1 ? <span className="ln-grad">{line}</span> : line}
+            </span>
+          ))}
+          {!done && <span className="inline-block w-[3px] h-[0.95em] align-middle ml-1 ln-cursor" style={{ background: '#16161f' }} />}
+        </h1>
+
+        <p className="ln-up ln-d2 mt-7 max-w-xl text-[17px] sm:text-[19px] leading-relaxed text-[#55555f]">
+          AI-rate any stock in 15 seconds. Learn the strategy from 9 pro traders. Automate it with prop-grade algorithms — all in one place.
+        </p>
+
+        <div className="ln-up ln-d3 mt-9 flex flex-wrap items-center gap-3">
+          <Link
+            href="/ai-stocks"
+            className="group inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-medium text-white transition-transform hover:-translate-y-0.5"
+            style={{ background: ACCENT, boxShadow: '0 12px 30px rgba(139,92,246,.32)' }}
+          >
+            Try the AI Analyzer
+            <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          </Link>
+          <Link
+            href="/courses"
+            className="inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-medium text-[#16161f] bg-white/70 backdrop-blur border border-black/[0.07] hover:bg-white transition-colors"
+          >
+            Browse the courses
+          </Link>
+          <span className="text-[13px] text-[#86868f] ml-1">3 free analyses · $0.99 courses · no card to start</span>
+        </div>
+
+        {/* interactive product picker */}
+        <div className="ln-up ln-d4 mt-16 max-w-2xl">
+          <div className="text-[15px] font-medium text-[#42424f] mb-3">What do you want to do first?</div>
+          <div className="flex flex-wrap gap-2.5">
+            {PRODUCTS.map((p) => {
+              const active = sel === p.id
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setSel(active ? null : p.id)}
+                  className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-medium transition-all duration-200"
+                  style={
+                    active
+                      ? { background: ACCENT, color: '#fff', boxShadow: '0 8px 22px rgba(139,92,246,.3)', transform: 'translateY(-1px)' }
+                      : { background: 'rgba(255,255,255,.7)', color: '#16161f', border: '1px solid rgba(0,0,0,.07)', backdropFilter: 'blur(6px)' }
+                  }
+                >
+                  {active && <Check className="w-4 h-4 ln-pop" />}
+                  {p.label}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="mt-4">
+            {!chosen ? (
+              <div className="text-[13px] italic text-[#a0a0a8]">Pick one to get started.</div>
+            ) : (
+              <div className="flex items-center justify-between gap-4 rounded-2xl bg-white/70 backdrop-blur border border-black/[0.06] px-5 py-4" style={{ boxShadow: '0 10px 30px rgba(99,102,241,.1)' }}>
+                <div className="min-w-0">
+                  <div className="text-[12px] uppercase tracking-wider text-[#9a9aa4]">Let&apos;s go</div>
+                  <div className="text-[15px] font-medium truncate">{chosen.title}</div>
+                </div>
+                <Link
+                  href={chosen.href}
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white"
+                  style={{ background: ACCENT }}
+                >
+                  {chosen.cta}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* ---------- products ---------- */}
+      <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
+        <Reveal>
+          <div className="text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">Analyze · Learn · Automate</div>
+          <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl">
+            One platform for the whole trade — from idea to execution.
+          </h2>
+        </Reveal>
+
+        <div className="grid md:grid-cols-3 gap-5 mt-12">
+          {PRODUCTS.map((p, i) => (
+            <Reveal key={p.id} delay={i * 90}>
+              <Link
+                href={p.href}
+                className="group block h-full rounded-3xl bg-white/65 backdrop-blur border border-black/[0.06] p-7 transition-all duration-300 hover:-translate-y-1.5"
+                style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 22px 50px rgba(99,102,241,.16)')}
+                onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 10px 40px rgba(80,80,120,.06)')}
+              >
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white mb-6" style={{ background: p.grad }}>
+                  <p.icon className="w-6 h-6" />
+                </div>
+                <div className="text-[19px] font-semibold tracking-tight mb-2">{p.title}</div>
+                <p className="text-[15px] leading-relaxed text-[#5e5e68]">{p.blurb}</p>
+                <div className="mt-6 inline-flex items-center gap-1.5 text-[14px] font-medium" style={{ color: '#7c3aed' }}>
+                  {p.cta}
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </div>
+              </Link>
+            </Reveal>
           ))}
         </div>
-        <Link href="/courses" style={{
-          background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', color: '#06121f', padding: '9px 20px',
-          borderRadius: 10, fontSize: 13, fontWeight: 800, textDecoration: 'none', letterSpacing: '-.2px',
-        }}>Get started</Link>
-      </nav>
 
-      {/* HERO */}
-      <section style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '110px 24px 80px' }}>
-        <div style={{ animation: 'fadeUp .8s ease both' }}>
-          <Link href="/performance" className="trust-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: 'rgba(0,212,170,.08)', border: '1px solid rgba(0,212,170,.25)', borderRadius: 100, padding: '7px 18px', marginBottom: 30, fontSize: 11, color: '#00d4aa', fontWeight: 700, letterSpacing: '1px', textDecoration: 'none', transition: 'all .2s' }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#00d4aa', animation: 'pulseDot 1.6s infinite' }} />
-            EVERY AI CALL IS PUBLIC · SEE THE TRACK RECORD →
-          </Link>
-
-          <h1 style={{ fontSize: 'clamp(42px,7.5vw,88px)', fontWeight: 900, lineHeight: 0.96, letterSpacing: '-3px', color: '#eaf4fa', maxWidth: 920, margin: '0 auto' }}>
-            Outtrade<br /><span className="grad">Wall Street.</span>
-          </h1>
-
-          <p style={{ fontSize: 'clamp(15px,1.8vw,19px)', color: '#6a8497', lineHeight: 1.7, maxWidth: 580, margin: '26px auto 0' }}>
-            {"AI-rate any stock in 15 seconds. Learn the strategy from 9 pro traders. Automate it with prop-grade algorithms. The edge Wall Street gatekeeps — free to start."}
-          </p>
-
-          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginTop: 40 }}>
-            <Link href="/ai-stocks" className="btn-primary" style={{ background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', color: '#06121f', padding: '16px 38px', borderRadius: 14, fontSize: 15.5, fontWeight: 900, textDecoration: 'none', boxShadow: '0 0 50px #00d4aa40, 0 16px 36px rgba(0,0,0,.45)', letterSpacing: '-.3px' }}>
-              Try the AI Analyzer
-            </Link>
-            <Link href="/courses" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', color: '#dce8f0', padding: '16px 34px', borderRadius: 14, fontSize: 15, fontWeight: 700, textDecoration: 'none', backdropFilter: 'blur(10px)' }}>
-              Browse the courses
-            </Link>
-          </div>
-
-          <div style={{ display: 'flex', gap: 'clamp(20px,5vw,52px)', justifyContent: 'center', flexWrap: 'wrap', marginTop: 56 }}>
-            {([['9', 'AI tools'], ['9', 'Live agents'], ['$0.99', 'Courses'], ['$0', 'To start']] as [string, string][]).map(([n, l]) => (
-              <div key={l}>
-                <div style={{ fontSize: 'clamp(22px,3vw,30px)', fontWeight: 900, color: '#eaf4fa', fontFamily: '"SF Mono",ui-monospace,monospace', letterSpacing: '-1px' }}>{n}</div>
-                <div style={{ fontSize: 10.5, color: '#3a5566', letterSpacing: '1.5px', marginTop: 4, fontWeight: 600 }}>{l.toUpperCase()}</div>
+        {/* trust strip */}
+        <Reveal delay={120}>
+          <div className="mt-16 rounded-3xl bg-white/65 backdrop-blur border border-black/[0.06] px-8 py-10 flex flex-wrap items-center justify-between gap-8" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
+            {[
+              ['Public', 'AI track record — every call logged'],
+              ['Real', 'institutional data, not mock numbers'],
+              ['$0', 'to start — 3 free AI analyses'],
+            ].map(([a, b]) => (
+              <div key={b} className="min-w-[160px]">
+                <div className="text-[28px] font-semibold tracking-tight ln-grad inline-block">{a}</div>
+                <div className="text-[14px] text-[#6a6a74] mt-1">{b}</div>
               </div>
             ))}
-          </div>
-        </div>
-
-        <div style={{ position: 'absolute', bottom: 28, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, opacity: 0.35 }}>
-          <span style={{ fontSize: 9, letterSpacing: '3px', color: '#6a90a8' }}>SCROLL</span>
-          <div style={{ width: 1, height: 40, background: 'linear-gradient(#00d4aa,transparent)', animation: 'floatY 2s ease-in-out infinite' }} />
-        </div>
-      </section>
-
-      {/* TRUST STRIP */}
-      <section style={{ position: 'relative', zIndex: 1, borderTop: '1px solid rgba(255,255,255,.05)', borderBottom: '1px solid rgba(255,255,255,.05)', background: 'rgba(4,8,14,.6)', backdropFilter: 'blur(8px)' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(16px,4vw,44px)', flexWrap: 'wrap', fontSize: 12, color: '#3a5566', fontWeight: 600, letterSpacing: '.5px' }}>
-          <span>Live data · <span style={{ color: '#6a8497' }}>Finnhub</span></span>
-          <span style={{ opacity: .3 }}>|</span>
-          <span>Payments · <span style={{ color: '#6a8497' }}>Stripe</span></span>
-          <span style={{ opacity: .3 }}>|</span>
-          <span>AI · <span style={{ color: '#6a8497' }}>Google Gemini</span></span>
-          <span style={{ opacity: .3 }}>|</span>
-          <span><span style={{ color: '#6a8497' }}>9</span> world-class instructors</span>
-        </div>
-      </section>
-
-      {/* THE THREE PILLARS — analyze · learn · automate */}
-      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(70px,10vw,120px) 24px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: 52 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 14 }}>HOW IT WORKS</div>
-              <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', maxWidth: 680, margin: '0 auto', lineHeight: 1.08 }}>
-                Analyze it. Learn it. Automate it.
-              </h2>
-              <p style={{ fontSize: 15, color: '#6a8497', maxWidth: 520, margin: '16px auto 0', lineHeight: 1.7 }}>
-                {"One loop: the AI finds the trade, the courses teach the strategy, and the algorithms run it for you."}
-              </p>
-            </div>
-          </Reveal>
-
-          <div className="grid3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }}>
-            {PILLARS.map((p, i) => (
-              <Reveal key={p.tag} delay={i * 90}>
-                <Link href={p.href} className="card" style={{
-                  display: 'flex', flexDirection: 'column', height: '100%', textDecoration: 'none', borderRadius: 18, padding: '30px 26px',
-                  background: `${p.clr}0a`, border: `1px solid ${p.clr}28`, backdropFilter: 'blur(12px)',
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = `${p.clr}66`; e.currentTarget.style.background = `${p.clr}14` }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = `${p.clr}28`; e.currentTarget.style.background = `${p.clr}0a` }}
-                >
-                  <div style={{ width: 48, height: 48, borderRadius: 13, marginBottom: 20, background: `${p.clr}16`, border: `1px solid ${p.clr}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: p.clr }}>
-                    <Icon name={p.icon} size={24} />
-                  </div>
-                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: p.clr, marginBottom: 12 }}>{p.tag}</div>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: '#eaf4fa', lineHeight: 1.15, marginBottom: 12, letterSpacing: '-.5px' }}>{p.title}</div>
-                  <div style={{ fontSize: 14, color: '#8aa0b2', lineHeight: 1.7, marginBottom: 22, flex: 1 }}>{p.body}</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: p.clr }}>{p.cta} →</div>
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ALSO INSIDE — everything else, demoted to a quiet strip */}
-      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(40px,6vw,70px) 24px' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-          <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: 28 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '3px', color: '#5a7488', marginBottom: 8 }}>ALSO INSIDE YN FINANCE</div>
-              <p style={{ fontSize: 13.5, color: '#6a8497', maxWidth: 480, margin: '0 auto', lineHeight: 1.6 }}>
-                {"Pro tools that come with the platform — the intelligence suite, live agent network and more."}
-              </p>
-            </div>
-          </Reveal>
-          <Reveal delay={80}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10 }}>
-              {OTHERS.map(o => (
-                <Link key={o.href} href={o.href} className="card" style={{
-                  textDecoration: 'none', borderRadius: 100, padding: '10px 20px',
-                  background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.08)',
-                  display: 'flex', alignItems: 'center', gap: 9, fontSize: 13.5, fontWeight: 700, color: '#8aa0b2',
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = `${o.clr}55`; e.currentTarget.style.color = '#dce8f0' }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.08)'; e.currentTarget.style.color = '#8aa0b2' }}>
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: o.clr, boxShadow: `0 0 8px ${o.clr}` }} />
-                  {o.name}
-                </Link>
-              ))}
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* TRUST — honest credibility, no fabricated social proof */}
-      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(60px,9vw,110px) 24px', background: 'linear-gradient(180deg, transparent, rgba(4,12,20,.55), transparent)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: 50 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 14 }}>WHY TRUST IT</div>
-              <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', maxWidth: 640, margin: '0 auto 22px', lineHeight: 1.08 }}>
-                Built to be checked, not just believed.
-              </h2>
-              <LiveTrackStat />
-            </div>
-          </Reveal>
-          <div className="grid3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }}>
-            {TRUST.map((t, i) => (
-              <Reveal key={t.title} delay={i * 90}>
-                <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 18, padding: '28px 26px', background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.08)', backdropFilter: 'blur(12px)' }}>
-                  <div style={{ width: 46, height: 46, borderRadius: 12, marginBottom: 18, background: `${t.clr}16`, border: `1px solid ${t.clr}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.clr }}>
-                    <Icon name={t.icon} size={23} />
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#eaf4fa', marginBottom: 10, letterSpacing: '-.3px' }}>{t.title}</div>
-                  <div style={{ fontSize: 13.5, color: '#6a8497', lineHeight: 1.7, flex: 1 }}>{t.body}</div>
-                  {t.href && <Link href={t.href} style={{ marginTop: 16, fontSize: 13, fontWeight: 800, color: t.clr, textDecoration: 'none' }}>{t.cta} →</Link>}
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* COURSES */}
-      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(60px,9vw,110px) 24px' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-          <Reveal>
-            <div style={{ borderRadius: 24, padding: 'clamp(36px,6vw,64px)', background: 'linear-gradient(135deg, rgba(0,212,170,.08), rgba(30,144,255,.05))', border: '1px solid rgba(0,212,170,.18)', textAlign: 'center', backdropFilter: 'blur(12px)' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 16 }}>LEARN FROM THE BEST · $0.99</div>
-              <h2 style={{ fontSize: 'clamp(26px,3.6vw,42px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', lineHeight: 1.1, maxWidth: 620, margin: '0 auto' }}>
-                Courses from 9 world-class traders — priced like a coffee.
-              </h2>
-              <p style={{ fontSize: 15, color: '#6a8497', maxWidth: 520, margin: '18px auto 0', lineHeight: 1.7 }}>
-                {"Watch the strategy, then practice it instantly on real charts. No subscription — every course is just $0.99."}
-              </p>
-              <Link href="/courses" className="btn-primary" style={{ display: 'inline-block', marginTop: 32, background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', color: '#06121f', padding: '15px 36px', borderRadius: 13, fontSize: 15, fontWeight: 900, textDecoration: 'none', boxShadow: '0 0 40px #00d4aa35' }}>
-                Browse the catalog →
-              </Link>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* MANIFESTO — the soul */}
-      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(72px,11vw,140px) 24px' }}>
-        <div style={{ maxWidth: 860, margin: '0 auto', textAlign: 'center' }}>
-          <Reveal>
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 24 }}>WHY WE EXIST</div>
-            <h2 style={{ fontSize: 'clamp(26px,4.2vw,46px)', fontWeight: 900, letterSpacing: '-1.5px', lineHeight: 1.16, color: '#eaf4fa' }}>
-              The financial system rewards the few who understand it — and quietly drains everyone else.{' '}
-              <span className="grad">We&apos;re here to flip that.</span>
-            </h2>
-          </Reveal>
-          <Reveal delay={120}>
-            <p style={{ fontSize: 'clamp(15px,1.9vw,19px)', color: '#8aa0b2', lineHeight: 1.85, margin: '28px auto 0', maxWidth: 720 }}>
-              {"The wealthy have smart money — private bankers, advisors, every dollar working. Everyone else's money just sits there, drained by fees, interest, inflation and fine print nobody explained. We don't think that's fair. And for the first time, AI means it doesn't have to be."}
-            </p>
-            <p style={{ fontSize: 'clamp(15px,1.9vw,19px)', color: '#8aa0b2', lineHeight: 1.85, margin: '20px auto 0', maxWidth: 720 }}>
-              {"So we're building the money brain we wish we'd had — one with no products to push, that proves every call it makes, and treats your first $1,000 with the seriousness Wall Street saves for its biggest clients."}
-            </p>
-          </Reveal>
-          <Reveal delay={240}>
-            <div style={{ marginTop: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic', fontSize: 'clamp(20px,3vw,26px)', color: '#eaf4fa', letterSpacing: '.3px' }}>Neil Gilani &amp; Yannai Richter</div>
-              <div style={{ fontSize: 11.5, letterSpacing: '2px', color: '#3a5566', textTransform: 'uppercase' }}>Founders, YN Finance</div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* FOUNDERS */}
-      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(60px,9vw,110px) 24px' }}>
-        <div style={{ maxWidth: 980, margin: '0 auto' }}>
-          <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: 40 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#f59e0b', marginBottom: 14 }}>THE FOUNDERS</div>
-              <h2 style={{ fontSize: 'clamp(26px,3.6vw,40px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', lineHeight: 1.1 }}>Two builders, one mission.</h2>
-            </div>
-          </Reveal>
-          <div className="grid2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-            {([
-              { in: 'NG', name: 'Neil Gilani', role: 'CEO & Co-Founder', clr: '#00d4aa', g: 'linear-gradient(135deg,#00d4aa,#3b8eea)', tc: '#06121f',
-                body: 'Built the entire platform — the AI pipeline, real-time data infrastructure and every trading tool behind it.' },
-              { in: 'YR', name: 'Yannai Richter', role: 'CTO & Co-Founder', clr: '#1e90ff', g: 'linear-gradient(135deg,#1e90ff,#a855f7)', tc: '#fff',
-                body: 'Co-architected the tech stack and personally recruited nine world-class instructors onto the platform.' },
-            ] as { in: string; name: string; role: string; clr: string; g: string; tc: string; body: string }[]).map((f, i) => (
-              <Reveal key={f.in} delay={i * 90}>
-                <div style={{ height: '100%', borderRadius: 18, padding: '28px 26px', background: `${f.clr}0a`, border: `1px solid ${f.clr}28`, backdropFilter: 'blur(12px)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: 13, background: f.g, color: f.tc, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, boxShadow: `0 0 22px ${f.clr}44` }}>{f.in}</div>
-                    <div>
-                      <div style={{ fontSize: 17, fontWeight: 800, color: '#eaf4fa' }}>{f.name}</div>
-                      <div style={{ fontSize: 11, color: f.clr, fontFamily: 'monospace', letterSpacing: '.08em', marginTop: 3 }}>{f.role.toUpperCase()}</div>
-                    </div>
-                  </div>
-                  <p style={{ fontSize: 14, color: '#6a8497', lineHeight: 1.7 }}>{f.body}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(50px,8vw,90px) 24px' }}>
-        <div style={{ maxWidth: 760, margin: '0 auto' }}>
-          <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: 40 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', color: '#00d4aa', marginBottom: 14 }}>QUESTIONS</div>
-              <h2 style={{ fontSize: 'clamp(26px,3.6vw,40px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#eaf4fa', lineHeight: 1.1 }}>Everything you’d want to ask.</h2>
-            </div>
-          </Reveal>
-          <Reveal delay={80}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {FAQ.map(([q, ans]) => (
-                <details key={q} className="faq card" style={{ borderRadius: 14, background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.08)', padding: '0 22px' }}>
-                  <summary style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '20px 0', fontSize: 15.5, fontWeight: 700, color: '#eaf4fa' }}>
-                    {q}
-                    <span className="faq-plus" style={{ flexShrink: 0, fontSize: 20, color: '#00d4aa', transition: 'transform .25s', lineHeight: 1 }}>+</span>
-                  </summary>
-                  <p style={{ fontSize: 14, color: '#6a8497', lineHeight: 1.75, padding: '0 0 22px', maxWidth: 640 }}>{ans}</p>
-                </details>
-              ))}
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* FINAL CTA */}
-      <section style={{ position: 'relative', zIndex: 1, padding: 'clamp(80px,12vw,150px) 24px', textAlign: 'center' }}>
-        <Reveal>
-          <h2 style={{ fontSize: 'clamp(32px,5.5vw,68px)', fontWeight: 900, letterSpacing: '-2.5px', color: '#eaf4fa', lineHeight: 1, maxWidth: 760, margin: '0 auto' }}>
-            Stop trading <span className="grad">blind.</span>
-          </h2>
-          <p style={{ fontSize: 'clamp(15px,1.8vw,18px)', color: '#6a8497', maxWidth: 480, margin: '22px auto 0', lineHeight: 1.7 }}>
-            {"Start free in under a minute. No card, no terminal to learn — just the edge."}
-          </p>
-          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginTop: 38 }}>
-            <Link href="/ai-stocks" className="btn-primary" style={{ background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', color: '#06121f', padding: '17px 44px', borderRadius: 14, fontSize: 16, fontWeight: 900, textDecoration: 'none', boxShadow: '0 0 60px #00d4aa50' }}>
-              Start for free →
-            </Link>
-            <Link href="/courses" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', color: '#dce8f0', padding: '17px 38px', borderRadius: 14, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
-              Browse courses
+            <Link
+              href="/app"
+              className="inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-medium text-white transition-transform hover:-translate-y-0.5"
+              style={{ background: ACCENT, boxShadow: '0 12px 30px rgba(139,92,246,.3)' }}
+            >
+              Open the app
+              <ArrowUpRight className="w-4 h-4" />
             </Link>
           </div>
         </Reveal>
       </section>
 
-      {/* FOOTER */}
       <SiteFooter />
     </div>
   )
