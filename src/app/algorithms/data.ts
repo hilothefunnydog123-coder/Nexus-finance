@@ -2062,40 +2062,45 @@ bullBreak = orReady and inWin and ta.crossover(close, orHigh)
 bearBreak = orReady and inWin and ta.crossunder(close, orLow)
 
 flat = strategy.position_size == 0
-canTrade = flat and tradesToday < maxTrades
-
-// signal only AFTER the retest of the broken level — entry exactly at that level
 vwLongOK  = not useVWAP or close > vw
 vwShortOK = not useVWAP or close < vw
-fireLong  = canTrade and orReady and inWin and armedLong  and low  <= orHigh and vwLongOK  and allowLong
-fireShort = canTrade and orReady and inWin and armedShort and high >= orLow  and vwShortOK and allowShort
 
-if fireLong
-    tradesToday += 1
-    armedLong := false
-    strategy.entry("Long", strategy.long, limit=orHigh)
-    strategy.exit("xL", "Long", stop=orHigh - riskPts, limit=orHigh + targetPts)
-
-if fireShort
-    tradesToday += 1
-    armedShort := false
-    strategy.entry("Short", strategy.short, limit=orLow)
-    strategy.exit("xS", "Short", stop=orLow + riskPts, limit=orLow - targetPts)
-
-// arm the retest AFTER the entry check, so the break candle never enters on its own bar
-if bullBreak
+// the moment of a clean (VWAP-confirmed) break, arm a LIMIT entry resting ON the level it broke
+if bullBreak and vwLongOK and allowLong and tradesToday < maxTrades
     armedLong  := true
     armedShort := false
-if bearBreak
+if bearBreak and vwShortOK and allowShort and tradesToday < maxTrades
     armedShort := true
     armedLong  := false
+
+// rest the limit on the exact OR line until price retests it — fills at the line, never in premium
+if flat and armedLong and inWin and tradesToday < maxTrades
+    strategy.entry("Long", strategy.long, limit=orHigh)
+else if strategy.position_size <= 0
+    strategy.cancel("Long")
+if flat and armedShort and inWin and tradesToday < maxTrades
+    strategy.entry("Short", strategy.short, limit=orLow)
+else if strategy.position_size >= 0
+    strategy.cancel("Short")
+
+if strategy.position_size > 0
+    strategy.exit("xL", "Long", stop=orHigh - riskPts, limit=orHigh + targetPts)
+if strategy.position_size < 0
+    strategy.exit("xS", "Short", stop=orLow + riskPts, limit=orLow - targetPts)
+
+// count one trade when the limit fills, then disarm
+if strategy.position_size != 0 and strategy.position_size[1] == 0
+    tradesToday += 1
+    armedLong  := false
+    armedShort := false
 
 plot(orReady ? orHigh : na, "OR High", color.new(color.teal,0), 1, plot.style_linebr)
 plot(orReady ? orLow  : na, "OR Low",  color.new(color.red,0),  1, plot.style_linebr)
 plot(vw, "VWAP", color.new(color.orange,0), 1)
+plot((armedLong and flat) ? orHigh : (armedShort and flat) ? orLow : strategy.position_size != 0 ? strategy.position_avg_price : na, "Entry @ broken level", color.new(color.yellow,0), 2, plot.style_linebr)
 bgcolor(inOR ? color.new(color.blue, 92) : na, title="Opening Range")
-plotshape(fireLong,  "Long",  shape.triangleup,   location.belowbar, color.new(color.lime,0), size=size.small)
-plotshape(fireShort, "Short", shape.triangledown, location.abovebar, color.new(color.red,0),  size=size.small)`,
+plotshape(bullBreak and armedLong,  "Break Long",  shape.triangleup,   location.belowbar, color.new(color.lime,0), size=size.small)
+plotshape(bearBreak and armedShort, "Break Short", shape.triangledown, location.abovebar, color.new(color.red,0),  size=size.small)`,
       mt5: `// YN Finance — Opening Range Breakout EA (MetaTrader 5)
 // Marks the first OR_Minutes after the open, trades the breakout with an
 // ATR stop + fixed R target. Map OpenHour/OpenMin to 09:30 ET in broker time.
@@ -2221,65 +2226,63 @@ allowShort = dirMode != "Longs only"
 bullBreak = orReady and inWin and ta.crossover(close, orHigh)
 bearBreak = orReady and inWin and ta.crossunder(close, orLow)
 
-// ===== TRADE STATE =====
+// ===== TRADE STATE (a limit rests on the broken level) =====
+var float pendEntry = na
+var float pendSL = na
+var float pendTP = na
 var bool  tOpen = false
 var int   tDir  = 0
-var float tEntry = na
-var float tSL = na
-var float tTP = na
 var int   wins = 0
 var int   losses = 0
 
-canTrade  = not tOpen and tradesToday < maxTrades and barstate.isconfirmed
+if newDay
+    tOpen := false
+
 vwLongOK  = not useVWAP or close > vw
 vwShortOK = not useVWAP or close < vw
 
-// signal only AFTER the retest of the broken level — entry exactly at the level
-fireLong  = canTrade and orReady and inWin and armedLong  and low  <= orHigh and vwLongOK  and allowLong
-fireShort = canTrade and orReady and inWin and armedShort and high >= orLow  and vwShortOK and allowShort
+// FILL FIRST — price retests and touches the resting limit at the EXACT line (uses prior-bar arm state)
+fillLong  = armedLong  and not tOpen and low  <= pendEntry
+fillShort = armedShort and not tOpen and high >= pendEntry
+if fillLong or fillShort
+    tOpen := true
+    tDir := fillLong ? 1 : -1
+    tradesToday += 1
+    armedLong := false
+    armedShort := false
 
+// SIGNAL AT THE BREAK — place a LIMIT entry resting ON the level it broke (entry = the exact OR line)
+canSignal = not armedLong and not armedShort and not tOpen and tradesToday < maxTrades and barstate.isconfirmed
+sigLong  = canSignal and bullBreak and vwLongOK  and allowLong
+sigShort = canSignal and bearBreak and vwShortOK and allowShort
 sym = brokerSym == "" ? syminfo.ticker : brokerSym
 
-if fireLong
-    tradesToday += 1
-    tOpen := true
-    tDir := 1
-    tEntry := orHigh
-    tSL := orHigh - riskPts
-    tTP := orHigh + targetPts
-    armedLong := false
-    label.new(bar_index, orHigh, "LONG @ " + str.tostring(orHigh,"#.##") + "\\nBreak + retest of OR high, above VWAP\\nTP " + str.tostring(tTP,"#.##") + "   SL " + str.tostring(tSL,"#.##"), style=label.style_label_up, color=color.new(#22c55e,10), textcolor=color.white, size=size.small)
-    jL  = '{"symbol":"' + sym + '","side":"long","action":"buy","qty":' + str.tostring(contracts) + ',"entry":' + str.tostring(orHigh,"#.##") + ',"sl":' + str.tostring(tSL,"#.##") + ',"tp":' + str.tostring(tTP,"#.##") + '}'
-    tpJ = '{"ticker":"' + sym + '","action":"buy","quantity":' + str.tostring(contracts) + ',"stopLoss":{"type":"stop","stopPrice":' + str.tostring(tSL,"#.##") + '},"takeProfit":{"limitPrice":' + str.tostring(tTP,"#.##") + '}}'
-    rT  = "ORB LONG | " + sym + " " + timeframe.period + " | Entry " + str.tostring(orHigh,"#.##") + " | SL " + str.tostring(tSL,"#.##") + " | TP " + str.tostring(tTP,"#.##")
+if sigLong
+    armedLong := true
+    pendEntry := orHigh
+    pendSL := orHigh - riskPts
+    pendTP := orHigh + targetPts
+    label.new(bar_index, orHigh, "LONG LIMIT @ " + str.tostring(orHigh,"#.##") + "\\nOR high broke + closed, above VWAP\\nTP " + str.tostring(pendTP,"#.##") + "   SL " + str.tostring(pendSL,"#.##"), style=label.style_label_up, color=color.new(#22c55e,10), textcolor=color.white, size=size.small)
+    jL  = '{"symbol":"' + sym + '","side":"long","action":"buy","type":"limit","qty":' + str.tostring(contracts) + ',"limit":' + str.tostring(orHigh,"#.##") + ',"sl":' + str.tostring(pendSL,"#.##") + ',"tp":' + str.tostring(pendTP,"#.##") + '}'
+    tpJ = '{"ticker":"' + sym + '","action":"buy","quantity":' + str.tostring(contracts) + ',"type":"limit","limitPrice":' + str.tostring(orHigh,"#.##") + ',"stopLoss":{"type":"stop","stopPrice":' + str.tostring(pendSL,"#.##") + '},"takeProfit":{"limitPrice":' + str.tostring(pendTP,"#.##") + '}}'
+    rT  = "ORB LONG | " + sym + " " + timeframe.period + " | LIMIT @ " + str.tostring(orHigh,"#.##") + " | SL " + str.tostring(pendSL,"#.##") + " | TP " + str.tostring(pendTP,"#.##")
     alert(alertFmt == "JSON - TradersPost" ? tpJ : alertFmt == "JSON - Generic" ? jL : rT, alert.freq_once_per_bar_close)
 
-if fireShort
-    tradesToday += 1
-    tOpen := true
-    tDir := -1
-    tEntry := orLow
-    tSL := orLow + riskPts
-    tTP := orLow - targetPts
-    armedShort := false
-    label.new(bar_index, orLow, "SHORT @ " + str.tostring(orLow,"#.##") + "\\nBreak + retest of OR low, below VWAP\\nTP " + str.tostring(tTP,"#.##") + "   SL " + str.tostring(tSL,"#.##"), style=label.style_label_down, color=color.new(color.red,10), textcolor=color.white, size=size.small)
-    jS  = '{"symbol":"' + sym + '","side":"short","action":"sell","qty":' + str.tostring(contracts) + ',"entry":' + str.tostring(orLow,"#.##") + ',"sl":' + str.tostring(tSL,"#.##") + ',"tp":' + str.tostring(tTP,"#.##") + '}'
-    tpJ = '{"ticker":"' + sym + '","action":"sell","quantity":' + str.tostring(contracts) + ',"stopLoss":{"type":"stop","stopPrice":' + str.tostring(tSL,"#.##") + '},"takeProfit":{"limitPrice":' + str.tostring(tTP,"#.##") + '}}'
-    rT  = "ORB SHORT | " + sym + " " + timeframe.period + " | Entry " + str.tostring(orLow,"#.##") + " | SL " + str.tostring(tSL,"#.##") + " | TP " + str.tostring(tTP,"#.##")
+if sigShort
+    armedShort := true
+    pendEntry := orLow
+    pendSL := orLow + riskPts
+    pendTP := orLow - targetPts
+    label.new(bar_index, orLow, "SHORT LIMIT @ " + str.tostring(orLow,"#.##") + "\\nOR low broke + closed, below VWAP\\nTP " + str.tostring(pendTP,"#.##") + "   SL " + str.tostring(pendSL,"#.##"), style=label.style_label_down, color=color.new(color.red,10), textcolor=color.white, size=size.small)
+    jS  = '{"symbol":"' + sym + '","side":"short","action":"sell","type":"limit","qty":' + str.tostring(contracts) + ',"limit":' + str.tostring(orLow,"#.##") + ',"sl":' + str.tostring(pendSL,"#.##") + ',"tp":' + str.tostring(pendTP,"#.##") + '}'
+    tpJ = '{"ticker":"' + sym + '","action":"sell","quantity":' + str.tostring(contracts) + ',"type":"limit","limitPrice":' + str.tostring(orLow,"#.##") + ',"stopLoss":{"type":"stop","stopPrice":' + str.tostring(pendSL,"#.##") + '},"takeProfit":{"limitPrice":' + str.tostring(pendTP,"#.##") + '}}'
+    rT  = "ORB SHORT | " + sym + " " + timeframe.period + " | LIMIT @ " + str.tostring(orLow,"#.##") + " | SL " + str.tostring(pendSL,"#.##") + " | TP " + str.tostring(pendTP,"#.##")
     alert(alertFmt == "JSON - TradersPost" ? tpJ : alertFmt == "JSON - Generic" ? jS : rT, alert.freq_once_per_bar_close)
 
-// arm the retest AFTER the entry check, so the break candle never enters on its own bar
-if bullBreak
-    armedLong  := true
-    armedShort := false
-if bearBreak
-    armedShort := true
-    armedLong  := false
-
-// ===== OUTCOME (fixed 50 / 50) =====
+// ===== OUTCOME (fixed 50 / 50 from the filled level) =====
 if tOpen
-    hitTP = tDir == 1 ? high >= tTP : low <= tTP
-    hitSL = tDir == 1 ? low <= tSL : high >= tSL
+    hitTP = tDir == 1 ? high >= pendTP : low <= pendTP
+    hitSL = tDir == 1 ? low <= pendSL : high >= pendSL
     if hitTP or hitSL
         won = hitTP and not hitSL
         tOpen := false
@@ -2294,11 +2297,14 @@ if tOpen
 plot(orReady ? orHigh : na, "OR High", color.new(color.teal,0), 1, plot.style_linebr)
 plot(orReady ? orLow  : na, "OR Low",  color.new(color.red,0),  1, plot.style_linebr)
 plot(vw, "VWAP", color.new(color.orange,0), 1)
-plot(tOpen ? tTP : na, "Target", color.new(color.green,30), 1, plot.style_linebr)
-plot(tOpen ? tSL : na, "Stop",   color.new(color.red,30),   1, plot.style_linebr)
+plot((armedLong or armedShort or tOpen) ? pendEntry : na, "Entry @ broken level", color.new(color.yellow,0), 2, plot.style_linebr)
+plot(tOpen ? pendTP : na, "Target", color.new(color.green,30), 1, plot.style_linebr)
+plot(tOpen ? pendSL : na, "Stop",   color.new(color.red,30),   1, plot.style_linebr)
 bgcolor(inOR ? color.new(color.blue, 92) : na, title="Opening Range")
-plotshape(fireLong,  "LONG",  shape.triangleup,   location.belowbar, color.new(color.lime,0), size=size.normal)
-plotshape(fireShort, "SHORT", shape.triangledown, location.abovebar, color.new(color.red,0),  size=size.normal)
+plotshape(sigLong,  "Break Long",  shape.triangleup,   location.belowbar, color.new(color.lime,0), size=size.small)
+plotshape(sigShort, "Break Short", shape.triangledown, location.abovebar, color.new(color.red,0),  size=size.small)
+plotshape(fillLong,  "Fill Long",  shape.circle, location.belowbar, color.new(color.aqua,0), size=size.tiny)
+plotshape(fillShort, "Fill Short", shape.circle, location.abovebar, color.new(color.aqua,0), size=size.tiny)
 
 // ===== DASHBOARD + BACKTEST STATS =====
 if showDash and barstate.islast
