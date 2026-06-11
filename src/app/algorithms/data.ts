@@ -2174,7 +2174,7 @@ void OnTick() {
     signals: {
       tradingview: `//@version=5
 indicator("YN Finance — ORB Break & Retest | 50/50 VWAP Signals", overlay=true,
-  max_bars_back=1000, max_lines_count=500, max_labels_count=500)
+  max_bars_back=1000, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
 
 // ① OPENING RANGE
 orSess = input.session("0930-0945", "Opening range — first 3x 5m candles (ET)", group="① Opening Range")
@@ -2195,6 +2195,8 @@ brokerSym = input.string("", "Broker symbol override (blank = chart)", group="�
 contracts = input.int(1, "Contracts per signal", minval=1, group="④ Alerts / Autotrade")
 
 // ⑤ VISUALS
+showTrade = input.bool(true, "Show trade box (green target / red stop)", group="⑤ Visuals")
+tradeBars = input.int(24, "Trade box width (bars)", group="⑤ Visuals")
 showDash  = input.bool(true, "Show dashboard + stats", group="⑤ Visuals")
 
 tz = "America/New_York"
@@ -2262,6 +2264,10 @@ if sigLong
     pendEntry := orHigh
     pendSL := orHigh - riskPts
     pendTP := orHigh + targetPts
+    if showTrade
+        bxR = bar_index + tradeBars
+        box.new(bar_index, pendTP, bxR, orHigh, border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
+        box.new(bar_index, orHigh, bxR, pendSL, border_color=color.new(color.red,55), bgcolor=color.new(color.red,85))
     label.new(bar_index, orHigh, "LONG LIMIT @ " + str.tostring(orHigh,"#.##") + "\\nOR high broke + closed, above VWAP\\nTP " + str.tostring(pendTP,"#.##") + "   SL " + str.tostring(pendSL,"#.##"), style=label.style_label_up, color=color.new(#22c55e,10), textcolor=color.white, size=size.small)
     jL  = '{"symbol":"' + sym + '","side":"long","action":"buy","type":"limit","qty":' + str.tostring(contracts) + ',"limit":' + str.tostring(orHigh,"#.##") + ',"sl":' + str.tostring(pendSL,"#.##") + ',"tp":' + str.tostring(pendTP,"#.##") + '}'
     tpJ = '{"ticker":"' + sym + '","action":"buy","quantity":' + str.tostring(contracts) + ',"type":"limit","limitPrice":' + str.tostring(orHigh,"#.##") + ',"stopLoss":{"type":"stop","stopPrice":' + str.tostring(pendSL,"#.##") + '},"takeProfit":{"limitPrice":' + str.tostring(pendTP,"#.##") + '}}'
@@ -2273,6 +2279,10 @@ if sigShort
     pendEntry := orLow
     pendSL := orLow + riskPts
     pendTP := orLow - targetPts
+    if showTrade
+        bxR = bar_index + tradeBars
+        box.new(bar_index, orLow, bxR, pendTP, border_color=color.new(color.green,55), bgcolor=color.new(color.green,82))
+        box.new(bar_index, pendSL, bxR, orLow, border_color=color.new(color.red,55), bgcolor=color.new(color.red,85))
     label.new(bar_index, orLow, "SHORT LIMIT @ " + str.tostring(orLow,"#.##") + "\\nOR low broke + closed, below VWAP\\nTP " + str.tostring(pendTP,"#.##") + "   SL " + str.tostring(pendSL,"#.##"), style=label.style_label_down, color=color.new(color.red,10), textcolor=color.white, size=size.small)
     jS  = '{"symbol":"' + sym + '","side":"short","action":"sell","type":"limit","qty":' + str.tostring(contracts) + ',"limit":' + str.tostring(orLow,"#.##") + ',"sl":' + str.tostring(pendSL,"#.##") + ',"tp":' + str.tostring(pendTP,"#.##") + '}'
     tpJ = '{"ticker":"' + sym + '","action":"sell","quantity":' + str.tostring(contracts) + ',"type":"limit","limitPrice":' + str.tostring(orLow,"#.##") + ',"stopLoss":{"type":"stop","stopPrice":' + str.tostring(pendSL,"#.##") + '},"takeProfit":{"limitPrice":' + str.tostring(pendTP,"#.##") + '}}'
