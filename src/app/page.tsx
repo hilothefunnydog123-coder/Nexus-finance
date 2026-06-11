@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { ArrowUpRight, Check, Sparkles, LineChart, GraduationCap, Bot, Menu, X, ArrowRight } from 'lucide-react'
 import SiteFooter from '@/components/SiteFooter'
@@ -64,6 +64,105 @@ function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; 
   )
 }
 
+/* ---------- magnet (mouse-following dynamic) ---------- */
+function Magnet({ children, padding = 130, strength = 3 }: { children: ReactNode; padding?: number; strength?: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ x: 0, y: 0 })
+  const [active, setActive] = useState(false)
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      const el = ref.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      const cx = r.left + r.width / 2
+      const cy = r.top + r.height / 2
+      const dx = e.clientX - cx
+      const dy = e.clientY - cy
+      if (Math.abs(dx) < r.width / 2 + padding && Math.abs(dy) < r.height / 2 + padding) {
+        setActive(true)
+        setPos({ x: dx / strength, y: dy / strength })
+      } else {
+        setActive(false)
+        setPos({ x: 0, y: 0 })
+      }
+    }
+    window.addEventListener('mousemove', onMove)
+    return () => window.removeEventListener('mousemove', onMove)
+  }, [padding, strength])
+  return (
+    <div
+      ref={ref}
+      style={{
+        transform: `translate3d(${pos.x}px, ${pos.y}px, 0)`,
+        transition: active ? 'transform 0.3s ease-out' : 'transform 0.6s ease-in-out',
+        willChange: 'transform',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+/* ---------- soft animated candlesticks ---------- */
+function Candles() {
+  const W = 320
+  const H = 250
+  const candles = [
+    { up: true, wickT: 160, wickB: 225, top: 175, bot: 215 },
+    { up: false, wickT: 130, wickB: 195, top: 145, bot: 180 },
+    { up: true, wickT: 100, wickB: 170, top: 115, bot: 158 },
+    { up: true, wickT: 70, wickB: 140, top: 84, bot: 128 },
+    { up: false, wickT: 88, wickB: 145, top: 100, bot: 132 },
+    { up: true, wickT: 50, wickB: 118, top: 63, bot: 105 },
+    { up: false, wickT: 62, wickB: 108, top: 72, bot: 98 },
+    { up: true, wickT: 22, wickB: 92, top: 34, bot: 80 },
+  ]
+  const n = candles.length
+  const slot = W / n
+  const bodyW = slot * 0.5
+  const up = '#34d399'
+  const upGlow = 'rgba(52,211,153,.5)'
+  const dn = '#fb7185'
+  const dnGlow = 'rgba(251,113,133,.5)'
+  return (
+    <div style={{ position: 'relative', width: W, height: H, animation: 'cs-float 7s ease-in-out infinite' }}>
+      <div
+        style={{
+          position: 'absolute',
+          inset: -40,
+          background: 'radial-gradient(circle at 60% 55%, rgba(52,211,153,.18), rgba(251,113,133,.14) 42%, transparent 72%)',
+          filter: 'blur(22px)',
+        }}
+      />
+      {candles.map((c, i) => {
+        const x = i * slot + slot / 2
+        const col = c.up ? up : dn
+        const glow = c.up ? upGlow : dnGlow
+        return (
+          <Fragment key={i}>
+            <div style={{ position: 'absolute', left: x - 1, top: c.wickT, width: 2, height: c.wickB - c.wickT, background: col, borderRadius: 2, opacity: 0.6 }} />
+            <div
+              style={{
+                position: 'absolute',
+                left: x - bodyW / 2,
+                top: c.top,
+                width: bodyW,
+                height: c.bot - c.top,
+                background: col,
+                borderRadius: 6,
+                boxShadow: `0 0 22px ${glow}`,
+                transformOrigin: 'center bottom',
+                animation: `cs-breathe ${3 + i * 0.12}s ease-in-out ${i * 0.15}s infinite`,
+              }}
+            />
+          </Fragment>
+        )
+      })}
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 12, height: 1, background: 'linear-gradient(90deg,transparent,rgba(124,58,237,.28),transparent)' }} />
+    </div>
+  )
+}
+
 const ACCENT = 'linear-gradient(110deg,#6366f1,#a855f7,#ec4899)'
 
 const NAV = [
@@ -113,7 +212,7 @@ export default function Home() {
   const chosen = PRODUCTS.find((p) => p.id === sel)
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden font-sans text-[#16161f] antialiased" style={{ background: '#fcfcfe' }}>
+    <div className="relative min-h-screen overflow-x-hidden font-sans text-[#16161f] antialiased" style={{ background: 'linear-gradient(155deg,#f1ecff 0%,#fdeef7 38%,#eaf3ff 70%,#eafff4 100%)' }}>
       <style>{`
         @keyframes ln-up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
         .ln-up{opacity:0;animation:ln-up .95s cubic-bezier(.16,1,.3,1) forwards}
@@ -125,6 +224,8 @@ export default function Home() {
         .ln-pop{animation:ln-pop .34s cubic-bezier(.34,1.56,.64,1) both}
         @keyframes ln-pan{to{background-position:200% center}}
         .ln-grad{background:linear-gradient(110deg,#6366f1,#a855f7,#ec4899,#6366f1);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:ln-pan 6s linear infinite}
+        @keyframes cs-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+        @keyframes cs-breathe{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.07)}}
       `}</style>
 
       {/* ---------- soft animated colour mesh ---------- */}
@@ -146,13 +247,13 @@ export default function Home() {
               width: b.s,
               height: b.s,
               background: `radial-gradient(circle at center, ${b.c} 0%, transparent 68%)`,
-              filter: 'blur(60px)',
-              opacity: 0.55,
+              filter: 'blur(58px)',
+              opacity: 0.78,
               animation: `ln-blob ${b.d}s ease-in-out ${b.delay}s infinite`,
             }}
           />
         ))}
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(252,252,254,.55), rgba(252,252,254,.2) 40%, rgba(252,252,254,.75))' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,.12), transparent 28%, rgba(255,255,255,.4))' }} />
       </div>
 
       {/* ---------- nav ---------- */}
@@ -213,7 +314,8 @@ export default function Home() {
       </div>
 
       {/* ---------- hero ---------- */}
-      <main className="relative z-10 max-w-6xl mx-auto px-6 pt-36 pb-24 sm:pt-44">
+      <main className="relative z-10 max-w-6xl mx-auto px-6 pt-36 pb-24 sm:pt-44 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:items-center">
+        <div>
         <div className="ln-up ln-d1 inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur border border-black/[0.06] px-3.5 py-1.5 text-[13px] text-[#42424f] mb-8" style={{ boxShadow: '0 4px 16px rgba(99,102,241,.08)' }}>
           <Sparkles className="w-3.5 h-3.5" style={{ color: '#8b5cf6' }} />
           AI stock analysis · live for everyone
@@ -294,6 +396,13 @@ export default function Home() {
               </div>
             )}
           </div>
+        </div>
+        </div>
+
+        <div className="ln-up ln-d3 mt-16 lg:mt-0 flex justify-center lg:justify-end">
+          <Magnet padding={150} strength={3}>
+            <Candles />
+          </Magnet>
         </div>
       </main>
 
