@@ -5,6 +5,69 @@ import Link from 'next/link'
 import { YNMark } from '@/components/YNLogo'
 import { ALGORITHMS, type AlgoMode, type Platform } from './data'
 
+// ── Bloomberg-style terminal chrome ───────────────────────────────────────────
+function TerminalClock() {
+  const [t, setT] = useState('')
+  useEffect(() => {
+    const f = () => setT(new Date().toLocaleTimeString('en-US', { hour12: false }) + ' ET')
+    f()
+    const id = setInterval(f, 1000)
+    return () => clearInterval(id)
+  }, [])
+  return <span>{t || '--:--:--'}</span>
+}
+
+function CommandBar() {
+  return (
+    <div style={{ background: '#000', borderBottom: '1px solid #2a2410', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: 14, fontFamily: 'ui-monospace,monospace', fontSize: 12, color: '#ff9e1b', flexWrap: 'wrap' }}>
+      <span style={{ fontWeight: 800, letterSpacing: '.08em' }}>YN&lt;GO&gt;</span>
+      <span style={{ color: '#ffc35c' }}>ALGO</span>
+      <span style={{ color: '#5a5230' }}>·</span>
+      <span style={{ color: '#8a7e50' }}>QUANT DESK</span>
+      <span style={{ width: 7, height: 13, background: '#ff9e1b', display: 'inline-block', animation: 'bbg-blink 1s step-end infinite' }} />
+      <span style={{ marginLeft: 'auto', display: 'flex', gap: 14, alignItems: 'center' }}>
+        <span style={{ color: '#33ff99' }}>● MKT OPEN</span>
+        <span style={{ color: '#ffc35c' }}><TerminalClock /></span>
+      </span>
+    </div>
+  )
+}
+
+const BBG_TICKS: [string, string, string, boolean][] = [
+  ['ES1', '5402.50', '+0.38%', true], ['NQ1', '19180.0', '+0.71%', true], ['SPX', '5398.11', '+0.40%', true],
+  ['NVDA', '131.74', '+2.18%', true], ['AAPL', '214.05', '-0.32%', false], ['TSLA', '248.90', '+1.74%', true],
+  ['BTC', '71420', '-1.12%', false], ['ETH', '3884', '+0.88%', true], ['GC1', '2388.4', '-0.22%', false],
+  ['CL1', '78.40', '+0.95%', true], ['EURUSD', '1.0842', '-0.11%', false], ['VIX', '13.21', '-3.40%', false],
+]
+function TickerTape() {
+  return (
+    <div style={{ background: '#000', borderBottom: '1px solid #141414', overflow: 'hidden', fontFamily: 'ui-monospace,monospace' }}>
+      <div style={{ display: 'flex', gap: 28, whiteSpace: 'nowrap', padding: '5px 0', width: 'max-content', animation: 'bbg-mq 44s linear infinite' }}>
+        {[...BBG_TICKS, ...BBG_TICKS, ...BBG_TICKS].map((t, i) => (
+          <span key={i} style={{ fontSize: 12 }}>
+            <span style={{ color: '#cfc79a', fontWeight: 700 }}>{t[0]}</span>{' '}
+            <span style={{ color: '#9a9a9a' }}>{t[1]}</span>{' '}
+            <span style={{ color: t[3] ? '#33ff99' : '#ff5a5a' }}>{t[2]}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function FunctionKeys() {
+  const keys = [['F1', 'HELP'], ['F2', 'MKT'], ['F3', 'NEWS'], ['F4', 'PORT'], ['F5', 'GRAPH'], ['F6', 'ALERT'], ['F7', 'BUY'], ['F8', 'SELL']]
+  return (
+    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200, background: '#000', borderTop: '1px solid #1a1a1a', display: 'flex', fontFamily: 'ui-monospace,monospace', fontSize: 11 }}>
+      {keys.map(([k, l], i) => (
+        <span key={k} style={{ flex: 1, textAlign: 'center', padding: '6px 4px', borderRight: i < 7 ? '1px solid #141414' : 'none', color: '#7a7a7a' }}>
+          <span style={{ color: '#ff9e1b', fontWeight: 700 }}>{k}</span> {l}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 // ── Copy button ───────────────────────────────────────────────────────────────
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
@@ -125,10 +188,12 @@ export default function AlgorithmsPage() {
   }, [selectedId, platform, algo.auto.ninjatrader])
 
   return (
-    <div style={{ background: '#0b1929', minHeight: '100vh', color: '#e8f4f8', fontFamily: '"Inter",system-ui,sans-serif' }}>
+    <div style={{ background: '#05060a', minHeight: '100vh', color: '#e8f4f8', fontFamily: 'ui-monospace, "JetBrains Mono", Menlo, monospace', paddingBottom: 38 }}>
       <style>{`
         @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
         @keyframes pulse  { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
+        @keyframes bbg-mq { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+        @keyframes bbg-blink { 0%,100%{opacity:1} 50%{opacity:0} }
         * { box-sizing:border-box; margin:0; padding:0 }
         ::selection { background:#00d4aa30 }
         pre::-webkit-scrollbar { width:6px; height:6px }
@@ -138,8 +203,11 @@ export default function AlgorithmsPage() {
         @media(max-width:600px) { .algo-grid{grid-template-columns:1fr!important} .meta-grid{grid-template-columns:1fr!important} }
       `}</style>
 
+      <CommandBar />
+      <TickerTape />
+
       {/* NAV */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(11,25,41,.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,.07)', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(5,6,10,.96)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,.07)', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
             <YNMark size={28} glow />
@@ -344,6 +412,7 @@ export default function AlgorithmsPage() {
           </div>
         </div>
       </div>
+      <FunctionKeys />
     </div>
   )
 }

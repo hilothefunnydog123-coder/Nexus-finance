@@ -67,7 +67,7 @@ export default function CoursesPage() {
     })
 
   return (
-    <div style={{ background: '#040c14', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', color: '#cdd6f4' }}>
+    <div style={{ background: 'radial-gradient(1200px 600px at 12% -8%, rgba(139,92,246,.30), transparent 55%), radial-gradient(1000px 520px at 92% 2%, rgba(236,72,153,.24), transparent 52%), radial-gradient(1100px 700px at 50% 112%, rgba(6,182,212,.22), transparent 55%), #0a0613', backgroundAttachment: 'fixed', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', color: '#e7e2f5' }}>
 
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid #1a2d4a', background: 'rgba(4,12,20,0.95)', backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 50 }}>
@@ -105,7 +105,7 @@ export default function CoursesPage() {
       </div>
 
       {/* Hero */}
-      <div style={{ borderBottom: '1px solid #1a2d4a', background: 'linear-gradient(180deg, #071220 0%, #040c14 100%)', padding: '56px 24px 48px' }}>
+      <div style={{ borderBottom: '1px solid rgba(167,139,250,.18)', background: 'linear-gradient(180deg, rgba(139,92,246,.12), rgba(236,72,153,.05) 60%, transparent)', padding: '56px 24px 48px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 11, background: '#00d4aa20', color: '#00d4aa', padding: '4px 12px', borderRadius: 100, fontWeight: 700, border: '1px solid #00d4aa30' }}>
@@ -117,7 +117,7 @@ export default function CoursesPage() {
           </div>
           <h1 style={{ fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 900, color: '#fff', letterSpacing: -2, lineHeight: 1.05, marginBottom: 16, maxWidth: 700 }}>
             Learn real trading strategies.<br />
-            <span style={{ background: 'linear-gradient(90deg, #00d4aa, #1e90ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <span style={{ background: 'linear-gradient(90deg, #a78bfa, #f472b6, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               Practice it instantly.
             </span>
           </h1>

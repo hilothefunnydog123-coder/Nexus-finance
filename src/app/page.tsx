@@ -165,6 +165,19 @@ function Candles() {
 
 const ACCENT = 'linear-gradient(110deg,#6366f1,#a855f7,#ec4899)'
 
+const TICKERS = [
+  { s: 'SPY', p: '539.18', up: true, c: '0.41%' },
+  { s: 'QQQ', p: '472.30', up: true, c: '0.66%' },
+  { s: 'NVDA', p: '131.74', up: true, c: '2.18%' },
+  { s: 'AAPL', p: '214.05', up: false, c: '0.32%' },
+  { s: 'TSLA', p: '248.90', up: true, c: '1.74%' },
+  { s: 'BTC', p: '71,420', up: false, c: '1.12%' },
+  { s: 'ETH', p: '3,884', up: true, c: '0.88%' },
+  { s: 'ES', p: '5,402.5', up: true, c: '0.38%' },
+  { s: 'NQ', p: '19,180', up: true, c: '0.71%' },
+  { s: 'GC', p: '2,388', up: false, c: '0.22%' },
+]
+
 const NAV = [
   { label: 'Analyzer', href: '/ai-stocks' },
   { label: 'Courses', href: '/courses' },
@@ -226,6 +239,7 @@ export default function Home() {
         .ln-grad{background:linear-gradient(110deg,#6366f1,#a855f7,#ec4899,#6366f1);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:ln-pan 6s linear infinite}
         @keyframes cs-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
         @keyframes cs-breathe{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.07)}}
+        @keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
       `}</style>
 
       {/* ---------- soft animated colour mesh ---------- */}
@@ -310,6 +324,22 @@ export default function Home() {
           <Link href="/app" onClick={() => setMenu(false)} className="mt-4 text-base font-medium text-white rounded-full px-6 py-3" style={{ background: ACCENT }}>
             Open app
           </Link>
+        </div>
+      </div>
+
+      {/* ---------- live ticker ---------- */}
+      <div className="fixed top-[58px] inset-x-0 z-20 overflow-hidden border-y border-black/[0.07] bg-white/50 backdrop-blur">
+        <div className="flex gap-8 py-2 whitespace-nowrap" style={{ animation: 'mq 42s linear infinite', width: 'max-content' }}>
+          {[...TICKERS, ...TICKERS, ...TICKERS].map((t, i) => (
+            <span key={i} className="inline-flex items-center gap-2 font-mono text-[12.5px]">
+              <span className="font-semibold text-[#16161f]">{t.s}</span>
+              <span className="text-[#7a7a84]">{t.p}</span>
+              <span style={{ color: t.up ? '#16a34a' : '#dc2626' }}>
+                {t.up ? '▲' : '▼'}
+                {t.c}
+              </span>
+            </span>
+          ))}
         </div>
       </div>
 
@@ -460,6 +490,49 @@ export default function Home() {
               Open the app
               <ArrowUpRight className="w-4 h-4" />
             </Link>
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ---------- founders ---------- */}
+      <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
+        <Reveal>
+          <div
+            className="rounded-[28px] overflow-hidden border border-black/[0.06]"
+            style={{ background: 'linear-gradient(135deg,rgba(99,102,241,.12),rgba(236,72,153,.09) 55%,rgba(16,185,129,.08))', boxShadow: '0 24px 70px rgba(99,102,241,.14)' }}
+          >
+            <div className="grid md:grid-cols-[1.25fr_1fr]">
+              <div className="p-9 sm:p-12">
+                <div className="text-[13px] uppercase tracking-[0.22em] text-[#8a8a94] mb-3">The founders</div>
+                <h2 className="text-[clamp(1.7rem,3.6vw,2.6rem)] font-semibold tracking-[-0.02em] leading-[1.1]">
+                  Built by two teenagers
+                  <br />
+                  who refused to wait.
+                </h2>
+                <p className="mt-5 text-[16px] leading-relaxed text-[#54545e] max-w-md">
+                  We taught ourselves to code and shipped a real product most adults never will — because we want everyone&apos;s money to be as intelligent as the wealthy&apos;s, not just Wall Street&apos;s.
+                </p>
+                <Link href="/company" className="mt-7 inline-flex items-center gap-1.5 text-[14px] font-medium" style={{ color: '#7c3aed' }}>
+                  Read our story <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+              <div className="p-9 sm:p-12 flex flex-col justify-center gap-5 bg-white/45 backdrop-blur">
+                {[
+                  { i: 'NG', n: 'Neil Gilani', r: 'Co-founder · CEO', g: 'linear-gradient(135deg,#6366f1,#8b5cf6)' },
+                  { i: 'YR', n: 'Yannai Richter', r: 'Co-founder · CTO', g: 'linear-gradient(135deg,#ec4899,#f97316)' },
+                ].map((f) => (
+                  <div key={f.i} className="flex items-center gap-4">
+                    <span className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-[15px]" style={{ background: f.g, boxShadow: '0 8px 22px rgba(139,92,246,.25)' }}>
+                      {f.i}
+                    </span>
+                    <div>
+                      <div className="text-[16px] font-semibold">{f.n}</div>
+                      <div className="text-[13px] text-[#6a6a74]">{f.r}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </Reveal>
       </section>
