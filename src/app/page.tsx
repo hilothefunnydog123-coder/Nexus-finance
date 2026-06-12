@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, Check, Sparkles, LineChart, GraduationCap, Bot, Menu, X, ArrowRight, Brain } from 'lucide-react'
+import { ArrowUpRight, Check, Sparkles, LineChart, GraduationCap, Bot, Menu, X, ArrowRight, Brain, Play } from 'lucide-react'
 import SiteFooter from '@/components/SiteFooter'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -460,6 +460,13 @@ export default function Home() {
           >
             Browse the courses
           </Link>
+          <a
+            href="#demo"
+            className="inline-flex items-center gap-2 rounded-full px-5 py-3.5 text-[15px] font-medium text-[#16161f] hover:bg-black/[0.04] transition-colors"
+          >
+            <Play className="w-4 h-4" style={{ color: '#7c3aed' }} fill="#7c3aed" />
+            Watch the demo
+          </a>
           <span className="text-[13px] text-[#86868f] ml-1">3 free analyses · $0.99 courses · no card to start</span>
         </div>
 
@@ -578,7 +585,7 @@ export default function Home() {
       </section>
 
       {/* ---------- demo video ---------- */}
-      <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
+      <section id="demo" className="relative z-10 max-w-6xl mx-auto px-6 pb-28 scroll-mt-24">
         <Reveal>
           <div className="text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">See it work</div>
           <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl mb-8">
@@ -588,8 +595,9 @@ export default function Home() {
             <div className="relative w-full" style={{ aspectRatio: '1912 / 900', background: '#0f1830' }}>
               <video
                 src="/founder-demo.mp4"
+                poster="/founder-demo-poster.jpg"
                 controls
-                preload="metadata"
+                preload="none"
                 playsInline
                 className="absolute inset-0 w-full h-full"
                 style={{ background: '#0f1830' }}
