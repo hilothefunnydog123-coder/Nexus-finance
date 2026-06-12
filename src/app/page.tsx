@@ -230,10 +230,6 @@ const PRODUCTS = [
   },
 ]
 
-// Paste a Loom/YouTube EMBED url here once the founder demo is recorded.
-// Loom: https://www.loom.com/embed/<id>   ·   YouTube: https://www.youtube.com/embed/<id>
-const DEMO_VIDEO_URL = ''
-
 function fmtNum(n: number) {
   if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k'
   return String(n)
@@ -589,26 +585,17 @@ export default function Home() {
             The whole platform, in 60 seconds.
           </h2>
           <div className="rounded-[28px] overflow-hidden border border-black/[0.06]" style={{ boxShadow: '0 24px 70px rgba(99,102,241,.14)' }}>
-            <div className="relative w-full" style={{ aspectRatio: '16 / 9', background: 'linear-gradient(135deg,#1a1530,#241a3d 55%,#0f1830)' }}>
-              {DEMO_VIDEO_URL ? (
-                <iframe
-                  src={DEMO_VIDEO_URL}
-                  title="YN Finance demo"
-                  allow="autoplay; fullscreen; picture-in-picture"
-                  allowFullScreen
-                  className="absolute inset-0 w-full h-full"
-                />
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ background: ACCENT, boxShadow: '0 12px 30px rgba(139,92,246,.4)' }}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </div>
-                  <div className="text-white text-[18px] font-semibold">Founder demo — dropping this week</div>
-                  <div className="text-white/60 text-[14px] mt-1.5 max-w-sm">A 60-second walkthrough from the two of us, built and recorded by hand.</div>
-                </div>
-              )}
+            <div className="relative w-full" style={{ aspectRatio: '1912 / 900', background: '#0f1830' }}>
+              <video
+                src="/founder-demo.mp4"
+                controls
+                preload="metadata"
+                playsInline
+                className="absolute inset-0 w-full h-full"
+                style={{ background: '#0f1830' }}
+              >
+                Your browser doesn&apos;t support embedded video.
+              </video>
             </div>
           </div>
         </Reveal>
