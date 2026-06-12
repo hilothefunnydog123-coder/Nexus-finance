@@ -230,6 +230,53 @@ const PRODUCTS = [
   },
 ]
 
+// Paste a Loom/YouTube EMBED url here once the founder demo is recorded.
+// Loom: https://www.loom.com/embed/<id>   ·   YouTube: https://www.youtube.com/embed/<id>
+const DEMO_VIDEO_URL = ''
+
+function fmtNum(n: number) {
+  if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k'
+  return String(n)
+}
+
+function StatsStrip() {
+  const [s, setS] = useState<{ users: number | null; signals: number | null } | null>(null)
+  useEffect(() => {
+    fetch('/api/stats')
+      .then((r) => r.json())
+      .then(setS)
+      .catch(() => {})
+  }, [])
+  const cells: [string, string][] = []
+  if (s?.users) cells.push([fmtNum(s.users), 'traders on board'])
+  if (s?.signals) cells.push([fmtNum(s.signals), 'AI signals generated'])
+  cells.push(['9', 'autonomous AI agents'])
+  cells.push(['32', 'instruments tracked live'])
+  cells.push(['9', 'pro-trader courses'])
+  cells.push(['5', 'algorithmic strategies'])
+  const show = cells.slice(0, 4)
+  return (
+    <section className="relative z-10 max-w-6xl mx-auto px-6 pb-12">
+      <Reveal>
+        <div className="rounded-3xl bg-white/65 backdrop-blur border border-black/[0.06] px-6 py-7 sm:px-10" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
+          <div className="flex items-center gap-2 mb-5 text-[12px] uppercase tracking-[0.18em] text-[#8a8a94]">
+            <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
+            Live on ynfinance.org
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-4">
+            {show.map(([v, l]) => (
+              <div key={l}>
+                <div className="text-[clamp(1.7rem,3.4vw,2.4rem)] font-semibold tracking-tight ln-grad inline-block">{v}</div>
+                <div className="text-[13.5px] text-[#5e5e68] mt-1 leading-snug">{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Reveal>
+    </section>
+  )
+}
+
 export default function Home() {
   const { displayed, done } = useTypewriter('Trade with an\nunfair advantage.', 48, 450)
   const { signInWithGoogle } = useAuth()
@@ -474,6 +521,8 @@ export default function Home() {
         </div>
       </main>
 
+      <StatsStrip />
+
       {/* ---------- products ---------- */}
       <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
         <Reveal>
@@ -532,6 +581,39 @@ export default function Home() {
         </Reveal>
       </section>
 
+      {/* ---------- demo video ---------- */}
+      <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
+        <Reveal>
+          <div className="text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">See it work</div>
+          <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl mb-8">
+            The whole platform, in 60 seconds.
+          </h2>
+          <div className="rounded-[28px] overflow-hidden border border-black/[0.06]" style={{ boxShadow: '0 24px 70px rgba(99,102,241,.14)' }}>
+            <div className="relative w-full" style={{ aspectRatio: '16 / 9', background: 'linear-gradient(135deg,#1a1530,#241a3d 55%,#0f1830)' }}>
+              {DEMO_VIDEO_URL ? (
+                <iframe
+                  src={DEMO_VIDEO_URL}
+                  title="YN Finance demo"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ background: ACCENT, boxShadow: '0 12px 30px rgba(139,92,246,.4)' }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                  <div className="text-white text-[18px] font-semibold">Founder demo — dropping this week</div>
+                  <div className="text-white/60 text-[14px] mt-1.5 max-w-sm">A 60-second walkthrough from the two of us, built and recorded by hand.</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Reveal>
+      </section>
+
       {/* ---------- founders ---------- */}
       <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
         <Reveal>
@@ -549,6 +631,9 @@ export default function Home() {
                 </h2>
                 <p className="mt-5 text-[16px] leading-relaxed text-[#54545e] max-w-md">
                   We taught ourselves to code and shipped a real product most adults never will — because we want everyone&apos;s money to be as intelligent as the wealthy&apos;s, not just Wall Street&apos;s.
+                </p>
+                <p className="mt-4 text-[16px] leading-relaxed text-[#54545e] max-w-md">
+                  No team, no funding, no permission. Just the two of us, nights and weekends — shipping to ynfinance.org.
                 </p>
                 <Link href="/company" className="mt-7 inline-flex items-center gap-1.5 text-[14px] font-medium" style={{ color: '#7c3aed' }}>
                   Read our story <ArrowRight className="w-4 h-4" />
