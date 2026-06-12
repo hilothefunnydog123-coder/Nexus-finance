@@ -182,6 +182,7 @@ const TICKERS = [
 const NAV = [
   { label: 'Analyzer', href: '/ai-stocks' },
   { label: 'BrainStock', href: '/brainstock' },
+  { label: 'Beat the AI', href: '/predict' },
   { label: 'Courses', href: '/courses' },
   { label: 'Algorithms', href: '/algorithms' },
   { label: 'Company', href: '/company' },
