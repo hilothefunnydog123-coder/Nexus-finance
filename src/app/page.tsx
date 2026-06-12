@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, Check, Sparkles, LineChart, GraduationCap, Bot, Menu, X, ArrowRight } from 'lucide-react'
+import { ArrowUpRight, Check, Sparkles, LineChart, GraduationCap, Bot, Menu, X, ArrowRight, Brain } from 'lucide-react'
 import SiteFooter from '@/components/SiteFooter'
+import { useAuth } from '@/hooks/useAuth'
 
 /* ---------- typewriter ---------- */
 function useTypewriter(text: string, speed = 45, startDelay = 500) {
@@ -180,6 +181,7 @@ const TICKERS = [
 
 const NAV = [
   { label: 'Analyzer', href: '/ai-stocks' },
+  { label: 'BrainStock', href: '/brainstock' },
   { label: 'Courses', href: '/courses' },
   { label: 'Algorithms', href: '/algorithms' },
   { label: 'Company', href: '/company' },
@@ -216,10 +218,21 @@ const PRODUCTS = [
     icon: Bot,
     grad: 'linear-gradient(135deg,#10b981,#06b6d4)',
   },
+  {
+    id: 'forecast',
+    label: 'Forecast a price',
+    title: 'BrainStock',
+    blurb: 'Our own neural network forecasts short-term price moves — and honestly reports its skill vs. a naive baseline.',
+    href: '/brainstock',
+    cta: 'Run a forecast',
+    icon: Brain,
+    grad: 'linear-gradient(135deg,#06b6d4,#a855f7)',
+  },
 ]
 
 export default function Home() {
   const { displayed, done } = useTypewriter('Trade with an\nunfair advantage.', 48, 450)
+  const { signInWithGoogle } = useAuth()
   const [menu, setMenu] = useState(false)
   const [sel, setSel] = useState<string | null>(null)
   const chosen = PRODUCTS.find((p) => p.id === sel)
@@ -313,11 +326,11 @@ export default function Home() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <Link href="/ai-stocks" className="text-[15px] text-[#42424f] hover:text-[#16161f] transition-colors">
+          <button onClick={() => signInWithGoogle()} className="text-[15px] text-[#42424f] hover:text-[#16161f] transition-colors">
             Sign in
-          </Link>
+          </button>
           <Link
-            href="/app"
+            href="/ai-stocks"
             className="text-[14px] font-medium text-white rounded-full px-5 py-2.5 transition-transform hover:-translate-y-0.5"
             style={{ background: ACCENT, boxShadow: '0 8px 24px rgba(139,92,246,.3)' }}
           >
@@ -346,7 +359,7 @@ export default function Home() {
               {l.label}
             </Link>
           ))}
-          <Link href="/app" onClick={() => setMenu(false)} className="mt-4 text-base font-medium text-white rounded-full px-6 py-3" style={{ background: ACCENT }}>
+          <Link href="/ai-stocks" onClick={() => setMenu(false)} className="mt-4 text-base font-medium text-white rounded-full px-6 py-3" style={{ background: ACCENT }}>
             Open app
           </Link>
         </div>
@@ -470,7 +483,7 @@ export default function Home() {
           </h2>
         </Reveal>
 
-        <div className="grid md:grid-cols-3 gap-5 mt-12">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-12">
           {PRODUCTS.map((p, i) => (
             <Reveal key={p.id} delay={i * 90}>
               <Link
@@ -508,7 +521,7 @@ export default function Home() {
               </div>
             ))}
             <Link
-              href="/app"
+              href="/ai-stocks"
               className="inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-medium text-white transition-transform hover:-translate-y-0.5"
               style={{ background: ACCENT, boxShadow: '0 12px 30px rgba(139,92,246,.3)' }}
             >
