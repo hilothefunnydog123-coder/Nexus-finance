@@ -351,6 +351,48 @@ function DailyBoard() {
   )
 }
 
+function HeroBoard() {
+  const [picks, setPicks] = useState<BoardPick[]>([])
+  useEffect(() => {
+    fetch('/api/daily-picks')
+      .then((r) => r.json())
+      .then((d) => setPicks(d.picks || []))
+      .catch(() => {})
+  }, [])
+  const top = picks.slice(0, 6)
+  return (
+    <div className="w-full max-w-sm rounded-3xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(160deg,#0b1020,#11163a)', boxShadow: '0 30px 70px rgba(40,40,80,.28)' }}>
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
+          <span className="text-[13px] font-semibold text-white tracking-tight">AI Bull Board</span>
+        </div>
+        <span className="text-[11px] text-white/45">today&apos;s top calls</span>
+      </div>
+      {top.length > 0 ? (
+        <div className="divide-y divide-white/[0.06]">
+          {top.map((p) => (
+            <div key={p.ticker} className="flex items-center gap-3 px-5 py-2.5">
+              <span className="text-[11px] text-white/35 w-4 tabular-nums">{p.rank}</span>
+              <span className="text-[14px] font-semibold text-white w-14">{p.ticker}</span>
+              <span className="text-[12px] text-white/45 tabular-nums flex-1">${p.target.toFixed(2)}</span>
+              <span className="text-[13px] font-semibold tabular-nums" style={{ color: '#34d399' }}>▲ {p.pct.toFixed(2)}%</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="px-5 py-8 text-center">
+          <div className="text-[13px] text-white/70 font-medium">Posts every market morning</div>
+          <div className="text-[11px] text-white/40 mt-1">~300 stocks ranked by the AI for the session ahead</div>
+        </div>
+      )}
+      <a href="#board" className="block px-5 py-3 text-[12px] font-medium text-white/70 hover:text-white border-t border-white/10 transition-colors">
+        See all 15 →
+      </a>
+    </div>
+  )
+}
+
 export default function Home() {
   const { displayed, done } = useTypewriter('Trade with an\nunfair advantage.', 48, 450)
   const { signInWithGoogle } = useAuth()
@@ -595,7 +637,8 @@ export default function Home() {
         </div>
         </div>
 
-        <div className="ln-up ln-d3 mt-16 lg:mt-0 flex justify-center lg:justify-end">
+        <div className="ln-up ln-d3 mt-16 lg:mt-0 flex flex-col items-center lg:items-end gap-10">
+          <HeroBoard />
           <Magnet padding={150} strength={3}>
             <Candles />
           </Magnet>
