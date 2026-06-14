@@ -106,9 +106,12 @@ export default function BrainStock() {
     if (t) runForecast(t)
   }
 
-  // Auto-load AAPL on first render so the dashboard has real data immediately.
+  // Auto-load on first render — honor a ?t=TICKER deep-link (from the Bull Board).
   useEffect(() => {
-    runForecast('AAPL')
+    const t = new URLSearchParams(window.location.search).get('t')
+    const sym = t && /^[A-Za-z0-9.\-]{1,8}$/.test(t) ? t.toUpperCase() : 'AAPL'
+    setTicker(sym)
+    runForecast(sym)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

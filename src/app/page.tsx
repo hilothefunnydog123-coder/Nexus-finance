@@ -274,6 +274,83 @@ function StatsStrip() {
   )
 }
 
+type BoardPick = {
+  rank: number
+  ticker: string
+  price: number
+  target: number
+  pct: number
+  target5: number
+  pct5: number
+  dirAcc: number
+  skill: number
+}
+
+function DailyBoard() {
+  const [data, setData] = useState<{ date: string | null; generatedAt: string | null; picks: BoardPick[] } | null>(null)
+  useEffect(() => {
+    fetch('/api/daily-picks')
+      .then((r) => r.json())
+      .then(setData)
+      .catch(() => {})
+  }, [])
+  const picks = data?.picks ?? []
+  return (
+    <section id="board" className="relative z-10 max-w-6xl mx-auto px-6 pb-24 scroll-mt-24">
+      <Reveal>
+        <div className="flex items-center gap-2 text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">
+          <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: '#16a34a', boxShadow: '0 0 8px #16a34a' }} />
+          AI Bull Board
+        </div>
+        <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl">
+          This morning&apos;s top 15 AI bull calls.
+        </h2>
+        <p className="mt-3 text-[16px] text-[#5e5e68] max-w-xl">
+          Every market morning we run ~300 stocks through our BrainStock forecaster and rank the most bullish for the session — with a price target on each. Regenerated before the open.
+          {data?.date && <span className="text-[#9a9aa4]"> · Updated {data.date}</span>}
+        </p>
+      </Reveal>
+
+      {picks.length > 0 ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
+          {picks.map((p, i) => (
+            <Reveal key={p.ticker} delay={i * 40}>
+              <Link
+                href={`/brainstock?t=${p.ticker}`}
+                className="group block h-full rounded-2xl bg-white/65 backdrop-blur border border-black/[0.06] p-5 transition-all duration-300 hover:-translate-y-1"
+                style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[12px] font-semibold text-[#9a9aa4] tabular-nums">#{p.rank}</span>
+                    <span className="text-[18px] font-semibold tracking-tight">{p.ticker}</span>
+                  </div>
+                  <span className="text-[15px] font-semibold tabular-nums" style={{ color: '#16a34a' }}>▲ {p.pct.toFixed(2)}%</span>
+                </div>
+                <div className="mt-3 text-[14px] text-[#5e5e68] tabular-nums">
+                  ${p.price.toFixed(2)} <span className="text-[#b8b8c0]">→</span> <b className="text-[#16161f]">${p.target.toFixed(2)}</b>
+                  <span className="text-[#9a9aa4]"> session target</span>
+                </div>
+                <div className="mt-1 text-[12px] text-[#9a9aa4] tabular-nums">
+                  5-day ${p.target5.toFixed(2)} ({p.pct5 >= 0 ? '+' : ''}{p.pct5.toFixed(1)}%) · {Math.round(p.dirAcc * 100)}% dir. accuracy
+                </div>
+              </Link>
+            </Reveal>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-10 rounded-2xl bg-white/55 backdrop-blur border border-black/[0.06] px-8 py-12 text-center" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
+          <div className="text-[17px] font-semibold text-[#16161f]">The board posts every market morning.</div>
+          <div className="text-[14px] text-[#6a6a74] mt-2">Check back around the open — ~300 stocks get ranked by the AI for the session ahead.</div>
+        </div>
+      )}
+      <p className="mt-6 text-[12px] text-[#9a9aa4] max-w-2xl">
+        Model estimates ranked by predicted next-session move, filtered to names where the model beats a naive baseline in backtest. Not financial advice.
+      </p>
+    </section>
+  )
+}
+
 export default function Home() {
   const { displayed, done } = useTypewriter('Trade with an\nunfair advantage.', 48, 450)
   const { signInWithGoogle } = useAuth()
@@ -526,6 +603,8 @@ export default function Home() {
       </main>
 
       <StatsStrip />
+
+      <DailyBoard />
 
       {/* ---------- products ---------- */}
       <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
