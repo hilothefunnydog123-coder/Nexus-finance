@@ -311,67 +311,77 @@ export default function JudgemyntPage() {
 
           {/* hero content */}
           <div className="relative z-10 flex h-[calc(100vh-90px)] flex-col justify-center px-6 sm:px-10 lg:px-16 max-w-5xl">
-            <div className="jm-fade-up mb-6 lg:mb-8 flex items-center gap-2">
-              <Crown className="w-4 h-4 text-white/70" />
-              <span className="font-inter text-xs sm:text-sm uppercase tracking-[0.3em] text-white/70">
-                The Credential For The AI Era
+            <div
+              className="jm-fade-up mb-6 lg:mb-8 inline-flex w-fit items-center gap-2 rounded-full border px-3.5 py-1.5"
+              style={{ borderColor: `${TEAL}40`, background: `${TEAL}0d` }}
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: TEAL }} />
+                <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: TEAL }} />
+              </span>
+              <span className="font-inter text-[10px] sm:text-xs uppercase tracking-[0.3em] text-white/80">
+                Judgment is the last human edge
               </span>
             </div>
 
-            <h1 className="font-podium uppercase text-white leading-[0.92] tracking-tight">
+            <h1 className="font-podium uppercase text-white leading-[0.9] tracking-tight">
               <span className="jm-fade-up jm-d1 block text-[clamp(2.8rem,8vw,7rem)]">Detect.</span>
               <span className="jm-fade-up jm-d1 block text-[clamp(2.8rem,8vw,7rem)]">Correct.</span>
               <span
                 className="jm-fade-up jm-d1 block text-[clamp(2.8rem,8vw,7rem)]"
-                style={{ color: TEAL }}
+                style={{ background: `linear-gradient(100deg, ${TEAL}, ${BLUE})`, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}
               >
                 Direct.
               </span>
             </h1>
 
-            <p className="jm-fade-up jm-d2 mt-6 lg:mt-8 max-w-md font-inter text-sm sm:text-base leading-relaxed text-white/70">
-              AI can write anything. Judgemynt proves you can tell when it&apos;s{' '}
-              <span className="font-semibold text-white">wrong</span> — and earns you a real degree for it.
+            <p className="jm-fade-up jm-d2 mt-6 lg:mt-8 max-w-lg font-inter text-sm sm:text-base lg:text-lg leading-relaxed text-white/70">
+              AI can write anything. The scarce skill now is knowing when it&apos;s{' '}
+              <span className="font-semibold text-white">wrong</span>. Judgemynt is the exam that proves your
+              AI judgment — and the <span className="font-semibold text-white">credential employers can verify</span>.
             </p>
 
-            <div className="jm-fade-up jm-d3 mt-8 lg:mt-10 flex flex-wrap items-center gap-4 sm:gap-6">
+            <div className="jm-fade-up jm-d3 mt-8 lg:mt-10 flex flex-wrap items-center gap-3 sm:gap-4">
               <button
                 onClick={() => go('curriculum')}
-                className="group flex items-center gap-2 px-5 sm:px-7 py-3 sm:py-4 text-[11px] sm:text-xs uppercase tracking-widest font-semibold text-[#06121f]"
-                style={{ background: TEAL }}
+                className="group flex items-center gap-2 px-5 sm:px-7 py-3.5 sm:py-4 text-[11px] sm:text-xs uppercase tracking-widest font-semibold text-[#06121f] transition hover:brightness-110"
+                style={{ background: `linear-gradient(110deg, ${TEAL}, ${BLUE})`, boxShadow: `0 8px 30px ${TEAL}33` }}
               >
-                Take the exam
+                Take the exam — free
                 <ArrowUpRight className="w-4 h-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </button>
               <button
                 onClick={() => go('assess')}
-                className="flex items-center gap-2 border border-white/30 hover:border-white/60 hover:bg-white/10 px-5 sm:px-7 py-3 sm:py-4 text-[11px] sm:text-xs uppercase tracking-widest text-white transition"
+                className="group flex items-center gap-2 border border-white/30 hover:border-white/60 hover:bg-white/10 px-5 sm:px-7 py-3.5 sm:py-4 text-[11px] sm:text-xs uppercase tracking-widest text-white transition"
               >
                 AI Employment Exam
+                <ArrowUpRight className="w-4 h-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </button>
-              <div className="hidden sm:flex items-center gap-3">
-                <Award className="w-8 h-8 text-white/50" />
-                <div className="text-xs uppercase tracking-wider text-white/60 leading-tight">
-                  AI-Graded
-                  <br />
-                  Judgment Exam
-                </div>
-              </div>
             </div>
 
-            <div className="jm-fade-up jm-d4 mt-8 sm:mt-10 lg:mt-14 flex flex-wrap gap-6 sm:gap-12 lg:gap-16">
+            <div className="jm-fade-up jm-d4 mt-8 sm:mt-10 lg:mt-14 flex flex-wrap items-center gap-6 sm:gap-10 lg:gap-14">
               {[
                 ['3', 'Degrees to earn'],
                 ['9', 'Judgment exams'],
                 ['100%', 'AI-graded'],
-              ].map(([v, l]) => (
-                <div key={l}>
-                  <div className="font-inter font-bold tracking-tight text-2xl sm:text-4xl lg:text-5xl text-white">
-                    {v}
+              ].map(([v, l], i) => (
+                <div key={l} className="flex items-center gap-6 sm:gap-10 lg:gap-14">
+                  {i > 0 && <span className="hidden sm:block h-8 w-px bg-white/15" aria-hidden />}
+                  <div>
+                    <div className="font-inter font-bold tracking-tight text-2xl sm:text-4xl lg:text-5xl text-white">
+                      {v}
+                    </div>
+                    <div className="mt-1 text-[9px] sm:text-xs uppercase tracking-widest text-white/50">{l}</div>
                   </div>
-                  <div className="mt-1 text-[9px] sm:text-xs uppercase tracking-widest text-white/50">{l}</div>
                 </div>
               ))}
+            </div>
+
+            <div className="jm-fade-up jm-d4 mt-7 flex items-center gap-2 text-white/45">
+              <Award className="w-4 h-4" style={{ color: TEAL }} />
+              <span className="text-[11px] sm:text-xs tracking-wide">
+                Verifiable credential · for upskillers and the teams that hire them
+              </span>
             </div>
           </div>
 
@@ -398,10 +408,18 @@ export default function JudgemyntPage() {
                   {l.label}
                 </button>
               ))}
+              <Link
+                href="/judgemynt/employers"
+                onClick={() => setMenuOpen(false)}
+                className="font-podium text-4xl sm:text-5xl uppercase text-white"
+                style={menuItemStyle(menuOpen, navLinks.length)}
+              >
+                For Employers
+              </Link>
               <button
                 onClick={() => go('curriculum')}
                 className="mt-4 flex items-center gap-2 border border-white/30 px-6 py-3 text-xs uppercase tracking-widest text-white"
-                style={menuItemStyle(menuOpen, navLinks.length)}
+                style={menuItemStyle(menuOpen, navLinks.length + 1)}
               >
                 Start the exam <ArrowUpRight className="w-4 h-4" />
               </button>
@@ -533,6 +551,7 @@ export default function JudgemyntPage() {
               value={submission}
               onChange={(e) => setSubmission(e.target.value)}
               placeholder="Fix what's actually wrong…"
+              aria-label="Your answer"
               rows={8}
               className="w-full bg-white/[0.03] border border-white/10 rounded-xl p-4 text-[#eaf4fa] text-sm leading-relaxed outline-none focus:border-white/30 resize-y"
             />
@@ -847,7 +866,7 @@ function BrainCanvas() {
       window.removeEventListener('resize', resize)
     }
   }, [])
-  return <canvas ref={ref} className="absolute inset-0 h-full w-full" />
+  return <canvas ref={ref} aria-hidden="true" className="absolute inset-0 h-full w-full" />
 }
 
 function Shell({ children, onHome, onCerts }: { children: ReactNode; onHome: () => void; onCerts: () => void }) {
