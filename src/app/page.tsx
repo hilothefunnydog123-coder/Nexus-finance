@@ -286,29 +286,82 @@ type BoardPick = {
   skill: number
 }
 
+function EmailSignup() {
+  const [email, setEmail] = useState('')
+  const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const submit = async (e: { preventDefault: () => void }) => {
+    e.preventDefault()
+    if (!email.trim()) return
+    setState('loading')
+    try {
+      const r = await fetch('/api/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
+      setState(r.ok ? 'done' : 'error')
+    } catch {
+      setState('error')
+    }
+  }
+  return (
+    <section className="relative z-10 max-w-6xl mx-auto px-6 pb-24">
+      <Reveal>
+        <div className="rounded-3xl px-8 py-10 sm:px-12 text-center" style={{ background: 'linear-gradient(135deg,#0b1020,#11163a)', boxShadow: '0 24px 70px rgba(40,40,80,.28)' }}>
+          <h2 className="text-[clamp(1.6rem,3.4vw,2.3rem)] font-semibold tracking-[-0.02em] text-white">Get the AI Bull Board every morning.</h2>
+          <p className="mt-3 text-[15px] text-white/60 max-w-md mx-auto">One email before the open with the day&apos;s top AI calls and targets. Free, no spam, unsubscribe anytime.</p>
+          {state === 'done' ? (
+            <div className="mt-7 text-[16px] font-medium" style={{ color: '#34d399' }}>You&apos;re in — check your inbox tomorrow morning. ✦</div>
+          ) : (
+            <form onSubmit={submit} className="mt-7 flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@email.com"
+                className="flex-1 rounded-full px-5 py-3.5 text-[15px] outline-none"
+                style={{ background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.14)', color: '#fff' }}
+              />
+              <button type="submit" disabled={state === 'loading'} className="rounded-full px-6 py-3.5 text-[15px] font-semibold text-white" style={{ background: 'linear-gradient(135deg,#06b6d4,#a855f7)' }}>
+                {state === 'loading' ? 'Joining…' : 'Get the board'}
+              </button>
+            </form>
+          )}
+          {state === 'error' && <div className="mt-3 text-[13px]" style={{ color: '#f87171' }}>Something went wrong — try again.</div>}
+        </div>
+      </Reveal>
+    </section>
+  )
+}
+
 function DailyBoard() {
-  const [data, setData] = useState<{ date: string | null; generatedAt: string | null; picks: BoardPick[] } | null>(null)
+  const [data, setData] = useState<{ date: string | null; generatedAt: string | null; picks: BoardPick[]; bears: BoardPick[] } | null>(null)
+  const [view, setView] = useState<'bull' | 'bear'>('bull')
   useEffect(() => {
     fetch('/api/daily-picks')
       .then((r) => r.json())
       .then(setData)
       .catch(() => {})
   }, [])
-  const picks = data?.picks ?? []
+  const bull = view === 'bull'
+  const picks = (bull ? data?.picks : data?.bears) ?? []
   return (
     <section id="board" className="relative z-10 max-w-6xl mx-auto px-6 pb-24 scroll-mt-24">
       <Reveal>
         <div className="flex items-center gap-2 text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">
-          <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: '#16a34a', boxShadow: '0 0 8px #16a34a' }} />
-          AI Bull Board
+          <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: bull ? '#16a34a' : '#dc2626', boxShadow: `0 0 8px ${bull ? '#16a34a' : '#dc2626'}` }} />
+          AI {bull ? 'Bull' : 'Bear'} Board
         </div>
         <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl">
-          This morning&apos;s top 15 AI bull calls.
+          This morning&apos;s top 15 AI {bull ? 'bull' : 'bear'} calls.
         </h2>
         <p className="mt-3 text-[16px] text-[#5e5e68] max-w-xl">
-          Every market morning we run ~300 stocks through our BrainStock forecaster and rank the most bullish for the session — with a price target on each. Regenerated before the open.
+          Every market morning we run ~300 stocks through our BrainStock forecaster and rank the most {bull ? 'bullish' : 'bearish'} for the session — with a price target on each. Regenerated before the open.
           {data?.date && <span className="text-[#9a9aa4]"> · Updated {data.date}</span>}
         </p>
+        <div className="mt-5 flex items-center gap-3 flex-wrap">
+          <div className="inline-flex rounded-full bg-white/60 backdrop-blur border border-black/[0.06] p-1">
+            <button onClick={() => setView('bull')} className="px-4 py-1.5 rounded-full text-[14px] font-medium transition-colors" style={bull ? { background: '#16a34a', color: '#fff' } : { color: '#5e5e68' }}>Bulls</button>
+            <button onClick={() => setView('bear')} className="px-4 py-1.5 rounded-full text-[14px] font-medium transition-colors" style={!bull ? { background: '#dc2626', color: '#fff' } : { color: '#5e5e68' }}>Bears</button>
+          </div>
+          <Link href="/brainstock/track-record" className="text-[14px] font-medium" style={{ color: '#7c3aed' }}>See the track record →</Link>
+        </div>
       </Reveal>
 
       {picks.length > 0 ? (
@@ -316,7 +369,7 @@ function DailyBoard() {
           {picks.map((p, i) => (
             <Reveal key={p.ticker} delay={i * 40}>
               <Link
-                href={`/brainstock?t=${p.ticker}`}
+                href={`/forecast/${p.ticker}`}
                 className="group block h-full rounded-2xl bg-white/65 backdrop-blur border border-black/[0.06] p-5 transition-all duration-300 hover:-translate-y-1"
                 style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}
               >
@@ -325,7 +378,7 @@ function DailyBoard() {
                     <span className="text-[12px] font-semibold text-[#9a9aa4] tabular-nums">#{p.rank}</span>
                     <span className="text-[18px] font-semibold tracking-tight">{p.ticker}</span>
                   </div>
-                  <span className="text-[15px] font-semibold tabular-nums" style={{ color: '#16a34a' }}>▲ {p.pct.toFixed(2)}%</span>
+                  <span className="text-[15px] font-semibold tabular-nums" style={{ color: bull ? '#16a34a' : '#dc2626' }}>{bull ? '▲' : '▼'} {Math.abs(p.pct).toFixed(2)}%</span>
                 </div>
                 <div className="mt-3 text-[14px] text-[#5e5e68] tabular-nums">
                   ${p.price.toFixed(2)} <span className="text-[#b8b8c0]">→</span> <b className="text-[#16161f]">${p.target.toFixed(2)}</b>
@@ -648,6 +701,8 @@ export default function Home() {
       <StatsStrip />
 
       <DailyBoard />
+
+      <EmailSignup />
 
       {/* ---------- products ---------- */}
       <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
