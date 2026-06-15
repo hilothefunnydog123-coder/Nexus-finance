@@ -190,6 +190,16 @@ const NAV = [
 
 const PRODUCTS = [
   {
+    id: 'forecast',
+    label: 'Forecast a price',
+    title: 'BrainStock',
+    blurb: 'Our neural net forecasts ~300 stocks every morning, ranks the top calls with price targets, and grades itself against real prices.',
+    href: '/brainstock',
+    cta: 'See the forecasts',
+    icon: Brain,
+    grad: 'linear-gradient(135deg,#06b6d4,#a855f7)',
+  },
+  {
     id: 'analyze',
     label: 'Analyze a stock',
     title: 'AI Stock Analyzer',
@@ -218,16 +228,6 @@ const PRODUCTS = [
     cta: 'Get the algorithms',
     icon: Bot,
     grad: 'linear-gradient(135deg,#10b981,#06b6d4)',
-  },
-  {
-    id: 'forecast',
-    label: 'Forecast a price',
-    title: 'BrainStock',
-    blurb: 'Our own neural network forecasts short-term price moves — and honestly reports its skill vs. a naive baseline.',
-    href: '/brainstock',
-    cta: 'Run a forecast',
-    icon: Brain,
-    grad: 'linear-gradient(135deg,#06b6d4,#a855f7)',
   },
 ]
 
@@ -602,7 +602,7 @@ export default function Home() {
         <div>
         <div className="ln-up ln-d1 inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur border border-black/[0.06] px-3.5 py-1.5 text-[13px] text-[#42424f] mb-8" style={{ boxShadow: '0 4px 16px rgba(99,102,241,.08)' }}>
           <Sparkles className="w-3.5 h-3.5" style={{ color: '#8b5cf6' }} />
-          AI stock analysis · live for everyone
+          BrainStock AI · forecasts ~300 stocks every market morning
         </div>
 
         <h1 className="text-[clamp(2.6rem,7vw,5.2rem)] font-semibold tracking-[-0.03em] leading-[1.04] whitespace-pre-wrap select-none" style={{ minHeight: '2.2em' }}>
@@ -707,7 +707,7 @@ export default function Home() {
       {/* ---------- products ---------- */}
       <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
         <Reveal>
-          <div className="text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">Analyze · Learn · Automate</div>
+          <div className="text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">Forecast · Analyze · Learn · Automate</div>
           <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl">
             One platform for the whole trade — from idea to execution.
           </h2>
