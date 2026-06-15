@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { forecastTicker } from '@/lib/forecast'
+import { forecastTicker, addBusinessDays } from '@/lib/forecast'
 import { UNIVERSE } from '@/lib/universe'
 
 export const runtime = 'nodejs'
@@ -23,20 +23,17 @@ type Pick = {
   ticker: string
   price: number
   target: number // next-session predicted close
-  pct: number // session upside %
+  pct: number // session move %
   target5: number // 5-day predicted close
   pct5: number
   dirAcc: number // backtested directional accuracy 0..1
   skill: number // skill score vs naive baseline
 }
 
-// US market date (YYYY-MM-DD) so the board is keyed to the trading session.
 function etDate(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 }
 
-// Bounded-concurrency worker pool with a wall-clock budget so we always return
-// before the function times out — we rank whatever finished in time.
 async function pool<T, R>(
   items: T[],
   concurrency: number,
@@ -83,23 +80,28 @@ async function runBatch(limit: number) {
     }
   })
 
-  // Bullish + the model actually beats the naive baseline + better-than-coinflip
-  // direction. Relax the skill gate if too few names qualify.
+  // Bullish: positive move, model beats naive baseline, better-than-coinflip direction.
   const bull = (min: number) =>
-    results
-      .filter((r) => r.pct > 0 && r.skill > min && r.dirAcc >= 0.5)
-      .sort((a, b) => b.pct - a.pct)
-  let ranked = bull(0)
-  if (ranked.length < 15) ranked = bull(-0.1)
-  if (ranked.length < 15) ranked = results.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct)
+    results.filter((r) => r.pct > 0 && r.skill > min && r.dirAcc >= 0.5).sort((a, b) => b.pct - a.pct)
+  let rankedBull = bull(0)
+  if (rankedBull.length < 15) rankedBull = bull(-0.1)
+  if (rankedBull.length < 15) rankedBull = results.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct)
+  const picks: Pick[] = rankedBull.slice(0, 15).map((r, idx) => ({ rank: idx + 1, ...r }))
 
-  const picks: Pick[] = ranked.slice(0, 15).map((r, idx) => ({ rank: idx + 1, ...r }))
-  return { picks, attempted: tickers.length, succeeded: results.length }
+  // Bearish: same filters, most negative move first.
+  const bear = (min: number) =>
+    results.filter((r) => r.pct < 0 && r.skill > min && r.dirAcc >= 0.5).sort((a, b) => a.pct - b.pct)
+  let rankedBear = bear(0)
+  if (rankedBear.length < 15) rankedBear = bear(-0.1)
+  if (rankedBear.length < 15) rankedBear = results.filter((r) => r.pct < 0).sort((a, b) => a.pct - b.pct)
+  const bears: Pick[] = rankedBear.slice(0, 15).map((r, idx) => ({ rank: idx + 1, ...r }))
+
+  return { picks, bears, attempted: tickers.length, succeeded: results.length }
 }
 
 export async function GET() {
   const admin = getAdmin()
-  if (!admin) return NextResponse.json({ date: null, generatedAt: null, picks: [] })
+  if (!admin) return NextResponse.json({ date: null, generatedAt: null, picks: [], bears: [] })
   try {
     const { data } = await admin
       .from('daily_picks')
@@ -108,11 +110,16 @@ export async function GET() {
       .limit(1)
       .maybeSingle()
     return NextResponse.json(
-      { date: data?.trade_date ?? null, generatedAt: data?.generated_at ?? null, picks: data?.picks ?? [] },
+      {
+        date: data?.trade_date ?? null,
+        generatedAt: data?.generated_at ?? null,
+        picks: data?.picks ?? [],
+        bears: data?.bears ?? [],
+      },
       { headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=600' } }
     )
   } catch {
-    return NextResponse.json({ date: null, generatedAt: null, picks: [] })
+    return NextResponse.json({ date: null, generatedAt: null, picks: [], bears: [] })
   }
 }
 
@@ -127,9 +134,10 @@ export async function POST(req: NextRequest) {
   const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 320) : 320
 
   try {
-    const { picks, attempted, succeeded } = await runBatch(limit)
+    const { picks, bears, attempted, succeeded } = await runBatch(limit)
     const trade_date = etDate()
     const generated_at = new Date().toISOString()
+    const resolve_date = addBusinessDays(new Date(trade_date + 'T00:00:00Z'), 5).toISOString().slice(0, 10)
 
     const admin = getAdmin()
     let stored = false
@@ -137,13 +145,25 @@ export async function POST(req: NextRequest) {
       try {
         await admin
           .from('daily_picks')
-          .upsert({ trade_date, generated_at, picks, attempted, succeeded }, { onConflict: 'trade_date' })
+          .upsert({ trade_date, generated_at, picks, bears, attempted, succeeded }, { onConflict: 'trade_date' })
         stored = true
+        // Seed the track record with today's bull calls (5-day horizon).
+        const callRows = picks.map((p) => ({
+          trade_date,
+          ticker: p.ticker,
+          start_price: p.price,
+          target: p.target5,
+          pct: p.pct5,
+          horizon: 5,
+          resolve_date,
+          status: 'open',
+        }))
+        if (callRows.length) await admin.from('forecast_calls').upsert(callRows, { onConflict: 'trade_date,ticker' })
       } catch {
-        /* table may not exist yet */
+        /* tables may not exist yet */
       }
     }
-    return NextResponse.json({ ok: true, trade_date, attempted, succeeded, stored, picks })
+    return NextResponse.json({ ok: true, trade_date, attempted, succeeded, stored, picks, bears })
   } catch (e) {
     console.error('[/api/daily-picks]', e)
     return NextResponse.json({ error: String(e) }, { status: 500 })
