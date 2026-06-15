@@ -405,43 +405,72 @@ function DailyBoard() {
 }
 
 function HeroBoard() {
-  const [picks, setPicks] = useState<BoardPick[]>([])
+  const [data, setData] = useState<{ picks: BoardPick[]; date: string | null } | null>(null)
   useEffect(() => {
     fetch('/api/daily-picks')
       .then((r) => r.json())
-      .then((d) => setPicks(d.picks || []))
+      .then((d) => setData({ picks: d.picks || [], date: d.date }))
       .catch(() => {})
   }, [])
-  const top = picks.slice(0, 6)
+  const top = (data?.picks ?? []).slice(0, 6)
   return (
-    <div className="w-full max-w-sm rounded-3xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(160deg,#0b1020,#11163a)', boxShadow: '0 30px 70px rgba(40,40,80,.28)' }}>
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
-          <span className="text-[13px] font-semibold text-white tracking-tight">AI Bull Board</span>
-        </div>
-        <span className="text-[11px] text-white/45">today&apos;s top calls</span>
-      </div>
-      {top.length > 0 ? (
-        <div className="divide-y divide-white/[0.06]">
-          {top.map((p) => (
-            <div key={p.ticker} className="flex items-center gap-3 px-5 py-2.5">
-              <span className="text-[11px] text-white/35 w-4 tabular-nums">{p.rank}</span>
-              <span className="text-[14px] font-semibold text-white w-14">{p.ticker}</span>
-              <span className="text-[12px] text-white/45 tabular-nums flex-1">${p.target.toFixed(2)}</span>
-              <span className="text-[13px] font-semibold tabular-nums" style={{ color: '#34d399' }}>▲ {p.pct.toFixed(2)}%</span>
+    <div
+      className="w-full max-w-sm rounded-[26px] p-[1.5px]"
+      style={{
+        background: 'linear-gradient(155deg, rgba(34,211,238,.55), rgba(168,85,247,.5) 55%, rgba(20,24,55,.4))',
+        boxShadow: '0 30px 80px rgba(70,45,140,.4)',
+      }}
+    >
+      <div className="rounded-[24px] overflow-hidden relative" style={{ background: 'linear-gradient(165deg,#0a0f20,#0e1330 55%,#15193c)' }}>
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: 'radial-gradient(360px 170px at 82% -8%, rgba(34,211,238,.26), transparent 60%), radial-gradient(320px 200px at 0% 112%, rgba(168,85,247,.24), transparent 60%)' }}
+        />
+
+        {/* header */}
+        <div className="relative flex items-center justify-between px-5 pt-4 pb-3">
+          <div className="flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-xl grid place-items-center" style={{ background: 'linear-gradient(135deg,#22d3ee,#a855f7)', boxShadow: '0 4px 14px rgba(34,211,238,.4)' }}>
+              <Brain className="w-3.5 h-3.5" style={{ color: '#0a0f20' }} />
+            </span>
+            <div className="leading-tight">
+              <div className="text-[13.5px] font-semibold text-white tracking-tight flex items-center gap-1.5">
+                AI Bull Board
+                <span className="inline-block w-1.5 h-1.5 rounded-full ln-cursor" style={{ background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
+              </div>
+              <div className="text-[10px] text-white/45">BrainStock · {data?.date ?? 'every market morning'}</div>
             </div>
-          ))}
+          </div>
+          <span className="text-[9.5px] font-bold tracking-wide px-2 py-1 rounded-full" style={{ background: 'rgba(34,197,94,.16)', color: '#34d399' }}>LIVE</span>
         </div>
-      ) : (
-        <div className="px-5 py-8 text-center">
-          <div className="text-[13px] text-white/70 font-medium">Posts every market morning</div>
-          <div className="text-[11px] text-white/40 mt-1">~300 stocks ranked by the AI for the session ahead</div>
-        </div>
-      )}
-      <a href="#board" className="block px-5 py-3 text-[12px] font-medium text-white/70 hover:text-white border-t border-white/10 transition-colors">
-        See all 15 →
-      </a>
+
+        {/* rows */}
+        {top.length > 0 ? (
+          <div className="relative px-2 pb-1">
+            {top.map((p) => (
+              <Link key={p.ticker} href={`/forecast/${p.ticker}`} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/[0.06] transition-colors">
+                <span className="text-[10px] text-white/30 w-3 tabular-nums">{p.rank}</span>
+                <span className="text-[14px] font-semibold text-white w-12">{p.ticker}</span>
+                <span className="text-[11px] text-white/40 tabular-nums flex-1">→ ${p.target.toFixed(2)}</span>
+                <span className="text-[12px] font-bold tabular-nums px-2 py-0.5 rounded-md" style={{ background: 'rgba(52,211,153,.14)', color: '#34d399' }}>▲ {p.pct.toFixed(2)}%</span>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="relative px-5 py-9 text-center">
+            <div className="text-[13px] text-white/75 font-medium">Posts every market morning</div>
+            <div className="text-[11px] text-white/40 mt-1">~300 stocks ranked by the AI for the session</div>
+          </div>
+        )}
+
+        {/* footer */}
+        <a href="#board" className="relative flex items-center justify-between px-5 py-3.5 border-t border-white/[0.08] text-[12px] font-semibold hover:bg-white/[0.03] transition-colors">
+          <span style={{ background: 'linear-gradient(90deg,#22d3ee,#a855f7)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            See all 15 calls + the track record
+          </span>
+          <span className="text-white/40">→</span>
+        </a>
+      </div>
     </div>
   )
 }
@@ -615,7 +644,7 @@ export default function Home() {
         </h1>
 
         <p className="ln-up ln-d2 mt-7 max-w-xl text-[17px] sm:text-[19px] leading-relaxed text-[#55555f]">
-          AI-rate any stock in 15 seconds. Learn the strategy from 9 pro traders. Automate it with prop-grade algorithms — all in one place.
+Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itself on real prices. Rate any stock in 15 seconds, learn from 9 pro traders, and automate it — all in one place.
         </p>
 
         <div className="ln-up ln-d3 mt-9 flex flex-wrap items-center gap-3">
