@@ -119,24 +119,27 @@ export default function BrainStock() {
   const chartData = useMemo(() => {
     if (!data) return []
     const rmse = data.metrics.rmse_model || 0
+    const z = 1.96 // ~95% band
     const hist = data.history.map((p) => ({
       date: p.date,
       history: p.price as number | null,
       forecast: null as number | null,
-      cone: null as [number, number] | null,
+      coneLow: null as number | null,
+      coneBand: null as number | null,
     }))
     const last = data.history[data.history.length - 1]
-    const fc = data.forecast.map((p, i) => ({
-      date: p.date,
-      history: null as number | null,
-      forecast: p.price as number | null,
-      cone: [
-        +(p.price - rmse * Math.sqrt(i + 1)).toFixed(2),
-        +(p.price + rmse * Math.sqrt(i + 1)).toFixed(2),
-      ] as [number, number] | null,
-    }))
+    const fc = data.forecast.map((p, i) => {
+      const half = z * rmse * Math.sqrt(i + 1)
+      return {
+        date: p.date,
+        history: null as number | null,
+        forecast: p.price as number | null,
+        coneLow: +(p.price - half).toFixed(2) as number | null,
+        coneBand: +(2 * half).toFixed(2) as number | null,
+      }
+    })
     if (last && fc.length)
-      hist[hist.length - 1] = { ...hist[hist.length - 1], forecast: last.price, cone: [last.price, last.price] }
+      hist[hist.length - 1] = { ...hist[hist.length - 1], forecast: last.price, coneLow: last.price, coneBand: 0 }
     return [...hist, ...fc]
   }, [data])
 
@@ -449,8 +452,8 @@ export default function BrainStock() {
                           <stop offset="100%" stopColor={CYAN} stopOpacity={0} />
                         </linearGradient>
                         <linearGradient id="bs-cone" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={VIOLET} stopOpacity={0.22} />
-                          <stop offset="100%" stopColor={VIOLET} stopOpacity={0.05} />
+                          <stop offset="0%" stopColor={VIOLET} stopOpacity={0.32} />
+                          <stop offset="100%" stopColor={VIOLET} stopOpacity={0.12} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid stroke="rgba(255,255,255,.06)" strokeDasharray="3 6" vertical={false} />
@@ -476,12 +479,24 @@ export default function BrainStock() {
                       />
                       <Area
                         type="monotone"
-                        dataKey="cone"
+                        dataKey="coneLow"
+                        stackId="cone"
+                        stroke="none"
+                        fill="none"
+                        connectNulls={false}
+                        isAnimationActive={false}
+                        legendType="none"
+                        tooltipType="none"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="coneBand"
+                        stackId="cone"
                         stroke="none"
                         fill="url(#bs-cone)"
-                        connectNulls
+                        connectNulls={false}
                         isAnimationActive={false}
-                        name="Confidence range"
+                        name="95% range"
                       />
                       <Line
                         type="monotone"
@@ -596,7 +611,7 @@ function ChartTooltip({ active, payload, label }: TooltipProps) {
     <div style={{ borderRadius: 10, border: `1px solid ${BORDER}`, background: 'rgba(10,15,26,.96)', backdropFilter: 'blur(6px)', padding: '8px 12px', fontSize: 12, boxShadow: '0 12px 30px rgba(0,0,0,.5)' }}>
       <div style={{ color: MUTED, marginBottom: 4 }}>{label}</div>
       {payload.map((p) =>
-        p.value == null || p.dataKey === 'cone' ? null : (
+        p.value == null || p.dataKey === 'coneLow' || p.dataKey === 'coneBand' ? null : (
           <div key={p.dataKey} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ width: 8, height: 8, borderRadius: 99, background: p.stroke || p.color }} />
             <span style={{ color: '#e7ecf5' }}>{p.dataKey === 'forecast' ? 'Forecast' : 'History'}</span>
