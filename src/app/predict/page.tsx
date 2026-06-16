@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Bot, Brain, Flame, Share2, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
-import { PredictChart } from '@/components/PredictChart'
+import TradingViewChart from '@/components/chart/TradingViewChart'
 
 /* ---------- palette ---------- */
 const UP = '#22c55e'
@@ -69,6 +69,14 @@ function bizLeft(resolveDate: string) {
 
 export default function Predict() {
   const [ticker, setTicker] = useState('AAPL')
+  const [chartSym, setChartSym] = useState('AAPL')
+  // Debounce the chart symbol so the TradingView widget doesn't reload on every keystroke.
+  useEffect(() => {
+    const t = ticker.trim().toUpperCase()
+    if (!t) return
+    const id = setTimeout(() => setChartSym(t), 600)
+    return () => clearTimeout(id)
+  }, [ticker])
   const [preds, setPreds] = useState<Pred[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -273,9 +281,8 @@ export default function Predict() {
             ))}
           </div>
 
-          <div style={{ marginTop: 16, borderRadius: 14, overflow: 'hidden', border: `1px solid ${BORDER}`, background: 'rgba(255,255,255,.02)', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 10, left: 12, zIndex: 2, fontSize: 13, fontWeight: 800, letterSpacing: 1, color: '#fff', textShadow: '0 0 10px rgba(0,0,0,.6)' }}>{'$' + (ticker || '—')}</div>
-            <PredictChart ticker={ticker} />
+          <div style={{ marginTop: 16, borderRadius: 14, overflow: 'hidden', border: `1px solid ${BORDER}`, background: '#040c14', height: 360 }}>
+            <TradingViewChart symbol={chartSym} interval="60" hideSideToolbar studies={[]} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
