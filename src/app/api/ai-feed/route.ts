@@ -148,9 +148,9 @@ export async function POST(req: NextRequest) {
   if (!meaningful.length) return NextResponse.json({ created: 0, note: 'nothing important enough' })
 
   try {
-    await admin.from('ai_posts').upsert(meaningful, { onConflict: 'source_url' })
+    await admin.from('ai_posts').insert(meaningful)
   } catch {
-    /* ignore dup races */
+    /* already de-duped by source_url above; ignore rare races */
   }
 
   // Email the single most important fresh post if it clears the bar.
