@@ -147,11 +147,14 @@ export async function POST(req: NextRequest) {
   const meaningful = rows.filter((r) => (r.importance as number) >= 3)
   if (!meaningful.length) return NextResponse.json({ created: 0, note: 'nothing important enough' })
 
+  let storeErr: string | null = null
   try {
-    await admin.from('ai_posts').insert(meaningful)
-  } catch {
-    /* already de-duped by source_url above; ignore rare races */
+    const { error } = await admin.from('ai_posts').insert(meaningful)
+    if (error) storeErr = error.message
+  } catch (e) {
+    storeErr = String(e)
   }
+  if (storeErr) return NextResponse.json({ created: 0, storeErr })
 
   // Email the single most important fresh post if it clears the bar.
   let emailed = 0
