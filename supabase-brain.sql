@@ -4,7 +4,7 @@
 
 create table if not exists public.brain (
   id         int primary key default 1,
-  weights    jsonb not null default '[0,0,0,0,0]'::jsonb,
+  weights    jsonb not null default '[0.4,0.6,0.3,0.5,0]'::jsonb,  -- momentum prior; SGD adjusts from here
   bias       double precision not null default 0,
   trained    int not null default 0,   -- examples learned from
   correct    int not null default 0,   -- progressive-validation hits

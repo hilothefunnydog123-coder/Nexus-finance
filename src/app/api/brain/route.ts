@@ -25,7 +25,7 @@ type Brain = { weights: number[]; bias: number; trained: number; correct: number
 async function loadBrain(admin: NonNullable<ReturnType<typeof getAdmin>>): Promise<Brain> {
   const { data } = await admin.from('brain').select('*').eq('id', 1).maybeSingle()
   return {
-    weights: Array.isArray(data?.weights) && data.weights.length === N_FEATURES ? data.weights : new Array(N_FEATURES).fill(0),
+    weights: Array.isArray(data?.weights) && data.weights.length === N_FEATURES ? data.weights : [0.4, 0.6, 0.3, 0.5, 0],
     bias: Number(data?.bias) || 0,
     trained: Number(data?.trained) || 0,
     correct: Number(data?.correct) || 0,
