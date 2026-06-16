@@ -475,6 +475,135 @@ function HeroBoard() {
   )
 }
 
+type AIPost = {
+  id: number
+  created_at: string
+  hook: string
+  insight: string
+  ticker: string | null
+  forecast: { price: number; target: number; pct: number; dirAcc: number } | null
+  importance: number
+  category: string
+}
+
+function timeAgo(iso: string) {
+  const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
+  if (s < 60) return `${s}s ago`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
+
+function AIFeed() {
+  const [posts, setPosts] = useState<AIPost[]>([])
+  useEffect(() => {
+    fetch('/api/ai-feed')
+      .then((r) => r.json())
+      .then((d) => setPosts(d.posts || []))
+      .catch(() => {})
+  }, [])
+  return (
+    <section id="ai-feed" className="relative z-10 max-w-6xl mx-auto px-6 pb-24 scroll-mt-24">
+      <Reveal>
+        <div className="flex items-center gap-2 text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">
+          <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: '#8b5cf6', boxShadow: '0 0 8px #8b5cf6' }} />
+          The AI is watching
+        </div>
+        <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl">
+          Live market takes, written by our AI.
+        </h2>
+        <p className="mt-3 text-[16px] text-[#5e5e68] max-w-xl">
+          Through the day, BrainStock reads the headlines, gives its honest read, and — when there&apos;s a ticker — attaches a forecast. The big ones hit your inbox.
+        </p>
+      </Reveal>
+      {posts.length > 0 ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
+          {posts.slice(0, 9).map((p, i) => (
+            <Reveal key={p.id} delay={i * 40}>
+              <div className="h-full rounded-2xl bg-white/65 backdrop-blur border border-black/[0.06] p-5" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: 'rgba(139,92,246,.1)', color: '#7c3aed' }}>{p.category}</span>
+                  <span className="text-[11px] text-[#9a9aa4]">{timeAgo(p.created_at)}</span>
+                </div>
+                <div className="text-[16px] font-semibold tracking-tight leading-snug">{p.hook}</div>
+                <p className="mt-1.5 text-[14px] text-[#5e5e68] leading-relaxed">{p.insight}</p>
+                {p.forecast && p.ticker && (
+                  <Link href={`/forecast/${p.ticker}`} className="mt-3 inline-flex items-center gap-2 text-[13px] font-medium rounded-full px-3 py-1.5" style={{ background: 'rgba(6,182,212,.08)', color: '#0891b2' }}>
+                    {p.ticker} target ${p.forecast.target.toFixed(2)}
+                    <span style={{ color: p.forecast.pct >= 0 ? '#16a34a' : '#dc2626' }}>{p.forecast.pct >= 0 ? '▲' : '▼'} {Math.abs(p.forecast.pct).toFixed(1)}%</span>
+                  </Link>
+                )}
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-10 rounded-2xl bg-white/55 backdrop-blur border border-black/[0.06] px-8 py-12 text-center" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
+          <div className="text-[17px] font-semibold text-[#16161f]">The AI posts its takes through the day.</div>
+          <div className="text-[14px] text-[#6a6a74] mt-2">Check back soon — it reads the market every few hours.</div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function AIPopup() {
+  const [posts, setPosts] = useState<AIPost[]>([])
+  const [idx, setIdx] = useState(0)
+  const [show, setShow] = useState(false)
+  const shownRef = useRef(0)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('yn_ai_pop_off')) return
+    fetch('/api/ai-feed')
+      .then((r) => r.json())
+      .then((d) => {
+        const list: AIPost[] = (d.posts || []).filter((p: AIPost) => p.importance >= 3)
+        if (!list.length) return
+        setPosts(list)
+        setTimeout(() => setShow(true), 6000)
+      })
+      .catch(() => {})
+  }, [])
+  useEffect(() => {
+    if (!show || !posts.length) return
+    const id = setTimeout(() => {
+      shownRef.current += 1
+      if (shownRef.current >= 4) setShow(false)
+      else setIdx((i) => (i + 1) % posts.length)
+    }, 15000)
+    return () => clearTimeout(id)
+  }, [show, idx, posts.length])
+  if (!show || !posts.length) return null
+  const p = posts[idx]
+  const dismiss = () => {
+    setShow(false)
+    try {
+      sessionStorage.setItem('yn_ai_pop_off', '1')
+    } catch {}
+  }
+  return (
+    <div className="fixed bottom-5 left-5 z-50 w-[330px] max-w-[calc(100vw-2.5rem)] rounded-2xl p-[1.5px] ln-up" style={{ background: 'linear-gradient(135deg,#22d3ee,#a855f7)', boxShadow: '0 20px 50px rgba(60,40,120,.4)' }}>
+      <div className="rounded-2xl p-4 relative" style={{ background: 'linear-gradient(165deg,#0c1124,#141a3e)' }}>
+        <button onClick={dismiss} aria-label="Dismiss" className="absolute top-2.5 right-3 text-white/40 hover:text-white text-[16px] leading-none">×</button>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="w-5 h-5 rounded-lg grid place-items-center" style={{ background: 'linear-gradient(135deg,#22d3ee,#a855f7)' }}>
+            <Brain className="w-3 h-3" style={{ color: '#0c1124' }} />
+          </span>
+          <span className="text-[11px] font-semibold text-white/70">BrainStock AI</span>
+          <span className="inline-block w-1.5 h-1.5 rounded-full ln-cursor" style={{ background: '#22c55e' }} />
+        </div>
+        <div className="text-[15px] font-semibold text-white leading-snug pr-4">{p.hook}</div>
+        <p className="mt-1 text-[12.5px] text-white/55 leading-relaxed">{p.insight}</p>
+        <a href={p.ticker ? `/forecast/${p.ticker}` : '#ai-feed'} onClick={() => setShow(false)} className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] font-semibold" style={{ color: '#5eead4' }}>
+          {p.ticker ? `See the AI's take on ${p.ticker}` : "See the AI's take"} →
+        </a>
+      </div>
+    </div>
+  )
+}
+
 export default function Home() {
   const { displayed, done } = useTypewriter('Trade with an\nunfair advantage.', 48, 450)
   const { signInWithGoogle } = useAuth()
@@ -731,6 +860,8 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
 
       <DailyBoard />
 
+      <AIFeed />
+
       <EmailSignup />
 
       {/* ---------- products ---------- */}
@@ -861,6 +992,8 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
           </div>
         </Reveal>
       </section>
+
+      <AIPopup />
 
       <SiteFooter />
     </div>
