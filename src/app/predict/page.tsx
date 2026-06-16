@@ -82,6 +82,17 @@ export default function Predict() {
   const [error, setError] = useState<string | null>(null)
   const [reveal, setReveal] = useState<Pred | null>(null)
   const [resolving, setResolving] = useState(false)
+  const [brainTrained, setBrainTrained] = useState(0)
+  const [brainAcc, setBrainAcc] = useState(0)
+  useEffect(() => {
+    fetch('/api/brain')
+      .then((r) => r.json())
+      .then((d) => {
+        setBrainTrained(d.trained || 0)
+        setBrainAcc(d.accuracy || 0)
+      })
+      .catch(() => {})
+  }, [])
 
   // Load + resolve any due predictions on mount.
   useEffect(() => {
@@ -136,26 +147,25 @@ export default function Predict() {
     setReveal(null)
     const t = ticker.trim().toUpperCase()
     try {
-      const r = await fetch('/api/forecast', {
+      const r = await fetch('/api/brain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker: t, horizon: 5 }),
+        body: JSON.stringify({ action: 'play', ticker: t }),
       })
       const j = await r.json()
-      if (!r.ok) throw new Error(j?.error ?? 'Could not reach the AI.')
-      const start: number = j.history[j.history.length - 1].price
-      const fc: number = j.forecast[j.forecast.length - 1].price
-      const aiDir: Dir = fc >= start ? 'up' : 'down'
+      if (!r.ok || !j.dir) throw new Error(j?.error ?? 'Could not reach the AI.')
+      const aiDir: Dir = j.dir
       const pred: Pred = {
         id: uid(),
         ticker: t,
         userDir,
         aiDir,
-        startPrice: start,
+        startPrice: j.startPrice,
         startDate: todayISO(),
-        resolveDate: addBiz(new Date(), HORIZON).toISOString().slice(0, 10),
+        resolveDate: j.resolveDate || addBiz(new Date(), HORIZON).toISOString().slice(0, 10),
         status: 'open',
       }
+      setBrainTrained((n) => n + 1)
       const next = [pred, ...preds]
       setPreds(next)
       localStorage.setItem(KEY, JSON.stringify(next))
@@ -254,6 +264,12 @@ export default function Predict() {
         <p style={{ marginTop: 14, fontSize: 17, color: MUTED, maxWidth: 560, lineHeight: 1.6 }}>
           Pick a stock and call it <b style={{ color: UP }}>UP</b> or <b style={{ color: DOWN }}>DOWN</b> over the next {HORIZON} trading days. Our BrainStock AI calls it too. Real prices settle the score — see if you can beat the machine.
         </p>
+        <div style={{ marginTop: 16, display: 'inline-flex', alignItems: 'flex-start', gap: 10, borderRadius: 14, border: `1px solid ${VIOLET}44`, background: `${VIOLET}12`, padding: '11px 15px', maxWidth: 580 }}>
+          <Brain size={18} color={VIOLET} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span style={{ fontSize: 13.5, color: '#cdd6e6', lineHeight: 1.55 }}>
+            This isn&apos;t a static bot — <b style={{ color: '#fff' }}>every game trains a real neural net.</b> It learns from each outcome and has trained on <b style={{ color: VIOLET }}>{brainTrained.toLocaleString()}</b> plays{brainAcc > 0 ? <> · now <b style={{ color: UP }}>{brainAcc}%</b> accurate</> : null}.
+          </span>
+        </div>
 
         {/* PLAY CARD */}
         <div style={{ ...glass, marginTop: 30, padding: 24 }} className="pv-pop pv-neon">

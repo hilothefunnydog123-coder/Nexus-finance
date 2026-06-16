@@ -14,6 +14,18 @@ export default async function handler() {
   } catch (e) {
     console.error('[ResolvePicks] error:', e)
   }
+  // Train the brain on any newly-resolved Beat-the-AI plays.
+  try {
+    const r = await fetch(`${SITE_URL}/api/brain`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SECRET}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'train' }),
+    })
+    const d = await r.json()
+    console.log('[BrainTrain] completed:', JSON.stringify({ learned: d.learned, accuracy: d.accuracy }))
+  } catch (e) {
+    console.error('[BrainTrain] error:', e)
+  }
 }
 
 export const config: Config = {
