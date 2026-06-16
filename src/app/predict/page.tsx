@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Bot, Brain, Flame, Share2, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
+import { PredictChart } from '@/components/PredictChart'
 
 /* ---------- palette ---------- */
 const UP = '#22c55e'
@@ -196,7 +197,15 @@ export default function Predict() {
       <style>{`
         @keyframes pv-pop { from{opacity:0;transform:translateY(10px) scale(.98)} to{opacity:1;transform:none} }
         @keyframes pv-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+        @keyframes pv-glow { 0%,100%{box-shadow:0 0 0 1px rgba(34,211,238,.18),0 0 44px rgba(34,211,238,.10)} 50%{box-shadow:0 0 0 1px rgba(168,85,247,.32),0 0 64px rgba(168,85,247,.18)} }
+        @keyframes pv-flash { 0%{opacity:0;transform:scale(.94)} 14%{opacity:1} 100%{opacity:1;transform:none} }
         .pv-pop{ animation:pv-pop .45s ease both }
+        .pv-neon{ animation:pv-glow 4.5s ease-in-out infinite }
+        .pv-flash{ animation:pv-flash .55s ease both }
+        .pv-call{ transition: transform .12s ease, box-shadow .2s ease }
+        .pv-call:hover{ transform: translateY(-2px) scale(1.015) }
+        .pv-up:hover{ box-shadow: 0 0 30px ${UP}66, inset 0 0 0 1px ${UP}55 !important }
+        .pv-down:hover{ box-shadow: 0 0 30px ${DOWN}66, inset 0 0 0 1px ${DOWN}55 !important }
       `}</style>
 
       {/* HEADER */}
@@ -239,8 +248,8 @@ export default function Predict() {
         </p>
 
         {/* PLAY CARD */}
-        <div style={{ ...glass, marginTop: 30, padding: 24 }} className="pv-pop">
-          <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.2, color: MUTED, marginBottom: 12 }}>Make your call</div>
+        <div style={{ ...glass, marginTop: 30, padding: 24 }} className="pv-pop pv-neon">
+          <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.2, color: MUTED, marginBottom: 12 }}>🎰 Place your call</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,.04)', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '8px 12px' }}>
               <span style={{ color: MUTED, fontWeight: 600 }}>$</span>
@@ -264,11 +273,16 @@ export default function Predict() {
             ))}
           </div>
 
+          <div style={{ marginTop: 16, borderRadius: 14, overflow: 'hidden', border: `1px solid ${BORDER}`, background: 'rgba(255,255,255,.02)', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 10, left: 12, zIndex: 2, fontSize: 13, fontWeight: 800, letterSpacing: 1, color: '#fff', textShadow: '0 0 10px rgba(0,0,0,.6)' }}>{'$' + (ticker || '—')}</div>
+            <PredictChart ticker={ticker} />
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
-            <button onClick={() => play('up')} disabled={loading} style={callBtn(UP, loading)}>
+            <button onClick={() => play('up')} disabled={loading} style={callBtn(UP, loading)} className="pv-call pv-up">
               <TrendingUp size={22} /> Call it UP
             </button>
-            <button onClick={() => play('down')} disabled={loading} style={callBtn(DOWN, loading)}>
+            <button onClick={() => play('down')} disabled={loading} style={callBtn(DOWN, loading)} className="pv-call pv-down">
               <TrendingDown size={22} /> Call it DOWN
             </button>
           </div>
@@ -348,7 +362,8 @@ function callBtn(color: string, loading: boolean): CSSProperties {
     letterSpacing: 0.3,
     cursor: loading ? 'not-allowed' : 'pointer',
     opacity: loading ? 0.55 : 1,
-    transition: 'transform .12s ease',
+    boxShadow: `0 0 18px ${color}33, inset 0 0 0 1px ${color}22`,
+    transition: 'transform .12s ease, box-shadow .2s ease',
   }
 }
 
@@ -374,22 +389,30 @@ function dirChip(dir: Dir) {
   )
 }
 
+function Side({ label, dir }: { label: string; dir: Dir }) {
+  const c = dir === 'up' ? UP : DOWN
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: 11, color: MUTED, letterSpacing: 1, marginBottom: 6 }}>{label}</div>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 19, fontWeight: 900, color: c, padding: '8px 16px', borderRadius: 12, background: `${c}1a`, border: `1px solid ${c}66`, boxShadow: `0 0 22px ${c}40` }}>
+        {dir === 'up' ? <TrendingUp size={19} /> : <TrendingDown size={19} />}
+        {dir.toUpperCase()}
+      </div>
+    </div>
+  )
+}
+
 function RevealCard({ p }: { p: Pred }) {
   const agree = p.userDir === p.aiDir
   return (
-    <div style={{ ...glass, marginTop: 16, padding: 22, borderColor: agree ? `${VIOLET}55` : `${CYAN}55` }} className="pv-pop">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 13, color: MUTED }}>Locked in on <b style={{ color: '#fff' }}>${p.ticker}</b> at ${p.startPrice.toFixed(2)}</div>
-          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 16, fontSize: 15 }}>
-            <span style={{ color: MUTED }}>You: {dirChip(p.userDir)}</span>
-            <span style={{ color: MUTED }}>AI: {dirChip(p.aiDir)}</span>
-          </div>
-        </div>
-        <div style={{ fontSize: 13, color: agree ? VIOLET : CYAN, fontWeight: 700, textAlign: 'right' }}>
-          {agree ? 'You and the AI agree 🤝' : 'Head to head ⚔️'}
-          <div style={{ color: MUTED, fontWeight: 400, marginTop: 2 }}>settles {p.resolveDate}</div>
-        </div>
+    <div style={{ ...glass, marginTop: 16, padding: '24px 22px', borderColor: agree ? `${VIOLET}66` : `${CYAN}66`, boxShadow: `0 0 46px ${agree ? VIOLET : CYAN}33` }} className="pv-flash">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
+        <Side label="YOU" dir={p.userDir} />
+        <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 1, color: agree ? VIOLET : CYAN, textShadow: `0 0 18px ${agree ? VIOLET : CYAN}66` }}>VS</div>
+        <Side label="THE AI" dir={p.aiDir} />
+      </div>
+      <div style={{ marginTop: 16, textAlign: 'center', fontSize: 13, color: MUTED }}>
+        Locked in on <b style={{ color: '#fff' }}>${p.ticker}</b> at ${p.startPrice.toFixed(2)} · {agree ? 'you and the AI agree 🤝' : 'head to head ⚔️'} · settles {p.resolveDate}
       </div>
     </div>
   )
