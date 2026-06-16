@@ -17,6 +17,7 @@ export default async function handler() {
 }
 
 export const config: Config = {
-  // ~9am, 12pm, 3pm, 6pm ET on weekdays — the AI checks the market through the day.
-  schedule: '0 13,16,19,22 * * 1-5',
+  // Every hour, every day — the AI is always watching; it only posts what clears
+  // the importance bar (filtered server-side), so the feed stays signal-only.
+  schedule: '0 * * * *',
 }

@@ -42,7 +42,7 @@ async function generate(items: NewsItem[]): Promise<Gen[]> {
   const key = process.env.GEMINI_API_KEY
   if (!key || !items.length) return []
   const list = items.map((n, i) => `${i}. ${n.headline}${n.summary ? ` — ${n.summary.slice(0, 180)}` : ''}`).join('\n')
-  const prompt = `You are BrainStock, the in-house market-watcher AI for YN Finance (a Gen-Z investing platform). From the headlines below, pick the 6 most interesting/important for a young investor and write a sharp, plain-English take on each.
+  const prompt = `You are BrainStock, the in-house market-watcher AI for YN Finance (a Gen-Z investing platform). From the headlines below, select ONLY the genuinely meaningful, market-relevant stories a young investor should actually know (anywhere from 0 to 6 — be picky; skip filler, fluff, celebrity gossip, ads, and minor noise). Write a sharp, plain-English take on each.
 
 For each, return:
 - "idx": the headline's number
@@ -143,17 +143,19 @@ export async function POST(req: NextRequest) {
       emailed: false,
     })
   }
-  if (!rows.length) return NextResponse.json({ created: 0 })
+  // Only keep the genuinely meaningful ones — the feed/popup stay signal-only.
+  const meaningful = rows.filter((r) => (r.importance as number) >= 3)
+  if (!meaningful.length) return NextResponse.json({ created: 0, note: 'nothing important enough' })
 
   try {
-    await admin.from('ai_posts').upsert(rows, { onConflict: 'source_url' })
+    await admin.from('ai_posts').upsert(meaningful, { onConflict: 'source_url' })
   } catch {
     /* ignore dup races */
   }
 
   // Email the single most important fresh post if it clears the bar.
   let emailed = 0
-  const top = rows.filter((r) => (r.importance as number) >= 4).sort((a, b) => (b.importance as number) - (a.importance as number))[0]
+  const top = meaningful.filter((r) => (r.importance as number) >= 4).sort((a, b) => (b.importance as number) - (a.importance as number))[0]
   const key = process.env.RESEND_API_KEY
   if (top && key) {
     try {
@@ -178,5 +180,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ created: rows.length, forecasts, emailed })
+  return NextResponse.json({ created: meaningful.length, forecasts, emailed })
 }
