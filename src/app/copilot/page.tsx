@@ -435,24 +435,7 @@ export default function Copilot() {
           </div>
         )}
 
-        {/* ---- spoken reply ---- */}
-        {reply && (
-          <div className="cp-fade" style={{ marginTop: 14, fontSize: 16.5, lineHeight: 1.65, textAlign: 'center', maxWidth: 600, color: '#cdd6e6' }}>
-            {reply}
-          </div>
-        )}
-
-        {/* ---- key points ---- */}
-        {bullets.length > 0 && (
-          <div className="cp-fade" style={{ marginTop: 18, width: '100%', maxWidth: 600, display: 'grid', gap: 8 }}>
-            {bullets.map((b, i) => (
-              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${BORDER}`, background: 'rgba(255,255,255,.025)' }}>
-                <span style={{ flexShrink: 0, marginTop: 6, width: 6, height: 6, borderRadius: 99, background: CYAN }} />
-                <span style={{ fontSize: 14, color: '#d6deec', lineHeight: 1.5 }}>{b}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* spoken narration is heard, not shown — let it talk */}
 
         {/* ---- live news the AI pulled ---- */}
         {news.length > 0 && (
