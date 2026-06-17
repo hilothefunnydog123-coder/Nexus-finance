@@ -82,6 +82,21 @@ Headline: "${data.headline}"`, undefined, 80)
 Movers: ${data.movers?.map((m: Record<string, unknown>) => `${m.symbol}: ${m.changePct}% | Vol ratio: ${m.volRatio}x | Float: ${m.float} | Catalyst: ${m.catalyst}`).join(' || ')}`, undefined, 200)
       break
 
+    case 'voice_copilot': {
+      const f = data.forecast
+      const facts = f
+        ? `BrainStock neural-net read on ${data.ticker} (${data.name || data.ticker}): current price $${f.price}, next-${f.horizon}-day forecast ${f.dir} ${f.pct}%, directional accuracy ${f.dirAcc}%, skill score ${f.skill} versus a naive baseline (positive = the model adds edge).`
+        : `No specific ticker was resolved from the question.`
+      result.reply = await callGemini(
+        `You are BrainStock — a spoken AI market co-pilot, the voice of a neural network. Think Jarvis: calm, confident, precise, a little charismatic. The user said out loud: "${data.question}".
+${facts}
+Answer in 2-3 short spoken sentences. Rules: first person ("I"), conversational, NO markdown, NO bullet points, NO emoji, NO stage directions. Lead with the verdict. If a ticker was resolved, reference the price and the model's lean naturally. If skill score is negative or accuracy is near 50%, be honest that your edge there is thin. Keep it under 65 words. This will be read aloud, so make it flow.`,
+        undefined,
+        180
+      )
+      break
+    }
+
     case 'terminal_chat':
       result.response = await callGemini(`You are an expert trading assistant inside YN Finance terminal. Answer concisely (3–4 sentences max). User is on the "${data.tab}" tab.
 Question: "${data.question}"${data.context ? `\nContext: ${data.context}` : ''}`, undefined, 250)

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, Check, Sparkles, LineChart, GraduationCap, Bot, Menu, X, ArrowRight, Brain, Play } from 'lucide-react'
+import { ArrowUpRight, Check, Sparkles, LineChart, GraduationCap, Bot, Menu, X, ArrowRight, Brain, Play, Mic } from 'lucide-react'
 import SiteFooter from '@/components/SiteFooter'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -183,6 +183,7 @@ const NAV = [
   { label: 'Analyzer', href: '/ai-stocks' },
   { label: 'BrainStock', href: '/brainstock' },
   { label: 'Beat the AI', href: '/predict' },
+  { label: 'Voice', href: '/copilot' },
   { label: 'Courses', href: '/courses' },
   { label: 'Algorithms', href: '/algorithms' },
   { label: 'Company', href: '/company' },
@@ -208,6 +209,16 @@ const PRODUCTS = [
     cta: 'Open the Analyzer',
     icon: LineChart,
     grad: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+  },
+  {
+    id: 'voice',
+    label: 'Talk to it',
+    title: 'BrainStock Voice',
+    blurb: 'Ask out loud — “what do you think of Tesla?” — and the neural net answers back in a voice, with its real forecast and the chart, live. Your market co-pilot.',
+    href: '/copilot',
+    cta: 'Start talking',
+    icon: Mic,
+    grad: 'linear-gradient(135deg,#22d3ee,#a855f7)',
   },
   {
     id: 'learn',
@@ -867,7 +878,7 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
       {/* ---------- products ---------- */}
       <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
         <Reveal>
-          <div className="text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">Forecast · Analyze · Learn · Automate</div>
+          <div className="text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">Forecast · Analyze · Talk · Learn · Automate</div>
           <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl">
             One platform for the whole trade — from idea to execution.
           </h2>
