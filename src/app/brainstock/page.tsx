@@ -386,6 +386,14 @@ export default function BrainStock() {
           <p style={{ marginTop: 12, fontSize: 12, color: MUTED }}>
             Live prices from Yahoo Finance · 6-month history · walk-forward backtest vs. naive baseline.
           </p>
+
+          {/* EXPLORE — the AI's receipts & games */}
+          <div style={{ marginTop: 26, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 12 }} className="bs-explore">
+            <FeatureLink href="/fund" accent={GREEN} live emoji="📈" title="Live Fund" desc="The AI's open book, marked to real prices right now" />
+            <FeatureLink href="/time-machine" accent={VIOLET} emoji="⏳" title="Time Machine" desc="What if you'd followed the AI since any past day" />
+            <FeatureLink href="/predict" accent={CYAN} emoji="⚔️" title="Beat the AI" desc="Humanity vs BrainStock — call it before the model" />
+            <FeatureLink href="/brainstock/track-record" accent={AMBER} emoji="🧾" title="Track Record" desc="Every call graded against real prices. No cherry-picking" />
+          </div>
         </div>
       </section>
 
@@ -568,8 +576,27 @@ export default function BrainStock() {
         </div>
       </footer>
 
-      <style>{`@media (max-width: 900px){ .bs-resp{ grid-template-columns: 1fr !important } }`}</style>
+      <style>{`@media (max-width: 900px){ .bs-resp{ grid-template-columns: 1fr !important } }
+        .bs-flink:hover{ transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,.35) }
+        @media (max-width: 720px){ .bs-explore{ grid-template-columns: 1fr 1fr !important } }`}</style>
     </div>
+  )
+}
+
+function FeatureLink({ href, accent, emoji, title, desc, live }: { href: string; accent: string; emoji: string; title: string; desc: string; live?: boolean }) {
+  return (
+    <Link href={href} style={{ ...glass, padding: 16, textDecoration: 'none', color: '#e7ecf5', display: 'block', borderColor: `${accent}33`, position: 'relative', transition: 'transform .12s ease, box-shadow .2s ease' }} className="bs-flink">
+      {live && (
+        <span style={{ position: 'absolute', top: 12, right: 12, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 800, letterSpacing: 0.6, color: accent }}>
+          <span style={{ width: 6, height: 6, borderRadius: 99, background: accent, animation: 'bs-pulse 1.4s ease-in-out infinite' }} /> LIVE
+        </span>
+      )}
+      <div style={{ fontSize: 22 }}>{emoji}</div>
+      <div style={{ marginTop: 8, fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+        {title} <ArrowUpRight size={14} color={accent} />
+      </div>
+      <div style={{ marginTop: 4, fontSize: 12, color: MUTED, lineHeight: 1.45 }}>{desc}</div>
+    </Link>
   )
 }
 
