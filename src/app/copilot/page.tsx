@@ -48,6 +48,7 @@ export default function Copilot() {
   mutedRef.current = muted
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null)
   const keepAlive = useRef<ReturnType<typeof setInterval> | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // Pick the best-sounding available English voice (prefer natural/online ones).
   const pickVoice = useCallback(() => {
@@ -69,10 +70,10 @@ export default function Copilot() {
     if (best) voiceRef.current = best
   }, [])
 
-  // ---- speech synthesis (chunked + Chrome keepalive so long answers don't cut off) ----
-  const speak = useCallback((text: string) => {
+  // Expressive browser fallback: vary pitch/rate/volume per sentence so it isn't monotone.
+  const browserSpeak = useCallback((text: string) => {
     const synth = typeof window !== 'undefined' ? window.speechSynthesis : null
-    if (mutedRef.current || !synth) {
+    if (!synth) {
       setPhase('idle')
       return
     }
@@ -80,12 +81,9 @@ export default function Copilot() {
     if (keepAlive.current) clearInterval(keepAlive.current)
     if (!voiceRef.current) pickVoice()
 
-    // Split into sentence-ish chunks — Chrome hard-stops long single utterances.
     const chunks = (text.match(/[^.!?…]+[.!?…]+|\S[^.!?…]*$/g) || [text]).map((c) => c.trim()).filter(Boolean)
     let i = 0
     setPhase('speaking')
-
-    // Keepalive: Chrome pauses synthesis mid-stream; resume() keeps it flowing.
     keepAlive.current = setInterval(() => {
       if (!synth.speaking) return
       synth.pause()
@@ -98,22 +96,57 @@ export default function Copilot() {
         setPhase('idle')
         return
       }
-      const u = new SpeechSynthesisUtterance(chunks[i])
-      u.rate = 1.0
-      u.pitch = 1.02
+      const c = chunks[i]
+      const u = new SpeechSynthesisUtterance(c)
+      // dynamics from the content
+      const jitter = (Math.random() - 0.5) * 0.06
+      let rate = 1.0, pitch = 1.0, vol = 1.0
+      if (/!\s*$/.test(c)) { rate = 1.08; pitch = 1.14; vol = 1.0 }        // excited
+      else if (/\?\s*$/.test(c)) { pitch = 1.1; rate = 1.02 }               // questioning lift
+      else if (/\b(but|however|risk|careful|watch|caveat|though|downside|catch)\b/i.test(c)) { rate = 0.94; pitch = 0.95 } // serious
+      else if (/\b(love|huge|massive|ripper|monster|insane|wild|beautiful)\b/i.test(c)) { pitch = 1.1; rate = 1.05 } // hype
+      u.rate = Math.max(0.85, rate + jitter)
+      u.pitch = Math.max(0.7, pitch + jitter)
+      u.volume = vol
       if (voiceRef.current) u.voice = voiceRef.current
-      u.onend = () => {
-        i++
-        next()
-      }
-      u.onerror = () => {
-        i++
-        next()
-      }
+      u.onend = () => { i++; setTimeout(next, /[,;:—-]\s*$/.test(c) ? 90 : 40) } // micro-pause for breath
+      u.onerror = () => { i++; next() }
       synth.speak(u)
     }
     next()
   }, [pickVoice])
+
+  // ---- speak: try the human neural voice (ElevenLabs) first, else expressive browser voice ----
+  const speak = useCallback(async (text: string) => {
+    if (mutedRef.current) {
+      setPhase('idle')
+      return
+    }
+    // stop anything currently talking
+    if (audioRef.current) { try { audioRef.current.pause() } catch { /* noop */ } audioRef.current = null }
+    if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel()
+
+    try {
+      const r = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+      if (r.ok && r.headers.get('content-type')?.includes('audio')) {
+        const url = URL.createObjectURL(await r.blob())
+        const audio = new Audio(url)
+        audioRef.current = audio
+        audio.onplay = () => setPhase('speaking')
+        audio.onended = () => { setPhase('idle'); URL.revokeObjectURL(url); audioRef.current = null }
+        audio.onerror = () => { URL.revokeObjectURL(url); browserSpeak(text) }
+        await audio.play()
+        return
+      }
+    } catch {
+      /* fall through to browser voice */
+    }
+    browserSpeak(text)
+  }, [browserSpeak])
 
   // ---- resolve a ticker from a spoken phrase ----
   async function resolveTicker(text: string): Promise<{ symbol: string; name: string } | null> {
@@ -267,6 +300,7 @@ export default function Copilot() {
   const stopAll = () => {
     try { recogRef.current?.stop() } catch { /* noop */ }
     if (keepAlive.current) clearInterval(keepAlive.current)
+    if (audioRef.current) { try { audioRef.current.pause() } catch { /* noop */ } audioRef.current = null }
     if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel()
     setPhase('idle')
   }

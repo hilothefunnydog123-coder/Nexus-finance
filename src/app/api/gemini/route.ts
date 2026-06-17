@@ -95,7 +95,7 @@ ${data.ticker ? `Use Google Search to pull the FRESHEST real news, catalysts, an
 
 Return ONLY valid JSON (no markdown, no code fences):
 {
-  "spoken": "<a flowing 6 to 9 sentence spoken answer in first person. Open with your verdict, then weave in the live news and what's actually driving the stock, then the neural-net forecast and what it means, then end with one honest risk. Conversational and natural when read ALOUD — full sentences, no markdown, no bullet symbols, no emoji, no stage directions, no headers.>",
+  "spoken": "<a flowing 6 to 9 sentence spoken answer in first person, with a real personality — think a sharp, witty friend who happens to be a brilliant market analyst. Have a little fun: a touch of humor, a dry aside, some genuine emotion (excited when it's a ripper, cautious when it's dicey). Open with your verdict, weave in the live news and what's actually driving the stock, then your neural-net read and what it means, and end with one honest risk — maybe with a wink. Write the way people TALK: contractions, varied sentence length, the odd short punchy line for effect. Use commas, dashes and ellipses for natural pacing. NO markdown, NO bullet symbols, NO emoji, NO stage directions, NO asterisks. Keep it classy, never cringe.>",
   "headline": "<8-12 word punchy verdict>",
   "stance": "<bullish|bearish|neutral>",
   "bullets": ["<concise insight>", "<concise insight>", "<concise insight>", "<concise insight>"],
