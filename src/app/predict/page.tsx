@@ -150,7 +150,7 @@ export default function Predict() {
       const r = await fetch('/api/brain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'play', ticker: t }),
+        body: JSON.stringify({ action: 'play', ticker: t, userDir }),
       })
       const j = await r.json()
       if (!r.ok || !j.dir) throw new Error(j?.error ?? 'Could not reach the AI.')
@@ -251,6 +251,7 @@ export default function Predict() {
       </header>
 
       <main style={{ maxWidth: 980, margin: '0 auto', padding: '48px 22px 80px' }}>
+        <Showdown />
         {/* HERO */}
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, borderRadius: 100, border: `1px solid ${BORDER}`, background: 'rgba(255,255,255,.03)', padding: '5px 13px', fontSize: 12, color: MUTED }}>
           <Sparkles size={14} color={UP} /> Free · just for fun · no money, ever
@@ -365,6 +366,107 @@ export default function Predict() {
       </main>
 
       <style>{`@media (max-width: 640px){ .pv-resp4{ grid-template-columns: 1fr 1fr !important } }`}</style>
+    </div>
+  )
+}
+
+type ShowdownData = {
+  ready: boolean
+  inFlight?: number
+  games?: number
+  humanWins?: number
+  aiWins?: number
+  humanWinRate?: number
+  aiWinRate?: number
+  leader?: 'humans' | 'ai' | 'tied'
+  margin?: number
+  recent?: { ticker: string; winner: string; outcome: string }[]
+}
+
+function Showdown() {
+  const [d, setD] = useState<ShowdownData | null>(null)
+  useEffect(() => {
+    let alive = true
+    const load = () => fetch('/api/showdown').then((r) => r.json()).then((j) => alive && setD(j)).catch(() => {})
+    load()
+    const id = setInterval(load, 60000)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [])
+
+  if (!d || (!d.ready && !d.inFlight)) return null
+
+  if (!d.ready) {
+    return (
+      <div style={{ ...glass, padding: '18px 20px', marginBottom: 26, textAlign: 'center', borderColor: `${VIOLET}44` }}>
+        <div style={{ fontSize: 13, color: MUTED }}>
+          ⚔️ <b style={{ color: '#fff' }}>Humanity vs BrainStock</b> — {d.inFlight} {d.inFlight === 1 ? 'battle' : 'battles'} in flight. The first scores post when they settle.
+        </div>
+      </div>
+    )
+  }
+
+  const human = d.humanWins ?? 0
+  const ai = d.aiWins ?? 0
+  const total = (human + ai) || 1
+  const humanPct = (human / total) * 100
+  const humansLead = d.leader === 'humans'
+  const tied = d.leader === 'tied'
+  const leadColor = humansLead ? UP : tied ? CYAN : VIOLET
+
+  return (
+    <div
+      style={{
+        ...glass,
+        padding: '22px 22px 20px',
+        marginBottom: 28,
+        borderColor: `${leadColor}55`,
+        boxShadow: `0 0 50px ${leadColor}22`,
+      }}
+      className="pv-pop"
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.4, color: MUTED }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: UP, animation: 'pv-pulse 1.4s ease-in-out infinite' }} />
+          Humanity vs BrainStock · live
+        </div>
+        <div style={{ fontSize: 12, color: MUTED }}>{(d.games ?? 0).toLocaleString()} battles settled</div>
+      </div>
+
+      <div style={{ marginTop: 14, fontSize: 'clamp(20px,3.4vw,28px)', fontWeight: 800, letterSpacing: -0.6 }}>
+        {tied ? (
+          <>Dead even — <span style={{ color: CYAN }}>humanity and the machine are tied.</span></>
+        ) : humansLead ? (
+          <>Humanity leads by <span style={{ color: UP }}>{d.margin}</span>. 🌍</>
+        ) : (
+          <>BrainStock leads by <span style={{ color: VIOLET }}>{d.margin}</span>. 🤖</>
+        )}
+      </div>
+
+      {/* tug-of-war bar */}
+      <div style={{ marginTop: 16, height: 14, borderRadius: 8, overflow: 'hidden', display: 'flex', border: `1px solid ${BORDER}` }}>
+        <div style={{ width: `${humanPct}%`, background: `linear-gradient(90deg, ${UP}, ${UP}cc)`, transition: 'width .6s ease' }} />
+        <div style={{ width: `${100 - humanPct}%`, background: `linear-gradient(90deg, ${VIOLET}cc, ${VIOLET})`, transition: 'width .6s ease' }} />
+      </div>
+      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+        <div style={{ color: UP, fontWeight: 700 }}>👤 Humans {d.humanWinRate}% · {human.toLocaleString()} wins</div>
+        <div style={{ color: VIOLET, fontWeight: 700 }}>{ai.toLocaleString()} wins · {d.aiWinRate}% AI 🧠</div>
+      </div>
+
+      {d.recent && d.recent.length > 0 && (
+        <div style={{ marginTop: 14, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {d.recent.slice(0, 10).map((r, i) => {
+            const c = r.winner === 'human' ? UP : r.winner === 'ai' ? VIOLET : r.winner === 'both' ? CYAN : MUTED
+            return (
+              <span key={i} title={`${r.ticker} settled ${r.outcome.toUpperCase()} · ${r.winner}`} style={{ fontSize: 11, fontWeight: 700, color: c, border: `1px solid ${c}44`, background: `${c}14`, borderRadius: 100, padding: '3px 9px' }}>
+                ${r.ticker} {r.winner === 'human' ? '👤' : r.winner === 'ai' ? '🤖' : r.winner === 'both' ? '🤝' : '✕'}
+              </span>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

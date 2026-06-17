@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
   if (action === 'play') {
     const ticker = String(body.ticker ?? '').toUpperCase().trim()
     if (!/^[A-Z0-9.\-]{1,8}$/.test(ticker)) return NextResponse.json({ error: 'Invalid ticker' }, { status: 400 })
+    const userDir = body.userDir === 'up' || body.userDir === 'down' ? (body.userDir as string) : null
     try {
       const hist = await fetchYahoo(ticker)
       const closes = hist.map((p) => p.price)
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
       const resolveDate = addBusinessDays(new Date(etDate() + 'T00:00:00Z'), 5).toISOString().slice(0, 10)
       const brain = await loadBrain(admin)
       const p = predictUp(brain.weights, brain.bias, x)
+      const aiDir = p >= 0.5 ? 'up' : 'down'
       try {
         await admin.from('brain_examples').insert({
           ticker,
@@ -72,12 +74,14 @@ export async function POST(req: NextRequest) {
           resolve_date: resolveDate,
           status: 'open',
           source: 'game',
+          user_dir: userDir,
+          ai_dir: aiDir,
         })
       } catch {
         /* table may not exist yet */
       }
       return NextResponse.json({
-        dir: p >= 0.5 ? 'up' : 'down',
+        dir: aiDir,
         confidence: +(Math.max(p, 1 - p) * 100).toFixed(0),
         startPrice: +startPrice.toFixed(2),
         resolveDate,

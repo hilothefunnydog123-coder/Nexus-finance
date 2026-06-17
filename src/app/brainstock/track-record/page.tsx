@@ -45,6 +45,9 @@ export default function TrackRecord() {
           <Link href="/brainstock" style={{ color: MUTED, textDecoration: 'none', fontSize: 14, display: 'inline-flex', gap: 6, alignItems: 'center' }}>
             <ArrowLeft size={14} /> BrainStock
           </Link>
+          <Link href="/fund" style={{ color: GREEN, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
+            ● Live fund →
+          </Link>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase', color: MUTED }}>
