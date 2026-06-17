@@ -87,23 +87,22 @@ Movers: ${data.movers?.map((m: Record<string, unknown>) => `${m.symbol}: ${m.cha
       const facts = f
         ? `BrainStock neural-net read on ${data.ticker} (${data.name || data.ticker}): current price $${f.price}, next-${f.horizon}-day forecast ${f.dir} ${f.pct}%, directional accuracy ${f.dirAcc}%, skill score ${f.skill} versus a naive baseline (positive = the model adds real edge).`
         : `No specific ticker was resolved — answer the market question generally and helpfully.`
-      result.raw = await callGeminiSearch(
+      result.reply = await callGeminiSearch(
         `You are BrainStock — a spoken AI market co-pilot, the voice of a neural network. Think Jarvis: calm, sharp, confident, a little charismatic, genuinely insightful.
 The user asked out loud: "${data.question}".
 ${facts}
 ${data.ticker ? `Use Google Search to pull the FRESHEST real news, catalysts, analyst moves and price context for ${data.name || data.ticker}.` : 'Use Google Search for the latest relevant market context.'}
 
-Return ONLY valid JSON (no markdown, no code fences):
-{
-  "spoken": "<a flowing 6 to 9 sentence spoken answer in first person, with a real personality — think a sharp, witty friend who happens to be a brilliant market analyst. Have a little fun: a touch of humor, a dry aside, some genuine emotion (excited when it's a ripper, cautious when it's dicey). Open with your verdict, weave in the live news and what's actually driving the stock, then your neural-net read and what it means, and end with one honest risk — maybe with a wink. Write the way people TALK: contractions, varied sentence length, the odd short punchy line for effect. Use commas, dashes and ellipses for natural pacing. NO markdown, NO bullet symbols, NO emoji, NO stage directions, NO asterisks. Keep it classy, never cringe.>",
-  "headline": "<8-12 word punchy verdict>",
-  "stance": "<bullish|bearish|neutral>",
-  "bullets": ["<concise insight>", "<concise insight>", "<concise insight>", "<concise insight>"],
-  "news": [
-    {"title": "<real recent headline>", "source": "<outlet e.g. Reuters/Bloomberg/CNBC>", "sentiment": "<bullish|bearish|neutral>", "age": "<e.g. 2h ago / today / this week>"}
-  ]
-}
-Include 3 to 5 real, recent news items. Keep "spoken" rich and specific — names, numbers, catalysts — not generic filler.`,
+Respond in EXACTLY this labeled format and nothing else (no markdown, no code fences, no asterisks):
+
+SPOKEN: <a flowing 6 to 9 sentence spoken answer on ONE line, first person, with real personality — a sharp, witty friend who's a brilliant market analyst. A little humor, a dry aside, genuine emotion (excited when it's a ripper, cautious when it's dicey). Open with your verdict, weave in the live news and what's driving the stock, then your neural-net read, and end with one honest risk. Talk the way people talk: contractions, varied sentence length, the odd short punchy line. Use commas, dashes and ellipses for pacing. Keep it on a single line.>
+HEADLINE: <8-12 word punchy verdict>
+STANCE: <bullish|bearish|neutral>
+NEWS:
+<real recent headline> | <outlet e.g. Reuters/Bloomberg/CNBC> | <bullish|bearish|neutral> | <e.g. 2h ago / today / this week>
+<another real headline> | <outlet> | <sentiment> | <age>
+
+Give 3 to 5 NEWS lines, each on its own line using " | " separators. Keep SPOKEN rich and specific — names, numbers, catalysts — not generic filler.`,
         undefined,
         2048
       )

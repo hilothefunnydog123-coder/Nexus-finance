@@ -222,22 +222,35 @@ export default function Copilot() {
         }),
       })
       const j = await r.json()
-      // The model returns rich JSON in j.raw — parse defensively (strip any code fences).
-      let parsed: { spoken?: string; headline?: string; stance?: string; bullets?: string[]; news?: typeof news } | null = null
-      const raw = (j.raw || j.reply || '').toString().replace(/```json|```/g, '').trim()
-      try {
-        parsed = JSON.parse(raw)
-      } catch {
-        const m = raw.match(/\{[\s\S]*\}/)
-        if (m) { try { parsed = JSON.parse(m[0]) } catch { /* give up */ } }
-      }
+      const raw = (j.reply || j.raw || '').toString().replace(/```/g, '').trim()
 
-      const spoken = parsed?.spoken?.trim() || (raw && !raw.startsWith('{') ? raw : '') ||
-        "I couldn't get a clean read on that one. Try naming a stock — like 'what do you think of Nvidia?'"
+      // Robust labeled-section parse (immune to quotes/dashes in the prose).
+      const section = (name: string) => {
+        const m = raw.match(new RegExp(`${name}\\s*:\\s*([\\s\\S]*?)(?=\\n\\s*(?:SPOKEN|HEADLINE|STANCE|NEWS)\\s*:|$)`, 'i'))
+        return m ? m[1].trim() : ''
+      }
+      const spokenRaw = section('SPOKEN')
+      const headlineRaw = section('HEADLINE')
+      const newsBlock = section('NEWS')
+      const parsedNews = newsBlock
+        .split('\n')
+        .map((l: string) => l.replace(/^[-*•]\s*/, '').trim())
+        .filter((l: string) => l.includes('|'))
+        .map((l: string) => {
+          const [title, source, sentiment, age] = l.split('|').map((s: string) => s.trim())
+          return title ? { title, source: source || '', sentiment: sentiment || 'neutral', age } : null
+        })
+        .filter(Boolean) as { title: string; source: string; sentiment: string; age?: string }[]
+
+      // Fallback: if no SPOKEN label, just speak whatever real text came back (strip any label lines).
+      const spoken =
+        spokenRaw ||
+        raw.replace(/^(HEADLINE|STANCE|NEWS|SPOKEN)\s*:.*$/gim, '').replace(/\n+/g, ' ').trim() ||
+        "Hmm — couldn't pull that one up. Try naming a ticker, like 'what do you think of Nvidia?'"
+
       setReply(spoken)
-      if (parsed?.headline) setHeadline(parsed.headline)
-      if (Array.isArray(parsed?.bullets)) setBullets(parsed!.bullets.filter(Boolean).slice(0, 4))
-      if (Array.isArray(parsed?.news)) setNews(parsed!.news.filter((n) => n && n.title).slice(0, 5))
+      if (headlineRaw) setHeadline(headlineRaw)
+      if (parsedNews.length) setNews(parsedNews.slice(0, 5))
       speak(spoken)
       if (mutedRef.current) setPhase('idle')
     } catch {
