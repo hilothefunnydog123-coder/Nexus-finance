@@ -186,6 +186,7 @@ const NAV = [
   { label: 'Voice', href: '/copilot' },
   { label: 'Courses', href: '/courses' },
   { label: 'Algorithms', href: '/algorithms' },
+  { label: 'Pricing', href: '/pricing' },
   { label: 'Company', href: '/company' },
 ]
 
