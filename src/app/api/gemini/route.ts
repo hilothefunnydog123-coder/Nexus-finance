@@ -85,14 +85,27 @@ Movers: ${data.movers?.map((m: Record<string, unknown>) => `${m.symbol}: ${m.cha
     case 'voice_copilot': {
       const f = data.forecast
       const facts = f
-        ? `BrainStock neural-net read on ${data.ticker} (${data.name || data.ticker}): current price $${f.price}, next-${f.horizon}-day forecast ${f.dir} ${f.pct}%, directional accuracy ${f.dirAcc}%, skill score ${f.skill} versus a naive baseline (positive = the model adds edge).`
-        : `No specific ticker was resolved from the question.`
-      result.reply = await callGemini(
-        `You are BrainStock — a spoken AI market co-pilot, the voice of a neural network. Think Jarvis: calm, confident, precise, a little charismatic. The user said out loud: "${data.question}".
+        ? `BrainStock neural-net read on ${data.ticker} (${data.name || data.ticker}): current price $${f.price}, next-${f.horizon}-day forecast ${f.dir} ${f.pct}%, directional accuracy ${f.dirAcc}%, skill score ${f.skill} versus a naive baseline (positive = the model adds real edge).`
+        : `No specific ticker was resolved — answer the market question generally and helpfully.`
+      result.raw = await callGeminiSearch(
+        `You are BrainStock — a spoken AI market co-pilot, the voice of a neural network. Think Jarvis: calm, sharp, confident, a little charismatic, genuinely insightful.
+The user asked out loud: "${data.question}".
 ${facts}
-Answer in 2-3 short spoken sentences. Rules: first person ("I"), conversational, NO markdown, NO bullet points, NO emoji, NO stage directions. Lead with the verdict. If a ticker was resolved, reference the price and the model's lean naturally. If skill score is negative or accuracy is near 50%, be honest that your edge there is thin. Keep it under 65 words. This will be read aloud, so make it flow.`,
+${data.ticker ? `Use Google Search to pull the FRESHEST real news, catalysts, analyst moves and price context for ${data.name || data.ticker}.` : 'Use Google Search for the latest relevant market context.'}
+
+Return ONLY valid JSON (no markdown, no code fences):
+{
+  "spoken": "<a flowing 6 to 9 sentence spoken answer in first person. Open with your verdict, then weave in the live news and what's actually driving the stock, then the neural-net forecast and what it means, then end with one honest risk. Conversational and natural when read ALOUD — full sentences, no markdown, no bullet symbols, no emoji, no stage directions, no headers.>",
+  "headline": "<8-12 word punchy verdict>",
+  "stance": "<bullish|bearish|neutral>",
+  "bullets": ["<concise insight>", "<concise insight>", "<concise insight>", "<concise insight>"],
+  "news": [
+    {"title": "<real recent headline>", "source": "<outlet e.g. Reuters/Bloomberg/CNBC>", "sentiment": "<bullish|bearish|neutral>", "age": "<e.g. 2h ago / today / this week>"}
+  ]
+}
+Include 3 to 5 real, recent news items. Keep "spoken" rich and specific — names, numbers, catalysts — not generic filler.`,
         undefined,
-        180
+        2048
       )
       break
     }

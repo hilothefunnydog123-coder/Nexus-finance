@@ -34,6 +34,9 @@ export default function Copilot() {
   const [supported, setSupported] = useState(true)
   const [transcript, setTranscript] = useState('')
   const [reply, setReply] = useState('')
+  const [headline, setHeadline] = useState('')
+  const [bullets, setBullets] = useState<string[]>([])
+  const [news, setNews] = useState<{ title: string; source: string; sentiment: string; age?: string }[]>([])
   const [ticker, setTicker] = useState<string | null>(null)
   const [verdict, setVerdict] = useState<{ dir: string; pct: number; price: number; dirAcc: number; skill: number } | null>(null)
   const [muted, setMuted] = useState(false)
@@ -43,28 +46,74 @@ export default function Copilot() {
   const recogRef = useRef<any>(null)
   const mutedRef = useRef(muted)
   mutedRef.current = muted
+  const voiceRef = useRef<SpeechSynthesisVoice | null>(null)
+  const keepAlive = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // ---- speech synthesis ----
+  // Pick the best-sounding available English voice (prefer natural/online ones).
+  const pickVoice = useCallback(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return
+    const voices = window.speechSynthesis.getVoices()
+    if (!voices.length) return
+    const score = (v: SpeechSynthesisVoice) => {
+      const n = v.name.toLowerCase()
+      let s = 0
+      if (/natural|neural|online/.test(n)) s += 6
+      if (/google/.test(n)) s += 5
+      if (/(aria|jenny|guy|libby|sonia|emma|michelle|ava|samantha|serena|daniel)/.test(n)) s += 4
+      if (v.lang === 'en-US') s += 2
+      else if (v.lang?.startsWith('en')) s += 1
+      if (/zira|david|mark|hazel|compact|espeak/.test(n)) s -= 3 // the robotic ones
+      return s
+    }
+    const best = [...voices].filter((v) => v.lang?.startsWith('en')).sort((a, b) => score(b) - score(a))[0]
+    if (best) voiceRef.current = best
+  }, [])
+
+  // ---- speech synthesis (chunked + Chrome keepalive so long answers don't cut off) ----
   const speak = useCallback((text: string) => {
-    if (mutedRef.current || typeof window === 'undefined' || !window.speechSynthesis) {
+    const synth = typeof window !== 'undefined' ? window.speechSynthesis : null
+    if (mutedRef.current || !synth) {
       setPhase('idle')
       return
     }
-    window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(text)
-    u.rate = 1.02
-    u.pitch = 1.0
-    const voices = window.speechSynthesis.getVoices()
-    // prefer a crisp English voice
-    const pick =
-      voices.find((v) => /Google US English|Samantha|Daniel|Microsoft (Aria|Guy|Jenny)/i.test(v.name)) ||
-      voices.find((v) => v.lang?.startsWith('en'))
-    if (pick) u.voice = pick
-    u.onstart = () => setPhase('speaking')
-    u.onend = () => setPhase('idle')
-    u.onerror = () => setPhase('idle')
-    window.speechSynthesis.speak(u)
-  }, [])
+    synth.cancel()
+    if (keepAlive.current) clearInterval(keepAlive.current)
+    if (!voiceRef.current) pickVoice()
+
+    // Split into sentence-ish chunks — Chrome hard-stops long single utterances.
+    const chunks = (text.match(/[^.!?…]+[.!?…]+|\S[^.!?…]*$/g) || [text]).map((c) => c.trim()).filter(Boolean)
+    let i = 0
+    setPhase('speaking')
+
+    // Keepalive: Chrome pauses synthesis mid-stream; resume() keeps it flowing.
+    keepAlive.current = setInterval(() => {
+      if (!synth.speaking) return
+      synth.pause()
+      synth.resume()
+    }, 9000)
+
+    const next = () => {
+      if (i >= chunks.length) {
+        if (keepAlive.current) clearInterval(keepAlive.current)
+        setPhase('idle')
+        return
+      }
+      const u = new SpeechSynthesisUtterance(chunks[i])
+      u.rate = 1.0
+      u.pitch = 1.02
+      if (voiceRef.current) u.voice = voiceRef.current
+      u.onend = () => {
+        i++
+        next()
+      }
+      u.onerror = () => {
+        i++
+        next()
+      }
+      synth.speak(u)
+    }
+    next()
+  }, [pickVoice])
 
   // ---- resolve a ticker from a spoken phrase ----
   async function resolveTicker(text: string): Promise<{ symbol: string; name: string } | null> {
@@ -92,6 +141,9 @@ export default function Copilot() {
     if (!question.trim()) return
     setError(null)
     setReply('')
+    setHeadline('')
+    setBullets([])
+    setNews([])
     setTicker(null)
     setVerdict(null)
     setTranscript(question)
@@ -137,9 +189,23 @@ export default function Copilot() {
         }),
       })
       const j = await r.json()
-      const text = j.reply || "I couldn't get a read on that one. Try naming a stock — like 'what do you think of Nvidia?'"
-      setReply(text)
-      speak(text)
+      // The model returns rich JSON in j.raw — parse defensively (strip any code fences).
+      let parsed: { spoken?: string; headline?: string; stance?: string; bullets?: string[]; news?: typeof news } | null = null
+      const raw = (j.raw || j.reply || '').toString().replace(/```json|```/g, '').trim()
+      try {
+        parsed = JSON.parse(raw)
+      } catch {
+        const m = raw.match(/\{[\s\S]*\}/)
+        if (m) { try { parsed = JSON.parse(m[0]) } catch { /* give up */ } }
+      }
+
+      const spoken = parsed?.spoken?.trim() || (raw && !raw.startsWith('{') ? raw : '') ||
+        "I couldn't get a clean read on that one. Try naming a stock — like 'what do you think of Nvidia?'"
+      setReply(spoken)
+      if (parsed?.headline) setHeadline(parsed.headline)
+      if (Array.isArray(parsed?.bullets)) setBullets(parsed!.bullets.filter(Boolean).slice(0, 4))
+      if (Array.isArray(parsed?.news)) setNews(parsed!.news.filter((n) => n && n.title).slice(0, 5))
+      speak(spoken)
       if (mutedRef.current) setPhase('idle')
     } catch {
       setError('I lost the connection for a second. Try again.')
@@ -177,8 +243,14 @@ export default function Copilot() {
 
   // warm up the voice list (some browsers populate async)
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.getVoices()
-  }, [])
+    if (typeof window === 'undefined' || !window.speechSynthesis) return
+    pickVoice()
+    window.speechSynthesis.onvoiceschanged = pickVoice
+    return () => {
+      if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = null
+      if (keepAlive.current) clearInterval(keepAlive.current)
+    }
+  }, [pickVoice])
 
   const startListening = () => {
     setError(null)
@@ -194,6 +266,7 @@ export default function Copilot() {
   }
   const stopAll = () => {
     try { recogRef.current?.stop() } catch { /* noop */ }
+    if (keepAlive.current) clearInterval(keepAlive.current)
     if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel()
     setPhase('idle')
   }
@@ -321,10 +394,55 @@ export default function Copilot() {
           </div>
         )}
 
+        {/* ---- headline verdict ---- */}
+        {headline && (
+          <div className="cp-fade" style={{ marginTop: 18, fontSize: 'clamp(18px,3vw,24px)', fontWeight: 800, letterSpacing: -0.5, textAlign: 'center', maxWidth: 620, background: `linear-gradient(90deg, ${CYAN}, ${VIOLET})`, WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            {headline}
+          </div>
+        )}
+
         {/* ---- spoken reply ---- */}
         {reply && (
-          <div className="cp-fade" style={{ marginTop: 18, fontSize: 17, lineHeight: 1.6, textAlign: 'center', maxWidth: 560, color: '#cdd6e6' }}>
+          <div className="cp-fade" style={{ marginTop: 14, fontSize: 16.5, lineHeight: 1.65, textAlign: 'center', maxWidth: 600, color: '#cdd6e6' }}>
             {reply}
+          </div>
+        )}
+
+        {/* ---- key points ---- */}
+        {bullets.length > 0 && (
+          <div className="cp-fade" style={{ marginTop: 18, width: '100%', maxWidth: 600, display: 'grid', gap: 8 }}>
+            {bullets.map((b, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${BORDER}`, background: 'rgba(255,255,255,.025)' }}>
+                <span style={{ flexShrink: 0, marginTop: 6, width: 6, height: 6, borderRadius: 99, background: CYAN }} />
+                <span style={{ fontSize: 14, color: '#d6deec', lineHeight: 1.5 }}>{b}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ---- live news the AI pulled ---- */}
+        {news.length > 0 && (
+          <div className="cp-fade" style={{ marginTop: 20, width: '100%', maxWidth: 600 }}>
+            <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1.4, color: MUTED, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+              📰 What I&apos;m reading right now
+            </div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {news.map((n, i) => {
+                const c = /bull/i.test(n.sentiment) ? GREEN : /bear/i.test(n.sentiment) ? RED : MUTED
+                return (
+                  <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '11px 14px', borderRadius: 12, border: `1px solid ${BORDER}`, background: 'rgba(255,255,255,.025)' }}>
+                    <span style={{ flexShrink: 0, width: 4, alignSelf: 'stretch', borderRadius: 4, background: c }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#e7ecf5', lineHeight: 1.4 }}>{n.title}</div>
+                      <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3 }}>
+                        {n.source}{n.age ? ` · ${n.age}` : ''}
+                      </div>
+                    </div>
+                    <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: c, textTransform: 'uppercase' }}>{n.sentiment}</span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
