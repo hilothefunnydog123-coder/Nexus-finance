@@ -127,7 +127,7 @@ function ValueCard({ icon, title, desc, accent }: { icon: string; title: string;
 }
 
 // ── Founder Card ───────────────────────────────────────────────────────────────
-function FounderCard({ name, role, accent, bio, detail }: { name:string; role:string; accent:string; bio:string; detail:string }) {
+function FounderCard({ name, role, accent, bio, detail, linkedin }: { name:string; role:string; accent:string; bio:string; detail:string; linkedin?:string }) {
   return (
     <div style={{
       background:'rgba(255,255,255,.03)',
@@ -144,10 +144,26 @@ function FounderCard({ name, role, accent, bio, detail }: { name:string; role:st
         <div style={{ width:48, height:48, borderRadius:12, background:`${accent}20`, border:`2px solid ${accent}40`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:900, color:accent }}>
           {name.split(' ').map(n=>n[0]).join('')}
         </div>
-        <div>
+        <div style={{ flex:1 }}>
           <div style={{ fontSize:16, fontWeight:800, color:'#fff' }}>{name}</div>
           <div style={{ fontSize:11, fontWeight:700, color:accent, letterSpacing:'0.12em', fontFamily:'monospace' }}>{role}</div>
         </div>
+        {linkedin && (
+          <a
+            href={linkedin}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${name} on LinkedIn`}
+            title={`${name} on LinkedIn`}
+            style={{ display:'flex', alignItems:'center', justifyContent:'center', width:34, height:34, borderRadius:9, background:`${accent}18`, border:`1px solid ${accent}40`, color:accent, textDecoration:'none', transition:'background .2s, transform .2s' }}
+            onMouseEnter={e => { e.currentTarget.style.background=`${accent}30`; e.currentTarget.style.transform='translateY(-1px)' }}
+            onMouseLeave={e => { e.currentTarget.style.background=`${accent}18`; e.currentTarget.style.transform='translateY(0)' }}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.22.79 24 1.77 24h20.45c.98 0 1.78-.78 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/>
+            </svg>
+          </a>
+        )}
       </div>
       <p style={{ fontSize:13, color:'#7a9aaa', lineHeight:1.7, marginBottom:10 }}>{bio}</p>
       <p style={{ fontSize:12, color:'#4a6a7a', lineHeight:1.6, fontStyle:'italic' }}>{detail}</p>
@@ -319,6 +335,7 @@ export default function CompanyPage() {
               accent="#00d4aa"
               bio="Built every line of YN Finance's code solo. Started at 11 with Discord bots, built a gap scanner at 13 that hit 40K upvotes on Reddit overnight."
               detail="'I coded because I needed the tool. Then I realized everyone else needed it too.'"
+              linkedin="https://www.linkedin.com/in/neil-gilani-8863b7412/"
             />
             <FounderCard
               name="Yannai Richter"
@@ -326,6 +343,7 @@ export default function CompanyPage() {
               accent="#1e90ff"
               bio="Paper traded from age 12. Turned $500 simulated into $31K in 11 months. Cold-emailed Ross Cameron 47 times and signed 9 world-class instructors on 70% revenue share."
               detail="'I trusted my thesis before the crowd did. That's the only edge that matters.'"
+              linkedin="https://www.linkedin.com/in/yannai-richter-797a20344/"
             />
           </div>
         </div>
