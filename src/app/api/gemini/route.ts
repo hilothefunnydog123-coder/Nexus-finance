@@ -109,6 +109,38 @@ Give 3 to 5 NEWS lines, each on its own line using " | " separators. Keep SPOKEN
       break
     }
 
+    case 'war_room': {
+      const f = data.forecast
+      const facts = f
+        ? `BrainStock's neural net on ${data.ticker} (${data.name || data.ticker}): price $${f.price}, ${f.horizon}-day forecast ${f.dir} ${f.pct}%, directional accuracy ${f.dirAcc}%, skill score ${f.skill} vs baseline.`
+        : `No model forecast available for ${data.ticker}.`
+      result.reply = await callGeminiSearch(
+        `Simulate a hedge fund investment committee debating $${data.ticker} (${data.name || data.ticker}) live. Five characters who TALK TO EACH OTHER — they disagree, rebut by name, concede points, and escalate. Use Google Search for the FRESHEST real news, catalysts, earnings and numbers.
+
+Characters:
+- BULL = Marcus, aggressive long PM. Makes the bull case with real catalysts.
+- BEAR = Vera, skeptical short-seller. Attacks the thesis, finds risks in the filings/numbers.
+- QUANT = Kenji, cold and data-only. ${facts} He cites these model numbers.
+- RISK = Dalia, risk officer. Obsesses over what blows up the book and how big they can size.
+- CIO = the chief, runs the room, interrupts, and makes the final call.
+
+Output EXACTLY this format and nothing else (no markdown, no emoji, no asterisks):
+ROUND: BULL | <2-4 sentences in character, reference a real catalyst>
+ROUND: BEAR | <rebut Marcus by name with a real risk>
+ROUND: QUANT | <cite the model numbers coldly>
+ROUND: RISK | <what's the downside / position size concern>
+ROUND: BULL | <push back>
+ROUND: BEAR | <counter>
+ROUND: CIO | <weigh the room>
+RULING: <STRONG BUY|BUY|HOLD|AVOID|SHORT> | <conviction 0-100> | <position size e.g. 2% starter / pass / full> | <invalidation e.g. out below $185> | <one punchy sentence verdict>
+
+Use 8 to 11 ROUND lines with varied speakers that build real tension, then exactly one RULING line. Keep every line on ONE line, separated by " | ". Be specific — real names, numbers, catalysts.`,
+        undefined,
+        3072
+      )
+      break
+    }
+
     case 'terminal_chat':
       result.response = await callGemini(`You are an expert trading assistant inside YN Finance terminal. Answer concisely (3–4 sentences max). User is on the "${data.tab}" tab.
 Question: "${data.question}"${data.context ? `\nContext: ${data.context}` : ''}`, undefined, 250)

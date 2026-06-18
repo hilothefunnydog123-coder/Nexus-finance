@@ -183,6 +183,7 @@ const NAV = [
   { label: 'Analyzer', href: '/ai-stocks' },
   { label: 'BrainStock', href: '/brainstock' },
   { label: 'Beat the AI', href: '/predict' },
+  { label: 'War Room', href: '/war-room' },
   { label: 'Voice', href: '/copilot' },
   { label: 'Courses', href: '/courses' },
   { label: 'Algorithms', href: '/algorithms' },
