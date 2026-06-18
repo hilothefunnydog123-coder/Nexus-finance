@@ -190,7 +190,7 @@ export default function Copilot() {
         const r = await fetch('/api/forecast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ticker: resolved.symbol, horizon: 5 }),
+          body: JSON.stringify({ ticker: resolved.symbol, horizon: 5, source: 'voice' }),
         })
         const j = await r.json()
         if (r.ok && j.history?.length) {
