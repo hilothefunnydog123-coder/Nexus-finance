@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
   const { data: board } = await admin
     .from('daily_picks')
-    .select('trade_date,picks,bears')
+    .select('trade_date,picks,bears,emailed_at')
     .order('trade_date', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -80,6 +80,12 @@ export async function POST(req: NextRequest) {
   const bears = (board?.bears ?? []) as Pick[]
   const date = board?.trade_date ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   if (!bulls.length) return NextResponse.json({ sent: 0, failed: 0, note: 'no board yet' })
+
+  // Once-per-day guard: never email the same board twice (pass ?force=1 to override).
+  const force = new URL(req.url).searchParams.get('force') === '1'
+  if (board?.emailed_at && !force) {
+    return NextResponse.json({ sent: 0, failed: 0, note: 'already emailed this board' })
+  }
 
   const { data: subs } = await admin.from('subscribers').select('email').eq('active', true).limit(5000)
   const list = (subs || []) as { email: string }[]
@@ -101,6 +107,14 @@ export async function POST(req: NextRequest) {
       else sent++
     } catch {
       failed++
+    }
+  }
+  // Stamp the board so the next cron run won't re-send it.
+  if (sent > 0 && board?.trade_date) {
+    try {
+      await admin.from('daily_picks').update({ emailed_at: new Date().toISOString() }).eq('trade_date', board.trade_date)
+    } catch {
+      /* non-fatal */
     }
   }
   return NextResponse.json({ sent, failed })

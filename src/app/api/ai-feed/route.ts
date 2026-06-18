@@ -156,11 +156,29 @@ export async function POST(req: NextRequest) {
   }
   if (storeErr) return NextResponse.json({ created: 0, storeErr })
 
-  // Email the single most important fresh post if it clears the bar.
+  // Email the single most important fresh post — but cap alert emails to once a
+  // day so we never spam subscribers, no matter how much news breaks.
   let emailed = 0
-  const top = meaningful.filter((r) => (r.importance as number) >= 4).sort((a, b) => (b.importance as number) - (a.importance as number))[0]
+  const DAILY_ALERT_CAP = 1
+  // Raise the bar to 5 (was 4): only a genuinely major story ever earns an email.
+  const top = meaningful.filter((r) => (r.importance as number) >= 5).sort((a, b) => (b.importance as number) - (a.importance as number))[0]
   const key = process.env.RESEND_API_KEY
+  let sentToday = 0
   if (top && key) {
+    try {
+      const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+      const { count } = await admin
+        .from('ai_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('emailed', true)
+        .gte('created_at', since)
+      sentToday = count ?? 0
+    } catch {
+      /* if we can't tell, err on the side of NOT emailing */
+      sentToday = DAILY_ALERT_CAP
+    }
+  }
+  if (top && key && sentToday < DAILY_ALERT_CAP) {
     try {
       const { data: subs } = await admin.from('subscribers').select('email').eq('active', true).limit(5000)
       const list = (subs || []) as { email: string }[]
