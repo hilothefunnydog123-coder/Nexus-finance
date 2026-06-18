@@ -186,8 +186,6 @@ const NAV = [
   { label: 'Voice', href: '/copilot' },
   { label: 'Courses', href: '/courses' },
   { label: 'Algorithms', href: '/algorithms' },
-  { label: 'Pricing', href: '/pricing' },
-  { label: 'Company', href: '/company' },
 ]
 
 const PRODUCTS = [
@@ -986,17 +984,30 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
               </div>
               <div className="p-9 sm:p-12 flex flex-col justify-center gap-5 bg-white/45 backdrop-blur">
                 {[
-                  { i: 'NG', n: 'Neil Gilani', r: 'Co-founder · CEO', g: 'linear-gradient(135deg,#6366f1,#8b5cf6)' },
-                  { i: 'YR', n: 'Yannai Richter', r: 'Co-founder · CTO', g: 'linear-gradient(135deg,#ec4899,#f97316)' },
+                  { i: 'NG', n: 'Neil Gilani', r: 'Co-founder · CEO', g: 'linear-gradient(135deg,#6366f1,#8b5cf6)', l: 'https://www.linkedin.com/in/neil-gilani-8863b7412/' },
+                  { i: 'YR', n: 'Yannai Richter', r: 'Co-founder · CTO', g: 'linear-gradient(135deg,#ec4899,#f97316)', l: 'https://www.linkedin.com/in/yannai-richter-797a20344/' },
                 ].map((f) => (
                   <div key={f.i} className="flex items-center gap-4">
                     <span className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-[15px]" style={{ background: f.g, boxShadow: '0 8px 22px rgba(139,92,246,.25)' }}>
                       {f.i}
                     </span>
-                    <div>
+                    <div className="flex-1">
                       <div className="text-[16px] font-semibold">{f.n}</div>
                       <div className="text-[13px] text-[#6a6a74]">{f.r}</div>
                     </div>
+                    <a
+                      href={f.l}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${f.n} on LinkedIn`}
+                      title={`${f.n} on LinkedIn`}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center text-white transition-transform hover:-translate-y-0.5"
+                      style={{ background: '#0a66c2', boxShadow: '0 6px 16px rgba(10,102,194,.3)' }}
+                    >
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.22.79 24 1.77 24h20.45c.98 0 1.78-.78 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/>
+                      </svg>
+                    </a>
                   </div>
                 ))}
               </div>
