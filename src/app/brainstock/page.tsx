@@ -23,6 +23,7 @@ import {
   Sparkles,
   TrendingUp,
 } from 'lucide-react'
+import NeuralBg from '@/components/cinematic/NeuralBg'
 
 /* ---------- palette ---------- */
 const CYAN = '#22d3ee'
@@ -148,7 +149,7 @@ export default function BrainStock() {
       style={{
         minHeight: '100vh',
         background:
-          'radial-gradient(1200px 600px at 12% -8%, rgba(34,211,238,.12), transparent 55%), radial-gradient(1000px 520px at 92% 0%, rgba(167,139,250,.14), transparent 52%), #070b14',
+          'radial-gradient(1200px 620px at 12% -8%, rgba(34,211,238,.14), transparent 55%), radial-gradient(1000px 520px at 92% 0%, rgba(167,139,250,.16), transparent 52%), #05060b',
         color: '#e7ecf5',
         fontFamily: 'Inter, system-ui, sans-serif',
         display: 'flex',
@@ -225,18 +226,20 @@ export default function BrainStock() {
       </header>
 
       {/* HERO */}
-      <section style={{ position: 'relative' }}>
+      <section style={{ position: 'relative', overflow: 'hidden' }}>
+        <NeuralBg opacity={0.9} />
         <div
           className="bs-grid"
           style={{
             position: 'absolute',
             inset: 0,
-            opacity: 0.5,
+            opacity: 0.18,
             pointerEvents: 'none',
             maskImage: 'radial-gradient(ellipse at top, black, transparent 70%)',
             WebkitMaskImage: 'radial-gradient(ellipse at top, black, transparent 70%)',
           }}
         />
+        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 62% 54% at 38% 42%, transparent, rgba(5,6,11,.5) 92%)' }} />
         <div style={{ maxWidth: 1180, margin: '0 auto', padding: '52px 24px 24px', position: 'relative' }}>
           <div
             style={{
@@ -251,7 +254,7 @@ export default function BrainStock() {
               color: MUTED,
             }}
           >
-            <Sparkles size={14} color={CYAN} /> Real data · Backtested · Honest metrics
+            <Sparkles size={14} color={CYAN} /> Real neural net · trains nightly · grades itself in public
           </div>
           <h1
             style={{
@@ -275,9 +278,10 @@ export default function BrainStock() {
             </span>{' '}
             <span style={{ color: 'rgba(231,236,245,.9)' }}>— and admits when it&apos;s wrong.</span>
           </h1>
-          <p style={{ marginTop: 16, fontSize: 17, color: MUTED, maxWidth: 640, lineHeight: 1.6 }}>
-            BrainStock learns from six months of real price history and reports its skill against a
-            naive baseline — so you see exactly when the model helps, and when it doesn&apos;t.
+          <p style={{ marginTop: 16, fontSize: 17, color: MUTED, maxWidth: 660, lineHeight: 1.6 }}>
+            A real multi-layer neural network — backpropagation, eleven live market features — that{' '}
+            <span style={{ color: '#e7ecf5', fontWeight: 600 }}>retrains every night on its own graded predictions.</span>{' '}
+            It reports its skill against a naive baseline, wins and losses, and gets sharper as the data compounds.
           </p>
 
           {/* COMPOSER */}
