@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { forecastTicker } from '@/lib/forecast'
+import { loadTrainedModel } from '@/lib/nnStore'
 import { rateLimit } from '@/lib/ratelimit'
 
 export const runtime = 'nodejs'
@@ -37,6 +38,7 @@ async function logPrediction(ticker: string, horizon: number, source: string, re
         horizon,
         resolve_date,
         status: 'open',
+        features: result.features ?? null,
       },
       { onConflict: 'trade_date,ticker,source' }
     )
@@ -72,7 +74,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid ticker' }, { status: 400 })
   }
   try {
-    const result = await forecastTicker(ticker, horizon)
+    const admin = getAdmin()
+    const model = admin ? await loadTrainedModel(admin) : null // use the trained net if it has experience
+    const result = await forecastTicker(ticker, horizon, undefined, model)
     await logPrediction(ticker, horizon, source, result) // feed the flywheel
     return NextResponse.json(result)
   } catch (err) {

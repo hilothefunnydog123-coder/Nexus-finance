@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { forecastTicker, addBusinessDays } from '@/lib/forecast'
+import { loadTrainedModel } from '@/lib/nnStore'
 import { UNIVERSE } from '@/lib/universe'
 
 export const runtime = 'nodejs'
@@ -61,9 +62,11 @@ async function pool<T, R>(
 
 async function runBatch(limit: number) {
   const tickers = [...new Set(UNIVERSE)].slice(0, limit)
+  const admin0 = getAdmin()
+  const model = admin0 ? await loadTrainedModel(admin0) : null // forecast with the trained net
   type Raw = Omit<Pick, 'rank'>
   const results = await pool<string, Raw>(tickers, 12, 45000, async (ticker) => {
-    const f = await forecastTicker(ticker, 5)
+    const f = await forecastTicker(ticker, 5, undefined, model)
     const price = f.history[f.history.length - 1]?.price
     const target = f.forecast[0]?.price
     const target5 = f.forecast[f.forecast.length - 1]?.price

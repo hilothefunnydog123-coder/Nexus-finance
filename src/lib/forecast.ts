@@ -1,15 +1,19 @@
 /**
  * BrainStock forecast engine (shared by /api/forecast and the daily batch).
  *
- * Real historical prices via Yahoo Finance's public chart endpoint. Forecast is
- * a drift + EWMA mean-reversion blend; skill metrics come from a walk-forward
- * backtest vs. a naive "tomorrow = today" baseline — reported honestly.
+ * Real historical OHLCV via Yahoo Finance. When a trained neural network is
+ * supplied, the forecast is produced by the net (see lib/nn.ts) from engineered
+ * features and backtested walk-forward against a naive baseline. Without a model
+ * it falls back to a transparent EWMA drift so the endpoint always works.
  */
+
+import { featurize, predict, type NNModel } from './nn'
 
 export const FORECAST_DISCLAIMER =
   'Educational research tool. Forecasts are model estimates, not financial advice. Past performance does not guarantee future results.'
 
 export type Point = { date: string; price: number }
+export type Bar = { date: string; c: number; h: number; l: number; v: number }
 export type Metrics = {
   samples: number
   horizon: number
@@ -26,35 +30,34 @@ export type ForecastResult = {
   forecast: Point[]
   metrics: Metrics
   disclaimer: string
+  engine: 'neural-net' | 'baseline'
+  features?: number[]
 }
 
 type YahooChart = {
   chart: {
     result?: Array<{
       timestamp: number[]
-      indicators: { quote: Array<{ close: (number | null)[] }> }
+      indicators: { quote: Array<{ open?: (number | null)[]; high?: (number | null)[]; low?: (number | null)[]; close: (number | null)[]; volume?: (number | null)[] }> }
     }>
     error?: { code: string; description: string } | null
   }
 }
 
-export async function fetchYahoo(ticker: string, signal?: AbortSignal): Promise<Point[]> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-    ticker
-  )}?range=6mo&interval=1d`
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; YN-Neuro/0.1; +https://ynfinance.org)',
-      Accept: 'application/json',
-    },
-    cache: 'no-store',
-    signal,
-  })
+async function yahoo(ticker: string, range: string, signal?: AbortSignal): Promise<YahooChart> {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=${range}&interval=1d`
+  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YN-Neuro/0.2; +https://ynfinance.org)', Accept: 'application/json' }, cache: 'no-store', signal })
   if (!res.ok) throw new Error(`Yahoo HTTP ${res.status}`)
   const data = (await res.json()) as YahooChart
   if (data.chart.error) throw new Error(data.chart.error.description)
-  const r = data.chart.result?.[0]
-  if (!r) throw new Error('Unknown ticker')
+  if (!data.chart.result?.[0]) throw new Error('Unknown ticker')
+  return data
+}
+
+/** Close-only history (kept for callers that just need prices). */
+export async function fetchYahoo(ticker: string, signal?: AbortSignal): Promise<Point[]> {
+  const data = await yahoo(ticker, '6mo', signal)
+  const r = data.chart.result![0]
   const ts = r.timestamp ?? []
   const closes = r.indicators?.quote?.[0]?.close ?? []
   const pts: Point[] = []
@@ -67,100 +70,125 @@ export async function fetchYahoo(ticker: string, signal?: AbortSignal): Promise<
   return pts
 }
 
-// One-step-ahead forecast for the next day, given history up to t.
+/** Full OHLCV bars (1y) — what the neural net trains and predicts on. */
+export async function fetchBars(ticker: string, signal?: AbortSignal): Promise<Bar[]> {
+  const data = await yahoo(ticker, '1y', signal)
+  const r = data.chart.result![0]
+  const ts = r.timestamp ?? []
+  const q = r.indicators?.quote?.[0]
+  const close = q?.close ?? []
+  const high = q?.high ?? []
+  const low = q?.low ?? []
+  const vol = q?.volume ?? []
+  const bars: Bar[] = []
+  for (let i = 0; i < ts.length; i++) {
+    const c = close[i]
+    if (c == null || !Number.isFinite(c)) continue
+    bars.push({ date: new Date(ts[i] * 1000).toISOString().slice(0, 10), c, h: high[i] ?? c, l: low[i] ?? c, v: vol[i] ?? 0 })
+  }
+  if (bars.length < 55) throw new Error('Not enough price history')
+  return bars
+}
+
+// ── baseline drift (fallback when no trained net is supplied) ───────────────
 export function predictNext(prices: number[]): number {
   const n = prices.length
   const last = prices[n - 1]
   const window = Math.min(20, n - 1)
   let ewma = 0
   const alpha = 0.25
-  for (let i = n - window; i < n; i++) {
-    const r = (prices[i] - prices[i - 1]) / prices[i - 1]
-    ewma = alpha * r + (1 - alpha) * ewma
-  }
-  const drift = ewma * 0.6
-  return last * (1 + drift)
+  for (let i = n - window; i < n; i++) ewma = alpha * ((prices[i] - prices[i - 1]) / prices[i - 1]) + (1 - alpha) * ewma
+  return last * (1 + ewma * 0.6)
 }
-
 export function multiStepForecast(prices: number[], horizon: number): number[] {
   const out: number[] = []
   const working = prices.slice()
-  for (let i = 0; i < horizon; i++) {
-    const next = predictNext(working)
-    out.push(next)
-    working.push(next)
-  }
+  for (let i = 0; i < horizon; i++) { const next = predictNext(working); out.push(next); working.push(next) }
   return out
 }
-
-export function backtest(prices: number[], horizon: number): Metrics {
+function baselineBacktest(prices: number[], horizon: number): Metrics {
   const evalStart = Math.max(40, prices.length - 60)
-  const errModelSq: number[] = []
-  const errNaiveSq: number[] = []
-  const errModelAbs: number[] = []
-  const errNaiveAbs: number[] = []
-  let directionalHits = 0
-  let directionalCount = 0
+  const eMs: number[] = [], eNs: number[] = [], eMa: number[] = [], eNa: number[] = []
+  let hits = 0, count = 0
   for (let t = evalStart; t < prices.length - 1; t++) {
-    const hist = prices.slice(0, t + 1)
-    const model = predictNext(hist)
-    const naive = hist[hist.length - 1]
+    const model = predictNext(prices.slice(0, t + 1))
+    const naive = prices[t]
     const actual = prices[t + 1]
-    errModelSq.push((model - actual) ** 2)
-    errNaiveSq.push((naive - actual) ** 2)
-    errModelAbs.push(Math.abs(model - actual))
-    errNaiveAbs.push(Math.abs(naive - actual))
-    const predDir = Math.sign(model - naive)
-    const realDir = Math.sign(actual - naive)
-    if (predDir !== 0 && realDir !== 0) {
-      directionalCount++
-      if (predDir === realDir) directionalHits++
-    }
+    eMs.push((model - actual) ** 2); eNs.push((naive - actual) ** 2); eMa.push(Math.abs(model - actual)); eNa.push(Math.abs(naive - actual))
+    const pd = Math.sign(model - naive), rd = Math.sign(actual - naive)
+    if (pd !== 0 && rd !== 0) { count++; if (pd === rd) hits++ }
   }
-  const mean = (a: number[]) => a.reduce((s, x) => s + x, 0) / a.length
-  const rmse_model = Math.sqrt(mean(errModelSq))
-  const rmse_naive = Math.sqrt(mean(errNaiveSq))
-  const mae_model = mean(errModelAbs)
-  const mae_naive = mean(errNaiveAbs)
-  const skill_score = 1 - rmse_model / rmse_naive
-  const directional_accuracy = directionalCount > 0 ? directionalHits / directionalCount : 0.5
+  return finishMetrics(eMs, eNs, eMa, eNa, hits, count, horizon)
+}
+
+// ── neural-net walk-forward backtest ────────────────────────────────────────
+function nnBacktest(bars: Bar[], model: NNModel, horizon: number): Metrics {
+  const c = bars.map((b) => b.c)
+  const start = Math.max(60, c.length - 55)
+  const eMs: number[] = [], eNs: number[] = [], eMa: number[] = [], eNa: number[] = []
+  let hits = 0, count = 0
+  for (let t = start; t < c.length - horizon; t++) {
+    const f = featurize(bars.slice(0, t + 1).map((b) => ({ c: b.c, h: b.h, l: b.l, v: b.v })))
+    if (!f) continue
+    const rHat = predict(model, f)
+    const last = c[t]
+    const predPrice = last * Math.exp(rHat)
+    const actual = c[t + horizon]
+    eMs.push((predPrice - actual) ** 2); eNs.push((last - actual) ** 2); eMa.push(Math.abs(predPrice - actual)); eNa.push(Math.abs(last - actual))
+    const rd = Math.sign(actual - last)
+    if (rd !== 0) { count++; if (Math.sign(rHat) === rd) hits++ }
+  }
+  if (!eMs.length) return baselineBacktest(c, horizon)
+  return finishMetrics(eMs, eNs, eMa, eNa, hits, count, horizon)
+}
+
+function finishMetrics(eMs: number[], eNs: number[], eMa: number[], eNa: number[], hits: number, count: number, horizon: number): Metrics {
+  const m = (a: number[]) => a.reduce((s, x) => s + x, 0) / (a.length || 1)
+  const rmse_model = Math.sqrt(m(eMs)), rmse_naive = Math.sqrt(m(eNs))
   return {
-    samples: errModelSq.length,
+    samples: eMs.length,
     horizon,
     rmse_model: +rmse_model.toFixed(3),
     rmse_naive: +rmse_naive.toFixed(3),
-    mae_model: +mae_model.toFixed(3),
-    mae_naive: +mae_naive.toFixed(3),
-    skill_score: +skill_score.toFixed(3),
-    directional_accuracy: +directional_accuracy.toFixed(3),
+    mae_model: +m(eMa).toFixed(3),
+    mae_naive: +m(eNa).toFixed(3),
+    skill_score: +(1 - rmse_model / (rmse_naive || 1)).toFixed(3),
+    directional_accuracy: +(count > 0 ? hits / count : 0.5).toFixed(3),
   }
 }
 
 export function addBusinessDays(from: Date, n: number): Date {
   const d = new Date(from)
   let added = 0
-  while (added < n) {
-    d.setUTCDate(d.getUTCDate() + 1)
-    const dow = d.getUTCDay()
-    if (dow !== 0 && dow !== 6) added++
-  }
+  while (added < n) { d.setUTCDate(d.getUTCDate() + 1); const dow = d.getUTCDay(); if (dow !== 0 && dow !== 6) added++ }
   return d
 }
 
-export async function forecastTicker(
-  ticker: string,
-  horizon = 5,
-  signal?: AbortSignal
-): Promise<ForecastResult> {
-  const all = await fetchYahoo(ticker, signal)
+export async function forecastTicker(ticker: string, horizon = 5, signal?: AbortSignal, model?: NNModel | null): Promise<ForecastResult> {
+  const bars = await fetchBars(ticker, signal)
+  const all: Point[] = bars.map((b) => ({ date: b.date, price: +b.c.toFixed(2) }))
   const prices = all.map((p) => p.price)
-  const fcPrices = multiStepForecast(prices, horizon)
+  const last = prices[prices.length - 1]
   const lastDate = new Date(all[all.length - 1].date + 'T00:00:00Z')
-  const forecast = fcPrices.map((p, i) => ({
-    date: addBusinessDays(lastDate, i + 1).toISOString().slice(0, 10),
-    price: +p.toFixed(2),
-  }))
-  const metrics = backtest(prices, horizon)
-  const history = all.slice(-90)
-  return { ticker, history, forecast, metrics, disclaimer: FORECAST_DISCLAIMER }
+
+  const feats = featurize(bars.map((b) => ({ c: b.c, h: b.h, l: b.l, v: b.v })))
+
+  let fcPrices: number[]
+  let metrics: Metrics
+  let engine: 'neural-net' | 'baseline'
+
+  if (model && feats) {
+    const rHat = predict(model, feats) // predicted horizon log-return
+    fcPrices = []
+    for (let i = 1; i <= horizon; i++) fcPrices.push(+(last * Math.exp((rHat * i) / horizon)).toFixed(4))
+    metrics = nnBacktest(bars, model, horizon)
+    engine = 'neural-net'
+  } else {
+    fcPrices = multiStepForecast(prices, horizon)
+    metrics = baselineBacktest(prices, horizon)
+    engine = 'baseline'
+  }
+
+  const forecast = fcPrices.map((p, i) => ({ date: addBusinessDays(lastDate, i + 1).toISOString().slice(0, 10), price: +p.toFixed(2) }))
+  return { ticker, history: all.slice(-90), forecast, metrics, disclaimer: FORECAST_DISCLAIMER, engine, features: feats ?? undefined }
 }
