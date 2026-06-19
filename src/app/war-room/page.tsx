@@ -171,15 +171,23 @@ export default function WarRoom() {
     <div
       style={{
         minHeight: '100vh',
+        position: 'relative',
         background:
-          'radial-gradient(1100px 560px at 14% -8%, rgba(167,139,250,.14), transparent 55%), radial-gradient(1000px 520px at 90% 0%, rgba(34,211,238,.10), transparent 52%), #070b14',
+          'radial-gradient(900px 480px at 16% -10%, rgba(167,139,250,.16), transparent 55%), radial-gradient(800px 460px at 88% -4%, rgba(34,211,238,.10), transparent 52%), #05070d',
         color: '#e7ecf5',
         fontFamily: 'Inter, system-ui, sans-serif',
       }}
     >
-      <style>{`@keyframes wr-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+      {/* blueprint grid + vignette */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', backgroundImage: 'linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px)', backgroundSize: '46px 46px', maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 80%)', WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 80%)' }} />
+      <style>{`@keyframes wr-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
         @keyframes wr-dots{0%,20%{opacity:.2}50%{opacity:1}100%{opacity:.2}}
-        .wr-msg{animation:wr-in .4s ease both}`}</style>
+        @keyframes wr-blink{0%,100%{opacity:1}50%{opacity:.25}}
+        @keyframes wr-stamp{0%{opacity:0;transform:scale(1.12) rotate(-2deg)}60%{opacity:1}100%{opacity:1;transform:scale(1) rotate(0)}}
+        .wr-msg{animation:wr-in .45s ease both}
+        .wr-seat{transition:transform .15s ease,border-color .15s ease}
+        .wr-seat:hover{transform:translateY(-2px)}
+        @media (max-width:640px){.wr-cast{grid-template-columns:repeat(3,1fr) !important}}`}</style>
 
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '28px 22px 90px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -202,12 +210,14 @@ export default function WarRoom() {
           live, citing real news and BrainStock&apos;s forecast, then the CIO rules.
         </p>
 
-        {/* cast */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 18 }}>
+        {/* the desk — five seats */}
+        <div className="wr-cast" style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginTop: 22 }}>
           {Object.entries(CAST).map(([k, p]) => (
-            <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#cdd6e6', border: `1px solid ${p.color}40`, background: `${p.color}12`, borderRadius: 100, padding: '5px 11px' }}>
-              <span>{p.emoji}</span> <b style={{ color: p.color }}>{p.name}</b> · {p.title}
-            </span>
+            <div key={k} className="wr-seat" style={{ textAlign: 'center', padding: '14px 6px', borderRadius: 14, background: 'rgba(255,255,255,.02)', border: `1px solid ${BORDER}` }}>
+              <div style={{ width: 42, height: 42, margin: '0 auto', borderRadius: 12, display: 'grid', placeItems: 'center', fontSize: 20, background: `${p.color}1a`, border: `1px solid ${p.color}55`, boxShadow: `0 0 16px ${p.color}26` }}>{p.emoji}</div>
+              <div style={{ marginTop: 9, fontSize: 13, fontWeight: 800, color: '#eef2f8' }}>{p.name}</div>
+              <div style={{ fontSize: 9.5, color: p.color, textTransform: 'uppercase', letterSpacing: 0.8, fontFamily: 'ui-monospace,monospace', marginTop: 2 }}>{p.title}</div>
+            </div>
           ))}
         </div>
 
@@ -249,43 +259,56 @@ export default function WarRoom() {
           </div>
         )}
 
-        {/* the room */}
+        {/* the room — live transcript */}
         {convened && lines.length > 0 && (
-          <div ref={feedRef} style={{ ...glass, marginTop: 22, padding: '18px 16px', maxHeight: 560, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {lines.slice(0, shown).map((l, i) => {
-              const p = CAST[l.who]
-              const right = p.side === 'R'
-              return (
-                <div key={i} className="wr-msg" style={{ display: 'flex', flexDirection: right ? 'row-reverse' : 'row', gap: 10, alignItems: 'flex-start' }}>
-                  <div style={{ flexShrink: 0, width: 38, height: 38, borderRadius: 11, display: 'grid', placeItems: 'center', fontSize: 18, background: `${p.color}1f`, border: `1px solid ${p.color}55` }}>{p.emoji}</div>
-                  <div style={{ maxWidth: '80%' }}>
-                    <div style={{ fontSize: 12, color: p.color, fontWeight: 700, marginBottom: 3, textAlign: right ? 'right' : 'left' }}>
-                      {p.name} <span style={{ color: MUTED, fontWeight: 500 }}>· {p.title}</span>
+          <div style={{ ...glass, marginTop: 22, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 18px', borderBottom: `1px solid ${BORDER}`, background: 'rgba(255,255,255,.015)' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 11, letterSpacing: 1.6, textTransform: 'uppercase', color: MUTED, fontFamily: 'ui-monospace,monospace' }}>
+                <span style={{ width: 7, height: 7, borderRadius: 99, background: allShown ? MUTED : GREEN, animation: allShown ? 'none' : 'wr-blink 1.3s infinite' }} />
+                {allShown ? 'Session closed' : 'Live session'} · ${ticker}
+              </div>
+              <div style={{ fontSize: 11, color: MUTED, fontFamily: 'ui-monospace,monospace' }}>{Math.min(shown, lines.length)}/{lines.length}</div>
+            </div>
+
+            <div ref={feedRef} style={{ maxHeight: 560, overflowY: 'auto', padding: '20px 18px' }}>
+              {lines.slice(0, shown).map((l, i) => {
+                const p = CAST[l.who]
+                const last = i === Math.min(shown, lines.length) - 1
+                return (
+                  <div key={i} className="wr-msg" style={{ display: 'flex', gap: 14, paddingBottom: last && allShown ? 0 : 18 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                      <div style={{ width: 42, height: 42, borderRadius: 12, display: 'grid', placeItems: 'center', fontSize: 20, background: `${p.color}1a`, border: `1px solid ${p.color}66`, boxShadow: `0 0 16px ${p.color}2e` }}>{p.emoji}</div>
+                      {!(last) && <div style={{ flex: 1, width: 1.5, marginTop: 6, minHeight: 10, background: `linear-gradient(${p.color}55, rgba(255,255,255,.06))` }} />}
                     </div>
-                    <div style={{ fontSize: 14.5, lineHeight: 1.55, color: '#e2e8f2', background: right ? `${p.color}10` : 'rgba(255,255,255,.03)', border: `1px solid ${right ? p.color + '33' : BORDER}`, borderRadius: 12, padding: '10px 13px' }}>
-                      {l.text}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 5 }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 800, color: p.color, letterSpacing: 0.2 }}>{p.name}</span>
+                        <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: MUTED, fontFamily: 'ui-monospace,monospace' }}>{p.title}</span>
+                      </div>
+                      <div style={{ fontSize: 15, lineHeight: 1.62, color: '#dbe3ef' }}>{l.text}</div>
                     </div>
                   </div>
+                )
+              })}
+              {!allShown && (
+                <div style={{ color: MUTED, fontSize: 14, paddingLeft: 56, display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+                  <span style={{ animation: 'wr-dots 1.2s infinite' }}>●</span>
+                  <span style={{ animation: 'wr-dots 1.2s .2s infinite' }}>●</span>
+                  <span style={{ animation: 'wr-dots 1.2s .4s infinite' }}>●</span>
                 </div>
-              )
-            })}
-            {!allShown && (
-              <div style={{ color: MUTED, fontSize: 13, paddingLeft: 48, display: 'inline-flex', gap: 3 }}>
-                <span style={{ animation: 'wr-dots 1.2s infinite' }}>●</span>
-                <span style={{ animation: 'wr-dots 1.2s .2s infinite' }}>●</span>
-                <span style={{ animation: 'wr-dots 1.2s .4s infinite' }}>●</span>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
         {/* the ruling */}
         {allShown && ruling && (
-          <div className="wr-msg" style={{ ...glass, marginTop: 16, padding: 24, borderColor: `${verdictColor(ruling.verdict)}55`, boxShadow: `0 0 50px ${verdictColor(ruling.verdict)}1f` }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.4, color: MUTED }}>
-              <Gavel size={14} color={VIOLET} /> The CIO&apos;s ruling
+          <div style={{ ...glass, position: 'relative', overflow: 'hidden', marginTop: 16, padding: '26px 24px', borderColor: `${verdictColor(ruling.verdict)}55`, boxShadow: `0 0 60px ${verdictColor(ruling.verdict)}22`, animation: 'wr-stamp .5s ease both' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${verdictColor(ruling.verdict)}, transparent)` }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, color: MUTED, fontFamily: 'ui-monospace,monospace' }}>
+              <Gavel size={13} color={verdictColor(ruling.verdict)} /> Resolution of the committee
             </div>
-            <div style={{ fontSize: 'clamp(28px,5vw,40px)', fontWeight: 800, letterSpacing: -1, color: verdictColor(ruling.verdict), marginTop: 6 }}>{ruling.verdict}</div>
+            <div style={{ fontSize: 'clamp(30px,6vw,46px)', fontWeight: 900, letterSpacing: -1.5, color: verdictColor(ruling.verdict), marginTop: 8, textShadow: `0 0 32px ${verdictColor(ruling.verdict)}44` }}>{ruling.verdict}</div>
 
             {/* computed conviction — real, not the LLM's guess */}
             <div style={{ marginTop: 12 }}>
@@ -301,13 +324,13 @@ export default function WarRoom() {
 
             {ruling.summary && <p style={{ marginTop: 14, fontSize: 16, color: '#e2e8f2', lineHeight: 1.55 }}>{ruling.summary}</p>}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
-              <div style={{ ...glass, padding: '12px 14px' }}>
-                <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: MUTED }}>Position size</div>
-                <div style={{ marginTop: 3, fontSize: 16, fontWeight: 700 }}>{ruling.size}</div>
+              <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(0,0,0,.25)', border: `1px solid ${BORDER}` }}>
+                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.4, color: MUTED, fontFamily: 'ui-monospace,monospace' }}>Position size</div>
+                <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700, fontFamily: 'ui-monospace,monospace', color: '#eef2f8' }}>{ruling.size}</div>
               </div>
-              <div style={{ ...glass, padding: '12px 14px' }}>
-                <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: MUTED }}>Invalidation</div>
-                <div style={{ marginTop: 3, fontSize: 16, fontWeight: 700, color: RED }}>{ruling.invalidation}</div>
+              <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(0,0,0,.25)', border: `1px solid ${BORDER}` }}>
+                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.4, color: MUTED, fontFamily: 'ui-monospace,monospace' }}>Invalidation</div>
+                <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700, color: RED, fontFamily: 'ui-monospace,monospace' }}>{ruling.invalidation}</div>
               </div>
             </div>
             <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
