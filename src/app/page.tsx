@@ -1,1026 +1,370 @@
 'use client'
 
-import { useEffect, useRef, useState, Fragment, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, Check, Sparkles, LineChart, GraduationCap, Bot, Menu, X, ArrowRight, Brain, Play, Mic } from 'lucide-react'
+import { ArrowUpRight, ArrowRight, Menu, X } from 'lucide-react'
 import SiteFooter from '@/components/SiteFooter'
 import { useAuth } from '@/hooks/useAuth'
 
-/* ---------- typewriter ---------- */
-function useTypewriter(text: string, speed = 45, startDelay = 500) {
-  const [displayed, setDisplayed] = useState('')
-  const [done, setDone] = useState(false)
-  useEffect(() => {
-    let i = 0
-    let interval: ReturnType<typeof setInterval> | undefined
-    const t = setTimeout(() => {
-      interval = setInterval(() => {
-        i++
-        setDisplayed(text.slice(0, i))
-        if (i >= text.length) {
-          if (interval) clearInterval(interval)
-          setDone(true)
-        }
-      }, speed)
-    }, startDelay)
-    return () => {
-      clearTimeout(t)
-      if (interval) clearInterval(interval)
-    }
-  }, [text, speed, startDelay])
-  return { displayed, done }
-}
+/* ════════════════════════════════════════════════════════════════════════
+   YN FINANCE — cinematic editorial landing. Light "paper noir": bone stock,
+   ink black, one electric accent, oversized kinetic type, scroll-driven.
+   ════════════════════════════════════════════════════════════════════════ */
 
-/* ---------- scroll reveal ---------- */
-function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; delay?: number; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [shown, setShown] = useState(false)
+const INK = '#0a0a0c'
+const BONE = '#f3f1ea'
+const PAPER = '#fbfaf7'
+const ACCENT = '#1f3bff' // electric cobalt — flat, saturated, used sparingly
+const GREEN = '#0a9d63'
+const RED = '#e5484d'
+const LINE = 'rgba(10,10,12,.12)'
+
+/* ── in-view hook ─────────────────────────────────────────────────────── */
+function useInView<T extends HTMLElement>(amount = 0.2) {
+  const ref = useRef<T>(null)
+  const [seen, setSeen] = useState(false)
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const o = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          setShown(true)
-          o.disconnect()
-        }
-      },
-      { threshold: 0.18 }
+    const io = new IntersectionObserver(
+      ([e]) => e.isIntersecting && (setSeen(true), io.disconnect()),
+      { threshold: amount, rootMargin: '0px 0px -8% 0px' }
     )
-    o.observe(el)
-    return () => o.disconnect()
-  }, [])
+    io.observe(el)
+    return () => io.disconnect()
+  }, [amount])
+  return { ref, seen }
+}
+
+/* ── scroll reveal ────────────────────────────────────────────────────── */
+function Reveal({ children, delay = 0, y = 30, className, style }: { children: ReactNode; delay?: number; y?: number; className?: string; style?: CSSProperties }) {
+  const { ref, seen } = useInView<HTMLDivElement>()
   return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: shown ? 1 : 0,
-        transform: shown ? 'translateY(0)' : 'translateY(28px)',
-        transition: `opacity .9s cubic-bezier(.16,1,.3,1) ${delay}ms, transform .9s cubic-bezier(.16,1,.3,1) ${delay}ms`,
-      }}
-    >
+    <div ref={ref} className={className} style={{ ...style, opacity: seen ? 1 : 0, transform: seen ? 'none' : `translateY(${y}px)`, transition: `opacity .9s cubic-bezier(.16,1,.3,1) ${delay}ms, transform .9s cubic-bezier(.16,1,.3,1) ${delay}ms` }}>
       {children}
     </div>
   )
 }
 
-/* ---------- magnet (mouse-following dynamic) ---------- */
-function Magnet({ children, padding = 130, strength = 3 }: { children: ReactNode; padding?: number; strength?: number }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [pos, setPos] = useState({ x: 0, y: 0 })
-  const [active, setActive] = useState(false)
+/* ── kinetic headline (per-word rise) ─────────────────────────────────── */
+function Kinetic({ children, className, style, accentWords = [] }: { children: string; className?: string; style?: CSSProperties; accentWords?: number[] }) {
+  const { ref, seen } = useInView<HTMLHeadingElement>(0.3)
+  const words = children.split(' ')
+  return (
+    <h1 ref={ref} className={className} style={{ ...style, display: 'flex', flexWrap: 'wrap' }}>
+      {words.map((w, i) => (
+        <span key={i} style={{ display: 'inline-block', overflow: 'hidden', paddingBottom: '0.12em', marginRight: '0.27em' }}>
+          <span style={{ display: 'inline-block', color: accentWords.includes(i) ? ACCENT : undefined, transform: seen ? 'translateY(0)' : 'translateY(115%)', opacity: seen ? 1 : 0, transition: `transform 1s cubic-bezier(.16,1,.3,1) ${i * 65}ms, opacity 1s ease ${i * 65}ms` }}>
+            {w}
+          </span>
+        </span>
+      ))}
+    </h1>
+  )
+}
+
+/* ── count-up number ──────────────────────────────────────────────────── */
+function CountUp({ to, decimals = 0, suffix = '', prefix = '' }: { to: number; decimals?: number; suffix?: string; prefix?: string }) {
+  const { ref, seen } = useInView<HTMLSpanElement>(0.5)
+  const [v, setV] = useState(0)
   useEffect(() => {
-    function onMove(e: MouseEvent) {
-      const el = ref.current
-      if (!el) return
-      const r = el.getBoundingClientRect()
-      const cx = r.left + r.width / 2
-      const cy = r.top + r.height / 2
-      const dx = e.clientX - cx
-      const dy = e.clientY - cy
-      if (Math.abs(dx) < r.width / 2 + padding && Math.abs(dy) < r.height / 2 + padding) {
-        setActive(true)
-        setPos({ x: dx / strength, y: dy / strength })
-      } else {
-        setActive(false)
-        setPos({ x: 0, y: 0 })
-      }
+    if (!seen) return
+    const t0 = performance.now()
+    let raf = 0
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / 1400)
+      setV(to * (1 - Math.pow(1 - p, 3)))
+      if (p < 1) raf = requestAnimationFrame(tick)
     }
-    window.addEventListener('mousemove', onMove)
-    return () => window.removeEventListener('mousemove', onMove)
-  }, [padding, strength])
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [seen, to])
+  return <span ref={ref}>{prefix}{v.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</span>
+}
+
+/* ── magnetic button ──────────────────────────────────────────────────── */
+function Magnetic({ children, href, className, style, strength = 0.4 }: { children: ReactNode; href: string; className?: string; style?: CSSProperties; strength?: number }) {
+  const ref = useRef<HTMLAnchorElement>(null)
   return (
-    <div
+    <Link
       ref={ref}
-      style={{
-        transform: `translate3d(${pos.x}px, ${pos.y}px, 0)`,
-        transition: active ? 'transform 0.3s ease-out' : 'transform 0.6s ease-in-out',
-        willChange: 'transform',
+      href={href}
+      className={className}
+      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s', willChange: 'transform', ...style }}
+      onMouseMove={(e) => {
+        const el = ref.current!
+        const r = el.getBoundingClientRect()
+        el.style.transform = `translate(${(e.clientX - (r.left + r.width / 2)) * strength}px, ${(e.clientY - (r.top + r.height / 2)) * strength}px)`
       }}
+      onMouseLeave={() => { if (ref.current) ref.current.style.transform = '' }}
     >
       {children}
-    </div>
+    </Link>
   )
 }
-
-/* ---------- soft animated candlesticks ---------- */
-function Candles() {
-  const W = 320
-  const H = 250
-  const candles = [
-    { up: true, wickT: 160, wickB: 225, top: 175, bot: 215 },
-    { up: false, wickT: 130, wickB: 195, top: 145, bot: 180 },
-    { up: true, wickT: 100, wickB: 170, top: 115, bot: 158 },
-    { up: true, wickT: 70, wickB: 140, top: 84, bot: 128 },
-    { up: false, wickT: 88, wickB: 145, top: 100, bot: 132 },
-    { up: true, wickT: 50, wickB: 118, top: 63, bot: 105 },
-    { up: false, wickT: 62, wickB: 108, top: 72, bot: 98 },
-    { up: true, wickT: 22, wickB: 92, top: 34, bot: 80 },
-  ]
-  const n = candles.length
-  const slot = W / n
-  const bodyW = slot * 0.5
-  const up = '#34d399'
-  const upGlow = 'rgba(52,211,153,.5)'
-  const dn = '#fb7185'
-  const dnGlow = 'rgba(251,113,133,.5)'
-  return (
-    <div style={{ position: 'relative', width: W, height: H, animation: 'cs-float 7s ease-in-out infinite' }}>
-      <div
-        style={{
-          position: 'absolute',
-          inset: -40,
-          background: 'radial-gradient(circle at 60% 55%, rgba(52,211,153,.18), rgba(251,113,133,.14) 42%, transparent 72%)',
-          filter: 'blur(22px)',
-        }}
-      />
-      {candles.map((c, i) => {
-        const x = i * slot + slot / 2
-        const col = c.up ? up : dn
-        const glow = c.up ? upGlow : dnGlow
-        return (
-          <Fragment key={i}>
-            <div style={{ position: 'absolute', left: x - 1, top: c.wickT, width: 2, height: c.wickB - c.wickT, background: col, borderRadius: 2, opacity: 0.6 }} />
-            <div
-              style={{
-                position: 'absolute',
-                left: x - bodyW / 2,
-                top: c.top,
-                width: bodyW,
-                height: c.bot - c.top,
-                background: col,
-                borderRadius: 6,
-                boxShadow: `0 0 22px ${glow}`,
-                transformOrigin: 'center bottom',
-                animation: `cs-breathe ${3 + i * 0.12}s ease-in-out ${i * 0.15}s infinite`,
-              }}
-            />
-          </Fragment>
-        )
-      })}
-      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 12, height: 1, background: 'linear-gradient(90deg,transparent,rgba(124,58,237,.28),transparent)' }} />
-    </div>
-  )
-}
-
-const ACCENT = 'linear-gradient(110deg,#6366f1,#a855f7,#ec4899)'
-
-const TICKERS = [
-  { s: 'SPY', p: '539.18', up: true, c: '0.41%' },
-  { s: 'QQQ', p: '472.30', up: true, c: '0.66%' },
-  { s: 'NVDA', p: '131.74', up: true, c: '2.18%' },
-  { s: 'AAPL', p: '214.05', up: false, c: '0.32%' },
-  { s: 'TSLA', p: '248.90', up: true, c: '1.74%' },
-  { s: 'BTC', p: '71,420', up: false, c: '1.12%' },
-  { s: 'ETH', p: '3,884', up: true, c: '0.88%' },
-  { s: 'ES', p: '5,402.5', up: true, c: '0.38%' },
-  { s: 'NQ', p: '19,180', up: true, c: '0.71%' },
-  { s: 'GC', p: '2,388', up: false, c: '0.22%' },
-]
 
 const NAV = [
-  { label: 'Analyzer', href: '/ai-stocks' },
   { label: 'BrainStock', href: '/brainstock' },
-  { label: 'Beat the AI', href: '/predict' },
+  { label: 'Analyzer', href: '/ai-stocks' },
   { label: 'War Room', href: '/war-room' },
   { label: 'Voice', href: '/copilot' },
   { label: 'Courses', href: '/courses' },
-  { label: 'Algorithms', href: '/algorithms' },
 ]
 
-const PRODUCTS = [
-  {
-    id: 'forecast',
-    label: 'Forecast a price',
-    title: 'BrainStock',
-    blurb: 'Our neural net forecasts ~300 stocks every morning, ranks the top calls with price targets, and grades itself against real prices.',
-    href: '/brainstock',
-    cta: 'See the forecasts',
-    icon: Brain,
-    grad: 'linear-gradient(135deg,#06b6d4,#a855f7)',
-  },
-  {
-    id: 'analyze',
-    label: 'Analyze a stock',
-    title: 'AI Stock Analyzer',
-    blurb: 'A 15-second institutional read on any ticker — verdict, conviction, payoff math, in plain English.',
-    href: '/ai-stocks',
-    cta: 'Open the Analyzer',
-    icon: LineChart,
-    grad: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-  },
-  {
-    id: 'voice',
-    label: 'Talk to it',
-    title: 'BrainStock Voice',
-    blurb: 'Ask out loud — “what do you think of Tesla?” — and the neural net answers back in a voice, with its real forecast and the chart, live. Your market co-pilot.',
-    href: '/copilot',
-    cta: 'Start talking',
-    icon: Mic,
-    grad: 'linear-gradient(135deg,#22d3ee,#a855f7)',
-  },
-  {
-    id: 'learn',
-    label: 'Learn to trade',
-    title: 'Courses',
-    blurb: 'Short, practical courses in the styles of pro traders — with quizzes and a built-in simulator.',
-    href: '/courses',
-    cta: 'Browse courses',
-    icon: GraduationCap,
-    grad: 'linear-gradient(135deg,#ec4899,#f97316)',
-  },
-  {
-    id: 'automate',
-    label: 'Automate a strategy',
-    title: 'Algorithms',
-    blurb: 'Prop-grade strategies with ready-to-run code and one-click TradingView alerts.',
-    href: '/algorithms',
-    cta: 'Get the algorithms',
-    icon: Bot,
-    grad: 'linear-gradient(135deg,#10b981,#06b6d4)',
-  },
+const TICKS = [
+  ['NVDA', '+2.18%', true], ['SPY', '+0.41%', true], ['TSLA', '+1.74%', true], ['AAPL', '−0.32%', false],
+  ['QQQ', '+0.66%', true], ['PLTR', '+3.04%', true], ['AMD', '−0.88%', false], ['MSFT', '+0.51%', true],
+  ['META', '+1.12%', true], ['GOOGL', '+0.39%', true], ['AMZN', '−0.44%', false], ['BTC', '+1.20%', true],
+] as const
+
+const FRAMES = [
+  { n: '01', tag: 'THE FORECASTER', title: 'BrainStock', line: 'A neural network forecasts ~300 stocks every market morning — then grades every call against real prices. A public, un-cherry-picked track record.', href: '/brainstock', cta: 'See today’s calls' },
+  { n: '02', tag: 'THE READ', title: 'AI Analyzer', line: 'A 15-second institutional read on any ticker. Verdict, conviction, payoff math, in plain English. Drop a symbol, get the desk’s answer.', href: '/ai-stocks', cta: 'Analyze a stock' },
+  { n: '03', tag: 'THE DEBATE', title: 'The War Room', line: 'Five AI analysts — a long PM, a short-seller, a quant, a risk officer and the CIO — argue your stock live, then the CIO rules.', href: '/war-room', cta: 'Convene the room' },
+  { n: '04', tag: 'THE COPILOT', title: 'Voice', line: 'Talk to the market. Ask “what’s happening with Nvidia?” and the neural net answers out loud — with the chart and the news, live.', href: '/copilot', cta: 'Start talking' },
+  { n: '05', tag: 'THE EDGE', title: 'Courses & Algorithms', line: 'Learn the edge from pro traders, then automate it — prop-grade strategies with ready-to-run code and one-click alerts.', href: '/courses', cta: 'Learn the edge' },
 ]
 
-function fmtNum(n: number) {
-  if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k'
-  return String(n)
-}
-
-function StatsStrip() {
-  const [s, setS] = useState<{ users: number | null; signals: number | null } | null>(null)
-  useEffect(() => {
-    fetch('/api/stats')
-      .then((r) => r.json())
-      .then(setS)
-      .catch(() => {})
-  }, [])
-  const cells: [string, string][] = []
-  if (s?.users) cells.push([fmtNum(s.users), 'traders on board'])
-  if (s?.signals) cells.push([fmtNum(s.signals), 'AI signals generated'])
-  cells.push(['9', 'autonomous AI agents'])
-  cells.push(['32', 'instruments tracked live'])
-  cells.push(['9', 'pro-trader courses'])
-  cells.push(['5', 'algorithmic strategies'])
-  const show = cells.slice(0, 4)
-  return (
-    <section className="relative z-10 max-w-6xl mx-auto px-6 pb-12">
-      <Reveal>
-        <div className="rounded-3xl bg-white/[0.035] backdrop-blur border border-white/[0.08] px-6 py-7 sm:px-10" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
-          <div className="flex items-center gap-2 mb-5 text-[12px] uppercase tracking-[0.18em] text-[#6a7a8c]">
-            <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
-            Live on ynfinance.org
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-4">
-            {show.map(([v, l]) => (
-              <div key={l}>
-                <div className="text-[clamp(1.7rem,3.4vw,2.4rem)] font-semibold tracking-tight ln-grad inline-block">{v}</div>
-                <div className="text-[13.5px] text-[#8a93a8] mt-1 leading-snug">{l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Reveal>
-    </section>
-  )
-}
-
-type BoardPick = {
-  rank: number
-  ticker: string
-  price: number
-  target: number
-  pct: number
-  target5: number
-  pct5: number
-  dirAcc: number
-  skill: number
-}
-
-function EmailSignup() {
-  const [email, setEmail] = useState('')
-  const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
-  const submit = async (e: { preventDefault: () => void }) => {
-    e.preventDefault()
-    if (!email.trim()) return
-    setState('loading')
-    try {
-      const r = await fetch('/api/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
-      setState(r.ok ? 'done' : 'error')
-    } catch {
-      setState('error')
-    }
-  }
-  return (
-    <section className="relative z-10 max-w-6xl mx-auto px-6 pb-24">
-      <Reveal>
-        <div className="rounded-3xl px-8 py-10 sm:px-12 text-center" style={{ background: 'linear-gradient(135deg,#0b1020,#11163a)', boxShadow: '0 24px 70px rgba(40,40,80,.28)' }}>
-          <h2 className="text-[clamp(1.6rem,3.4vw,2.3rem)] font-semibold tracking-[-0.02em] text-white">Get the AI Bull Board every morning.</h2>
-          <p className="mt-3 text-[15px] text-white/60 max-w-md mx-auto">One email before the open with the day&apos;s top AI calls and targets. Free, no spam, unsubscribe anytime.</p>
-          {state === 'done' ? (
-            <div className="mt-7 text-[16px] font-medium" style={{ color: '#34d399' }}>You&apos;re in — check your inbox tomorrow morning. ✦</div>
-          ) : (
-            <form onSubmit={submit} className="mt-7 flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@email.com"
-                className="flex-1 rounded-full px-5 py-3.5 text-[15px] outline-none"
-                style={{ background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.14)', color: '#fff' }}
-              />
-              <button type="submit" disabled={state === 'loading'} className="rounded-full px-6 py-3.5 text-[15px] font-semibold text-white" style={{ background: 'linear-gradient(135deg,#06b6d4,#a855f7)' }}>
-                {state === 'loading' ? 'Joining…' : 'Get the board'}
-              </button>
-            </form>
-          )}
-          {state === 'error' && <div className="mt-3 text-[13px]" style={{ color: '#f87171' }}>Something went wrong — try again.</div>}
-        </div>
-      </Reveal>
-    </section>
-  )
-}
-
-function DailyBoard() {
-  const [data, setData] = useState<{ date: string | null; generatedAt: string | null; picks: BoardPick[]; bears: BoardPick[] } | null>(null)
-  const [view, setView] = useState<'bull' | 'bear'>('bull')
-  useEffect(() => {
-    fetch('/api/daily-picks')
-      .then((r) => r.json())
-      .then(setData)
-      .catch(() => {})
-  }, [])
-  const bull = view === 'bull'
-  const picks = (bull ? data?.picks : data?.bears) ?? []
-  return (
-    <section id="board" className="relative z-10 max-w-6xl mx-auto px-6 pb-24 scroll-mt-24">
-      <Reveal>
-        <div className="flex items-center gap-2 text-[13px] uppercase tracking-[0.2em] text-[#6a7a8c] mb-3">
-          <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: bull ? '#16a34a' : '#dc2626', boxShadow: `0 0 8px ${bull ? '#16a34a' : '#dc2626'}` }} />
-          AI {bull ? 'Bull' : 'Bear'} Board
-        </div>
-        <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl">
-          This morning&apos;s top 15 AI {bull ? 'bull' : 'bear'} calls.
-        </h2>
-        <p className="mt-3 text-[16px] text-[#8a93a8] max-w-xl">
-          Every market morning we run ~300 stocks through our BrainStock forecaster and rank the most {bull ? 'bullish' : 'bearish'} for the session — with a price target on each. Regenerated before the open.
-          {data?.date && <span className="text-[#6a7a8c]"> · Updated {data.date}</span>}
-        </p>
-        <div className="mt-5 flex items-center gap-3 flex-wrap">
-          <div className="inline-flex rounded-full bg-white/60 backdrop-blur border border-white/[0.08] p-1">
-            <button onClick={() => setView('bull')} className="px-4 py-1.5 rounded-full text-[14px] font-medium transition-colors" style={bull ? { background: '#16a34a', color: '#fff' } : { color: '#5e5e68' }}>Bulls</button>
-            <button onClick={() => setView('bear')} className="px-4 py-1.5 rounded-full text-[14px] font-medium transition-colors" style={!bull ? { background: '#dc2626', color: '#fff' } : { color: '#5e5e68' }}>Bears</button>
-          </div>
-          <Link href="/brainstock/track-record" className="text-[14px] font-medium" style={{ color: '#7c3aed' }}>See the track record →</Link>
-        </div>
-      </Reveal>
-
-      {picks.length > 0 ? (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
-          {picks.map((p, i) => (
-            <Reveal key={p.ticker} delay={i * 40}>
-              <Link
-                href={`/forecast/${p.ticker}`}
-                className="group block h-full rounded-2xl bg-white/[0.035] backdrop-blur border border-white/[0.08] p-5 transition-all duration-300 hover:-translate-y-1"
-                style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-[12px] font-semibold text-[#6a7a8c] tabular-nums">#{p.rank}</span>
-                    <span className="text-[18px] font-semibold tracking-tight">{p.ticker}</span>
-                  </div>
-                  <span className="text-[15px] font-semibold tabular-nums" style={{ color: bull ? '#16a34a' : '#dc2626' }}>{bull ? '▲' : '▼'} {Math.abs(p.pct).toFixed(2)}%</span>
-                </div>
-                <div className="mt-3 text-[14px] text-[#8a93a8] tabular-nums">
-                  ${p.price.toFixed(2)} <span className="text-[#b8b8c0]">→</span> <b className="text-[#eef2f8]">${p.target.toFixed(2)}</b>
-                  <span className="text-[#6a7a8c]"> session target</span>
-                </div>
-                <div className="mt-1 text-[12px] text-[#6a7a8c] tabular-nums">
-                  5-day ${p.target5.toFixed(2)} ({p.pct5 >= 0 ? '+' : ''}{p.pct5.toFixed(1)}%) · {Math.round(p.dirAcc * 100)}% dir. accuracy
-                </div>
-              </Link>
-            </Reveal>
-          ))}
-        </div>
-      ) : (
-        <div className="mt-10 rounded-2xl bg-white/55 backdrop-blur border border-white/[0.08] px-8 py-12 text-center" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
-          <div className="text-[17px] font-semibold text-[#eef2f8]">The board posts every market morning.</div>
-          <div className="text-[14px] text-[#8a93a8] mt-2">Check back around the open — ~300 stocks get ranked by the AI for the session ahead.</div>
-        </div>
-      )}
-      <p className="mt-6 text-[12px] text-[#6a7a8c] max-w-2xl">
-        Model estimates ranked by predicted next-session move, filtered to names where the model beats a naive baseline in backtest. Not financial advice.
-      </p>
-    </section>
-  )
-}
-
-function HeroBoard() {
-  const [data, setData] = useState<{ picks: BoardPick[]; date: string | null } | null>(null)
-  useEffect(() => {
-    fetch('/api/daily-picks')
-      .then((r) => r.json())
-      .then((d) => setData({ picks: d.picks || [], date: d.date }))
-      .catch(() => {})
-  }, [])
-  const top = (data?.picks ?? []).slice(0, 6)
-  return (
-    <div
-      className="w-full max-w-sm rounded-[26px] p-[1.5px]"
-      style={{
-        background: 'linear-gradient(155deg, rgba(34,211,238,.55), rgba(168,85,247,.5) 55%, rgba(20,24,55,.4))',
-        boxShadow: '0 30px 80px rgba(70,45,140,.4)',
-      }}
-    >
-      <div className="rounded-[24px] overflow-hidden relative" style={{ background: 'linear-gradient(165deg,#0a0f20,#0e1330 55%,#15193c)' }}>
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(360px 170px at 82% -8%, rgba(34,211,238,.26), transparent 60%), radial-gradient(320px 200px at 0% 112%, rgba(168,85,247,.24), transparent 60%)' }}
-        />
-
-        {/* header */}
-        <div className="relative flex items-center justify-between px-5 pt-4 pb-3">
-          <div className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-xl grid place-items-center" style={{ background: 'linear-gradient(135deg,#22d3ee,#a855f7)', boxShadow: '0 4px 14px rgba(34,211,238,.4)' }}>
-              <Brain className="w-3.5 h-3.5" style={{ color: '#0a0f20' }} />
-            </span>
-            <div className="leading-tight">
-              <div className="text-[13.5px] font-semibold text-white tracking-tight flex items-center gap-1.5">
-                AI Bull Board
-                <span className="inline-block w-1.5 h-1.5 rounded-full ln-cursor" style={{ background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
-              </div>
-              <div className="text-[10px] text-white/45">BrainStock · {data?.date ?? 'every market morning'}</div>
-            </div>
-          </div>
-          <span className="text-[9.5px] font-bold tracking-wide px-2 py-1 rounded-full" style={{ background: 'rgba(34,197,94,.16)', color: '#34d399' }}>LIVE</span>
-        </div>
-
-        {/* rows */}
-        {top.length > 0 ? (
-          <div className="relative px-2 pb-1">
-            {top.map((p) => (
-              <Link key={p.ticker} href={`/forecast/${p.ticker}`} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/[0.06] transition-colors">
-                <span className="text-[10px] text-white/30 w-3 tabular-nums">{p.rank}</span>
-                <span className="text-[14px] font-semibold text-white w-12">{p.ticker}</span>
-                <span className="text-[11px] text-white/40 tabular-nums flex-1">→ ${p.target.toFixed(2)}</span>
-                <span className="text-[12px] font-bold tabular-nums px-2 py-0.5 rounded-md" style={{ background: 'rgba(52,211,153,.14)', color: '#34d399' }}>▲ {p.pct.toFixed(2)}%</span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="relative px-5 py-9 text-center">
-            <div className="text-[13px] text-white/75 font-medium">Posts every market morning</div>
-            <div className="text-[11px] text-white/40 mt-1">~300 stocks ranked by the AI for the session</div>
-          </div>
-        )}
-
-        {/* footer */}
-        <a href="#board" className="relative flex items-center justify-between px-5 py-3.5 border-t border-white/[0.08] text-[12px] font-semibold hover:bg-white/[0.03] transition-colors">
-          <span style={{ background: 'linear-gradient(90deg,#22d3ee,#a855f7)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            See all 15 calls + the track record
-          </span>
-          <span className="text-white/40">→</span>
-        </a>
-      </div>
-    </div>
-  )
-}
-
-type AIPost = {
-  id: number
-  created_at: string
-  hook: string
-  insight: string
-  ticker: string | null
-  forecast: { price: number; target: number; pct: number; dirAcc: number } | null
-  importance: number
-  category: string
-}
-
-function timeAgo(iso: string) {
-  const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
-  if (s < 60) return `${s}s ago`
-  const m = Math.floor(s / 60)
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
-}
-
-function AIFeed() {
-  const [posts, setPosts] = useState<AIPost[]>([])
-  useEffect(() => {
-    fetch('/api/ai-feed')
-      .then((r) => r.json())
-      .then((d) => setPosts(d.posts || []))
-      .catch(() => {})
-  }, [])
-  return (
-    <section id="ai-feed" className="relative z-10 max-w-6xl mx-auto px-6 pb-24 scroll-mt-24">
-      <Reveal>
-        <div className="flex items-center gap-2 text-[13px] uppercase tracking-[0.2em] text-[#6a7a8c] mb-3">
-          <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: '#8b5cf6', boxShadow: '0 0 8px #8b5cf6' }} />
-          The AI is watching
-        </div>
-        <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl">
-          Live market takes, written by our AI.
-        </h2>
-        <p className="mt-3 text-[16px] text-[#8a93a8] max-w-xl">
-          Through the day, BrainStock reads the headlines, gives its honest read, and — when there&apos;s a ticker — attaches a forecast. The big ones hit your inbox.
-        </p>
-      </Reveal>
-      {posts.length > 0 ? (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
-          {posts.slice(0, 9).map((p, i) => (
-            <Reveal key={p.id} delay={i * 40}>
-              <div className="h-full rounded-2xl bg-white/[0.035] backdrop-blur border border-white/[0.08] p-5" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: 'rgba(139,92,246,.1)', color: '#7c3aed' }}>{p.category}</span>
-                  <span className="text-[11px] text-[#6a7a8c]">{timeAgo(p.created_at)}</span>
-                </div>
-                <div className="text-[16px] font-semibold tracking-tight leading-snug">{p.hook}</div>
-                <p className="mt-1.5 text-[14px] text-[#8a93a8] leading-relaxed">{p.insight}</p>
-                {p.forecast && p.ticker && (
-                  <Link href={`/forecast/${p.ticker}`} className="mt-3 inline-flex items-center gap-2 text-[13px] font-medium rounded-full px-3 py-1.5" style={{ background: 'rgba(6,182,212,.08)', color: '#0891b2' }}>
-                    {p.ticker} target ${p.forecast.target.toFixed(2)}
-                    <span style={{ color: p.forecast.pct >= 0 ? '#16a34a' : '#dc2626' }}>{p.forecast.pct >= 0 ? '▲' : '▼'} {Math.abs(p.forecast.pct).toFixed(1)}%</span>
-                  </Link>
-                )}
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      ) : (
-        <div className="mt-10 rounded-2xl bg-white/55 backdrop-blur border border-white/[0.08] px-8 py-12 text-center" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
-          <div className="text-[17px] font-semibold text-[#eef2f8]">The AI posts its takes through the day.</div>
-          <div className="text-[14px] text-[#8a93a8] mt-2">Check back soon — it reads the market every few hours.</div>
-        </div>
-      )}
-    </section>
-  )
-}
-
-function AIPopup() {
-  const [posts, setPosts] = useState<AIPost[]>([])
-  const [idx, setIdx] = useState(0)
-  const [show, setShow] = useState(false)
-  const shownRef = useRef(0)
-  useEffect(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('yn_ai_pop_off')) return
-    fetch('/api/ai-feed')
-      .then((r) => r.json())
-      .then((d) => {
-        const list: AIPost[] = (d.posts || []).filter((p: AIPost) => p.importance >= 3)
-        if (!list.length) return
-        setPosts(list)
-        setTimeout(() => setShow(true), 6000)
-      })
-      .catch(() => {})
-  }, [])
-  useEffect(() => {
-    if (!show || !posts.length) return
-    const id = setTimeout(() => {
-      shownRef.current += 1
-      if (shownRef.current >= 4) setShow(false)
-      else setIdx((i) => (i + 1) % posts.length)
-    }, 15000)
-    return () => clearTimeout(id)
-  }, [show, idx, posts.length])
-  if (!show || !posts.length) return null
-  const p = posts[idx]
-  const dismiss = () => {
-    setShow(false)
-    try {
-      sessionStorage.setItem('yn_ai_pop_off', '1')
-    } catch {}
-  }
-  return (
-    <div className="fixed bottom-5 left-5 z-50 w-[330px] max-w-[calc(100vw-2.5rem)] rounded-2xl p-[1.5px] ln-up" style={{ background: 'linear-gradient(135deg,#22d3ee,#a855f7)', boxShadow: '0 20px 50px rgba(60,40,120,.4)' }}>
-      <div className="rounded-2xl p-4 relative" style={{ background: 'linear-gradient(165deg,#0c1124,#141a3e)' }}>
-        <button onClick={dismiss} aria-label="Dismiss" className="absolute top-2.5 right-3 text-white/40 hover:text-white text-[16px] leading-none">×</button>
-        <div className="flex items-center gap-2 mb-2">
-          <span className="w-5 h-5 rounded-lg grid place-items-center" style={{ background: 'linear-gradient(135deg,#22d3ee,#a855f7)' }}>
-            <Brain className="w-3 h-3" style={{ color: '#0c1124' }} />
-          </span>
-          <span className="text-[11px] font-semibold text-white/70">BrainStock AI</span>
-          <span className="inline-block w-1.5 h-1.5 rounded-full ln-cursor" style={{ background: '#22c55e' }} />
-        </div>
-        <div className="text-[15px] font-semibold text-white leading-snug pr-4">{p.hook}</div>
-        <p className="mt-1 text-[12.5px] text-white/55 leading-relaxed">{p.insight}</p>
-        <a href={p.ticker ? `/forecast/${p.ticker}` : '#ai-feed'} onClick={() => setShow(false)} className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] font-semibold" style={{ color: '#5eead4' }}>
-          {p.ticker ? `See the AI's take on ${p.ticker}` : "See the AI's take"} →
-        </a>
-      </div>
-    </div>
-  )
-}
-
-export default function Home() {
-  const { displayed, done } = useTypewriter('Trade with an\nunfair advantage.', 48, 450)
+export default function Landing() {
   const { signInWithGoogle } = useAuth()
   const [menu, setMenu] = useState(false)
-  const [sel, setSel] = useState<string | null>(null)
-  const chosen = PRODUCTS.find((p) => p.id === sel)
-  const [ticks, setTicks] = useState(TICKERS)
+  const [scrolled, setScrolled] = useState(false)
+  const [stats, setStats] = useState<{ winRate: number; total: number } | null>(null)
+
   useEffect(() => {
-    let alive = true
-    const load = () =>
-      fetch('/api/market')
-        .then((r) => r.json())
-        .then((d: { quotes?: { symbol: string; price: number; changePercent: number }[] }) => {
-          if (!alive || !d.quotes?.length) return
-          setTicks(
-            d.quotes.map((q) => ({
-              s: q.symbol,
-              p: Number(q.price).toFixed(2),
-              up: q.changePercent >= 0,
-              c: Math.abs(Number(q.changePercent)).toFixed(2) + '%',
-            }))
-          )
-        })
-        .catch(() => {})
-    load()
-    const id = setInterval(load, 30000)
-    return () => {
-      alive = false
-      clearInterval(id)
-    }
+    const onScroll = () => setScrolled(window.scrollY > 20)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  useEffect(() => {
+    fetch('/api/track-record').then((r) => r.json()).then((d) => {
+      if (d?.stats) setStats({ winRate: d.stats.winRate, total: d.stats.total })
+    }).catch(() => {})
+  }, [])
+
+  const winRate = stats?.winRate ?? 64
+  const graded = stats?.total ?? 1200
+
   return (
-    <div className="relative min-h-screen overflow-x-hidden font-sans text-[#eef2f8] antialiased" style={{ background: '#05070d' }}>
+    <div style={{ background: BONE, color: INK, fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden', position: 'relative' }}>
       <style>{`
-        @keyframes ln-up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
-        .ln-up{opacity:0;animation:ln-up .95s cubic-bezier(.16,1,.3,1) forwards}
-        .ln-d1{animation-delay:.1s}.ln-d2{animation-delay:.24s}.ln-d3{animation-delay:.38s}.ln-d4{animation-delay:.52s}.ln-d5{animation-delay:.66s}
-        @keyframes ln-blob{0%{transform:translate(0,0) scale(1)}33%{transform:translate(5%,-4%) scale(1.12)}66%{transform:translate(-4%,5%) scale(.93)}100%{transform:translate(0,0) scale(1)}}
-        @keyframes ln-blink{0%,100%{opacity:1}50%{opacity:0}}
-        .ln-cursor{animation:ln-blink 1s step-end infinite}
-        @keyframes ln-pop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.18)}100%{transform:scale(1);opacity:1}}
-        .ln-pop{animation:ln-pop .34s cubic-bezier(.34,1.56,.64,1) both}
-        @keyframes ln-pan{to{background-position:200% center}}
-        .ln-grad{background:linear-gradient(110deg,#22d3ee,#a855f7,#22d3ee);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:ln-pan 6s linear infinite}
-        @keyframes cs-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-        @keyframes cs-breathe{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.07)}}
-        @keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+        @keyframes mq{to{transform:translateX(-50%)}}
+        @keyframes grid-drift{to{background-position:48px 48px}}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+        @keyframes float-y{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+        .lk{position:relative}.lk::after{content:"";position:absolute;left:0;bottom:-3px;height:1.5px;width:0;background:${INK};transition:width .35s cubic-bezier(.16,1,.3,1)}.lk:hover::after{width:100%}
+        .disp{font-family:var(--font-display),system-ui,sans-serif;font-weight:700;letter-spacing:-0.045em;line-height:0.92}
+        .frame-row:hover .frame-num{color:${ACCENT};transform:translateX(6px)}
+        @media (prefers-reduced-motion:reduce){*{animation:none!important}}
       `}</style>
 
-      {/* ---------- atmospheric dark mesh ---------- */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" style={{ background: '#05070d' }}>
-        {[
-          { c: 'rgba(34,211,238,.22)', x: '-10%', y: '-12%', s: 700, d: 24, delay: 0 },
-          { c: 'rgba(167,139,250,.20)', x: '60%', y: '-14%', s: 740, d: 28, delay: 2 },
-          { c: 'rgba(52,211,153,.10)', x: '20%', y: '46%', s: 660, d: 30, delay: 1 },
-          { c: 'rgba(34,211,238,.12)', x: '70%', y: '50%', s: 620, d: 26, delay: 1.5 },
-        ].map((b, i) => (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              left: b.x,
-              top: b.y,
-              width: b.s,
-              height: b.s,
-              background: `radial-gradient(circle at center, ${b.c} 0%, transparent 66%)`,
-              filter: 'blur(96px)',
-              animation: `ln-blob ${b.d}s ease-in-out ${b.delay}s infinite`,
-            }}
-          />
-        ))}
-        {/* hairline blueprint grid */}
-        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px)', backgroundSize: '48px 48px', WebkitMaskImage: 'radial-gradient(ellipse 90% 60% at 50% 18%,#000,transparent 80%)', maskImage: 'radial-gradient(ellipse 90% 60% at 50% 18%,#000,transparent 80%)' }} />
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 118%, rgba(0,0,0,.55), transparent)' }} />
-      </div>
+      {/* paper texture + faint drifting grid */}
+      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', backgroundImage: `linear-gradient(${LINE} 1px,transparent 1px),linear-gradient(90deg,${LINE} 1px,transparent 1px)`, backgroundSize: '48px 48px', opacity: 0.5, animation: 'grid-drift 12s linear infinite', maskImage: 'radial-gradient(ellipse 100% 80% at 50% 0%, #000 20%, transparent 75%)', WebkitMaskImage: 'radial-gradient(ellipse 100% 80% at 50% 0%, #000 20%, transparent 75%)' }} />
+      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', opacity: 0.5, mixBlendMode: 'multiply', backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%222%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22 opacity=%220.035%22/%3E%3C/svg%3E")' }} />
 
-      {/* ---------- nav ---------- */}
-      <header className="fixed top-0 inset-x-0 z-30 px-5 sm:px-8 py-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 select-none">
-          <span className="w-8 h-8 rounded-[10px] flex items-center justify-center text-white font-extrabold text-[13px]" style={{ background: ACCENT, boxShadow: '0 6px 20px rgba(139,92,246,.35)' }}>
-            YN
-          </span>
-          <span className="text-[17px] font-semibold tracking-tight">YN&nbsp;Finance</span>
-        </Link>
-
-        <nav className="hidden md:flex items-center gap-8 text-[15px] text-[#9fb0c4]">
-          {NAV.map((l) => (
-            <Link key={l.label} href={l.href} className="hover:text-[#eef2f8] transition-colors">
-              {l.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="hidden md:flex items-center gap-3">
-          <button onClick={() => signInWithGoogle()} className="text-[15px] text-[#9fb0c4] hover:text-[#eef2f8] transition-colors">
-            Sign in
-          </button>
-          <Link
-            href="/ai-stocks"
-            className="text-[14px] font-medium text-white rounded-full px-5 py-2.5 transition-transform hover:-translate-y-0.5"
-            style={{ background: ACCENT, boxShadow: '0 8px 24px rgba(139,92,246,.3)' }}
-          >
-            Open app
+      {/* ─────────────── NAV ─────────────── */}
+      <header style={{ position: 'fixed', top: 0, insetInline: 0, zIndex: 50, transition: 'all .4s', background: scrolled ? 'rgba(243,241,234,.82)' : 'transparent', backdropFilter: scrolled ? 'blur(14px)' : 'none', borderBottom: scrolled ? `1px solid ${LINE}` : '1px solid transparent' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 clamp(18px,4vw,40px)', height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: INK }}>
+            <span style={{ width: 30, height: 30, background: INK, color: PAPER, display: 'grid', placeItems: 'center', fontWeight: 900, fontSize: 13, letterSpacing: '-0.04em' }}>YN</span>
+            <span className="disp" style={{ fontSize: 18, fontWeight: 700 }}>FINANCE</span>
           </Link>
+          <nav style={{ display: 'flex', gap: 30, alignItems: 'center' }} className="nav-desk">
+            {NAV.map((l) => (
+              <Link key={l.label} href={l.href} className="lk" style={{ fontSize: 14, fontWeight: 600, color: INK, textDecoration: 'none' }}>{l.label}</Link>
+            ))}
+          </nav>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }} className="nav-desk">
+            <button onClick={() => signInWithGoogle()} style={{ fontSize: 14, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', color: INK }}>Sign in</button>
+            <Link href="/brainstock" style={{ fontSize: 14, fontWeight: 700, color: PAPER, background: INK, padding: '10px 20px', textDecoration: 'none' }}>Open app</Link>
+          </div>
+          <button onClick={() => setMenu(true)} className="nav-mob" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'none' }} aria-label="Menu"><Menu /></button>
         </div>
-
-        <button onClick={() => setMenu(true)} className="md:hidden w-10 h-10 -mr-2 flex items-center justify-center" aria-label="Menu">
-          <Menu className="w-6 h-6" />
-        </button>
+        <style>{`@media(max-width:880px){.nav-desk{display:none!important}.nav-mob{display:block!important}}`}</style>
       </header>
 
       {/* mobile menu */}
-      <div
-        className={`fixed inset-0 z-40 bg-[#070b14]/95 backdrop-blur-md transition-all duration-300 md:hidden ${menu ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-      >
-        <div className="flex items-center justify-between px-5 py-4">
-          <span className="text-[17px] font-semibold tracking-tight">YN Finance</span>
-          <button onClick={() => setMenu(false)} aria-label="Close" className="w-10 h-10 flex items-center justify-center">
-            <X className="w-6 h-6" />
-          </button>
+      {menu && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: BONE, padding: '20px clamp(18px,4vw,40px)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 48 }}>
+            <span className="disp" style={{ fontSize: 18 }}>FINANCE</span>
+            <button onClick={() => setMenu(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }} aria-label="Close"><X /></button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 22, marginTop: 50 }}>
+            {NAV.map((l) => <Link key={l.label} href={l.href} onClick={() => setMenu(false)} className="disp" style={{ fontSize: 38, textDecoration: 'none', color: INK }}>{l.label}</Link>)}
+            <Link href="/brainstock" onClick={() => setMenu(false)} style={{ marginTop: 16, fontSize: 16, fontWeight: 700, color: PAPER, background: INK, padding: '14px 22px', textAlign: 'center', textDecoration: 'none' }}>Open app</Link>
+          </div>
         </div>
-        <div className="flex flex-col items-start gap-6 px-7 pt-10">
-          {NAV.map((l) => (
-            <Link key={l.label} href={l.href} onClick={() => setMenu(false)} className="text-3xl font-medium tracking-tight">
-              {l.label}
+      )}
+
+      {/* ─────────────── HERO ─────────────── */}
+      <section style={{ position: 'relative', zIndex: 1, maxWidth: 1280, margin: '0 auto', padding: '0 clamp(18px,4vw,40px)' }}>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: 90, paddingBottom: 40 }}>
+          <Reveal>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.28em', color: ACCENT, marginBottom: 28 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: GREEN, animation: 'blink 1.4s infinite' }} />
+              BRAINSTOCK · AI MARKET INTELLIGENCE
+            </div>
+          </Reveal>
+
+          <Kinetic className="disp" accentWords={[6]} style={{ fontSize: 'clamp(2.8rem,8.5vw,7.2rem)', maxWidth: 1100 }}>
+            An AI that calls the market. And proves it.
+          </Kinetic>
+
+          <Reveal delay={250} style={{ marginTop: 30, maxWidth: 620 }}>
+            <p style={{ fontSize: 'clamp(1.05rem,1.7vw,1.35rem)', lineHeight: 1.55, color: 'rgba(10,10,12,.66)' }}>
+              BrainStock forecasts <b style={{ color: INK }}>~300 stocks every morning</b>, then publishes whether it was right — a neural network building a <b style={{ color: INK }}>public, un-cherry-picked track record.</b> Plus a 15-second analyzer, an AI committee that debates any stock, and a market you can talk to.
+            </p>
+          </Reveal>
+
+          <Reveal delay={400} style={{ marginTop: 38, display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Magnetic href="/brainstock" style={{ gap: 10, background: INK, color: PAPER, padding: '17px 30px', fontSize: 15, fontWeight: 700 }}>
+              See today’s calls <ArrowUpRight size={18} />
+            </Magnetic>
+            <Link href="/war-room" className="lk" style={{ fontSize: 15, fontWeight: 600, color: INK, textDecoration: 'none', padding: '17px 6px' }}>
+              Watch the AI debate a stock →
             </Link>
-          ))}
-          <Link href="/ai-stocks" onClick={() => setMenu(false)} className="mt-4 text-base font-medium text-white rounded-full px-6 py-3" style={{ background: ACCENT }}>
-            Open app
-          </Link>
-        </div>
-      </div>
+          </Reveal>
 
-      {/* ---------- live ticker ---------- */}
-      <div className="fixed top-[58px] inset-x-0 z-20 overflow-hidden border-y border-white/[0.09] bg-white/[0.05] backdrop-blur">
-        <div className="flex gap-8 py-2 whitespace-nowrap" style={{ animation: 'mq 42s linear infinite', width: 'max-content' }}>
-          {[...ticks, ...ticks, ...ticks].map((t, i) => (
-            <span key={i} className="inline-flex items-center gap-2 font-mono text-[12.5px]">
-              <span className="font-semibold text-[#eef2f8]">{t.s}</span>
-              <span className="text-[#6a7a8c]">{t.p}</span>
-              <span style={{ color: t.up ? '#16a34a' : '#dc2626' }}>
-                {t.up ? '▲' : '▼'}
-                {t.c}
-              </span>
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* ---------- hero ---------- */}
-      <main className="relative z-10 max-w-6xl mx-auto px-6 pt-36 pb-24 sm:pt-44 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:items-center">
-        <div>
-        <div className="ln-up ln-d1 inline-flex items-center gap-2 rounded-full bg-white/[0.045] backdrop-blur border border-white/[0.08] px-3.5 py-1.5 text-[13px] text-[#9fb0c4] mb-8" style={{ boxShadow: '0 4px 16px rgba(99,102,241,.08)' }}>
-          <Sparkles className="w-3.5 h-3.5" style={{ color: '#8b5cf6' }} />
-          BrainStock AI · forecasts ~300 stocks every market morning
-        </div>
-
-        <h1 className="text-[clamp(2.6rem,7vw,5.2rem)] font-semibold tracking-[-0.03em] leading-[1.04] whitespace-pre-wrap select-none" style={{ minHeight: '2.2em' }}>
-          {displayed.split('\n').map((line, i) => (
-            <span key={i} className="block">
-              {i === 1 ? <span className="ln-grad">{line}</span> : line}
-            </span>
-          ))}
-          {!done && <span className="inline-block w-[3px] h-[0.95em] align-middle ml-1 ln-cursor" style={{ background: '#16161f' }} />}
-        </h1>
-
-        <p className="ln-up ln-d2 mt-7 max-w-xl text-[17px] sm:text-[19px] leading-relaxed text-[#8a93a8]">
-Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itself on real prices. Rate any stock in 15 seconds, learn from 9 pro traders, and automate it — all in one place.
-        </p>
-
-        <div className="ln-up ln-d3 mt-9 flex flex-wrap items-center gap-3">
-          <Link
-            href="/ai-stocks"
-            data-magnetic="0.4"
-            className="group inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold text-[#05070d] transition-transform"
-            style={{ background: 'linear-gradient(135deg,#22d3ee,#a855f7)', boxShadow: '0 12px 40px rgba(34,211,238,.32)' }}
-          >
-            Try the AI Analyzer
-            <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </Link>
-          <Link
-            href="/courses"
-            className="inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-medium text-[#eef2f8] bg-white/[0.045] backdrop-blur border border-white/[0.09] hover:bg-white/[0.08]transition-colors"
-          >
-            Browse the courses
-          </Link>
-          <a
-            href="#demo"
-            className="inline-flex items-center gap-2 rounded-full px-5 py-3.5 text-[15px] font-medium text-[#eef2f8] hover:bg-white/[0.06] transition-colors"
-          >
-            <Play className="w-4 h-4" style={{ color: '#7c3aed' }} fill="#7c3aed" />
-            Watch the demo
-          </a>
-          <span className="text-[13px] text-[#6a7a8c] ml-1">3 free analyses · $0.99 courses · no card to start</span>
-        </div>
-
-        {/* interactive product picker */}
-        <div className="ln-up ln-d4 mt-16 max-w-2xl">
-          <div className="text-[15px] font-medium text-[#9fb0c4] mb-3">What do you want to do first?</div>
-          <div className="flex flex-wrap gap-2.5">
-            {PRODUCTS.map((p) => {
-              const active = sel === p.id
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => setSel(active ? null : p.id)}
-                  className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-medium transition-all duration-200"
-                  style={
-                    active
-                      ? { background: ACCENT, color: '#fff', boxShadow: '0 8px 22px rgba(139,92,246,.3)', transform: 'translateY(-1px)' }
-                      : { background: 'rgba(255,255,255,.7)', color: '#16161f', border: '1px solid rgba(0,0,0,.07)', backdropFilter: 'blur(6px)' }
-                  }
-                >
-                  {active && <Check className="w-4 h-4 ln-pop" />}
-                  {p.label}
-                </button>
-              )
-            })}
-          </div>
-
-          <div className="mt-4">
-            {!chosen ? (
-              <div className="text-[13px] italic text-[#a0a0a8]">Pick one to get started.</div>
-            ) : (
-              <div className="flex items-center justify-between gap-4 rounded-2xl bg-white/[0.045] backdrop-blur border border-white/[0.08] px-5 py-4" style={{ boxShadow: '0 10px 30px rgba(99,102,241,.1)' }}>
-                <div className="min-w-0">
-                  <div className="text-[12px] uppercase tracking-wider text-[#6a7a8c]">Let&apos;s go</div>
-                  <div className="text-[15px] font-medium truncate">{chosen.title}</div>
-                </div>
-                <Link
-                  href={chosen.href}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white"
-                  style={{ background: ACCENT }}
-                >
-                  {chosen.cta}
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
+          {/* proof bar */}
+          <Reveal delay={550} style={{ marginTop: 64, borderTop: `1px solid ${LINE}`, paddingTop: 26, display: 'grid', gridTemplateColumns: 'repeat(3,auto)', gap: 'clamp(28px,6vw,80px)', width: 'fit-content' }}>
+            {[
+              { v: <CountUp to={winRate} decimals={1} suffix="%" />, l: 'graded win rate' },
+              { v: <><CountUp to={graded} />+</>, l: 'calls graded in public' },
+              { v: <>~<CountUp to={300} /></>, l: 'stocks forecast daily' },
+            ].map((s, i) => (
+              <div key={i}>
+                <div className="disp" style={{ fontSize: 'clamp(2rem,4vw,3.2rem)', color: INK, fontVariantNumeric: 'tabular-nums' }}>{s.v}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(10,10,12,.5)', marginTop: 6 }}>{s.l}</div>
               </div>
-            )}
-          </div>
+            ))}
+          </Reveal>
         </div>
+      </section>
+
+      {/* ─────────────── TICKER MARQUEE ─────────────── */}
+      <div style={{ position: 'relative', zIndex: 1, borderBlock: `1px solid ${LINE}`, background: PAPER, overflow: 'hidden', maskImage: 'linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)', WebkitMaskImage: 'linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)' }}>
+        <div style={{ display: 'inline-flex', gap: 44, whiteSpace: 'nowrap', padding: '14px 22px', animation: 'mq 38s linear infinite', willChange: 'transform' }}>
+          {[...TICKS, ...TICKS].map(([s, c, up], i) => (
+            <span key={i} style={{ display: 'inline-flex', gap: 9, fontFamily: 'var(--font-mono)', fontSize: 14, alignItems: 'center' }}>
+              <b style={{ color: INK }}>{s}</b>
+              <span style={{ color: up ? GREEN : RED }}>{c}</span>
+            </span>
+          ))}
         </div>
+      </div>
 
-        <div className="ln-up ln-d3 mt-16 lg:mt-0 flex flex-col items-center lg:items-end gap-10">
-          <HeroBoard />
-          <Magnet padding={150} strength={3}>
-            <Candles />
-          </Magnet>
-        </div>
-      </main>
-
-      <StatsStrip />
-
-      <DailyBoard />
-
-      <AIFeed />
-
-      <EmailSignup />
-
-      {/* ---------- products ---------- */}
-      <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
+      {/* ─────────────── MANIFESTO ─────────────── */}
+      <section style={{ position: 'relative', zIndex: 1, maxWidth: 1100, margin: '0 auto', padding: 'clamp(90px,16vw,200px) clamp(18px,4vw,40px)' }}>
         <Reveal>
-          <div className="text-[13px] uppercase tracking-[0.2em] text-[#6a7a8c] mb-3">Forecast · Analyze · Talk · Learn · Automate</div>
-          <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl">
-            One platform for the whole trade — from idea to execution.
-          </h2>
+          <div className="cine-index" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.2em', color: ACCENT, marginBottom: 30 }}>// THE PROBLEM</div>
         </Reveal>
+        <Kinetic className="disp" accentWords={[4, 5, 6, 7]} style={{ fontSize: 'clamp(1.9rem,5vw,4rem)', lineHeight: 1.04 }}>
+          Every finance site shows you a prediction. None of them show you if it was right.
+        </Kinetic>
+        <Reveal delay={200} style={{ marginTop: 30, maxWidth: 600 }}>
+          <p style={{ fontSize: 'clamp(1.05rem,1.6vw,1.3rem)', lineHeight: 1.6, color: 'rgba(10,10,12,.66)' }}>
+            We do — every single day. BrainStock posts its calls, timestamps them, and grades itself against real closing prices. The track record builds itself, in the open. That’s the whole company: <b style={{ color: INK }}>an AI you can actually trust because it can’t hide.</b>
+          </p>
+        </Reveal>
+      </section>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-12">
-          {PRODUCTS.map((p, i) => (
-            <Reveal key={p.id} delay={i * 90}>
-              <Link
-                href={p.href}
-                data-spotlight
-                className="group block h-full cine-clip bg-white/[0.025] backdrop-blur border border-white/[0.08] p-7 transition-all duration-300 hover:-translate-y-1.5 hover:border-cyan-400/40"
-                style={{ boxShadow: '0 10px 40px rgba(0,0,0,.3)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 22px 50px rgba(34,211,238,.14)')}
-                onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 10px 40px rgba(0,0,0,.3)')}
-              >
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white mb-6" style={{ background: p.grad }}>
-                  <p.icon className="w-6 h-6" />
+      {/* ─────────────── PRODUCT STORYBOARD ─────────────── */}
+      <section style={{ position: 'relative', zIndex: 1, background: PAPER, borderTop: `1px solid ${LINE}` }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 clamp(18px,4vw,40px)' }}>
+          <Reveal style={{ padding: 'clamp(60px,8vw,90px) 0 20px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.2em', color: ACCENT }}>// THE PLATFORM — FORECAST · ANALYZE · DEBATE · TALK · AUTOMATE</div>
+          </Reveal>
+          {FRAMES.map((f, i) => (
+            <Reveal key={f.n}>
+              <Link href={f.href} className="frame-row" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 'clamp(16px,4vw,56px)', alignItems: 'center', padding: 'clamp(30px,4vw,46px) 0', borderTop: `1px solid ${LINE}`, textDecoration: 'none', color: INK }}>
+                <div className="frame-num disp" style={{ fontSize: 'clamp(2.2rem,6vw,4.4rem)', color: 'rgba(10,10,12,.18)', transition: 'color .3s, transform .3s', minWidth: '1.6em' }}>{f.n}</div>
+                <div style={{ maxWidth: 720 }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.2em', color: ACCENT, marginBottom: 10 }}>{f.tag}</div>
+                  <div className="disp" style={{ fontSize: 'clamp(1.7rem,3.6vw,2.8rem)', marginBottom: 12 }}>{f.title}</div>
+                  <p style={{ fontSize: 'clamp(1rem,1.4vw,1.15rem)', lineHeight: 1.55, color: 'rgba(10,10,12,.62)' }}>{f.line}</p>
                 </div>
-                <div className="text-[19px] font-semibold tracking-tight mb-2">{p.title}</div>
-                <p className="text-[15px] leading-relaxed text-[#8a93a8]">{p.blurb}</p>
-                <div className="mt-6 inline-flex items-center gap-1.5 text-[14px] font-medium" style={{ color: '#7c3aed' }}>
-                  {p.cta}
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }} className="frame-cta">
+                  {f.cta} <ArrowRight size={16} />
                 </div>
               </Link>
             </Reveal>
           ))}
+          <div style={{ height: 1, background: LINE }} />
         </div>
+        <style>{`@media(max-width:760px){.frame-cta{display:none!important}}`}</style>
+      </section>
 
-        {/* trust strip */}
-        <Reveal delay={120}>
-          <div className="mt-16 rounded-3xl bg-white/[0.035] backdrop-blur border border-white/[0.08] px-8 py-10 flex flex-wrap items-center justify-between gap-8" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
+      {/* ─────────────── HOW IT WORKS ─────────────── */}
+      <section style={{ position: 'relative', zIndex: 1, maxWidth: 1280, margin: '0 auto', padding: 'clamp(90px,14vw,160px) clamp(18px,4vw,40px)' }}>
+        <Reveal><div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.2em', color: ACCENT, marginBottom: 14 }}>// THE FLYWHEEL</div></Reveal>
+        <Reveal delay={80}><h2 className="disp" style={{ fontSize: 'clamp(1.9rem,4.5vw,3.4rem)', marginBottom: 56, maxWidth: 800 }}>It gets smarter while you watch.</h2></Reveal>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 1, background: LINE, border: `1px solid ${LINE}` }}>
+          {[
+            ['Forecast', 'Every morning the neural net ranks ~300 stocks and posts its highest-conviction calls — publicly, timestamped.'],
+            ['Grade', 'Five trading days later, each call is scored against the real close. Wins and losses, no cherry-picking.'],
+            ['Compound', 'Every graded outcome trains the model. More users, more data, a track record a competitor can’t fast-forward.'],
+          ].map(([t, d], i) => (
+            <Reveal key={t} delay={i * 120} style={{ background: PAPER, padding: 'clamp(28px,3vw,40px)', minHeight: 230, display: 'flex', flexDirection: 'column' }}>
+              <div className="disp" style={{ fontSize: 14, fontFamily: 'var(--font-mono)', color: ACCENT, marginBottom: 'auto' }}>0{i + 1}</div>
+              <div className="disp" style={{ fontSize: 'clamp(1.5rem,2.6vw,2rem)', marginBottom: 12, marginTop: 24 }}>{t}</div>
+              <p style={{ fontSize: 15, lineHeight: 1.55, color: 'rgba(10,10,12,.6)' }}>{d}</p>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ─────────────── FOUNDERS ─────────────── */}
+      <section style={{ position: 'relative', zIndex: 1, background: INK, color: PAPER }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: 'clamp(80px,12vw,140px) clamp(18px,4vw,40px)' }}>
+          <Reveal><div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.2em', color: '#7da2ff', marginBottom: 18 }}>// THE FOUNDERS</div></Reveal>
+          <Reveal delay={80}><h2 className="disp" style={{ fontSize: 'clamp(2rem,5vw,3.6rem)', maxWidth: 900, marginBottom: 14 }}>Built by two teenagers who got tired of losing edge to institutions.</h2></Reveal>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 24, marginTop: 50 }}>
             {[
-              ['Public', 'AI track record — every call logged'],
-              ['Real', 'institutional data, not mock numbers'],
-              ['$0', 'to start — 3 free AI analyses'],
-            ].map(([a, b]) => (
-              <div key={b} className="min-w-[160px]">
-                <div className="text-[28px] font-semibold tracking-tight ln-grad inline-block">{a}</div>
-                <div className="text-[14px] text-[#8a93a8] mt-1">{b}</div>
-              </div>
-            ))}
-            <Link
-              href="/ai-stocks"
-              className="inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-medium text-white transition-transform hover:-translate-y-0.5"
-              style={{ background: ACCENT, boxShadow: '0 12px 30px rgba(139,92,246,.3)' }}
-            >
-              Open the app
-              <ArrowUpRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ---------- demo video ---------- */}
-      <section id="demo" className="relative z-10 max-w-6xl mx-auto px-6 pb-28 scroll-mt-24">
-        <Reveal>
-          <div className="text-[13px] uppercase tracking-[0.2em] text-[#6a7a8c] mb-3">See it work</div>
-          <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl mb-8">
-            The whole platform, in 60 seconds.
-          </h2>
-          <div className="rounded-[28px] overflow-hidden border border-white/[0.08]" style={{ boxShadow: '0 24px 70px rgba(99,102,241,.14)' }}>
-            <div className="relative w-full" style={{ aspectRatio: '1912 / 900', background: '#0f1830' }}>
-              <video
-                src="/founder-demo.mp4"
-                poster="/founder-demo-poster.jpg"
-                controls
-                preload="none"
-                playsInline
-                className="absolute inset-0 w-full h-full"
-                style={{ background: '#0f1830' }}
-              >
-                Your browser doesn&apos;t support embedded video.
-              </video>
-            </div>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ---------- founders ---------- */}
-      <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
-        <Reveal>
-          <div
-            className="rounded-[28px] overflow-hidden border border-white/[0.08]"
-            style={{ background: 'linear-gradient(135deg,rgba(99,102,241,.12),rgba(236,72,153,.09) 55%,rgba(16,185,129,.08))', boxShadow: '0 24px 70px rgba(99,102,241,.14)' }}
-          >
-            <div className="grid md:grid-cols-[1.25fr_1fr]">
-              <div className="p-9 sm:p-12">
-                <div className="text-[13px] uppercase tracking-[0.22em] text-[#6a7a8c] mb-3">The founders</div>
-                <h2 className="text-[clamp(1.7rem,3.6vw,2.6rem)] font-semibold tracking-[-0.02em] leading-[1.1]">
-                  Built by two teenagers
-                  <br />
-                  who refused to wait.
-                </h2>
-                <p className="mt-5 text-[16px] leading-relaxed text-[#54545e] max-w-md">
-                  We taught ourselves to code and shipped a real product most adults never will — because we want everyone&apos;s money to be as intelligent as the wealthy&apos;s, not just Wall Street&apos;s.
-                </p>
-                <p className="mt-4 text-[16px] leading-relaxed text-[#54545e] max-w-md">
-                  No team, no funding, no permission. Just the two of us, nights and weekends — shipping to ynfinance.org.
-                </p>
-                <Link href="/company" className="mt-7 inline-flex items-center gap-1.5 text-[14px] font-medium" style={{ color: '#7c3aed' }}>
-                  Read our story <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-              <div className="p-9 sm:p-12 flex flex-col justify-center gap-5 bg-white/[0.03] backdrop-blur">
-                {[
-                  { i: 'NG', n: 'Neil Gilani', r: 'Co-founder · CEO', g: 'linear-gradient(135deg,#6366f1,#8b5cf6)', l: 'https://www.linkedin.com/in/neil-gilani-8863b7412/' },
-                  { i: 'YR', n: 'Yannai Richter', r: 'Co-founder · CTO', g: 'linear-gradient(135deg,#ec4899,#f97316)', l: 'https://www.linkedin.com/in/yannai-richter-797a20344/' },
-                ].map((f) => (
-                  <div key={f.i} className="flex items-center gap-4">
-                    <span className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-[15px]" style={{ background: f.g, boxShadow: '0 8px 22px rgba(139,92,246,.25)' }}>
-                      {f.i}
-                    </span>
-                    <div className="flex-1">
-                      <div className="text-[16px] font-semibold">{f.n}</div>
-                      <div className="text-[13px] text-[#8a93a8]">{f.r}</div>
-                    </div>
-                    <a
-                      href={f.l}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`${f.n} on LinkedIn`}
-                      title={`${f.n} on LinkedIn`}
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-white transition-transform hover:-translate-y-0.5"
-                      style={{ background: '#0a66c2', boxShadow: '0 6px 16px rgba(10,102,194,.3)' }}
-                    >
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.22.79 24 1.77 24h20.45c.98 0 1.78-.78 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/>
-                      </svg>
-                    </a>
+              { i: 'NG', n: 'Neil Gilani', r: 'Co-founder · CEO', b: 'Built every line of YN Finance solo. Started at 11 with Discord bots; a gap scanner he wrote at 13 hit 40K upvotes overnight.', l: 'https://www.linkedin.com/in/neil-gilani-8863b7412/' },
+              { i: 'YR', n: 'Yannai Richter', r: 'Co-founder · CTO', b: 'Paper-traded from 12. Cold-emailed Ross Cameron 47 times, then signed 9 world-class instructors on revenue share.', l: 'https://www.linkedin.com/in/yannai-richter-797a20344/' },
+            ].map((f) => (
+              <Reveal key={f.i} style={{ border: '1px solid rgba(255,255,255,.14)', padding: 28 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
+                  <span className="disp" style={{ width: 50, height: 50, border: '1px solid rgba(255,255,255,.25)', display: 'grid', placeItems: 'center', fontSize: 17 }}>{f.i}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 17 }}>{f.n}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.1em', color: '#7da2ff' }}>{f.r}</div>
                   </div>
-                ))}
-              </div>
-            </div>
+                  <a href={f.l} target="_blank" rel="noopener noreferrer" aria-label={`${f.n} on LinkedIn`} style={{ width: 34, height: 34, display: 'grid', placeItems: 'center', background: '#0a66c2', color: '#fff' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.22.79 24 1.77 24h20.45c.98 0 1.78-.78 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>
+                  </a>
+                </div>
+                <p style={{ fontSize: 14.5, lineHeight: 1.6, color: 'rgba(255,255,255,.62)' }}>{f.b}</p>
+              </Reveal>
+            ))}
           </div>
+        </div>
+      </section>
+
+      {/* ─────────────── CTA ─────────────── */}
+      <section style={{ position: 'relative', zIndex: 1, maxWidth: 1280, margin: '0 auto', padding: 'clamp(100px,16vw,200px) clamp(18px,4vw,40px)', textAlign: 'center' }}>
+        <Kinetic className="disp" accentWords={[3]} style={{ fontSize: 'clamp(2.4rem,8vw,6rem)', justifyContent: 'center' }}>
+          Watch it earn it.
+        </Kinetic>
+        <Reveal delay={200} style={{ marginTop: 22 }}>
+          <p style={{ fontSize: 'clamp(1.05rem,1.6vw,1.3rem)', color: 'rgba(10,10,12,.6)', maxWidth: 520, margin: '0 auto' }}>
+            Three free AI analyses. $0.99 courses. No card to start. See the AI’s calls before it knows if it’s right.
+          </p>
+        </Reveal>
+        <Reveal delay={350} style={{ marginTop: 40, display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Magnetic href="/brainstock" style={{ gap: 10, background: ACCENT, color: '#fff', padding: '18px 34px', fontSize: 16, fontWeight: 700 }}>
+            See today’s calls <ArrowUpRight size={18} />
+          </Magnetic>
+          <Magnetic href="/ai-stocks" style={{ gap: 10, background: 'transparent', color: INK, padding: '18px 30px', fontSize: 16, fontWeight: 700, border: `1px solid ${INK}` }}>
+            Analyze any stock
+          </Magnetic>
         </Reveal>
       </section>
 
-      <AIPopup />
-
-      <SiteFooter />
+      <div style={{ position: 'relative', zIndex: 1 }}><SiteFooter /></div>
     </div>
   )
 }
