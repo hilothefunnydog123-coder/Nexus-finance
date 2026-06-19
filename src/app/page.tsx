@@ -266,8 +266,8 @@ function StatsStrip() {
   return (
     <section className="relative z-10 max-w-6xl mx-auto px-6 pb-12">
       <Reveal>
-        <div className="rounded-3xl bg-white/65 backdrop-blur border border-black/[0.06] px-6 py-7 sm:px-10" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
-          <div className="flex items-center gap-2 mb-5 text-[12px] uppercase tracking-[0.18em] text-[#8a8a94]">
+        <div className="rounded-3xl bg-white/[0.035] backdrop-blur border border-white/[0.08] px-6 py-7 sm:px-10" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
+          <div className="flex items-center gap-2 mb-5 text-[12px] uppercase tracking-[0.18em] text-[#6a7a8c]">
             <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
             Live on ynfinance.org
           </div>
@@ -275,7 +275,7 @@ function StatsStrip() {
             {show.map(([v, l]) => (
               <div key={l}>
                 <div className="text-[clamp(1.7rem,3.4vw,2.4rem)] font-semibold tracking-tight ln-grad inline-block">{v}</div>
-                <div className="text-[13.5px] text-[#5e5e68] mt-1 leading-snug">{l}</div>
+                <div className="text-[13.5px] text-[#8a93a8] mt-1 leading-snug">{l}</div>
               </div>
             ))}
           </div>
@@ -355,19 +355,19 @@ function DailyBoard() {
   return (
     <section id="board" className="relative z-10 max-w-6xl mx-auto px-6 pb-24 scroll-mt-24">
       <Reveal>
-        <div className="flex items-center gap-2 text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">
+        <div className="flex items-center gap-2 text-[13px] uppercase tracking-[0.2em] text-[#6a7a8c] mb-3">
           <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: bull ? '#16a34a' : '#dc2626', boxShadow: `0 0 8px ${bull ? '#16a34a' : '#dc2626'}` }} />
           AI {bull ? 'Bull' : 'Bear'} Board
         </div>
         <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl">
           This morning&apos;s top 15 AI {bull ? 'bull' : 'bear'} calls.
         </h2>
-        <p className="mt-3 text-[16px] text-[#5e5e68] max-w-xl">
+        <p className="mt-3 text-[16px] text-[#8a93a8] max-w-xl">
           Every market morning we run ~300 stocks through our BrainStock forecaster and rank the most {bull ? 'bullish' : 'bearish'} for the session — with a price target on each. Regenerated before the open.
-          {data?.date && <span className="text-[#9a9aa4]"> · Updated {data.date}</span>}
+          {data?.date && <span className="text-[#6a7a8c]"> · Updated {data.date}</span>}
         </p>
         <div className="mt-5 flex items-center gap-3 flex-wrap">
-          <div className="inline-flex rounded-full bg-white/60 backdrop-blur border border-black/[0.06] p-1">
+          <div className="inline-flex rounded-full bg-white/60 backdrop-blur border border-white/[0.08] p-1">
             <button onClick={() => setView('bull')} className="px-4 py-1.5 rounded-full text-[14px] font-medium transition-colors" style={bull ? { background: '#16a34a', color: '#fff' } : { color: '#5e5e68' }}>Bulls</button>
             <button onClick={() => setView('bear')} className="px-4 py-1.5 rounded-full text-[14px] font-medium transition-colors" style={!bull ? { background: '#dc2626', color: '#fff' } : { color: '#5e5e68' }}>Bears</button>
           </div>
@@ -381,21 +381,21 @@ function DailyBoard() {
             <Reveal key={p.ticker} delay={i * 40}>
               <Link
                 href={`/forecast/${p.ticker}`}
-                className="group block h-full rounded-2xl bg-white/65 backdrop-blur border border-black/[0.06] p-5 transition-all duration-300 hover:-translate-y-1"
+                className="group block h-full rounded-2xl bg-white/[0.035] backdrop-blur border border-white/[0.08] p-5 transition-all duration-300 hover:-translate-y-1"
                 style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <span className="text-[12px] font-semibold text-[#9a9aa4] tabular-nums">#{p.rank}</span>
+                    <span className="text-[12px] font-semibold text-[#6a7a8c] tabular-nums">#{p.rank}</span>
                     <span className="text-[18px] font-semibold tracking-tight">{p.ticker}</span>
                   </div>
                   <span className="text-[15px] font-semibold tabular-nums" style={{ color: bull ? '#16a34a' : '#dc2626' }}>{bull ? '▲' : '▼'} {Math.abs(p.pct).toFixed(2)}%</span>
                 </div>
-                <div className="mt-3 text-[14px] text-[#5e5e68] tabular-nums">
-                  ${p.price.toFixed(2)} <span className="text-[#b8b8c0]">→</span> <b className="text-[#16161f]">${p.target.toFixed(2)}</b>
-                  <span className="text-[#9a9aa4]"> session target</span>
+                <div className="mt-3 text-[14px] text-[#8a93a8] tabular-nums">
+                  ${p.price.toFixed(2)} <span className="text-[#b8b8c0]">→</span> <b className="text-[#eef2f8]">${p.target.toFixed(2)}</b>
+                  <span className="text-[#6a7a8c]"> session target</span>
                 </div>
-                <div className="mt-1 text-[12px] text-[#9a9aa4] tabular-nums">
+                <div className="mt-1 text-[12px] text-[#6a7a8c] tabular-nums">
                   5-day ${p.target5.toFixed(2)} ({p.pct5 >= 0 ? '+' : ''}{p.pct5.toFixed(1)}%) · {Math.round(p.dirAcc * 100)}% dir. accuracy
                 </div>
               </Link>
@@ -403,12 +403,12 @@ function DailyBoard() {
           ))}
         </div>
       ) : (
-        <div className="mt-10 rounded-2xl bg-white/55 backdrop-blur border border-black/[0.06] px-8 py-12 text-center" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
-          <div className="text-[17px] font-semibold text-[#16161f]">The board posts every market morning.</div>
-          <div className="text-[14px] text-[#6a6a74] mt-2">Check back around the open — ~300 stocks get ranked by the AI for the session ahead.</div>
+        <div className="mt-10 rounded-2xl bg-white/55 backdrop-blur border border-white/[0.08] px-8 py-12 text-center" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
+          <div className="text-[17px] font-semibold text-[#eef2f8]">The board posts every market morning.</div>
+          <div className="text-[14px] text-[#8a93a8] mt-2">Check back around the open — ~300 stocks get ranked by the AI for the session ahead.</div>
         </div>
       )}
-      <p className="mt-6 text-[12px] text-[#9a9aa4] max-w-2xl">
+      <p className="mt-6 text-[12px] text-[#6a7a8c] max-w-2xl">
         Model estimates ranked by predicted next-session move, filtered to names where the model beats a naive baseline in backtest. Not financial advice.
       </p>
     </section>
@@ -518,14 +518,14 @@ function AIFeed() {
   return (
     <section id="ai-feed" className="relative z-10 max-w-6xl mx-auto px-6 pb-24 scroll-mt-24">
       <Reveal>
-        <div className="flex items-center gap-2 text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">
+        <div className="flex items-center gap-2 text-[13px] uppercase tracking-[0.2em] text-[#6a7a8c] mb-3">
           <span className="inline-block w-2 h-2 rounded-full ln-cursor" style={{ background: '#8b5cf6', boxShadow: '0 0 8px #8b5cf6' }} />
           The AI is watching
         </div>
         <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl">
           Live market takes, written by our AI.
         </h2>
-        <p className="mt-3 text-[16px] text-[#5e5e68] max-w-xl">
+        <p className="mt-3 text-[16px] text-[#8a93a8] max-w-xl">
           Through the day, BrainStock reads the headlines, gives its honest read, and — when there&apos;s a ticker — attaches a forecast. The big ones hit your inbox.
         </p>
       </Reveal>
@@ -533,13 +533,13 @@ function AIFeed() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
           {posts.slice(0, 9).map((p, i) => (
             <Reveal key={p.id} delay={i * 40}>
-              <div className="h-full rounded-2xl bg-white/65 backdrop-blur border border-black/[0.06] p-5" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
+              <div className="h-full rounded-2xl bg-white/[0.035] backdrop-blur border border-white/[0.08] p-5" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: 'rgba(139,92,246,.1)', color: '#7c3aed' }}>{p.category}</span>
-                  <span className="text-[11px] text-[#9a9aa4]">{timeAgo(p.created_at)}</span>
+                  <span className="text-[11px] text-[#6a7a8c]">{timeAgo(p.created_at)}</span>
                 </div>
                 <div className="text-[16px] font-semibold tracking-tight leading-snug">{p.hook}</div>
-                <p className="mt-1.5 text-[14px] text-[#5e5e68] leading-relaxed">{p.insight}</p>
+                <p className="mt-1.5 text-[14px] text-[#8a93a8] leading-relaxed">{p.insight}</p>
                 {p.forecast && p.ticker && (
                   <Link href={`/forecast/${p.ticker}`} className="mt-3 inline-flex items-center gap-2 text-[13px] font-medium rounded-full px-3 py-1.5" style={{ background: 'rgba(6,182,212,.08)', color: '#0891b2' }}>
                     {p.ticker} target ${p.forecast.target.toFixed(2)}
@@ -551,9 +551,9 @@ function AIFeed() {
           ))}
         </div>
       ) : (
-        <div className="mt-10 rounded-2xl bg-white/55 backdrop-blur border border-black/[0.06] px-8 py-12 text-center" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
-          <div className="text-[17px] font-semibold text-[#16161f]">The AI posts its takes through the day.</div>
-          <div className="text-[14px] text-[#6a6a74] mt-2">Check back soon — it reads the market every few hours.</div>
+        <div className="mt-10 rounded-2xl bg-white/55 backdrop-blur border border-white/[0.08] px-8 py-12 text-center" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
+          <div className="text-[17px] font-semibold text-[#eef2f8]">The AI posts its takes through the day.</div>
+          <div className="text-[14px] text-[#8a93a8] mt-2">Check back soon — it reads the market every few hours.</div>
         </div>
       )}
     </section>
@@ -648,7 +648,7 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden font-sans text-[#16161f] antialiased" style={{ background: 'linear-gradient(155deg,#f1ecff 0%,#fdeef7 38%,#eaf3ff 70%,#eafff4 100%)' }}>
+    <div className="relative min-h-screen overflow-x-hidden font-sans text-[#eef2f8] antialiased" style={{ background: '#05070d' }}>
       <style>{`
         @keyframes ln-up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
         .ln-up{opacity:0;animation:ln-up .95s cubic-bezier(.16,1,.3,1) forwards}
@@ -659,21 +659,19 @@ export default function Home() {
         @keyframes ln-pop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.18)}100%{transform:scale(1);opacity:1}}
         .ln-pop{animation:ln-pop .34s cubic-bezier(.34,1.56,.64,1) both}
         @keyframes ln-pan{to{background-position:200% center}}
-        .ln-grad{background:linear-gradient(110deg,#6366f1,#a855f7,#ec4899,#6366f1);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:ln-pan 6s linear infinite}
+        .ln-grad{background:linear-gradient(110deg,#22d3ee,#a855f7,#22d3ee);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:ln-pan 6s linear infinite}
         @keyframes cs-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
         @keyframes cs-breathe{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.07)}}
         @keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
       `}</style>
 
-      {/* ---------- soft animated colour mesh ---------- */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      {/* ---------- atmospheric dark mesh ---------- */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" style={{ background: '#05070d' }}>
         {[
-          { c: '#a5b4fc', x: '-8%', y: '-10%', s: 620, d: 22, delay: 0 },
-          { c: '#f0abfc', x: '58%', y: '-14%', s: 680, d: 26, delay: 2 },
-          { c: '#fbcfe8', x: '30%', y: '40%', s: 720, d: 30, delay: 1 },
-          { c: '#a7f3d0', x: '-6%', y: '52%', s: 560, d: 24, delay: 3 },
-          { c: '#bae6fd', x: '66%', y: '50%', s: 600, d: 28, delay: 1.5 },
-          { c: '#fed7aa', x: '40%', y: '8%', s: 480, d: 20, delay: 2.5 },
+          { c: 'rgba(34,211,238,.22)', x: '-10%', y: '-12%', s: 700, d: 24, delay: 0 },
+          { c: 'rgba(167,139,250,.20)', x: '60%', y: '-14%', s: 740, d: 28, delay: 2 },
+          { c: 'rgba(52,211,153,.10)', x: '20%', y: '46%', s: 660, d: 30, delay: 1 },
+          { c: 'rgba(34,211,238,.12)', x: '70%', y: '50%', s: 620, d: 26, delay: 1.5 },
         ].map((b, i) => (
           <div
             key={i}
@@ -683,14 +681,15 @@ export default function Home() {
               top: b.y,
               width: b.s,
               height: b.s,
-              background: `radial-gradient(circle at center, ${b.c} 0%, transparent 68%)`,
-              filter: 'blur(58px)',
-              opacity: 0.78,
+              background: `radial-gradient(circle at center, ${b.c} 0%, transparent 66%)`,
+              filter: 'blur(96px)',
               animation: `ln-blob ${b.d}s ease-in-out ${b.delay}s infinite`,
             }}
           />
         ))}
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,.12), transparent 28%, rgba(255,255,255,.4))' }} />
+        {/* hairline blueprint grid */}
+        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px)', backgroundSize: '48px 48px', WebkitMaskImage: 'radial-gradient(ellipse 90% 60% at 50% 18%,#000,transparent 80%)', maskImage: 'radial-gradient(ellipse 90% 60% at 50% 18%,#000,transparent 80%)' }} />
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 118%, rgba(0,0,0,.55), transparent)' }} />
       </div>
 
       {/* ---------- nav ---------- */}
@@ -702,16 +701,16 @@ export default function Home() {
           <span className="text-[17px] font-semibold tracking-tight">YN&nbsp;Finance</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-8 text-[15px] text-[#42424f]">
+        <nav className="hidden md:flex items-center gap-8 text-[15px] text-[#9fb0c4]">
           {NAV.map((l) => (
-            <Link key={l.label} href={l.href} className="hover:text-[#16161f] transition-colors">
+            <Link key={l.label} href={l.href} className="hover:text-[#eef2f8] transition-colors">
               {l.label}
             </Link>
           ))}
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <button onClick={() => signInWithGoogle()} className="text-[15px] text-[#42424f] hover:text-[#16161f] transition-colors">
+          <button onClick={() => signInWithGoogle()} className="text-[15px] text-[#9fb0c4] hover:text-[#eef2f8] transition-colors">
             Sign in
           </button>
           <Link
@@ -730,7 +729,7 @@ export default function Home() {
 
       {/* mobile menu */}
       <div
-        className={`fixed inset-0 z-40 bg-white/90 backdrop-blur-md transition-all duration-300 md:hidden ${menu ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-40 bg-[#070b14]/95 backdrop-blur-md transition-all duration-300 md:hidden ${menu ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       >
         <div className="flex items-center justify-between px-5 py-4">
           <span className="text-[17px] font-semibold tracking-tight">YN Finance</span>
@@ -751,12 +750,12 @@ export default function Home() {
       </div>
 
       {/* ---------- live ticker ---------- */}
-      <div className="fixed top-[58px] inset-x-0 z-20 overflow-hidden border-y border-black/[0.07] bg-white/50 backdrop-blur">
+      <div className="fixed top-[58px] inset-x-0 z-20 overflow-hidden border-y border-white/[0.09] bg-white/[0.05] backdrop-blur">
         <div className="flex gap-8 py-2 whitespace-nowrap" style={{ animation: 'mq 42s linear infinite', width: 'max-content' }}>
           {[...ticks, ...ticks, ...ticks].map((t, i) => (
             <span key={i} className="inline-flex items-center gap-2 font-mono text-[12.5px]">
-              <span className="font-semibold text-[#16161f]">{t.s}</span>
-              <span className="text-[#7a7a84]">{t.p}</span>
+              <span className="font-semibold text-[#eef2f8]">{t.s}</span>
+              <span className="text-[#6a7a8c]">{t.p}</span>
               <span style={{ color: t.up ? '#16a34a' : '#dc2626' }}>
                 {t.up ? '▲' : '▼'}
                 {t.c}
@@ -769,7 +768,7 @@ export default function Home() {
       {/* ---------- hero ---------- */}
       <main className="relative z-10 max-w-6xl mx-auto px-6 pt-36 pb-24 sm:pt-44 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:items-center">
         <div>
-        <div className="ln-up ln-d1 inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur border border-black/[0.06] px-3.5 py-1.5 text-[13px] text-[#42424f] mb-8" style={{ boxShadow: '0 4px 16px rgba(99,102,241,.08)' }}>
+        <div className="ln-up ln-d1 inline-flex items-center gap-2 rounded-full bg-white/[0.045] backdrop-blur border border-white/[0.08] px-3.5 py-1.5 text-[13px] text-[#9fb0c4] mb-8" style={{ boxShadow: '0 4px 16px rgba(99,102,241,.08)' }}>
           <Sparkles className="w-3.5 h-3.5" style={{ color: '#8b5cf6' }} />
           BrainStock AI · forecasts ~300 stocks every market morning
         </div>
@@ -783,38 +782,39 @@ export default function Home() {
           {!done && <span className="inline-block w-[3px] h-[0.95em] align-middle ml-1 ln-cursor" style={{ background: '#16161f' }} />}
         </h1>
 
-        <p className="ln-up ln-d2 mt-7 max-w-xl text-[17px] sm:text-[19px] leading-relaxed text-[#55555f]">
+        <p className="ln-up ln-d2 mt-7 max-w-xl text-[17px] sm:text-[19px] leading-relaxed text-[#8a93a8]">
 Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itself on real prices. Rate any stock in 15 seconds, learn from 9 pro traders, and automate it — all in one place.
         </p>
 
         <div className="ln-up ln-d3 mt-9 flex flex-wrap items-center gap-3">
           <Link
             href="/ai-stocks"
-            className="group inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-medium text-white transition-transform hover:-translate-y-0.5"
-            style={{ background: ACCENT, boxShadow: '0 12px 30px rgba(139,92,246,.32)' }}
+            data-magnetic="0.4"
+            className="group inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold text-[#05070d] transition-transform"
+            style={{ background: 'linear-gradient(135deg,#22d3ee,#a855f7)', boxShadow: '0 12px 40px rgba(34,211,238,.32)' }}
           >
             Try the AI Analyzer
             <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </Link>
           <Link
             href="/courses"
-            className="inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-medium text-[#16161f] bg-white/70 backdrop-blur border border-black/[0.07] hover:bg-white transition-colors"
+            className="inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-medium text-[#eef2f8] bg-white/[0.045] backdrop-blur border border-white/[0.09] hover:bg-white/[0.08]transition-colors"
           >
             Browse the courses
           </Link>
           <a
             href="#demo"
-            className="inline-flex items-center gap-2 rounded-full px-5 py-3.5 text-[15px] font-medium text-[#16161f] hover:bg-black/[0.04] transition-colors"
+            className="inline-flex items-center gap-2 rounded-full px-5 py-3.5 text-[15px] font-medium text-[#eef2f8] hover:bg-white/[0.06] transition-colors"
           >
             <Play className="w-4 h-4" style={{ color: '#7c3aed' }} fill="#7c3aed" />
             Watch the demo
           </a>
-          <span className="text-[13px] text-[#86868f] ml-1">3 free analyses · $0.99 courses · no card to start</span>
+          <span className="text-[13px] text-[#6a7a8c] ml-1">3 free analyses · $0.99 courses · no card to start</span>
         </div>
 
         {/* interactive product picker */}
         <div className="ln-up ln-d4 mt-16 max-w-2xl">
-          <div className="text-[15px] font-medium text-[#42424f] mb-3">What do you want to do first?</div>
+          <div className="text-[15px] font-medium text-[#9fb0c4] mb-3">What do you want to do first?</div>
           <div className="flex flex-wrap gap-2.5">
             {PRODUCTS.map((p) => {
               const active = sel === p.id
@@ -840,9 +840,9 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
             {!chosen ? (
               <div className="text-[13px] italic text-[#a0a0a8]">Pick one to get started.</div>
             ) : (
-              <div className="flex items-center justify-between gap-4 rounded-2xl bg-white/70 backdrop-blur border border-black/[0.06] px-5 py-4" style={{ boxShadow: '0 10px 30px rgba(99,102,241,.1)' }}>
+              <div className="flex items-center justify-between gap-4 rounded-2xl bg-white/[0.045] backdrop-blur border border-white/[0.08] px-5 py-4" style={{ boxShadow: '0 10px 30px rgba(99,102,241,.1)' }}>
                 <div className="min-w-0">
-                  <div className="text-[12px] uppercase tracking-wider text-[#9a9aa4]">Let&apos;s go</div>
+                  <div className="text-[12px] uppercase tracking-wider text-[#6a7a8c]">Let&apos;s go</div>
                   <div className="text-[15px] font-medium truncate">{chosen.title}</div>
                 </div>
                 <Link
@@ -878,7 +878,7 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
       {/* ---------- products ---------- */}
       <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
         <Reveal>
-          <div className="text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">Forecast · Analyze · Talk · Learn · Automate</div>
+          <div className="text-[13px] uppercase tracking-[0.2em] text-[#6a7a8c] mb-3">Forecast · Analyze · Talk · Learn · Automate</div>
           <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl">
             One platform for the whole trade — from idea to execution.
           </h2>
@@ -889,16 +889,17 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
             <Reveal key={p.id} delay={i * 90}>
               <Link
                 href={p.href}
-                className="group block h-full rounded-3xl bg-white/65 backdrop-blur border border-black/[0.06] p-7 transition-all duration-300 hover:-translate-y-1.5"
-                style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 22px 50px rgba(99,102,241,.16)')}
-                onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 10px 40px rgba(80,80,120,.06)')}
+                data-spotlight
+                className="group block h-full cine-clip bg-white/[0.025] backdrop-blur border border-white/[0.08] p-7 transition-all duration-300 hover:-translate-y-1.5 hover:border-cyan-400/40"
+                style={{ boxShadow: '0 10px 40px rgba(0,0,0,.3)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 22px 50px rgba(34,211,238,.14)')}
+                onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 10px 40px rgba(0,0,0,.3)')}
               >
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white mb-6" style={{ background: p.grad }}>
                   <p.icon className="w-6 h-6" />
                 </div>
                 <div className="text-[19px] font-semibold tracking-tight mb-2">{p.title}</div>
-                <p className="text-[15px] leading-relaxed text-[#5e5e68]">{p.blurb}</p>
+                <p className="text-[15px] leading-relaxed text-[#8a93a8]">{p.blurb}</p>
                 <div className="mt-6 inline-flex items-center gap-1.5 text-[14px] font-medium" style={{ color: '#7c3aed' }}>
                   {p.cta}
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
@@ -910,7 +911,7 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
 
         {/* trust strip */}
         <Reveal delay={120}>
-          <div className="mt-16 rounded-3xl bg-white/65 backdrop-blur border border-black/[0.06] px-8 py-10 flex flex-wrap items-center justify-between gap-8" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
+          <div className="mt-16 rounded-3xl bg-white/[0.035] backdrop-blur border border-white/[0.08] px-8 py-10 flex flex-wrap items-center justify-between gap-8" style={{ boxShadow: '0 10px 40px rgba(80,80,120,.06)' }}>
             {[
               ['Public', 'AI track record — every call logged'],
               ['Real', 'institutional data, not mock numbers'],
@@ -918,7 +919,7 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
             ].map(([a, b]) => (
               <div key={b} className="min-w-[160px]">
                 <div className="text-[28px] font-semibold tracking-tight ln-grad inline-block">{a}</div>
-                <div className="text-[14px] text-[#6a6a74] mt-1">{b}</div>
+                <div className="text-[14px] text-[#8a93a8] mt-1">{b}</div>
               </div>
             ))}
             <Link
@@ -936,11 +937,11 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
       {/* ---------- demo video ---------- */}
       <section id="demo" className="relative z-10 max-w-6xl mx-auto px-6 pb-28 scroll-mt-24">
         <Reveal>
-          <div className="text-[13px] uppercase tracking-[0.2em] text-[#9a9aa4] mb-3">See it work</div>
+          <div className="text-[13px] uppercase tracking-[0.2em] text-[#6a7a8c] mb-3">See it work</div>
           <h2 className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold tracking-[-0.02em] leading-tight max-w-2xl mb-8">
             The whole platform, in 60 seconds.
           </h2>
-          <div className="rounded-[28px] overflow-hidden border border-black/[0.06]" style={{ boxShadow: '0 24px 70px rgba(99,102,241,.14)' }}>
+          <div className="rounded-[28px] overflow-hidden border border-white/[0.08]" style={{ boxShadow: '0 24px 70px rgba(99,102,241,.14)' }}>
             <div className="relative w-full" style={{ aspectRatio: '1912 / 900', background: '#0f1830' }}>
               <video
                 src="/founder-demo.mp4"
@@ -962,12 +963,12 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
       <section className="relative z-10 max-w-6xl mx-auto px-6 pb-28">
         <Reveal>
           <div
-            className="rounded-[28px] overflow-hidden border border-black/[0.06]"
+            className="rounded-[28px] overflow-hidden border border-white/[0.08]"
             style={{ background: 'linear-gradient(135deg,rgba(99,102,241,.12),rgba(236,72,153,.09) 55%,rgba(16,185,129,.08))', boxShadow: '0 24px 70px rgba(99,102,241,.14)' }}
           >
             <div className="grid md:grid-cols-[1.25fr_1fr]">
               <div className="p-9 sm:p-12">
-                <div className="text-[13px] uppercase tracking-[0.22em] text-[#8a8a94] mb-3">The founders</div>
+                <div className="text-[13px] uppercase tracking-[0.22em] text-[#6a7a8c] mb-3">The founders</div>
                 <h2 className="text-[clamp(1.7rem,3.6vw,2.6rem)] font-semibold tracking-[-0.02em] leading-[1.1]">
                   Built by two teenagers
                   <br />
@@ -983,7 +984,7 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
                   Read our story <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
-              <div className="p-9 sm:p-12 flex flex-col justify-center gap-5 bg-white/45 backdrop-blur">
+              <div className="p-9 sm:p-12 flex flex-col justify-center gap-5 bg-white/[0.03] backdrop-blur">
                 {[
                   { i: 'NG', n: 'Neil Gilani', r: 'Co-founder · CEO', g: 'linear-gradient(135deg,#6366f1,#8b5cf6)', l: 'https://www.linkedin.com/in/neil-gilani-8863b7412/' },
                   { i: 'YR', n: 'Yannai Richter', r: 'Co-founder · CTO', g: 'linear-gradient(135deg,#ec4899,#f97316)', l: 'https://www.linkedin.com/in/yannai-richter-797a20344/' },
@@ -994,7 +995,7 @@ Our neural net, BrainStock, forecasts ~300 stocks every morning and grades itsel
                     </span>
                     <div className="flex-1">
                       <div className="text-[16px] font-semibold">{f.n}</div>
-                      <div className="text-[13px] text-[#6a6a74]">{f.r}</div>
+                      <div className="text-[13px] text-[#8a93a8]">{f.r}</div>
                     </div>
                     <a
                       href={f.l}

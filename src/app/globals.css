@@ -161,3 +161,52 @@ h1, h2, h3, h4 {
 .text-down { color: #ff4757; }
 .bg-up { background-color: rgba(0, 212, 170, 0.1); }
 .bg-down { background-color: rgba(255, 71, 87, 0.1); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   TERMINAL NOIR — cinematic foundation (site-wide).
+   Driven by data-* attributes + the global CineFX engine. GPU-only.
+   ══════════════════════════════════════════════════════════════════════ */
+::selection { background: rgba(34, 211, 238, 0.26); color: #fff; }
+
+/* Scroll-reveal — add data-reveal (optionally ="scale|left|right|blur"), CineFX adds .cine-in */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1), filter .9s cubic-bezier(.16,1,.3,1);
+  will-change: opacity, transform;
+}
+[data-reveal="scale"] { transform: scale(.93); }
+[data-reveal="left"]  { transform: translateX(46px); }
+[data-reveal="right"] { transform: translateX(-46px); }
+[data-reveal="blur"]  { transform: translateY(20px); filter: blur(12px); }
+[data-reveal].cine-in { opacity: 1; transform: none; filter: none; }
+
+/* Magnetic hover — add data-magnetic; CineFX nudges transform toward the cursor */
+[data-magnetic] { transition: transform .3s cubic-bezier(.16,1,.3,1); }
+
+/* Spotlight — add data-spotlight; a pointer-following glow rides over the surface */
+[data-spotlight] { position: relative; }
+[data-spotlight]::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  transition: opacity .35s ease; z-index: 0;
+  background: radial-gradient(340px circle at var(--mx,50%) var(--my,50%), rgba(34,211,238,.14), transparent 60%);
+}
+[data-spotlight]:hover::before { opacity: 1; }
+[data-spotlight] > * { position: relative; z-index: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] { opacity: 1 !important; transform: none !important; filter: none !important; }
+  [data-magnetic] { transform: none !important; }
+}
+
+/* Cinematic helper classes */
+.cine-eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: #22d3ee; }
+.cine-display { font-family: var(--font-display), system-ui, sans-serif; font-weight: 700; letter-spacing: -0.045em; line-height: 0.95; }
+.cine-hair { height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent); }
+.cine-glass { background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.09); backdrop-filter: blur(12px); }
+.cine-clip { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%); }
+.cine-clip-tl { clip-path: polygon(18px 0, 100% 0, 100% 100%, 0 100%, 0 18px); }
+.cine-link { position: relative; }
+.cine-link::after { content: ""; position: absolute; left: 0; bottom: -2px; height: 1px; width: 0; background: currentColor; transition: width .3s cubic-bezier(.16,1,.3,1); }
+.cine-link:hover::after { width: 100%; }
+.cine-index { font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; color: #4a5e7a; }
