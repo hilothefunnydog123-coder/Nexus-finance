@@ -23,7 +23,36 @@ const CAST: Record<string, Persona> = {
 }
 
 type Line = { who: string; text: string }
-type Ruling = { verdict: string; conviction: number; size: string; invalidation: string; summary: string } | null
+type Ruling = { verdict: string; conviction: number; size: string; invalidation: string; summary: string; why: string } | null
+type FC = { price: number; pct: number; dir: string; dirAcc: number; skill: number; horizon: number } | null
+
+// Real, deterministic conviction from the model's measured edge + agreement with the
+// committee verdict — NOT a number the LLM made up.
+function computeConviction(f: FC, verdict: string): { score: number; why: string } {
+  const bull = /buy/i.test(verdict)
+  const bear = /short|sell|avoid/i.test(verdict)
+  if (!f) {
+    const base = /strong/i.test(verdict) ? 55 : /hold/i.test(verdict) ? 38 : 48
+    return { score: base, why: 'Model offline for this ticker — committee judgment only.' }
+  }
+  const dirAcc = Number(f.dirAcc) || 50 // backtested directional hit-rate
+  const skill = Number(f.skill) || 0 // % better than a naive baseline (can be negative)
+  const pct = Math.abs(Number(f.pct) || 0) // size of the predicted move
+  const up = f.dir === 'up'
+
+  let c = 50
+  c += (dirAcc - 55) * 1.2 // reward accuracy above coin-flip-ish
+  c += skill * 1.2 // reward genuinely beating the baseline; punish if it doesn't
+  c += Math.min(10, pct * 1.5) // a bigger predicted move carries more signal (capped)
+  if ((bull && up) || (bear && !up)) c += 8 // committee agrees with the model
+  else if ((bull && !up) || (bear && up)) c -= 12 // committee is fighting the model
+  c = Math.max(8, Math.min(94, Math.round(c)))
+
+  const parts = [`${dirAcc}% directional accuracy`, `${skill >= 0 ? '+' : ''}${skill} skill vs baseline`]
+  if ((bull && up) || (bear && !up)) parts.push('verdict aligns with the forecast')
+  else if ((bull && !up) || (bear && up)) parts.push('verdict fights the forecast')
+  return { score: c, why: `From ${parts.join(' · ')}.` }
+}
 
 const POPULAR = ['NVDA', 'TSLA', 'AAPL', 'PLTR', 'AMD', 'SPY']
 
@@ -60,7 +89,7 @@ export default function WarRoom() {
     setConvened(true)
 
     // 1) pull the real forecast so the Quant has live numbers to cite
-    let forecast: Record<string, unknown> | null = null
+    let forecast: FC = null
     const name = t
     try {
       const r = await fetch('/api/forecast', {
@@ -108,9 +137,12 @@ export default function WarRoom() {
         const rule = line.match(/^RULING:\s*([\s\S]+)$/i)
         if (rule) {
           const parts = rule[1].split('|').map((s: string) => s.trim())
+          const verdict = parts[0] || 'HOLD'
+          const conv = computeConviction(forecast, verdict) // real, computed — ignore the LLM's number
           parsedRuling = {
-            verdict: parts[0] || 'HOLD',
-            conviction: Math.max(0, Math.min(100, parseInt(parts[1]) || 50)),
+            verdict,
+            conviction: conv.score,
+            why: conv.why,
             size: parts[2] || '—',
             invalidation: parts[3] || '—',
             summary: parts[4] || '',
@@ -253,11 +285,21 @@ export default function WarRoom() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.4, color: MUTED }}>
               <Gavel size={14} color={VIOLET} /> The CIO&apos;s ruling
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap', marginTop: 8 }}>
-              <div style={{ fontSize: 'clamp(28px,5vw,40px)', fontWeight: 800, letterSpacing: -1, color: verdictColor(ruling.verdict) }}>{ruling.verdict}</div>
-              <div style={{ fontSize: 15, color: MUTED }}>conviction <b style={{ color: '#fff' }}>{ruling.conviction}%</b></div>
+            <div style={{ fontSize: 'clamp(28px,5vw,40px)', fontWeight: 800, letterSpacing: -1, color: verdictColor(ruling.verdict), marginTop: 6 }}>{ruling.verdict}</div>
+
+            {/* computed conviction — real, not the LLM's guess */}
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                <span style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, color: MUTED }}>Conviction</span>
+                <span style={{ fontSize: 18, fontWeight: 800, color: verdictColor(ruling.verdict), fontVariantNumeric: 'tabular-nums' }}>{ruling.conviction}%</span>
+              </div>
+              <div style={{ height: 8, borderRadius: 99, background: 'rgba(255,255,255,.07)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${ruling.conviction}%`, borderRadius: 99, background: `linear-gradient(90deg, ${verdictColor(ruling.verdict)}, ${verdictColor(ruling.verdict)}aa)`, transition: 'width .8s ease' }} />
+              </div>
+              {ruling.why && <div style={{ marginTop: 6, fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{ruling.why}</div>}
             </div>
-            {ruling.summary && <p style={{ marginTop: 8, fontSize: 16, color: '#e2e8f2', lineHeight: 1.55 }}>{ruling.summary}</p>}
+
+            {ruling.summary && <p style={{ marginTop: 14, fontSize: 16, color: '#e2e8f2', lineHeight: 1.55 }}>{ruling.summary}</p>}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
               <div style={{ ...glass, padding: '12px 14px' }}>
                 <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: MUTED }}>Position size</div>
