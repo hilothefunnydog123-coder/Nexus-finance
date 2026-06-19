@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import SiteFooter from '@/components/SiteFooter'
+import { PaperPage, PageHero, Section, Reveal, Magnetic, INK, MUTE, LINE, ACCENT, PAPER } from '@/components/cinematic/Paper'
 
 const BASE = 'https://ynfinance.org'
 
@@ -11,11 +10,11 @@ export const metadata: Metadata = {
 }
 
 const AGENTS = [
-  { n: '01', t: 'Fundamentals', c: '#00d4aa', d: 'Reads valuation (P/E vs sector), growth, margins and balance-sheet health to judge whether the business justifies the price.' },
-  { n: '02', t: 'Technical', c: '#1e90ff', d: 'Maps trend, momentum and key support/resistance from live price data, and locates the stock within its 52-week range.' },
-  { n: '03', t: 'Sentiment', c: '#a855f7', d: 'Weighs recent company news, the narrative and the Wall Street analyst consensus to gauge how the market is leaning.' },
-  { n: '04', t: 'Risk', c: '#f59e0b', d: 'Stress-tests the downside — volatility, beta, event risk (earnings) and the specific things that could break the thesis.' },
-  { n: '05', t: 'Portfolio Manager', c: '#ff2d78', d: 'Synthesizes the four specialists into one decision: a rating, conviction score, entry zone, stop, targets and an options play.' },
+  { n: '01', t: 'Fundamentals', d: 'Reads valuation (P/E vs sector), growth, margins and balance-sheet health to judge whether the business justifies the price.' },
+  { n: '02', t: 'Technical', d: 'Maps trend, momentum and key support/resistance from live price data, and locates the stock within its 52-week range.' },
+  { n: '03', t: 'Sentiment', d: 'Weighs recent company news, the narrative and the Wall Street analyst consensus to gauge how the market is leaning.' },
+  { n: '04', t: 'Risk', d: 'Stress-tests the downside — volatility, beta, event risk (earnings) and the specific things that could break the thesis.' },
+  { n: '05', t: 'Portfolio Manager', d: 'Synthesizes the four specialists into one decision: a rating, conviction score, entry zone, stop, targets and an options play.' },
 ]
 
 const SECTIONS = [
@@ -27,62 +26,57 @@ const SECTIONS = [
 
 export default function MethodologyPage() {
   return (
-    <div style={{ background: '#040a12', color: '#dce8f0', fontFamily: '"Inter",system-ui,sans-serif', minHeight: '100vh' }}>
-      <style>{`*{box-sizing:border-box;margin:0;padding:0}.lnk:hover{color:#00d4aa!important}`}</style>
-      <nav style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 clamp(16px,4vw,40px)', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 11, color: '#06121f' }}>YN</div>
-          <span style={{ fontSize: 16, fontWeight: 800 }}>YN Finance</span>
-        </Link>
-        <Link href="/ai-stocks" style={{ background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', color: '#06121f', padding: '9px 18px', borderRadius: 10, fontSize: 13, fontWeight: 800, textDecoration: 'none' }}>Try the analyzer →</Link>
-      </nav>
+    <PaperPage>
+      <PageHero
+        eyebrow="// TRANSPARENCY"
+        title="How the AI actually works."
+        accentWords={[3]}
+        sub="No black box and no hand-waving. Here’s the exact pipeline behind every analysis, the live data it runs on, how the ratings and targets are formed — and, just as importantly, where the limits are."
+      />
 
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '56px clamp(16px,4vw,24px) 80px' }}>
-        <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 800, letterSpacing: '2px', color: '#00d4aa', border: '1px solid rgba(0,212,170,.3)', borderRadius: 100, padding: '6px 16px', marginBottom: 22 }}>TRANSPARENCY</div>
-        <h1 style={{ fontSize: 'clamp(30px,5vw,52px)', fontWeight: 900, letterSpacing: '-2px', lineHeight: 1.03, marginBottom: 16 }}>How the AI actually works.</h1>
-        <p style={{ fontSize: 17, color: '#6a8497', lineHeight: 1.7, maxWidth: 620, marginBottom: 48 }}>
-          No black box and no hand-waving. Here’s the exact pipeline behind every analysis, the live data it runs on, how the ratings and targets are formed — and, just as importantly, where the limits are.
-        </p>
-
-        <h2 style={{ fontSize: 'clamp(22px,3vw,30px)', fontWeight: 900, letterSpacing: '-1px', marginBottom: 8 }}>Five specialized agents</h2>
-        <p style={{ fontSize: 15, color: '#6a8497', lineHeight: 1.7, marginBottom: 24 }}>Instead of one generic prompt, the analyzer runs five focused agents — each an expert in one lens — then a manager that makes the final call.</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 52 }}>
-          {AGENTS.map(a => (
-            <div key={a.n} style={{ display: 'flex', gap: 18, alignItems: 'flex-start', background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 14, padding: '20px 22px' }}>
-              <div style={{ fontSize: 13, fontWeight: 900, fontFamily: '"SF Mono",ui-monospace,monospace', color: a.c, flexShrink: 0, paddingTop: 2 }}>{a.n}</div>
-              <div>
-                <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 6 }}>{a.t}</h3>
-                <p style={{ fontSize: 14, color: '#8aa0b2', lineHeight: 1.65 }}>{a.d}</p>
+      <Section style={{ paddingTop: 0 }}>
+        <Reveal><div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.2em', color: ACCENT, marginBottom: 14 }}>// FIVE SPECIALIZED AGENTS</div></Reveal>
+        <Reveal delay={80}><h2 className="disp" style={{ fontSize: 'clamp(1.6rem,3.2vw,2.4rem)', maxWidth: 760, marginBottom: 36 }}>Not one generic prompt — five focused experts, then a manager that decides.</h2></Reveal>
+        {AGENTS.map((a) => (
+          <Reveal key={a.n}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 'clamp(16px,4vw,40px)', alignItems: 'start', padding: 'clamp(22px,3vw,32px) 0', borderTop: `1px solid ${LINE}` }}>
+              <div className="disp" style={{ fontSize: 'clamp(1.8rem,5vw,3rem)', color: 'rgba(10,10,12,.18)' }}>{a.n}</div>
+              <div style={{ maxWidth: 720 }}>
+                <h3 className="disp" style={{ fontSize: 'clamp(1.3rem,2.4vw,1.7rem)', marginBottom: 8 }}>{a.t}</h3>
+                <p style={{ fontSize: 15.5, color: MUTE, lineHeight: 1.65 }}>{a.d}</p>
               </div>
             </div>
-          ))}
-        </div>
-
-        {SECTIONS.map(s => (
-          <div key={s.t} style={{ marginBottom: 36 }}>
-            <h2 style={{ fontSize: 'clamp(20px,2.6vw,26px)', fontWeight: 900, letterSpacing: '-.5px', marginBottom: 12 }}>{s.t}</h2>
-            <p style={{ fontSize: 15, color: '#8aa0b2', lineHeight: 1.8 }}>{s.b}</p>
-          </div>
+          </Reveal>
         ))}
+      </Section>
 
-        {/* Honesty box */}
-        <div style={{ borderRadius: 16, padding: '24px 26px', background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.22)', marginBottom: 44 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#f59e0b', marginBottom: 10 }}>What this is — and isn’t</h2>
-          <p style={{ fontSize: 14, color: '#cdb88a', lineHeight: 1.8 }}>
-            YN Finance is an education and research tool, not a broker or a registered advisor, and nothing here is financial advice. The AI can be wrong, markets are uncertain, and past performance never guarantees future results. Use it to think faster and more thoroughly — then make your own decision.
-          </p>
+      <Section bg={PAPER}>
+        <div style={{ maxWidth: 820 }}>
+          {SECTIONS.map((s) => (
+            <Reveal key={s.t} style={{ marginBottom: 40 }}>
+              <h2 className="disp" style={{ fontSize: 'clamp(1.4rem,2.8vw,2rem)', marginBottom: 12 }}>{s.t}</h2>
+              <p style={{ fontSize: 15.5, color: MUTE, lineHeight: 1.8 }}>{s.b}</p>
+            </Reveal>
+          ))}
+          <Reveal>
+            <div style={{ padding: '24px 26px', background: 'rgba(31,59,255,.05)', border: `1px solid rgba(31,59,255,.22)` }}>
+              <h2 className="disp" style={{ fontSize: '1.2rem', color: ACCENT, marginBottom: 10 }}>What this is — and isn’t</h2>
+              <p style={{ fontSize: 14.5, color: MUTE, lineHeight: 1.8 }}>YN Finance is an education and research tool, not a broker or a registered advisor, and nothing here is financial advice. The AI can be wrong, markets are uncertain, and past performance never guarantees future results. Use it to think faster and more thoroughly — then make your own decision.</p>
+            </div>
+          </Reveal>
         </div>
+      </Section>
 
-        <div style={{ textAlign: 'center', padding: '36px 24px', borderRadius: 16, background: 'linear-gradient(135deg, rgba(0,212,170,.1), rgba(30,144,255,.05))', border: '1px solid rgba(0,212,170,.22)' }}>
-          <h2 style={{ fontSize: 24, fontWeight: 900, letterSpacing: '-.5px', marginBottom: 10 }}>See it on a real stock</h2>
-          <p style={{ fontSize: 14.5, color: '#6a8497', maxWidth: 440, margin: '0 auto 22px', lineHeight: 1.6 }}>Run any ticker, then check the call against our public track record.</p>
+      <Section>
+        <Reveal style={{ textAlign: 'center', maxWidth: 620, margin: '0 auto' }}>
+          <h2 className="disp" style={{ fontSize: 'clamp(1.8rem,4vw,2.8rem)', marginBottom: 12 }}>See it on a real stock.</h2>
+          <p style={{ fontSize: 16, color: MUTE, marginBottom: 28 }}>Run any ticker, then check the call against our public track record.</p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/ai-stocks" style={{ background: 'linear-gradient(135deg,#00d4aa,#1e90ff)', color: '#06121f', padding: '14px 30px', borderRadius: 12, fontSize: 15, fontWeight: 900, textDecoration: 'none' }}>Analyze a stock free →</Link>
-            <Link href="/performance" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', color: '#dce8f0', padding: '14px 28px', borderRadius: 12, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>View track record</Link>
+            <Magnetic href="/ai-stocks" style={{ gap: 8, background: INK, color: PAPER, padding: '16px 30px', fontSize: 15, fontWeight: 700 }}>Analyze a stock free →</Magnetic>
+            <Magnetic href="/performance" style={{ gap: 8, background: 'transparent', color: INK, padding: '16px 28px', fontSize: 15, fontWeight: 700, border: `1px solid ${INK}` }}>View track record</Magnetic>
           </div>
-        </div>
-      </div>
-      <SiteFooter />
-    </div>
+        </Reveal>
+      </Section>
+    </PaperPage>
   )
 }
