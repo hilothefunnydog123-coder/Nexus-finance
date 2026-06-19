@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { forecastTicker } from '@/lib/forecast'
+import { traceForward } from '@/lib/nn'
 import { loadTrainedModel } from '@/lib/nnStore'
 import { rateLimit } from '@/lib/ratelimit'
 
@@ -78,7 +79,9 @@ export async function POST(req: Request) {
     const model = admin ? await loadTrainedModel(admin) : null // use the trained net if it has experience
     const result = await forecastTicker(ticker, horizon, undefined, model)
     await logPrediction(ticker, horizon, source, result) // feed the flywheel
-    return NextResponse.json(result)
+    // Neural X-Ray: the real forward-pass activations on this ticker.
+    const trace = model && result.features ? traceForward(model, result.features) : null
+    return NextResponse.json({ ...result, trace })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ error: `Couldn't fetch data for ${ticker}: ${msg}` }, { status: 502 })

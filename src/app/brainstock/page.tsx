@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ArrowLeft, ArrowUpRight, Loader2 } from 'lucide-react'
 import NeuralBg from '@/components/cinematic/NeuralBg'
+import NeuralXray from '@/components/cinematic/NeuralXray'
+import { FEATURE_NAMES } from '@/lib/nn'
 
 /* ── palette ─────────────────────────────────────────────────────────────── */
 const VOID = '#05060b'
@@ -22,7 +24,7 @@ const POPULAR = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'SPY', 'PLTR', 'AMD']
 
 type Point = { date: string; price: number }
 type Metrics = { samples: number; horizon: number; rmse_model: number; rmse_naive: number; mae_model: number; mae_naive: number; skill_score: number; directional_accuracy: number }
-type Forecast = { ticker: string; history: Point[]; forecast: Point[]; metrics: Metrics; disclaimer: string; engine?: 'neural-net' | 'baseline' }
+type Forecast = { ticker: string; history: Point[]; forecast: Point[]; metrics: Metrics; disclaimer: string; engine?: 'neural-net' | 'baseline'; features?: number[]; trace?: number[][] | null }
 type Vitals = { ready: boolean; arch: string; trained: number; dirAcc: number; avgLoss: number }
 
 /* ── motion primitives ───────────────────────────────────────────────────── */
@@ -310,6 +312,31 @@ export default function BrainStock() {
                   </div>
                 </>
               )}
+            </Reveal>
+          </section>
+        )}
+
+        {/* NEURAL X-RAY */}
+        {data && (
+          <section style={{ marginTop: 26 }}>
+            <Reveal>
+              <div style={{ ...glass, padding: 'clamp(18px,2.4vw,26px)', position: 'relative', overflow: 'hidden' }}>
+                <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${VIOLET}66, transparent)` }} />
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 6 }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: '0.2em', color: VIOLET }}>// NEURAL X-RAY — THE REAL FORWARD PASS</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: data.trace ? GREEN : AMBER }}>{data.trace ? '◈ LIVE ACTIVATIONS' : '◇ INPUTS ONLY · NET STILL TRAINING'}</div>
+                </div>
+                <p style={{ fontSize: 13.5, color: MUTED, lineHeight: 1.55, maxWidth: 640, marginBottom: 14 }}>
+                  Not a graphic — the actual computation. Your {data.ticker} bars become the eleven features on the left; watch them fire through the real {vitals?.arch ?? '11→16→12→1'} network to the prediction. Hover any neuron.
+                </p>
+                <NeuralXray
+                  activations={data.trace ?? null}
+                  features={data.features ?? null}
+                  featureNames={FEATURE_NAMES}
+                  predicted={lastPrice && tgt ? Math.log(tgt / lastPrice) : null}
+                  trained={!!data.trace}
+                />
+              </div>
             </Reveal>
           </section>
         )}

@@ -190,3 +190,27 @@ export function deserialize(data: unknown): NNModel | null {
 }
 
 export const NN_ARCH = DEFAULT_SIZES.join('→')
+
+// Human-readable names for the 11 input features (matches featurize order).
+export const FEATURE_NAMES = [
+  'Return 1d', 'Return 5d', 'Return 10d', 'Return 20d', 'Mom vs SMA20',
+  'Mom vs SMA50', 'Volatility', 'Volume ratio', 'ATR', 'RSI', 'Range pos',
+]
+
+/** Full forward pass exposing every layer's activations — for the Neural X-Ray. */
+export function traceForward(m: NNModel, x: number[]): number[][] {
+  const acts: number[][] = [x]
+  let cur = x
+  for (let l = 0; l < m.W.length; l++) {
+    const out = new Array(m.W[l].length).fill(0)
+    for (let i = 0; i < m.W[l].length; i++) {
+      let z = m.b[l][i]
+      const row = m.W[l][i]
+      for (let j = 0; j < row.length; j++) z += row[j] * cur[j]
+      out[i] = l === m.W.length - 1 ? z : Math.tanh(z)
+    }
+    acts.push(out)
+    cur = out
+  }
+  return acts
+}
