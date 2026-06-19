@@ -64,6 +64,11 @@ async function runBatch(limit: number) {
   const tickers = [...new Set(UNIVERSE)].slice(0, limit)
   const admin0 = getAdmin()
   const model = admin0 ? await loadTrainedModel(admin0) : null // forecast with the trained net
+  const trade_date0 = etDate()
+  const resolve0 = addBusinessDays(new Date(trade_date0 + 'T00:00:00Z'), 5).toISOString().slice(0, 10)
+  // Every forecast in the batch becomes a labeled training example — this is what
+  // bootstraps the net to its activation threshold within one resolution window.
+  const predRows: { trade_date: string; ticker: string; source: string; start_price: number; predicted: number; horizon: number; resolve_date: string; status: string; features: number[] }[] = []
   type Raw = Omit<Pick, 'rank'>
   const results = await pool<string, Raw>(tickers, 12, 45000, async (ticker) => {
     const f = await forecastTicker(ticker, 5, undefined, model)
@@ -71,6 +76,7 @@ async function runBatch(limit: number) {
     const target = f.forecast[0]?.price
     const target5 = f.forecast[f.forecast.length - 1]?.price
     if (!price || !target) return null
+    if (f.features) predRows.push({ trade_date: trade_date0, ticker, source: 'daily', start_price: price, predicted: target5, horizon: 5, resolve_date: resolve0, status: 'open', features: f.features })
     return {
       ticker,
       price,
@@ -99,7 +105,7 @@ async function runBatch(limit: number) {
   if (rankedBear.length < 15) rankedBear = results.filter((r) => r.pct < 0).sort((a, b) => a.pct - b.pct)
   const bears: Pick[] = rankedBear.slice(0, 15).map((r, idx) => ({ rank: idx + 1, ...r }))
 
-  return { picks, bears, attempted: tickers.length, succeeded: results.length }
+  return { picks, bears, attempted: tickers.length, succeeded: results.length, predRows }
 }
 
 export async function GET() {
@@ -137,7 +143,7 @@ export async function POST(req: NextRequest) {
   const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 320) : 320
 
   try {
-    const { picks, bears, attempted, succeeded } = await runBatch(limit)
+    const { picks, bears, attempted, succeeded, predRows } = await runBatch(limit)
     const trade_date = etDate()
     const generated_at = new Date().toISOString()
     const resolve_date = addBusinessDays(new Date(trade_date + 'T00:00:00Z'), 5).toISOString().slice(0, 10)
@@ -162,6 +168,8 @@ export async function POST(req: NextRequest) {
           status: 'open',
         }))
         if (callRows.length) await admin.from('forecast_calls').upsert(callRows, { onConflict: 'trade_date,ticker' })
+        // Seed the neural-net training set with every forecast's feature vector.
+        if (predRows.length) await admin.from('prediction_log').upsert(predRows, { onConflict: 'trade_date,ticker,source' })
       } catch {
         /* tables may not exist yet */
       }
