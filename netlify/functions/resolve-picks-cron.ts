@@ -14,7 +14,31 @@ export default async function handler() {
   } catch (e) {
     console.error('[ResolvePicks] error:', e)
   }
-  // Train the brain on any newly-resolved Beat-the-AI plays.
+  // Step 2 — grade every served forecast whose 5-day window has closed (the flywheel labels).
+  try {
+    const res = await fetch(`${SITE_URL}/api/prediction-log`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SECRET}` },
+    })
+    const data = await res.json()
+    console.log('[PredictionLog] graded:', JSON.stringify({ resolved: data.resolved, due: data.due }))
+  } catch (e) {
+    console.error('[PredictionLog] error:', e)
+  }
+
+  // Step 3 — backprop the neural network on the freshly graded predictions.
+  try {
+    const res = await fetch(`${SITE_URL}/api/nn`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SECRET}` },
+    })
+    const data = await res.json()
+    console.log('[NeuralNet] trained:', JSON.stringify({ learned: data.learned, totalTrained: data.totalTrained }))
+  } catch (e) {
+    console.error('[NeuralNet] error:', e)
+  }
+
+  // Train the legacy Beat-the-AI neuron on any newly-resolved plays.
   try {
     const r = await fetch(`${SITE_URL}/api/brain`, {
       method: 'POST',
