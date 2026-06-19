@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ArrowLeft, ArrowUpRight, Loader2 } from 'lucide-react'
 import NeuralBg from '@/components/cinematic/NeuralBg'
 
@@ -107,6 +107,7 @@ export default function BrainStock() {
 
   const m = data?.metrics
   const lastPrice = data?.history[data.history.length - 1]?.price ?? 0
+  const nowDate = data?.history[data.history.length - 1]?.date
   const tgt = data?.forecast[data.forecast.length - 1]?.price ?? 0
   const move = lastPrice ? ((tgt - lastPrice) / lastPrice) * 100 : 0
   const isNN = data?.engine === 'neural-net'
@@ -221,6 +222,7 @@ export default function BrainStock() {
                       <linearGradient id="bn-c" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={VIOLET} stopOpacity={0.3} /><stop offset="100%" stopColor={VIOLET} stopOpacity={0.1} /></linearGradient>
                     </defs>
                     <CartesianGrid stroke="rgba(255,255,255,.05)" strokeDasharray="3 6" vertical={false} />
+                    {nowDate && <ReferenceLine x={nowDate} stroke="rgba(255,255,255,.22)" strokeDasharray="2 4" label={{ value: 'NOW', fill: FAINT, fontSize: 9, position: 'top', fontFamily: 'var(--font-mono)' }} />}
                     <XAxis dataKey="date" tick={{ fill: FAINT, fontSize: 10.5, fontFamily: 'var(--font-mono)' }} tickLine={false} axisLine={{ stroke: BORDER }} minTickGap={36} />
                     <YAxis tick={{ fill: FAINT, fontSize: 10.5, fontFamily: 'var(--font-mono)' }} tickLine={false} axisLine={false} domain={['auto', 'auto']} tickFormatter={(v) => `$${Number(v).toFixed(0)}`} width={50} />
                     <Tooltip contentStyle={{ background: 'rgba(8,10,16,.96)', border: `1px solid ${BORDER}`, fontSize: 12, fontFamily: 'var(--font-mono)' }} labelStyle={{ color: MUTED }} formatter={(v, n) => [`$${Number(v).toFixed(2)}`, n === 'forecast' ? 'Forecast' : 'History']} />
@@ -237,31 +239,74 @@ export default function BrainStock() {
             <Reveal delay={120} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {m && (
                 <>
-                  <div style={{ ...glass, padding: 22 }}>
+                  {/* skill gauge */}
+                  <div style={{ ...glass, padding: 22, position: 'relative', overflow: 'hidden' }}>
+                    <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${m.skill_score > 0 ? GREEN : AMBER}66, transparent)` }} />
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, letterSpacing: '0.14em', color: FAINT }}>SKILL VS NAIVE BASELINE</div>
                     <div style={{ fontSize: 'clamp(2.4rem,5vw,3.4rem)', fontWeight: 800, letterSpacing: '-2px', color: m.skill_score > 0 ? GREEN : AMBER, marginTop: 4 }}>{m.skill_score > 0 ? '+' : ''}{(m.skill_score * 100).toFixed(1)}%</div>
-                    <div style={{ marginTop: 10, fontSize: 12.5, color: MUTED, lineHeight: 1.5 }}>{m.skill_score > 0 ? 'The net is beating a naive “tomorrow = today” baseline on this name.' : 'Not beating the naive baseline here — shown honestly, no hiding.'}</div>
+                    {(() => { const p = Math.max(3, Math.min(97, ((m.skill_score * 100 + 20) / 40) * 100)); const up = m.skill_score > 0; return (
+                      <div style={{ position: 'relative', height: 8, background: 'rgba(255,255,255,.06)', borderRadius: 99, marginTop: 16 }}>
+                        <div style={{ position: 'absolute', left: '50%', top: -3, bottom: -3, width: 1, background: 'rgba(255,255,255,.22)' }} />
+                        <div style={{ position: 'absolute', top: 0, bottom: 0, borderRadius: 99, left: up ? '50%' : `${p}%`, width: `${Math.abs(p - 50)}%`, background: up ? GREEN : AMBER, boxShadow: `0 0 12px ${up ? GREEN : AMBER}66`, transition: 'all .9s cubic-bezier(.16,1,.3,1)' }} />
+                      </div>
+                    ) })()}
+                    <div style={{ marginTop: 14, fontSize: 12.5, color: MUTED, lineHeight: 1.5 }}>{m.skill_score > 0 ? 'The net is beating a naive “tomorrow = today” baseline on this name.' : 'Not beating the naive baseline here — shown honestly, no hiding.'}</div>
                   </div>
+
+                  {/* directional + samples */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <MetricTile label="Directional acc." value={`${(m.directional_accuracy * 100).toFixed(1)}%`} color={m.directional_accuracy >= 0.5 ? GREEN : RED} />
-                    <MetricTile label="Backtest samples" value={String(m.samples)} />
-                    <MetricTile label="RMSE · net" value={m.rmse_model.toFixed(2)} color={CYAN} />
-                    <MetricTile label="RMSE · naive" value={m.rmse_naive.toFixed(2)} />
-                  </div>
-                  <div style={{ ...glass, padding: 18 }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, letterSpacing: '0.14em', color: FAINT, marginBottom: 12 }}>PER-DAY FORECAST</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                      {data.forecast.map((p, i) => {
-                        const d = ((p.price - lastPrice) / lastPrice) * 100
-                        return (
-                          <div key={p.date} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: FAINT, width: 30 }}>T+{i + 1}</span>
-                            <span style={{ fontFamily: 'var(--font-mono)', color: MUTED, flex: 1 }}>${p.price.toFixed(2)}</span>
-                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: d >= 0 ? GREEN : RED }}>{d >= 0 ? '+' : ''}{d.toFixed(2)}%</span>
-                          </div>
-                        )
-                      })}
+                    <div style={{ ...glass, padding: '14px 16px' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: FAINT }}>DIRECTIONAL ACC.</div>
+                      <div style={{ marginTop: 5, fontSize: 20, fontWeight: 800, color: m.directional_accuracy >= 0.5 ? GREEN : RED, fontFamily: 'var(--font-mono)' }}>{(m.directional_accuracy * 100).toFixed(1)}%</div>
+                      <div style={{ position: 'relative', height: 5, background: 'rgba(255,255,255,.06)', borderRadius: 99, marginTop: 10 }}>
+                        <div style={{ position: 'absolute', left: '50%', top: -2, bottom: -2, width: 1, background: 'rgba(255,255,255,.28)' }} />
+                        <div style={{ height: '100%', width: `${m.directional_accuracy * 100}%`, background: m.directional_accuracy >= 0.5 ? GREEN : RED, borderRadius: 99, transition: 'width .9s cubic-bezier(.16,1,.3,1)' }} />
+                      </div>
                     </div>
+                    <div style={{ ...glass, padding: '14px 16px' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: FAINT }}>BACKTEST SAMPLES</div>
+                      <div style={{ marginTop: 5, fontSize: 20, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{m.samples}</div>
+                      <div style={{ marginTop: 10, fontSize: 10.5, color: FAINT, fontFamily: 'var(--font-mono)' }}>walk-forward · {m.horizon}d</div>
+                    </div>
+                  </div>
+
+                  {/* net vs naive error race */}
+                  <div style={{ ...glass, padding: 18 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: FAINT, marginBottom: 12 }}>FORECAST ERROR · LOWER WINS</div>
+                    {(() => { const mx = Math.max(m.rmse_model, m.rmse_naive) || 1; const rows: [string, number, string][] = [['NET', m.rmse_model, CYAN], ['NAIVE', m.rmse_naive, FAINT]]; return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {rows.map(([lab, val, col]) => (
+                          <div key={lab} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ width: 44, fontFamily: 'var(--font-mono)', fontSize: 10.5, color: FAINT }}>{lab}</span>
+                            <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,.05)', borderRadius: 99, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${(val / mx) * 100}%`, background: col, borderRadius: 99, transition: 'width .9s cubic-bezier(.16,1,.3,1)' }} />
+                            </div>
+                            <span style={{ width: 42, textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12, color: col }}>{val.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) })()}
+                    <div style={{ marginTop: 11, fontSize: 11.5, color: m.rmse_model < m.rmse_naive ? GREEN : AMBER }}>{m.rmse_model < m.rmse_naive ? '◈ Net beats the baseline on error.' : '◇ Baseline still ahead on raw error here.'}</div>
+                  </div>
+
+                  {/* per-day trajectory bars */}
+                  <div style={{ ...glass, padding: 18 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: FAINT, marginBottom: 14 }}>PER-DAY TRAJECTORY</div>
+                    {(() => { const mxMove = Math.max(...data.forecast.map((p) => Math.abs(((p.price - lastPrice) / lastPrice) * 100)), 0.05); return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {data.forecast.map((p, i) => { const d = ((p.price - lastPrice) / lastPrice) * 100; const w = (Math.abs(d) / mxMove) * 50; const up = d >= 0; return (
+                          <div key={p.date} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: FAINT, width: 30 }}>T+{i + 1}</span>
+                            <div style={{ position: 'relative', flex: 1, height: 16, display: 'flex', alignItems: 'center' }}>
+                              <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, background: 'rgba(255,255,255,.1)' }} />
+                              <div style={{ position: 'absolute', left: up ? '50%' : `${50 - w}%`, width: `${w}%`, height: 7, borderRadius: 2, background: up ? GREEN : RED, opacity: 0.85, boxShadow: `0 0 8px ${up ? GREEN : RED}55`, transition: 'width .9s cubic-bezier(.16,1,.3,1), left .9s cubic-bezier(.16,1,.3,1)' }} />
+                            </div>
+                            <span style={{ fontFamily: 'var(--font-mono)', color: MUTED, width: 62, textAlign: 'right' }}>${p.price.toFixed(2)}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: up ? GREEN : RED, width: 52, textAlign: 'right' }}>{up ? '+' : ''}{d.toFixed(2)}%</span>
+                          </div>
+                        ) })}
+                      </div>
+                    ) })()}
                   </div>
                 </>
               )}
@@ -306,14 +351,6 @@ function Vital({ label, value, color = '#e7ecf5', mono }: { label: string; value
     <div>
       <div style={{ fontSize: mono ? 18 : 'clamp(1.4rem,3vw,2.1rem)', fontWeight: 800, letterSpacing: '-0.02em', color, fontFamily: mono ? 'var(--font-mono)' : undefined, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: FAINT, marginTop: 6 }}>{label}</div>
-    </div>
-  )
-}
-function MetricTile({ label, value, color = '#e7ecf5' }: { label: string; value: string; color?: string }) {
-  return (
-    <div style={{ ...glass, padding: '14px 16px' }}>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: FAINT }}>{label.toUpperCase()}</div>
-      <div style={{ marginTop: 5, fontSize: 20, fontWeight: 800, color, fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
     </div>
   )
 }
