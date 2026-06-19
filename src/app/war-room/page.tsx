@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Gavel, Loader2 } from 'lucide-react'
+import NeuralBg from '@/components/cinematic/NeuralBg'
 
 const CYAN = '#22d3ee'
 const VIOLET = '#a78bfa'
@@ -178,8 +179,13 @@ export default function WarRoom() {
         fontFamily: 'Inter, system-ui, sans-serif',
       }}
     >
+      {/* living atmosphere — connected minds */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <NeuralBg opacity={0.42} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 72% 62% at 50% 38%, transparent, rgba(5,7,13,.72) 92%)' }} />
+      </div>
       {/* blueprint grid + vignette */}
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', backgroundImage: 'linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px)', backgroundSize: '46px 46px', maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 80%)', WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 80%)' }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', backgroundImage: 'linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px)', backgroundSize: '46px 46px', maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 80%)', WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 80%)' }} />
       <style>{`@keyframes wr-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
         @keyframes wr-dots{0%,20%{opacity:.2}50%{opacity:1}100%{opacity:.2}}
         @keyframes wr-blink{0%,100%{opacity:1}50%{opacity:.25}}
@@ -189,15 +195,15 @@ export default function WarRoom() {
         .wr-seat:hover{transform:translateY(-2px)}
         @media (max-width:640px){.wr-cast{grid-template-columns:repeat(3,1fr) !important}}`}</style>
 
-      <div style={{ maxWidth: 820, margin: '0 auto', padding: '28px 22px 90px' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 820, margin: '0 auto', padding: '28px 22px 90px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <Link href="/" style={{ color: MUTED, textDecoration: 'none', fontSize: 14, display: 'inline-flex', gap: 6, alignItems: 'center' }}>
             <ArrowLeft size={14} /> YN Finance
           </Link>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase', color: MUTED }}>
-          <Gavel size={15} color={VIOLET} /> The War Room
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: '0.28em', textTransform: 'uppercase', color: VIOLET }}>
+          <span style={{ width: 7, height: 7, borderRadius: 99, background: GREEN, boxShadow: `0 0 8px ${GREEN}`, animation: 'wr-blink 1.4s infinite' }} /> The War Room · live committee
         </div>
         <h1 style={{ fontSize: 'clamp(30px,5.2vw,50px)', fontWeight: 800, letterSpacing: -1.5, margin: '8px 0 0', lineHeight: 1.05 }}>
           Watch a hedge fund&apos;s committee{' '}
