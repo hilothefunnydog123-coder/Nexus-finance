@@ -38,6 +38,15 @@ export default async function handler() {
     console.error('[NeuralNet] error:', e)
   }
 
+  // Step the Colosseum — five AI strategies rebalance their paper portfolios.
+  try {
+    const res = await fetch(`${SITE_URL}/api/colosseum`, { method: 'POST', headers: { Authorization: `Bearer ${SECRET}` } })
+    const data = await res.json()
+    console.log('[Colosseum] stepped:', JSON.stringify({ stepped: data.stepped }))
+  } catch (e) {
+    console.error('[Colosseum] error:', e)
+  }
+
   // Train the legacy Beat-the-AI neuron on any newly-resolved plays.
   try {
     const r = await fetch(`${SITE_URL}/api/brain`, {
