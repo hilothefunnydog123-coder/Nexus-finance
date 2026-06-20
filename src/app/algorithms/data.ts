@@ -3745,6 +3745,7 @@ type FVG
     int   dir
     bool  inv
     int   born
+    bool  htf
 
 var array<FVG> fvgs = array.new<FVG>()
 var bool lastInvBull = false
@@ -3757,11 +3758,11 @@ bearFVG = allowS and high < low[2] and open[1] > close[1] and disp
 if bullFVG
     b = box.new(bar_index[2], low, bar_index, high[2], border_color = color.new(color.teal, 45), bgcolor = bullCol)
     c = showCE ? line.new(bar_index[2], (low + high[2]) / 2, bar_index, (low + high[2]) / 2, color = color.new(color.teal, 30), style = line.style_dotted) : na
-    array.push(fvgs, FVG.new(b, c, low, high[2], 1, false, bar_index))
+    array.push(fvgs, FVG.new(b, c, na, low, high[2], 1, false, bar_index, false))
 if bearFVG
     b = box.new(bar_index[2], low[2], bar_index, high, border_color = color.new(color.red, 45), bgcolor = bearCol)
     c = showCE ? line.new(bar_index[2], (low[2] + high) / 2, bar_index, (low[2] + high) / 2, color = color.new(color.red, 30), style = line.style_dotted) : na
-    array.push(fvgs, FVG.new(b, c, low[2], high, -1, false, bar_index))
+    array.push(fvgs, FVG.new(b, c, na, low[2], high, -1, false, bar_index, false))
 
 // trim memory
 while array.size(fvgs) > 60
@@ -3779,6 +3780,7 @@ var bool invalidated = false
 confirmed := false
 invalidated := false
 potential := false
+bool htfTapped = false
 
 if array.size(fvgs) > 0
     idx = array.size(fvgs) - 1
@@ -3787,8 +3789,10 @@ if array.size(fvgs) > 0
         box.set_right(f.bx, bar_index)
         if not na(f.ce)
             line.set_x2(f.ce, bar_index)
+        if f.htf and high >= f.bot and low <= f.top
+            htfTapped := true
         age = bar_index - f.born
-        if not f.inv and age <= invWin
+        if not f.inv and age <= (f.htf ? invWin * 6 : invWin)
             // potential = price probing the far side of the gap
             if (f.dir == 1 and low <= f.bot) or (f.dir == -1 and high >= f.top)
                 potential := true
@@ -3842,7 +3846,10 @@ if sweepLo
 f_sess(s) => not na(time(timeframe.period, s, NY))
 inAsia = f_sess("2000-0000")
 inLDN  = f_sess("0200-0500")
-var float asiaH = na, var float asiaL = na, var float ldnH = na, var float ldnL = na
+var float asiaH = na
+var float asiaL = na
+var float ldnH = na
+var float ldnL = na
 if inAsia
     asiaH := na(asiaH) or high > asiaH ? high : asiaH
     asiaL := na(asiaL) or low  < asiaL ? low  : asiaL
@@ -3856,7 +3863,8 @@ if showSess and not inAsia and inAsia[1]
 if showSess and not inLDN and inLDN[1]
     line.new(bar_index, ldnH, bar_index + 40, ldnH, color = color.new(color.blue, 40), style = line.style_dotted)
     label.new(bar_index + 40, ldnH, "LDN.H", style = label.style_none, textcolor = color.new(color.blue, 0), size = size.tiny)
-    asiaH := na, asiaL := na
+    asiaH := na
+    asiaL := na
 
 // previous-day high / low
 [pdh, pdl] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead = barmerge.lookahead_off)
@@ -3872,21 +3880,16 @@ if showData and isData and not isData[1]
     label.new(bar_index, high, "DATA.H", style = label.style_none, textcolor = color.new(color.yellow, 0), size = size.tiny)
     label.new(bar_index, low,  "DATA.L", style = label.style_none, textcolor = color.new(color.yellow, 0), size = size.tiny)
 
-// ════════════════════════ HTF PD ARRAY ═════════════════════
+// ═══ HTF FVGs — pushed into the same pipeline so they INVERT on this chart too ═══
 [hH, hL, hH2, hL2] = request.security(syminfo.tickerid, htfTf, [high, low, high[2], low[2]], lookahead = barmerge.lookahead_off)
 htfBull = hL > hH2
 htfBear = hH < hL2
-var box htfBox = na
-if showHTF and (htfBull or htfBear)
-    t = htfBull ? hL  : hL2
-    b = htfBull ? hH2 : hH
-    if na(htfBox)
-        htfBox := box.new(bar_index - 5, t, bar_index + 10, b, border_color = color.new(color.gray, 40), bgcolor = color.new(color.gray, 88), text = htfTf + " FVG", text_color = color.new(color.gray, 0), text_size = size.tiny, text_halign = text.align_right)
-    else
-        box.set_top(htfBox, t)
-        box.set_bottom(htfBox, b)
-        box.set_right(htfBox, bar_index + 10)
-htfTapped = not na(htfBox) and high >= box.get_bottom(htfBox) and low <= box.get_top(htfBox)
+if showHTF and htfBull and not htfBull[1]
+    hb = box.new(bar_index - 6, hL, bar_index, hH2, border_color = color.new(color.gray, 35), bgcolor = color.new(color.gray, 86), text = htfTf + " FVG", text_color = color.new(color.gray, 0), text_size = size.small, text_halign = text.align_left, text_valign = text.align_top)
+    array.push(fvgs, FVG.new(hb, na, na, hL, hH2, 1, false, bar_index, true))
+if showHTF and htfBear and not htfBear[1]
+    hb = box.new(bar_index - 6, hL2, bar_index, hH, border_color = color.new(color.gray, 35), bgcolor = color.new(color.gray, 86), text = htfTf + " FVG", text_color = color.new(color.gray, 0), text_size = size.small, text_halign = text.align_left, text_valign = text.align_top)
+    array.push(fvgs, FVG.new(hb, na, na, hL2, hH, -1, false, bar_index, true))
 
 // ════════════════════════ SMT DIVERGENCE ═══════════════════
 corrClose = request.security(smtSym, timeframe.period, close, lookahead = barmerge.lookahead_off)
@@ -3913,12 +3916,18 @@ if showPanel and barstate.islast
     table.cell(panel, 1, 0, grade, bgcolor = color.new(color.gray, 10), text_color = score >= 5 ? color.lime : score >= 3 ? color.orange : color.red, text_size = size.small)
     table.cell(panel, 0, 1, "Checklist", bgcolor = color.new(color.gray, 30), text_color = color.gray, text_size = size.tiny)
     table.cell(panel, 1, 1, "Status",    bgcolor = color.new(color.gray, 30), text_color = color.gray, text_size = size.tiny)
-    table.cell(panel, 0, 2, "Liquidity Sweep",  text_color = color.silver, text_size = size.tiny), table.cell(panel, 1, 2, f_tick(cLiq),   text_size = size.tiny)
-    table.cell(panel, 0, 3, "HTF PDA Delivery",  text_color = color.silver, text_size = size.tiny), table.cell(panel, 1, 3, f_tick(cPDA),   text_size = size.tiny)
-    table.cell(panel, 0, 4, "Volume",            text_color = color.silver, text_size = size.tiny), table.cell(panel, 1, 4, f_tick(cVol),   text_size = size.tiny)
-    table.cell(panel, 0, 5, "IFVG",              text_color = color.silver, text_size = size.tiny), table.cell(panel, 1, 5, f_tick(cIFVG),  text_size = size.tiny)
-    table.cell(panel, 0, 6, "Clear Targets",     text_color = color.silver, text_size = size.tiny), table.cell(panel, 1, 6, f_tick(cClear), text_size = size.tiny)
-    table.cell(panel, 0, 7, "SMT w/ corr.",      text_color = color.silver, text_size = size.tiny), table.cell(panel, 1, 7, f_tick(cSMT),   text_size = size.tiny)
+    table.cell(panel, 0, 2, "Liquidity Sweep", text_color = color.silver, text_size = size.tiny)
+    table.cell(panel, 1, 2, f_tick(cLiq), text_size = size.tiny)
+    table.cell(panel, 0, 3, "HTF PDA Delivery", text_color = color.silver, text_size = size.tiny)
+    table.cell(panel, 1, 3, f_tick(cPDA), text_size = size.tiny)
+    table.cell(panel, 0, 4, "Volume", text_color = color.silver, text_size = size.tiny)
+    table.cell(panel, 1, 4, f_tick(cVol), text_size = size.tiny)
+    table.cell(panel, 0, 5, "IFVG", text_color = color.silver, text_size = size.tiny)
+    table.cell(panel, 1, 5, f_tick(cIFVG), text_size = size.tiny)
+    table.cell(panel, 0, 6, "Clear Targets", text_color = color.silver, text_size = size.tiny)
+    table.cell(panel, 1, 6, f_tick(cClear), text_size = size.tiny)
+    table.cell(panel, 0, 7, "SMT w/ corr.", text_color = color.silver, text_size = size.tiny)
+    table.cell(panel, 1, 7, f_tick(cSMT), text_size = size.tiny)
 
 // ════════════════════════ ALERTS (educational markers only) ═
 if aPot   and potential
