@@ -3753,15 +3753,29 @@ type FVG
     int   life
     string nm
     bool  drawbx
+    int   tier
 
 var array<FVG> fvgs = array.new<FVG>()
 var bool lastInvBull = false
 var bool ifvgActive  = false
 
 f_tfn(t) => t == "1" ? "M1" : t == "3" ? "M3" : t == "5" ? "M5" : t == "15" ? "M15" : t == "30" ? "M30" : t == "60" ? "H1" : t == "120" ? "H2" : t == "240" ? "H4" : t == "D" ? "D1" : t
-f_pushGap(float top, float bot, int dir, string nm, int lifeMs, bool drawbx, bool htfFlag) =>
-    bx = drawbx ? box.new(bar_index - (htfFlag ? 6 : 2), top, bar_index, bot, border_color = color.new(dir == 1 ? #22c55e : #ef4444, 40), bgcolor = dir == 1 ? bullCol : bearCol, text = nm + " FVG", text_color = color.new(color.white, 10), text_size = size.normal, text_halign = text.align_right, text_valign = text.align_center) : na
-    array.push(fvgs, FVG.new(bx, na, na, top, bot, dir, false, bar_index, htfFlag, time, lifeMs, nm, drawbx))
+f_pushGap(float top, float bot, int dir, string nm, int lifeMs, bool drawbx, bool htfFlag, int tier) =>
+    skip = false
+    oi = array.size(fvgs) - 1
+    while oi >= 0
+        o = array.get(fvgs, oi)
+        if top >= o.bot and bot <= o.top
+            if o.tier > tier
+                skip := true
+            else if o.tier < tier
+                box.delete(o.bx)
+                line.delete(o.ce)
+                array.remove(fvgs, oi)
+        oi := oi - 1
+    if not skip
+        bx = drawbx ? box.new(bar_index - (htfFlag ? 6 : 2), top, bar_index, bot, border_color = color.new(dir == 1 ? #22c55e : #ef4444, 40), bgcolor = dir == 1 ? bullCol : bearCol, text = nm + " FVG", text_color = color.new(color.white, 10), text_size = size.normal, text_halign = text.align_right, text_valign = text.align_center) : na
+        array.push(fvgs, FVG.new(bx, na, na, top, bot, dir, false, bar_index, htfFlag, time, lifeMs, nm, drawbx, tier))
 
 disp    = (high[1] - low[1]) > atr * mult
 bullFVG = allowB and low > high[2] and close[1] > open[1] and disp
@@ -3771,9 +3785,9 @@ nmCur   = f_tfn(timeframe.period)
 curLife = 1800000      // keep current-TF gaps ~30 minutes only
 curBig  = atr * 0.55   // only prominent gaps (big displacement)
 if showCur and bullFVG and (low - high[2]) > curBig
-    f_pushGap(low, high[2], 1, nmCur, curLife, false, false)
+    f_pushGap(low, high[2], 1, nmCur, curLife, false, false, 0)
 if showCur and bearFVG and (low[2] - high) > curBig
-    f_pushGap(low[2], high, -1, nmCur, curLife, false, false)
+    f_pushGap(low[2], high, -1, nmCur, curLife, false, false, 0)
 
 // trim memory
 while array.size(fvgs) > 60
@@ -3819,7 +3833,7 @@ if array.size(fvgs) > 0
             htfTapped := true
         if not f.inv
             if not na(f.bx)
-                box.set_right(f.bx, bar_index)
+                box.set_right(f.bx, f.tier == 2 ? bar_index : int(math.min(bar_index, f.born + (f.tier == 1 ? 40 : 12))))
             if not na(f.ce)
                 line.set_x2(f.ce, bar_index)
             age = bar_index - f.born
@@ -3868,7 +3882,7 @@ if array.size(fvgs) > 0
                 array.remove(fvgs, idx)
         else
             if not na(f.bx)
-                box.set_right(f.bx, bar_index)
+                box.set_right(f.bx, f.tier == 2 ? bar_index : int(math.min(bar_index, f.born + (f.tier == 1 ? 40 : 12))))
             if (f.dir == 1 and close < f.bot) or (f.dir == -1 and close > f.top)
                 invalidated := true
                 ifvgActive := false
@@ -3997,23 +4011,44 @@ htfBear = hH < hL2
 midBull = mL > mH2
 midBear = mH < mL2
 if showHTF and htfBull and not htfBull[1]
-    f_pushGap(hL, hH2, 1, nmHi, lifeHi, true, true)
+    f_pushGap(hL, hH2, 1, nmHi, lifeHi, true, true, 2)
 if showHTF and htfBear and not htfBear[1]
-    f_pushGap(hL2, hH, -1, nmHi, lifeHi, true, true)
+    f_pushGap(hL2, hH, -1, nmHi, lifeHi, true, true, 2)
 if showHTF and midBull and not midBull[1]
-    f_pushGap(mL, mH2, 1, nmMid, lifeMid, true, true)
+    f_pushGap(mL, mH2, 1, nmMid, lifeMid, true, true, 1)
 if showHTF and midBear and not midBear[1]
-    f_pushGap(mL2, mH, -1, nmMid, lifeMid, true, true)
+    f_pushGap(mL2, mH, -1, nmMid, lifeMid, true, true, 1)
 
 // ════════════════════════ SMT DIVERGENCE ═══════════════════
-corrClose = request.security(smtSym, timeframe.period, close, lookahead = barmerge.lookahead_off)
-smtBear = useSMT and not na(lastPH) and high > lastPH and corrClose < corrClose[swStr]
-smtBull = useSMT and not na(lastPL) and low  < lastPL and corrClose > corrClose[swStr]
-smtOn   = smtBear or smtBull
-if smtBear and not smtBear[1]
-    label.new(bar_index, high, "SMT", style = label.style_label_down, color = color.new(#a855f7, 15), textcolor = color.white, size = size.tiny)
-if smtBull and not smtBull[1]
-    label.new(bar_index, low, "SMT", style = label.style_label_up, color = color.new(#a855f7, 15), textcolor = color.white, size = size.tiny)
+corrHigh = request.security(smtSym, timeframe.period, high, lookahead = barmerge.lookahead_off)
+corrLow  = request.security(smtSym, timeframe.period, low,  lookahead = barmerge.lookahead_off)
+var int   smtPhBar = na
+var float smtPhVal = na
+var float smtPhCorr = na
+var int   smtPlBar = na
+var float smtPlVal = na
+var float smtPlCorr = na
+smtBear = false
+smtBull = false
+if useSMT and not na(ph)
+    cHi = corrHigh[swStr]
+    if not na(smtPhVal) and ph > smtPhVal and cHi < smtPhCorr
+        line.new(smtPhBar, smtPhVal, bar_index - swStr, ph, color = color.new(#a855f7, 0), width = 1, style = line.style_dotted)
+        label.new(bar_index - swStr, ph, "SMT", style = label.style_none, textcolor = color.new(#a855f7, 0), size = size.tiny)
+        smtBear := true
+    smtPhBar := bar_index - swStr
+    smtPhVal := ph
+    smtPhCorr := cHi
+if useSMT and not na(pl)
+    cLo = corrLow[swStr]
+    if not na(smtPlVal) and pl < smtPlVal and cLo > smtPlCorr
+        line.new(smtPlBar, smtPlVal, bar_index - swStr, pl, color = color.new(#a855f7, 0), width = 1, style = line.style_dotted)
+        label.new(bar_index - swStr, pl, "SMT", style = label.style_none, textcolor = color.new(#a855f7, 0), size = size.tiny)
+        smtBull := true
+    smtPlBar := bar_index - swStr
+    smtPlVal := pl
+    smtPlCorr := cLo
+smtOn = smtBear or smtBull
 
 // ════════════════════════ CHECKLIST + GRADE ════════════════
 cLiq   = sweepHi or sweepLo or ta.barssince(sweepHi or sweepLo) < 20
