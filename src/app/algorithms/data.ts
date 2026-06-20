@@ -3694,10 +3694,10 @@ sweepTxt= input.string("$$$", "Liquidity-sweep label",      group = gLiq)
 
 // ════════════════════════ ③ FAIR VALUE GAPS ════════════════
 gFvg    = "③ Fair Value Gaps"
-bullCol  = input.color(color.new(#22c55e, 80), "Bullish FVG", group = gFvg)
-bearCol  = input.color(color.new(#ef4444, 80), "Bearish FVG", group = gFvg)
-ibullCol = input.color(color.new(#22c55e, 58), "Bullish IFVG", group = gFvg)
-ibearCol = input.color(color.new(#ef4444, 58), "Bearish IFVG", group = gFvg)
+bullCol  = input.color(color.new(#22c55e, 90), "Bullish FVG", group = gFvg)
+bearCol  = input.color(color.new(#ef4444, 90), "Bearish FVG", group = gFvg)
+ibullCol = input.color(color.new(#22c55e, 84), "Bullish IFVG", group = gFvg)
+ibearCol = input.color(color.new(#ef4444, 84), "Bearish IFVG", group = gFvg)
 showCE  = input.bool(true, "Show consequent encroachment (50%)", group = gFvg)
 showCur = input.bool(true, "Track current-timeframe gaps (IFVG only)", group = gFvg)
 showHTF = input.bool(true, "Higher-timeframe FVGs (+ inversions)", group = gFvg)
@@ -3767,11 +3767,13 @@ disp    = (high[1] - low[1]) > atr * mult
 bullFVG = allowB and low > high[2] and close[1] > open[1] and disp
 bearFVG = allowS and high < low[2] and open[1] > close[1] and disp
 
-nmCur = f_tfn(timeframe.period)
-if showCur and bullFVG
-    f_pushGap(low, high[2], 1, nmCur, 0, false, false)
-if showCur and bearFVG
-    f_pushGap(low[2], high, -1, nmCur, 0, false, false)
+nmCur   = f_tfn(timeframe.period)
+curLife = 1800000      // keep current-TF gaps ~30 minutes only
+curBig  = atr * 0.55   // only prominent gaps (big displacement)
+if showCur and bullFVG and (low - high[2]) > curBig
+    f_pushGap(low, high[2], 1, nmCur, curLife, false, false)
+if showCur and bearFVG and (low[2] - high) > curBig
+    f_pushGap(low[2], high, -1, nmCur, curLife, false, false)
 
 // trim memory
 while array.size(fvgs) > 60
@@ -3803,7 +3805,7 @@ var label slT = na
 pk = array.size(fvgs) - 1
 while pk >= 0
     g = array.get(fvgs, pk)
-    if g.htf and g.life > 0 and (time - g.t0) > g.life
+    if g.life > 0 and (time - g.t0) > g.life
         box.delete(g.bx)
         line.delete(g.ce)
         array.remove(fvgs, pk)
@@ -4008,9 +4010,9 @@ corrClose = request.security(smtSym, timeframe.period, close, lookahead = barmer
 smtBear = useSMT and not na(lastPH) and high > lastPH and corrClose < corrClose[swStr]
 smtBull = useSMT and not na(lastPL) and low  < lastPL and corrClose > corrClose[swStr]
 smtOn   = smtBear or smtBull
-if smtBear
+if smtBear and not smtBear[1]
     label.new(bar_index, high, "SMT", style = label.style_label_down, color = color.new(#a855f7, 15), textcolor = color.white, size = size.tiny)
-if smtBull
+if smtBull and not smtBull[1]
     label.new(bar_index, low, "SMT", style = label.style_label_up, color = color.new(#a855f7, 15), textcolor = color.white, size = size.tiny)
 
 // ════════════════════════ CHECKLIST + GRADE ════════════════
