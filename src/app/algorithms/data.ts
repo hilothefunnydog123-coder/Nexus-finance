@@ -3698,8 +3698,10 @@ bullCol = input.color(color.new(#26a69a, 82), "Bullish FVG",  group = gFvg)
 bearCol = input.color(color.new(#ef5350, 82), "Bearish FVG",  group = gFvg)
 invCol  = input.color(color.new(color.gray, 60),"Inverted FVG (IFVG)", group = gFvg)
 showCE  = input.bool(true, "Show consequent encroachment (50%)", group = gFvg)
-showHTF = input.bool(true, "Higher-timeframe FVG",           group = gFvg)
-htfTf   = input.timeframe("60", "HTF timeframe",             group = gFvg)
+showLTF = input.bool(false, "Show current-timeframe FVGs (busy)", group = gFvg)
+showHTF = input.bool(true, "Higher-timeframe FVGs (+ inversions)", group = gFvg)
+htfTf   = input.timeframe("60", "HTF timeframe (high)", group = gFvg)
+htfTf2  = input.timeframe("15", "HTF timeframe (mid)", group = gFvg)
 
 // ════════════════════════ ④ ENTRY / LIMITS ═════════════════
 gLim   = "④ Entry / Limits"
@@ -3755,11 +3757,11 @@ disp    = (high[1] - low[1]) > atr * mult
 bullFVG = allowB and low > high[2] and close[1] > open[1] and disp
 bearFVG = allowS and high < low[2] and open[1] > close[1] and disp
 
-if bullFVG
+if showLTF and bullFVG
     b = box.new(bar_index[2], low, bar_index, high[2], border_color = color.new(color.teal, 45), bgcolor = bullCol)
     c = showCE ? line.new(bar_index[2], (low + high[2]) / 2, bar_index, (low + high[2]) / 2, color = color.new(color.teal, 30), style = line.style_dotted) : na
     array.push(fvgs, FVG.new(b, c, na, low, high[2], 1, false, bar_index, false))
-if bearFVG
+if showLTF and bearFVG
     b = box.new(bar_index[2], low[2], bar_index, high, border_color = color.new(color.red, 45), bgcolor = bearCol)
     c = showCE ? line.new(bar_index[2], (low[2] + high) / 2, bar_index, (low[2] + high) / 2, color = color.new(color.red, 30), style = line.style_dotted) : na
     array.push(fvgs, FVG.new(b, c, na, low[2], high, -1, false, bar_index, false))
@@ -3782,48 +3784,64 @@ invalidated := false
 potential := false
 bool htfTapped = false
 
+// one active inverted setup (DD / BE / SL) — cleared when a fresher one forms
+var line  ddL = na
+var label ddT = na
+var line  beL = na
+var label beT = na
+var line  slL = na
+var label slT = na
+
 if array.size(fvgs) > 0
     idx = array.size(fvgs) - 1
     while idx >= 0
         f = array.get(fvgs, idx)
-        box.set_right(f.bx, bar_index)
-        if not na(f.ce)
-            line.set_x2(f.ce, bar_index)
         if f.htf and high >= f.bot and low <= f.top
             htfTapped := true
-        age = bar_index - f.born
-        if not f.inv and age <= (f.htf ? invWin * 6 : invWin)
-            // potential = price probing the far side of the gap
+        if not f.inv
+            box.set_right(f.bx, bar_index)
+            if not na(f.ce)
+                line.set_x2(f.ce, bar_index)
+            age = bar_index - f.born
+            win = f.htf ? invWin * 8 : invWin
             if (f.dir == 1 and low <= f.bot) or (f.dir == -1 and high >= f.top)
                 potential := true
-            // inversion = full body close through the gap
             invUp   = f.dir == -1 and close > f.top
             invDown = f.dir == 1  and close < f.bot
-            if invUp or invDown
+            filled  = (f.dir == 1 and low <= f.bot and close >= f.bot) or (f.dir == -1 and high >= f.top and close <= f.top)
+            if (invUp or invDown) and age <= win
                 f.inv := true
                 f.dir := invUp ? 1 : -1
-                box.set_bgcolor(f.bx, invCol)
-                box.set_border_color(f.bx, color.new(color.gray, 20))
                 lvl = invUp ? f.top : f.bot
+                line.delete(ddL)
+                label.delete(ddT)
+                line.delete(beL)
+                label.delete(beT)
+                line.delete(slL)
+                label.delete(slT)
                 if showI
-                    f.iline := line.new(bar_index, lvl, bar_index + 30, lvl, color = invUp ? color.aqua : color.orange, width = 2)
-                    label.new(bar_index + 30, lvl, invUp ? "DD+ ●" : "DD- ●", style = label.style_none, textcolor = invUp ? color.aqua : color.orange, size = size.small)
+                    ddL := line.new(bar_index, lvl, bar_index + 26, lvl, color = invUp ? #22d3ee : #f87171, width = 2)
+                    ddT := label.new(bar_index + 26, lvl, invUp ? "DD+ ●" : "DD- ●", style = label.style_none, textcolor = invUp ? #22d3ee : #f87171, size = size.small)
                 risk = invUp ? lvl - swLo : swHi - lvl
                 if showBE
-                    be = invUp ? lvl + risk : lvl - risk
-                    line.new(bar_index, be, bar_index + 30, be, color = color.new(color.orange, 0), style = line.style_dashed)
-                    label.new(bar_index + 30, be, "BE", style = label.style_none, textcolor = color.orange, size = size.tiny)
+                    bep = invUp ? lvl + risk : lvl - risk
+                    beL := line.new(bar_index, bep, bar_index + 26, bep, color = color.new(color.orange, 0), style = line.style_dashed)
+                    beT := label.new(bar_index + 26, bep, "BE", style = label.style_none, textcolor = color.orange, size = size.tiny)
                 if showSL
-                    sl = invUp ? swLo : swHi
-                    line.new(bar_index, sl, bar_index + 30, sl, color = color.new(color.red, 20), style = line.style_dotted)
-                    label.new(bar_index + 30, sl, "SL", style = label.style_none, textcolor = color.red, size = size.tiny)
+                    slp = invUp ? swLo : swHi
+                    slL := line.new(bar_index, slp, bar_index + 26, slp, color = color.new(color.red, 10), style = line.style_dotted)
+                    slT := label.new(bar_index + 26, slp, "SL", style = label.style_none, textcolor = color.red, size = size.tiny)
                 confirmed := true
                 ifvgActive := true
                 lastInvBull := invUp
-        // invalidation: an active IFVG gets fully traded back through
-        if f.inv and ((f.dir == 1 and close < f.bot) or (f.dir == -1 and close > f.top))
-            invalidated := true
-            ifvgActive := false
+            else if filled or age > win
+                box.delete(f.bx)
+                line.delete(f.ce)
+                array.remove(fvgs, idx)
+        else
+            if (f.dir == 1 and close < f.bot) or (f.dir == -1 and close > f.top)
+                invalidated := true
+                ifvgActive := false
         idx := idx - 1
 
 // ════════════════════════ LIQUIDITY SWEEPS ═════════════════
@@ -3880,16 +3898,27 @@ if showData and isData and not isData[1]
     label.new(bar_index, high, "DATA.H", style = label.style_none, textcolor = color.new(color.yellow, 0), size = size.tiny)
     label.new(bar_index, low,  "DATA.L", style = label.style_none, textcolor = color.new(color.yellow, 0), size = size.tiny)
 
-// ═══ HTF FVGs — pushed into the same pipeline so they INVERT on this chart too ═══
-[hH, hL, hH2, hL2] = request.security(syminfo.tickerid, htfTf, [high, low, high[2], low[2]], lookahead = barmerge.lookahead_off)
+// ═══ HTF FVGs (mid + high TF) — pushed into the pipeline so they INVERT here too ═══
+f_tfn(t) => t == "1" ? "M1" : t == "3" ? "M3" : t == "5" ? "M5" : t == "15" ? "M15" : t == "30" ? "M30" : t == "60" ? "H1" : t == "120" ? "H2" : t == "240" ? "H4" : t == "D" ? "D1" : t
+f_pushHtf(float top, float bot, int dir, string nm) =>
+    hb = box.new(bar_index - 6, top, bar_index, bot, border_color = color.new(color.gray, 35), bgcolor = color.new(color.gray, 86), text = nm + " FVG", text_color = color.new(color.gray, 0), text_size = size.small, text_halign = text.align_left, text_valign = text.align_top)
+    array.push(fvgs, FVG.new(hb, na, na, top, bot, dir, false, bar_index, true))
+nmHi  = f_tfn(htfTf)
+nmMid = f_tfn(htfTf2)
+[hH, hL, hH2, hL2] = request.security(syminfo.tickerid, htfTf,  [high, low, high[2], low[2]], lookahead = barmerge.lookahead_off)
+[mH, mL, mH2, mL2] = request.security(syminfo.tickerid, htfTf2, [high, low, high[2], low[2]], lookahead = barmerge.lookahead_off)
 htfBull = hL > hH2
 htfBear = hH < hL2
+midBull = mL > mH2
+midBear = mH < mL2
 if showHTF and htfBull and not htfBull[1]
-    hb = box.new(bar_index - 6, hL, bar_index, hH2, border_color = color.new(color.gray, 35), bgcolor = color.new(color.gray, 86), text = htfTf + " FVG", text_color = color.new(color.gray, 0), text_size = size.small, text_halign = text.align_left, text_valign = text.align_top)
-    array.push(fvgs, FVG.new(hb, na, na, hL, hH2, 1, false, bar_index, true))
+    f_pushHtf(hL, hH2, 1, nmHi)
 if showHTF and htfBear and not htfBear[1]
-    hb = box.new(bar_index - 6, hL2, bar_index, hH, border_color = color.new(color.gray, 35), bgcolor = color.new(color.gray, 86), text = htfTf + " FVG", text_color = color.new(color.gray, 0), text_size = size.small, text_halign = text.align_left, text_valign = text.align_top)
-    array.push(fvgs, FVG.new(hb, na, na, hL2, hH, -1, false, bar_index, true))
+    f_pushHtf(hL2, hH, -1, nmHi)
+if showHTF and midBull and not midBull[1]
+    f_pushHtf(mL, mH2, 1, nmMid)
+if showHTF and midBear and not midBear[1]
+    f_pushHtf(mL2, mH, -1, nmMid)
 
 // ════════════════════════ SMT DIVERGENCE ═══════════════════
 corrClose = request.security(smtSym, timeframe.period, close, lookahead = barmerge.lookahead_off)
