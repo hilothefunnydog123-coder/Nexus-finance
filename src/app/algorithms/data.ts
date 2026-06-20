@@ -3694,10 +3694,10 @@ sweepTxt= input.string("$$$", "Liquidity-sweep label",      group = gLiq)
 
 // ════════════════════════ ③ FAIR VALUE GAPS ════════════════
 gFvg    = "③ Fair Value Gaps"
-bullCol  = input.color(color.new(#22c55e, 90), "Bullish FVG", group = gFvg)
-bearCol  = input.color(color.new(#ef4444, 90), "Bearish FVG", group = gFvg)
-ibullCol = input.color(color.new(#22c55e, 84), "Bullish IFVG", group = gFvg)
-ibearCol = input.color(color.new(#ef4444, 84), "Bearish IFVG", group = gFvg)
+bullCol  = input.color(color.new(#089981, 91), "Bullish FVG", group = gFvg)
+bearCol  = input.color(color.new(#f23645, 91), "Bearish FVG", group = gFvg)
+ibullCol = input.color(color.new(#089981, 80), "Bullish IFVG", group = gFvg)
+ibearCol = input.color(color.new(#f23645, 80), "Bearish IFVG", group = gFvg)
 showCE  = input.bool(true, "Show consequent encroachment (50%)", group = gFvg)
 showCur = input.bool(true, "Track current-timeframe gaps (IFVG only)", group = gFvg)
 showHTF = input.bool(true, "Higher-timeframe FVGs (+ inversions)", group = gFvg)
@@ -3774,7 +3774,7 @@ f_pushGap(float top, float bot, int dir, string nm, int lifeMs, bool drawbx, boo
                 array.remove(fvgs, oi)
         oi := oi - 1
     if not skip
-        bx = drawbx ? box.new(bar_index - (htfFlag ? 6 : 2), top, bar_index, bot, border_color = color.new(dir == 1 ? #22c55e : #ef4444, 40), bgcolor = dir == 1 ? bullCol : bearCol, text = nm + " FVG", text_color = color.new(color.white, 10), text_size = size.normal, text_halign = text.align_right, text_valign = text.align_center) : na
+        bx = drawbx ? box.new(bar_index - (htfFlag ? 6 : 2), top, bar_index, bot, border_color = color.new(dir == 1 ? #089981 : #f23645, 28), border_width = 1, bgcolor = dir == 1 ? bullCol : bearCol, text = nm + " FVG", text_color = color.new(#9598a1, 0), text_size = size.small, text_halign = text.align_right, text_valign = text.align_center) : na
         array.push(fvgs, FVG.new(bx, na, na, top, bot, dir, false, bar_index, htfFlag, time, lifeMs, nm, drawbx, tier))
 
 disp    = (high[1] - low[1]) > atr * mult
@@ -3783,7 +3783,7 @@ bearFVG = allowS and high < low[2] and open[1] > close[1] and disp
 
 nmCur   = f_tfn(timeframe.period)
 curLife = 1800000      // keep current-TF gaps ~30 minutes only
-curBig  = atr * 1.1    // only the most prominent gaps (big displacement)
+curBig  = atr * 0.8    // some prominent current-TF gaps — not a flood, not none
 if showCur and bullFVG and (low - high[2]) > curBig
     f_pushGap(low, high[2], 1, nmCur, curLife, false, false, 0)
 if showCur and bearFVG and (low[2] - high) > curBig
@@ -3833,7 +3833,7 @@ if array.size(fvgs) > 0
             htfTapped := true
         if not f.inv
             if not na(f.bx)
-                box.set_right(f.bx, f.tier == 2 ? bar_index : int(math.min(bar_index, f.born + (f.tier == 1 ? 22 : 5))))
+                box.set_right(f.bx, f.tier == 2 ? bar_index : int(math.min(bar_index, f.born + (f.tier == 1 ? 8 : 3))))
             if not na(f.ce)
                 line.set_x2(f.ce, bar_index)
             age = bar_index - f.born
@@ -3848,9 +3848,9 @@ if array.size(fvgs) > 0
                 f.dir := invUp ? 1 : -1
                 lvl = invUp ? f.top : f.bot
                 icol = invUp ? ibullCol : ibearCol
-                ibrd = color.new(invUp ? #22c55e : #ef4444, 35)
+                ibrd = color.new(invUp ? #089981 : #f23645, 18)
                 if na(f.bx)
-                    f.bx := box.new(f.born, f.top, bar_index, f.bot, border_color = ibrd, bgcolor = icol, text = f.nm + " IFVG", text_color = color.new(color.white, 10), text_size = size.normal, text_halign = text.align_right, text_valign = text.align_center)
+                    f.bx := box.new(f.born, f.top, bar_index, f.bot, border_color = ibrd, border_width = 1, bgcolor = icol, text = f.nm + " IFVG", text_color = color.new(#cfd2dc, 0), text_size = size.small, text_halign = text.align_right, text_valign = text.align_center)
                 else
                     box.set_bgcolor(f.bx, icol)
                     box.set_border_color(f.bx, ibrd)
@@ -3862,8 +3862,8 @@ if array.size(fvgs) > 0
                 line.delete(slL)
                 label.delete(slT)
                 if showI
-                    ddL := line.new(bar_index, lvl, bar_index + 26, lvl, color = invUp ? #22d3ee : #f87171, width = 2)
-                    ddT := label.new(bar_index + 26, lvl, invUp ? "DD+ ●" : "DD- ●", style = label.style_none, textcolor = invUp ? #22d3ee : #f87171, size = size.small)
+                    ddL := line.new(bar_index, lvl, bar_index + 22, lvl, color = invUp ? #089981 : #f23645, width = 1)
+                    ddT := label.new(bar_index + 22, lvl, invUp ? "DD+" : "DD-", style = label.style_none, textcolor = invUp ? #089981 : #f23645, size = size.small)
                 risk = invUp ? lvl - swLo : swHi - lvl
                 if showBE
                     bep = invUp ? lvl + risk : lvl - risk
@@ -3882,7 +3882,7 @@ if array.size(fvgs) > 0
                 array.remove(fvgs, idx)
         else
             if not na(f.bx)
-                box.set_right(f.bx, f.tier == 2 ? bar_index : int(math.min(bar_index, f.born + (f.tier == 1 ? 22 : 5))))
+                box.set_right(f.bx, f.tier == 2 ? bar_index : int(math.min(bar_index, f.born + (f.tier == 1 ? 8 : 3))))
             if (f.dir == 1 and close < f.bot) or (f.dir == -1 and close > f.top)
                 invalidated := true
                 ifvgActive := false
@@ -3907,7 +3907,7 @@ if not na(ph)
     eqh  = not na(prevPH) and math.abs(ph - prevPH) <= eqTol
     hcol = eqh ? color.new(#f59e0b, 0) : color.new(#ef4444, 5)
     htxt = eqh ? "EQH" : "BSL"
-    array.push(hiLn, line.new(bar_index - swStr, ph, bar_index + 8, ph, color = hcol, width = 2, style = eqh ? line.style_solid : line.style_dashed))
+    array.push(hiLn, line.new(bar_index - swStr, ph, bar_index + 8, ph, color = hcol, width = 1, style = eqh ? line.style_solid : line.style_dashed))
     array.push(hiLv, ph)
     array.push(hiLb, label.new(bar_index + 8, ph, htxt, style = label.style_none, textcolor = hcol, size = size.small))
     prevPH := ph
