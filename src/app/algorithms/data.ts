@@ -3748,6 +3748,8 @@ type FVG
     bool  inv
     int   born
     bool  htf
+    int   t0
+    int   life
 
 var array<FVG> fvgs = array.new<FVG>()
 var bool lastInvBull = false
@@ -3760,11 +3762,11 @@ bearFVG = allowS and high < low[2] and open[1] > close[1] and disp
 if showLTF and bullFVG
     b = box.new(bar_index[2], low, bar_index, high[2], border_color = color.new(color.teal, 45), bgcolor = bullCol)
     c = showCE ? line.new(bar_index[2], (low + high[2]) / 2, bar_index, (low + high[2]) / 2, color = color.new(color.teal, 30), style = line.style_dotted) : na
-    array.push(fvgs, FVG.new(b, c, na, low, high[2], 1, false, bar_index, false))
+    array.push(fvgs, FVG.new(b, c, na, low, high[2], 1, false, bar_index, false, 0, 0))
 if showLTF and bearFVG
     b = box.new(bar_index[2], low[2], bar_index, high, border_color = color.new(color.red, 45), bgcolor = bearCol)
     c = showCE ? line.new(bar_index[2], (low[2] + high) / 2, bar_index, (low[2] + high) / 2, color = color.new(color.red, 30), style = line.style_dotted) : na
-    array.push(fvgs, FVG.new(b, c, na, low[2], high, -1, false, bar_index, false))
+    array.push(fvgs, FVG.new(b, c, na, low[2], high, -1, false, bar_index, false, 0, 0))
 
 // trim memory
 while array.size(fvgs) > 60
@@ -3792,6 +3794,16 @@ var label beT = na
 var line  slL = na
 var label slT = na
 
+// drop HTF gaps older than their lifespan (H1/H4 → 1.5 days, M15 → 24h)
+pk = array.size(fvgs) - 1
+while pk >= 0
+    g = array.get(fvgs, pk)
+    if g.htf and g.life > 0 and (time - g.t0) > g.life
+        box.delete(g.bx)
+        line.delete(g.ce)
+        array.remove(fvgs, pk)
+    pk := pk - 1
+
 if array.size(fvgs) > 0
     idx = array.size(fvgs) - 1
     while idx >= 0
@@ -3813,6 +3825,9 @@ if array.size(fvgs) > 0
                 f.inv := true
                 f.dir := invUp ? 1 : -1
                 lvl = invUp ? f.top : f.bot
+                box.set_text(f.bx, "IFVG")
+                box.set_bgcolor(f.bx, color.new(#a855f7, 85))
+                box.set_border_color(f.bx, color.new(#a855f7, 35))
                 line.delete(ddL)
                 label.delete(ddT)
                 line.delete(beL)
@@ -3839,26 +3854,63 @@ if array.size(fvgs) > 0
                 line.delete(f.ce)
                 array.remove(fvgs, idx)
         else
+            box.set_right(f.bx, bar_index)
             if (f.dir == 1 and close < f.bot) or (f.dir == -1 and close > f.top)
                 invalidated := true
                 ifvgActive := false
         idx := idx - 1
 
-// ════════════════════════ LIQUIDITY SWEEPS ═════════════════
+// ──────────── LIQUIDITY — resting highs/lows drawn as lines, removed when swept ────────────
 ph = ta.pivothigh(swStr, swStr)
 pl = ta.pivotlow(swStr, swStr)
+var array<line>  hiLn = array.new<line>()
+var array<float> hiLv = array.new<float>()
+var array<line>  loLn = array.new<line>()
+var array<float> loLv = array.new<float>()
 var float lastPH = na
 var float lastPL = na
+
 if not na(ph)
-    lastPH := ph
+    array.push(hiLn, line.new(bar_index - swStr, ph, bar_index, ph, color = color.new(color.red, 60), style = line.style_dotted))
+    array.push(hiLv, ph)
 if not na(pl)
-    lastPL := pl
-sweepHi = not na(lastPH) and high > lastPH and close < lastPH
-sweepLo = not na(lastPL) and low  < lastPL and close > lastPL
-if sweepHi
-    label.new(bar_index, high, sweepTxt, style = label.style_label_down, color = color.new(color.red, 30), textcolor = color.white, size = size.tiny)
-if sweepLo
-    label.new(bar_index, low, sweepTxt, style = label.style_label_up, color = color.new(color.green, 30), textcolor = color.white, size = size.tiny)
+    array.push(loLn, line.new(bar_index - swStr, pl, bar_index, pl, color = color.new(color.green, 60), style = line.style_dotted))
+    array.push(loLv, pl)
+
+sweepHi = false
+sweepLo = false
+hk = array.size(hiLn) - 1
+while hk >= 0
+    lv = array.get(hiLv, hk)
+    ln = array.get(hiLn, hk)
+    if high > lv
+        line.delete(ln)
+        array.remove(hiLn, hk)
+        array.remove(hiLv, hk)
+        sweepHi := true
+        lastPH := lv
+    else
+        line.set_x2(ln, bar_index + 6)
+    hk := hk - 1
+lk = array.size(loLn) - 1
+while lk >= 0
+    lv = array.get(loLv, lk)
+    ln = array.get(loLn, lk)
+    if low < lv
+        line.delete(ln)
+        array.remove(loLn, lk)
+        array.remove(loLv, lk)
+        sweepLo := true
+        lastPL := lv
+    else
+        line.set_x2(ln, bar_index + 6)
+    lk := lk - 1
+while array.size(hiLn) > 8
+    line.delete(array.shift(hiLn))
+    array.shift(hiLv)
+while array.size(loLn) > 8
+    line.delete(array.shift(loLn))
+    array.shift(loLv)
 
 // ════════════════════════ SESSION LIQUIDITY ════════════════
 f_sess(s) => not na(time(timeframe.period, s, NY))
@@ -3900,11 +3952,13 @@ if showData and isData and not isData[1]
 
 // ═══ HTF FVGs (mid + high TF) — pushed into the pipeline so they INVERT here too ═══
 f_tfn(t) => t == "1" ? "M1" : t == "3" ? "M3" : t == "5" ? "M5" : t == "15" ? "M15" : t == "30" ? "M30" : t == "60" ? "H1" : t == "120" ? "H2" : t == "240" ? "H4" : t == "D" ? "D1" : t
-f_pushHtf(float top, float bot, int dir, string nm) =>
-    hb = box.new(bar_index - 6, top, bar_index, bot, border_color = color.new(color.gray, 35), bgcolor = color.new(color.gray, 86), text = nm + " FVG", text_color = color.new(color.gray, 0), text_size = size.small, text_halign = text.align_left, text_valign = text.align_top)
-    array.push(fvgs, FVG.new(hb, na, na, top, bot, dir, false, bar_index, true))
-nmHi  = f_tfn(htfTf)
-nmMid = f_tfn(htfTf2)
+f_pushHtf(float top, float bot, int dir, string nm, int lifeMs) =>
+    hb = box.new(bar_index - 6, top, bar_index, bot, border_color = color.new(color.gray, 30), bgcolor = color.new(color.gray, 88), text = nm + " FVG", text_color = color.new(color.gray, 0), text_size = size.normal, text_halign = text.align_right, text_valign = text.align_center)
+    array.push(fvgs, FVG.new(hb, na, na, top, bot, dir, false, bar_index, true, time, lifeMs))
+nmHi    = f_tfn(htfTf)
+nmMid   = f_tfn(htfTf2)
+lifeHi  = 129600000  // 1.5 days — H1/H4 gaps
+lifeMid = 86400000   // 24 hours — M15 gaps
 [hH, hL, hH2, hL2] = request.security(syminfo.tickerid, htfTf,  [high, low, high[2], low[2]], lookahead = barmerge.lookahead_off)
 [mH, mL, mH2, mL2] = request.security(syminfo.tickerid, htfTf2, [high, low, high[2], low[2]], lookahead = barmerge.lookahead_off)
 htfBull = hL > hH2
@@ -3912,13 +3966,13 @@ htfBear = hH < hL2
 midBull = mL > mH2
 midBear = mH < mL2
 if showHTF and htfBull and not htfBull[1]
-    f_pushHtf(hL, hH2, 1, nmHi)
+    f_pushHtf(hL, hH2, 1, nmHi, lifeHi)
 if showHTF and htfBear and not htfBear[1]
-    f_pushHtf(hL2, hH, -1, nmHi)
+    f_pushHtf(hL2, hH, -1, nmHi, lifeHi)
 if showHTF and midBull and not midBull[1]
-    f_pushHtf(mL, mH2, 1, nmMid)
+    f_pushHtf(mL, mH2, 1, nmMid, lifeMid)
 if showHTF and midBear and not midBear[1]
-    f_pushHtf(mL2, mH, -1, nmMid)
+    f_pushHtf(mL2, mH, -1, nmMid, lifeMid)
 
 // ════════════════════════ SMT DIVERGENCE ═══════════════════
 corrClose = request.security(smtSym, timeframe.period, close, lookahead = barmerge.lookahead_off)
