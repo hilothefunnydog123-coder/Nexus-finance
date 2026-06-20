@@ -205,6 +205,11 @@ export default function AlgorithmsPage() {
     }
   }, [selectedId])
 
+  // Indicator-only entries have no auto-trade build — force the indicator view
+  useEffect(() => {
+    setMode(ALGORITHMS.find(a => a.id === selectedId)?.indicatorOnly ? 'signals' : 'auto')
+  }, [selectedId])
+
   // If the selected strategy has no NinjaTrader build, fall back to TradingView
   useEffect(() => {
     if (platform === 'ninjatrader' && !algo.auto.ninjatrader) setPlatform('tradingview')
@@ -358,7 +363,7 @@ export default function AlgorithmsPage() {
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#4a6a7a', fontFamily: 'monospace', marginBottom: 10 }}>ALGORITHM TYPE</div>
                 <div style={{ display: 'flex', gap: 0, border: '1px solid rgba(255,255,255,.1)', borderRadius: 10, overflow: 'hidden' }}>
-                  {([['auto','🤖 Auto-Trade','For prop firm auto-execution'],['signals','📡 Signal Alerts','For manual execution']] as const).map(([m, label, desc]) => (
+                  {(algo.indicatorOnly ? [['signals','📊 Indicator','Visual markup only']] as const : [['auto','🤖 Auto-Trade','For prop firm auto-execution'],['signals','📡 Signal Alerts','For manual execution']] as const).map(([m, label]) => (
                     <button key={m} onClick={() => setMode(m)} style={{ padding: '11px 22px', cursor: 'pointer', border: 'none', outline: 'none', transition: 'all .2s', background: mode === m ? algo.color : 'rgba(255,255,255,.03)', color: mode === m ? '#030a10' : '#6a90a8', fontWeight: mode === m ? 800 : 600, fontSize: 13 }}>
                       {label}
                     </button>

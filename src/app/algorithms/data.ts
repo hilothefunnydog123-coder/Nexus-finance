@@ -12,6 +12,7 @@ export interface Algorithm {
   winTarget: string
   riskPerTrade: string
   color: string
+  indicatorOnly?: boolean
   init: string
   overview: string
   propNotes: string
@@ -3648,5 +3649,297 @@ if barstate.islast and timeframe.period != "5"
         'Win-rate filters (both default ON): "VWAP filter" skips counter-trend trades (longs only above session VWAP, shorts below), and "Scale out at +1R" banks a partial and moves the stop to breakeven — you will get extra alerts when +1R is reached (scale + BE) and when the target or stop is hit. Also tune "Min run past level" (~15 for NQ, lower for MES/ES). Backtest each filter ON vs OFF, one at a time, over 6–12 months.',
       ],
     },
-  }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  IFVG ULTIMATE — Inversion Fair Value Gap Visualizer (INDICATOR, not signals)
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    id: 'ifvg',
+    instructor: 'YN Finance',
+    strategy: 'IFVG Ultimate — Inversion Fair Value Gap Visualizer',
+    tagline: 'A pure visualization engine: it marks Fair Value Gaps, detects when they invert after a liquidity raid, and overlays sessions, PD Arrays, SMT and a live setup grade. No signals, no auto-trade — it draws, you read.',
+    assets: ['Forex', 'Futures (NQ/ES/MNQ)', 'Crypto', 'Indices'],
+    timeframes: ['30s', '1m', '5m', '15m'],
+    propFirms: ['Educational / journaling use'],
+    winTarget: 'N/A — visual tool',
+    riskPerTrade: 'N/A',
+    color: '#a855f7',
+    indicatorOnly: true,
+    init: 'iF',
+    overview: 'IFVG Ultimate automates the identification of Inversion Fair Value Gaps. A Fair Value Gap forms when strong displacement leaves a body-to-body imbalance; when liquidity is swept and price later closes back through that gap, the imbalance is considered inverted — often marking a shift in order-flow. The indicator runs a sequential, non-repainting pipeline: (1) it maps liquidity (swing highs/lows, Asia & London session extremes, previous-day high/low, equal highs/lows, the 8:30 data wick and key opens); (2) it detects ATR-filtered FVGs; (3) it confirms an inversion only when a full candle body closes through a qualifying gap inside your window; (4) it overlays higher-timeframe PD Arrays and SMT divergence against a correlated symbol; and (5) it plots the inversion line plus educational Break-Even and Stop-Loss levels and tracks the model until liquidity is taken or it invalidates. A live checklist panel grades each setup A+ to C. Everything is for study, journaling and education — it issues no trade signals.',
+    propNotes: 'This is a visualization/journaling tool, not an execution strategy — there is no entry trigger and nothing auto-trades. Use it to annotate how often IFVGs complete vs. invalidate by session and timeframe, to study HTF PD Array delivery, and to teach ICT-style liquidity mechanics. All session windows use New York time. HTF calculations finalize on bar close (no look-ahead / no repaint). The ATR strictness setting controls how small a gap can be before it is ignored. The Break-Even and Stop-Loss lines are educational reference levels only. Core concepts (Fair Value Gaps, liquidity sweeps, PD Arrays, SMT) are publicly taught ICT material; this is an original YN Finance implementation in Pine v6.',
+    auto: {
+      tradingview: '// IFVG Ultimate is a visual indicator, not an auto-trade strategy.\n// Open the "📊 Indicator" tab for the full Pine v6 source.',
+      mt5: '// Not applicable — IFVG Ultimate is a TradingView visualization indicator.',
+      steps: ['IFVG Ultimate is an indicator — use the Indicator tab.'],
+    },
+    signals: {
+      tradingview: `//@version=6
+indicator("YN Finance — IFVG Ultimate | Inversion Fair Value Gaps", "YN IFVG Ultimate", overlay = true, max_lines_count = 500, max_boxes_count = 500, max_labels_count = 500)
+
+// ════════════════════════ ① GENERAL ════════════════════════
+gGen   = "① General"
+sens   = input.string("Normal",  "Displacement sensitivity", options = ["Sensitive", "Normal", "Strict"], group = gGen, tooltip = "How large the displacement must be (ATR-scaled) before a gap is drawn.")
+invWin = input.int(15,           "Inversion window (bars)",  minval = 3, maxval = 60, group = gGen, tooltip = "A gap must invert within this many bars of forming to count.")
+biasF  = input.string("Both",    "Bias filter",              options = ["Both", "Bullish only", "Bearish only"], group = gGen)
+
+// ════════════════════════ ② LIQUIDITY ══════════════════════
+gLiq    = "② Liquidity"
+swStr   = input.int(8,    "Swing strength",                minval = 2, group = gLiq)
+showSess= input.bool(true,"Asia / London session levels",  group = gLiq)
+showPDHL= input.bool(true,"Previous-day high / low",        group = gLiq)
+showData= input.bool(true,"8:30 data wick marker",          group = gLiq)
+sweepTxt= input.string("$$$", "Liquidity-sweep label",      group = gLiq)
+
+// ════════════════════════ ③ FAIR VALUE GAPS ════════════════
+gFvg    = "③ Fair Value Gaps"
+bullCol = input.color(color.new(#26a69a, 82), "Bullish FVG",  group = gFvg)
+bearCol = input.color(color.new(#ef5350, 82), "Bearish FVG",  group = gFvg)
+invCol  = input.color(color.new(color.gray, 60),"Inverted FVG (IFVG)", group = gFvg)
+showCE  = input.bool(true, "Show consequent encroachment (50%)", group = gFvg)
+showHTF = input.bool(true, "Higher-timeframe FVG",           group = gFvg)
+htfTf   = input.timeframe("60", "HTF timeframe",             group = gFvg)
+
+// ════════════════════════ ④ ENTRY / LIMITS ═════════════════
+gLim   = "④ Entry / Limits"
+showI  = input.bool(true, "IFVG (inversion) line", group = gLim)
+showBE = input.bool(true, "Break-Even line",       group = gLim)
+showSL = input.bool(true, "Stop-Loss line",        group = gLim)
+
+// ════════════════════════ ⑤ SMT DIVERGENCE ═════════════════
+gSmt   = "⑤ SMT Divergence"
+useSMT = input.bool(true, "Enable SMT",        group = gSmt)
+smtSym = input.symbol("CME_MINI:MES1!", "Correlated symbol", group = gSmt)
+
+// ════════════════════════ ⑥ DISPLAY ════════════════════════
+gDisp     = "⑥ Display"
+showPanel = input.bool(true, "Checklist & grade panel", group = gDisp)
+
+// ════════════════════════ ⑦ ALERTS ═════════════════════════
+gAl    = "⑦ Alerts"
+aPot   = input.bool(true,  "Potential inversion", group = gAl)
+aConf  = input.bool(true,  "Confirmed IFVG",      group = gAl)
+aSweep = input.bool(true,  "Liquidity sweep",     group = gAl)
+aInval = input.bool(true,  "Invalidation",        group = gAl)
+mPot   = input.string("Potential inversion forming on {t}", "Msg: potential",     group = gAl)
+mConf  = input.string("Confirmed IFVG on {t}",              "Msg: confirmed IFVG", group = gAl)
+mSweep = input.string("Liquidity swept on {t}",             "Msg: sweep",          group = gAl)
+mInval = input.string("IFVG invalidated on {t}",            "Msg: invalidation",   group = gAl)
+f_msg(s) => str.replace_all(s, "{t}", syminfo.ticker)
+
+// ════════════════════════ SETUP ════════════════════════════
+atr   = ta.atr(14)
+mult  = sens == "Sensitive" ? 0.10 : sens == "Strict" ? 0.55 : 0.28
+allowB = biasF != "Bearish only"
+allowS = biasF != "Bullish only"
+NY     = "America/New_York"
+
+// ════════════════════════ FAIR VALUE GAP MODEL ═════════════
+type FVG
+    box   bx
+    line  ce
+    line  iline
+    float top
+    float bot
+    int   dir
+    bool  inv
+    int   born
+
+var array<FVG> fvgs = array.new<FVG>()
+var bool lastInvBull = false
+var bool ifvgActive  = false
+
+disp    = (high[1] - low[1]) > atr * mult
+bullFVG = allowB and low > high[2] and close[1] > open[1] and disp
+bearFVG = allowS and high < low[2] and open[1] > close[1] and disp
+
+if bullFVG
+    b = box.new(bar_index[2], low, bar_index, high[2], border_color = color.new(color.teal, 45), bgcolor = bullCol)
+    c = showCE ? line.new(bar_index[2], (low + high[2]) / 2, bar_index, (low + high[2]) / 2, color = color.new(color.teal, 30), style = line.style_dotted) : na
+    array.push(fvgs, FVG.new(b, c, low, high[2], 1, false, bar_index))
+if bearFVG
+    b = box.new(bar_index[2], low[2], bar_index, high, border_color = color.new(color.red, 45), bgcolor = bearCol)
+    c = showCE ? line.new(bar_index[2], (low[2] + high) / 2, bar_index, (low[2] + high) / 2, color = color.new(color.red, 30), style = line.style_dotted) : na
+    array.push(fvgs, FVG.new(b, c, low[2], high, -1, false, bar_index))
+
+// trim memory
+while array.size(fvgs) > 60
+    old = array.shift(fvgs)
+    box.delete(old.bx)
+    line.delete(old.ce)
+
+// liquidity for stop placement
+swHi = ta.highest(high, 20)
+swLo = ta.lowest(low, 20)
+
+var bool potential = false
+var bool confirmed = false
+var bool invalidated = false
+confirmed := false
+invalidated := false
+potential := false
+
+if array.size(fvgs) > 0
+    idx = array.size(fvgs) - 1
+    while idx >= 0
+        f = array.get(fvgs, idx)
+        box.set_right(f.bx, bar_index)
+        if not na(f.ce)
+            line.set_x2(f.ce, bar_index)
+        age = bar_index - f.born
+        if not f.inv and age <= invWin
+            // potential = price probing the far side of the gap
+            if (f.dir == 1 and low <= f.bot) or (f.dir == -1 and high >= f.top)
+                potential := true
+            // inversion = full body close through the gap
+            invUp   = f.dir == -1 and close > f.top
+            invDown = f.dir == 1  and close < f.bot
+            if invUp or invDown
+                f.inv := true
+                f.dir := invUp ? 1 : -1
+                box.set_bgcolor(f.bx, invCol)
+                box.set_border_color(f.bx, color.new(color.gray, 20))
+                lvl = invUp ? f.top : f.bot
+                if showI
+                    f.iline := line.new(bar_index, lvl, bar_index + 30, lvl, color = invUp ? color.aqua : color.orange, width = 2)
+                    label.new(bar_index + 30, lvl, invUp ? "DD+ ●" : "DD- ●", style = label.style_none, textcolor = invUp ? color.aqua : color.orange, size = size.small)
+                risk = invUp ? lvl - swLo : swHi - lvl
+                if showBE
+                    be = invUp ? lvl + risk : lvl - risk
+                    line.new(bar_index, be, bar_index + 30, be, color = color.new(color.orange, 0), style = line.style_dashed)
+                    label.new(bar_index + 30, be, "BE", style = label.style_none, textcolor = color.orange, size = size.tiny)
+                if showSL
+                    sl = invUp ? swLo : swHi
+                    line.new(bar_index, sl, bar_index + 30, sl, color = color.new(color.red, 20), style = line.style_dotted)
+                    label.new(bar_index + 30, sl, "SL", style = label.style_none, textcolor = color.red, size = size.tiny)
+                confirmed := true
+                ifvgActive := true
+                lastInvBull := invUp
+        // invalidation: an active IFVG gets fully traded back through
+        if f.inv and ((f.dir == 1 and close < f.bot) or (f.dir == -1 and close > f.top))
+            invalidated := true
+            ifvgActive := false
+        idx := idx - 1
+
+// ════════════════════════ LIQUIDITY SWEEPS ═════════════════
+ph = ta.pivothigh(swStr, swStr)
+pl = ta.pivotlow(swStr, swStr)
+var float lastPH = na
+var float lastPL = na
+if not na(ph)
+    lastPH := ph
+if not na(pl)
+    lastPL := pl
+sweepHi = not na(lastPH) and high > lastPH and close < lastPH
+sweepLo = not na(lastPL) and low  < lastPL and close > lastPL
+if sweepHi
+    label.new(bar_index, high, sweepTxt, style = label.style_label_down, color = color.new(color.red, 30), textcolor = color.white, size = size.tiny)
+if sweepLo
+    label.new(bar_index, low, sweepTxt, style = label.style_label_up, color = color.new(color.green, 30), textcolor = color.white, size = size.tiny)
+
+// ════════════════════════ SESSION LIQUIDITY ════════════════
+f_sess(s) => not na(time(timeframe.period, s, NY))
+inAsia = f_sess("2000-0000")
+inLDN  = f_sess("0200-0500")
+var float asiaH = na, var float asiaL = na, var float ldnH = na, var float ldnL = na
+if inAsia
+    asiaH := na(asiaH) or high > asiaH ? high : asiaH
+    asiaL := na(asiaL) or low  < asiaL ? low  : asiaL
+if inLDN
+    ldnH := na(ldnH) or high > ldnH ? high : ldnH
+    ldnL := na(ldnL) or low  < ldnL ? low  : ldnL
+if showSess and not inAsia and inAsia[1]
+    line.new(bar_index, asiaH, bar_index + 40, asiaH, color = color.new(color.purple, 40), style = line.style_dotted)
+    line.new(bar_index, asiaL, bar_index + 40, asiaL, color = color.new(color.purple, 40), style = line.style_dotted)
+    label.new(bar_index + 40, asiaL, "ASIA.L", style = label.style_none, textcolor = color.new(color.purple, 0), size = size.tiny)
+if showSess and not inLDN and inLDN[1]
+    line.new(bar_index, ldnH, bar_index + 40, ldnH, color = color.new(color.blue, 40), style = line.style_dotted)
+    label.new(bar_index + 40, ldnH, "LDN.H", style = label.style_none, textcolor = color.new(color.blue, 0), size = size.tiny)
+    asiaH := na, asiaL := na
+
+// previous-day high / low
+[pdh, pdl] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead = barmerge.lookahead_off)
+if showPDHL and barstate.islast
+    line.new(bar_index - 1, pdh, bar_index + 10, pdh, color = color.new(color.gray, 20), extend = extend.none)
+    line.new(bar_index - 1, pdl, bar_index + 10, pdl, color = color.new(color.gray, 20), extend = extend.none)
+    label.new(bar_index + 10, pdh, "PDH", style = label.style_none, textcolor = color.gray, size = size.tiny)
+    label.new(bar_index + 10, pdl, "PDL", style = label.style_none, textcolor = color.gray, size = size.tiny)
+
+// 8:30 data wick
+isData = f_sess("0830-0831")
+if showData and isData and not isData[1]
+    label.new(bar_index, high, "DATA.H", style = label.style_none, textcolor = color.new(color.yellow, 0), size = size.tiny)
+    label.new(bar_index, low,  "DATA.L", style = label.style_none, textcolor = color.new(color.yellow, 0), size = size.tiny)
+
+// ════════════════════════ HTF PD ARRAY ═════════════════════
+[hH, hL, hH2, hL2] = request.security(syminfo.tickerid, htfTf, [high, low, high[2], low[2]], lookahead = barmerge.lookahead_off)
+htfBull = hL > hH2
+htfBear = hH < hL2
+var box htfBox = na
+if showHTF and (htfBull or htfBear)
+    t = htfBull ? hL  : hL2
+    b = htfBull ? hH2 : hH
+    if na(htfBox)
+        htfBox := box.new(bar_index - 5, t, bar_index + 10, b, border_color = color.new(color.gray, 40), bgcolor = color.new(color.gray, 88), text = htfTf + " FVG", text_color = color.new(color.gray, 0), text_size = size.tiny, text_halign = text.align_right)
+    else
+        box.set_top(htfBox, t)
+        box.set_bottom(htfBox, b)
+        box.set_right(htfBox, bar_index + 10)
+htfTapped = not na(htfBox) and high >= box.get_bottom(htfBox) and low <= box.get_top(htfBox)
+
+// ════════════════════════ SMT DIVERGENCE ═══════════════════
+corrClose = request.security(smtSym, timeframe.period, close, lookahead = barmerge.lookahead_off)
+smtBear = useSMT and not na(lastPH) and high > lastPH and corrClose < corrClose[swStr]
+smtBull = useSMT and not na(lastPL) and low  < lastPL and corrClose > corrClose[swStr]
+smtOn   = smtBear or smtBull
+
+// ════════════════════════ CHECKLIST + GRADE ════════════════
+cLiq   = sweepHi or sweepLo or ta.barssince(sweepHi or sweepLo) < 20
+cPDA   = htfTapped
+cVol   = volume > ta.sma(volume, 20)
+cIFVG  = ifvgActive
+cClear = math.abs((lastInvBull ? swHi : swLo) - close) > atr * 2
+cSMT   = smtOn
+score  = (cLiq ? 1 : 0) + (cPDA ? 1 : 0) + (cVol ? 1 : 0) + (cIFVG ? 1 : 0) + (cClear ? 1 : 0) + (cSMT ? 1 : 0)
+grade  = score >= 6 ? "A+" : score == 5 ? "A" : score == 4 ? "B+" : score == 3 ? "B" : "C"
+f_tick(b) => b ? "✅" : "❌"
+
+var table panel = na
+if showPanel and barstate.islast
+    if na(panel)
+        panel := table.new(position.bottom_right, 2, 8, border_width = 1, border_color = color.new(color.gray, 40))
+    table.cell(panel, 0, 0, "Setup Grade", bgcolor = color.new(color.gray, 20), text_color = color.white, text_size = size.small)
+    table.cell(panel, 1, 0, grade, bgcolor = color.new(color.gray, 10), text_color = score >= 5 ? color.lime : score >= 3 ? color.orange : color.red, text_size = size.small)
+    table.cell(panel, 0, 1, "Checklist", bgcolor = color.new(color.gray, 30), text_color = color.gray, text_size = size.tiny)
+    table.cell(panel, 1, 1, "Status",    bgcolor = color.new(color.gray, 30), text_color = color.gray, text_size = size.tiny)
+    table.cell(panel, 0, 2, "Liquidity Sweep",  text_color = color.silver, text_size = size.tiny), table.cell(panel, 1, 2, f_tick(cLiq),   text_size = size.tiny)
+    table.cell(panel, 0, 3, "HTF PDA Delivery",  text_color = color.silver, text_size = size.tiny), table.cell(panel, 1, 3, f_tick(cPDA),   text_size = size.tiny)
+    table.cell(panel, 0, 4, "Volume",            text_color = color.silver, text_size = size.tiny), table.cell(panel, 1, 4, f_tick(cVol),   text_size = size.tiny)
+    table.cell(panel, 0, 5, "IFVG",              text_color = color.silver, text_size = size.tiny), table.cell(panel, 1, 5, f_tick(cIFVG),  text_size = size.tiny)
+    table.cell(panel, 0, 6, "Clear Targets",     text_color = color.silver, text_size = size.tiny), table.cell(panel, 1, 6, f_tick(cClear), text_size = size.tiny)
+    table.cell(panel, 0, 7, "SMT w/ corr.",      text_color = color.silver, text_size = size.tiny), table.cell(panel, 1, 7, f_tick(cSMT),   text_size = size.tiny)
+
+// ════════════════════════ ALERTS (educational markers only) ═
+if aPot   and potential
+    alert(f_msg(mPot),   alert.freq_once_per_bar)
+if aConf  and confirmed
+    alert(f_msg(mConf),  alert.freq_once_per_bar)
+if aSweep and (sweepHi or sweepLo)
+    alert(f_msg(mSweep), alert.freq_once_per_bar)
+if aInval and invalidated
+    alert(f_msg(mInval), alert.freq_once_per_bar)
+
+alertcondition(confirmed,           "Confirmed IFVG",  "IFVG confirmed")
+alertcondition(sweepHi or sweepLo,  "Liquidity Sweep", "Liquidity swept")`,
+      steps: [
+        'Open TradingView → Pine Editor → paste the script → "Add to chart". It overlays directly on price. Best on intraday charts (30s–15m) of NQ/MNQ/ES, FX or crypto — the same markets ICT liquidity mechanics are taught on.',
+        'Reading the chart: teal/red shaded boxes are Fair Value Gaps. When a gap is swept and a candle body closes back through it, the box turns gray (an Inverted FVG) and an aqua/orange "DD" line is drawn at the inversion level, with dashed BE (Break-Even) and dotted SL (Stop-Loss) reference levels projected to the right.',
+        '"$$$" labels mark liquidity sweeps (a prior swing high/low raided then rejected). Dotted purple/blue lines are the Asia (ASIA.L/H) and London (LDN.H/L) session extremes; gray PDH/PDL are the previous-day high/low; yellow DATA.H/L marks the 8:30 NY data wick.',
+        'The gray "H1 FVG" box is the higher-timeframe PD Array (change the HTF in settings). The bottom-right panel grades the current context A+ to C from six confluences: Liquidity Sweep, HTF PDA Delivery, Volume, IFVG, Clear Targets, and SMT vs. your correlated symbol.',
+        'Tune it: "Displacement sensitivity" (Sensitive/Normal/Strict) controls how small a gap can be before it is drawn; "Inversion window" sets how quickly a gap must invert to count; set your correlated symbol for SMT (e.g. MES for MNQ, ES for NQ, GBPUSD for EURUSD).',
+        'Alerts are optional educational markers (not trade triggers): toggle Potential inversion, Confirmed IFVG, Liquidity sweep, and Invalidation, each with a custom message — then create a TradingView alert on "Any alert() function call", Once Per Bar Close. This indicator does not place orders.',
+      ],
+    },
+  },
 ]
