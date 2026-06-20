@@ -3694,10 +3694,10 @@ sweepTxt= input.string("$$$", "Liquidity-sweep label",      group = gLiq)
 
 // ════════════════════════ ③ FAIR VALUE GAPS ════════════════
 gFvg    = "③ Fair Value Gaps"
-bullCol  = input.color(color.new(#089981, 91), "Bullish FVG", group = gFvg)
-bearCol  = input.color(color.new(#f23645, 91), "Bearish FVG", group = gFvg)
-ibullCol = input.color(color.new(#089981, 80), "Bullish IFVG", group = gFvg)
-ibearCol = input.color(color.new(#f23645, 80), "Bearish IFVG", group = gFvg)
+bullCol  = input.color(color.new(#b2b5be, 78), "FVG shade", group = gFvg)
+bearCol  = input.color(color.new(#b2b5be, 78), "FVG shade (bearish)", group = gFvg)
+ibullCol = input.color(color.new(#787b86, 68), "IFVG shade", group = gFvg)
+ibearCol = input.color(color.new(#787b86, 68), "IFVG shade (bearish)", group = gFvg)
 showCE  = input.bool(true, "Show consequent encroachment (50%)", group = gFvg)
 showCur = input.bool(true, "Track current-timeframe gaps (IFVG only)", group = gFvg)
 showHTF = input.bool(true, "Higher-timeframe FVGs (+ inversions)", group = gFvg)
@@ -3774,7 +3774,7 @@ f_pushGap(float top, float bot, int dir, string nm, int lifeMs, bool drawbx, boo
                 array.remove(fvgs, oi)
         oi := oi - 1
     if not skip
-        bx = drawbx ? box.new(bar_index - (htfFlag ? 6 : 2), top, bar_index, bot, border_color = color.new(dir == 1 ? #089981 : #f23645, 28), border_width = 1, bgcolor = dir == 1 ? bullCol : bearCol, text = nm + " FVG", text_color = color.new(#9598a1, 0), text_size = size.small, text_halign = text.align_right, text_valign = text.align_center) : na
+        bx = drawbx ? box.new(bar_index - (htfFlag ? 6 : 2), top, bar_index, bot, border_color = color.new(color.black, 0), border_width = 2, bgcolor = dir == 1 ? bullCol : bearCol, text = nm + " FVG", text_color = color.new(color.black, 0), text_size = size.normal, text_halign = text.align_right, text_valign = text.align_center) : na
         array.push(fvgs, FVG.new(bx, na, na, top, bot, dir, false, bar_index, htfFlag, time, lifeMs, nm, drawbx, tier))
 
 disp    = (high[1] - low[1]) > atr * mult
@@ -3848,9 +3848,9 @@ if array.size(fvgs) > 0
                 f.dir := invUp ? 1 : -1
                 lvl = invUp ? f.top : f.bot
                 icol = invUp ? ibullCol : ibearCol
-                ibrd = color.new(invUp ? #089981 : #f23645, 18)
+                ibrd = color.new(color.black, 0)
                 if na(f.bx)
-                    f.bx := box.new(f.born, f.top, bar_index, f.bot, border_color = ibrd, border_width = 1, bgcolor = icol, text = f.nm + " IFVG", text_color = color.new(#cfd2dc, 0), text_size = size.small, text_halign = text.align_right, text_valign = text.align_center)
+                    f.bx := box.new(f.born, f.top, bar_index, f.bot, border_color = ibrd, border_width = 2, bgcolor = icol, text = f.nm + " IFVG", text_color = color.new(color.black, 0), text_size = size.normal, text_halign = text.align_right, text_valign = text.align_center)
                 else
                     box.set_bgcolor(f.bx, icol)
                     box.set_border_color(f.bx, ibrd)
@@ -3862,17 +3862,17 @@ if array.size(fvgs) > 0
                 line.delete(slL)
                 label.delete(slT)
                 if showI
-                    ddL := line.new(bar_index, lvl, bar_index + 22, lvl, color = invUp ? #089981 : #f23645, width = 1)
-                    ddT := label.new(bar_index + 22, lvl, invUp ? "DD+" : "DD-", style = label.style_none, textcolor = invUp ? #089981 : #f23645, size = size.small)
+                    ddL := line.new(bar_index, lvl, bar_index + 22, lvl, color = color.new(color.black, 0), width = 1)
+                    ddT := label.new(bar_index + 22, lvl, invUp ? "DD+" : "DD-", style = label.style_none, textcolor = color.new(color.black, 0), size = size.small)
                 risk = invUp ? lvl - swLo : swHi - lvl
                 if showBE
                     bep = invUp ? lvl + risk : lvl - risk
-                    beL := line.new(bar_index, bep, bar_index + 26, bep, color = color.new(color.orange, 0), style = line.style_dashed)
-                    beT := label.new(bar_index + 26, bep, "BE", style = label.style_none, textcolor = color.orange, size = size.tiny)
+                    beL := line.new(bar_index, bep, bar_index + 22, bep, color = color.new(color.black, 0), style = line.style_dashed)
+                    beT := label.new(bar_index + 22, bep, "BE", style = label.style_none, textcolor = color.new(color.black, 0), size = size.small)
                 if showSL
                     slp = invUp ? swLo : swHi
-                    slL := line.new(bar_index, slp, bar_index + 26, slp, color = color.new(color.red, 10), style = line.style_dotted)
-                    slT := label.new(bar_index + 26, slp, "SL", style = label.style_none, textcolor = color.red, size = size.tiny)
+                    slL := line.new(bar_index, slp, bar_index + 22, slp, color = color.new(color.black, 0), style = line.style_dotted)
+                    slT := label.new(bar_index + 22, slp, "SL", style = label.style_none, textcolor = color.new(color.black, 0), size = size.small)
                 confirmed := true
                 ifvgActive := true
                 lastInvBull := invUp
@@ -3905,7 +3905,7 @@ eqTol = atr * 0.2
 
 if not na(ph)
     eqh  = not na(prevPH) and math.abs(ph - prevPH) <= eqTol
-    hcol = eqh ? color.new(#f59e0b, 0) : color.new(#ef4444, 5)
+    hcol = color.new(color.black, 0)
     htxt = eqh ? "EQH" : "BSL"
     array.push(hiLn, line.new(bar_index - swStr, ph, bar_index + 8, ph, color = hcol, width = 1, style = eqh ? line.style_solid : line.style_dashed))
     array.push(hiLv, ph)
@@ -3913,7 +3913,7 @@ if not na(ph)
     prevPH := ph
 if not na(pl)
     eql  = not na(prevPL) and math.abs(pl - prevPL) <= eqTol
-    lcol = eql ? color.new(#f59e0b, 0) : color.new(#22c55e, 5)
+    lcol = color.new(color.black, 0)
     ltxt = eql ? "EQL" : "SSL"
     array.push(loLn, line.new(bar_index - swStr, pl, bar_index + 8, pl, color = lcol, width = 2, style = eql ? line.style_solid : line.style_dashed))
     array.push(loLv, pl)
@@ -4033,8 +4033,8 @@ smtBull = false
 if useSMT and not na(ph)
     cHi = corrHigh[swStr]
     if not na(smtPhVal) and ph > smtPhVal and cHi < smtPhCorr
-        line.new(smtPhBar, smtPhVal, bar_index - swStr, ph, color = color.new(#a855f7, 0), width = 1, style = line.style_dotted)
-        label.new(bar_index - swStr, ph, "SMT", style = label.style_none, textcolor = color.new(#a855f7, 0), size = size.tiny)
+        line.new(smtPhBar, smtPhVal, bar_index - swStr, ph, color = color.new(color.black, 0), width = 1, style = line.style_dotted)
+        label.new(bar_index - swStr, ph, "SMT", style = label.style_none, textcolor = color.new(color.black, 0), size = size.tiny)
         smtBear := true
     smtPhBar := bar_index - swStr
     smtPhVal := ph
@@ -4042,8 +4042,8 @@ if useSMT and not na(ph)
 if useSMT and not na(pl)
     cLo = corrLow[swStr]
     if not na(smtPlVal) and pl < smtPlVal and cLo > smtPlCorr
-        line.new(smtPlBar, smtPlVal, bar_index - swStr, pl, color = color.new(#a855f7, 0), width = 1, style = line.style_dotted)
-        label.new(bar_index - swStr, pl, "SMT", style = label.style_none, textcolor = color.new(#a855f7, 0), size = size.tiny)
+        line.new(smtPlBar, smtPlVal, bar_index - swStr, pl, color = color.new(color.black, 0), width = 1, style = line.style_dotted)
+        label.new(bar_index - swStr, pl, "SMT", style = label.style_none, textcolor = color.new(color.black, 0), size = size.tiny)
         smtBull := true
     smtPlBar := bar_index - swStr
     smtPlVal := pl
