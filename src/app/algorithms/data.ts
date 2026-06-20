@@ -3694,11 +3694,12 @@ sweepTxt= input.string("$$$", "Liquidity-sweep label",      group = gLiq)
 
 // ════════════════════════ ③ FAIR VALUE GAPS ════════════════
 gFvg    = "③ Fair Value Gaps"
-bullCol = input.color(color.new(#26a69a, 82), "Bullish FVG",  group = gFvg)
-bearCol = input.color(color.new(#ef5350, 82), "Bearish FVG",  group = gFvg)
-invCol  = input.color(color.new(color.gray, 60),"Inverted FVG (IFVG)", group = gFvg)
+bullCol  = input.color(color.new(#22c55e, 80), "Bullish FVG", group = gFvg)
+bearCol  = input.color(color.new(#ef4444, 80), "Bearish FVG", group = gFvg)
+ibullCol = input.color(color.new(#22c55e, 58), "Bullish IFVG", group = gFvg)
+ibearCol = input.color(color.new(#ef4444, 58), "Bearish IFVG", group = gFvg)
 showCE  = input.bool(true, "Show consequent encroachment (50%)", group = gFvg)
-showLTF = input.bool(false, "Show current-timeframe FVGs (busy)", group = gFvg)
+showCur = input.bool(true, "Track current-timeframe gaps (IFVG only)", group = gFvg)
 showHTF = input.bool(true, "Higher-timeframe FVGs (+ inversions)", group = gFvg)
 htfTf   = input.timeframe("60", "HTF timeframe (high)", group = gFvg)
 htfTf2  = input.timeframe("15", "HTF timeframe (mid)", group = gFvg)
@@ -3750,23 +3751,27 @@ type FVG
     bool  htf
     int   t0
     int   life
+    string nm
+    bool  drawbx
 
 var array<FVG> fvgs = array.new<FVG>()
 var bool lastInvBull = false
 var bool ifvgActive  = false
 
+f_tfn(t) => t == "1" ? "M1" : t == "3" ? "M3" : t == "5" ? "M5" : t == "15" ? "M15" : t == "30" ? "M30" : t == "60" ? "H1" : t == "120" ? "H2" : t == "240" ? "H4" : t == "D" ? "D1" : t
+f_pushGap(float top, float bot, int dir, string nm, int lifeMs, bool drawbx, bool htfFlag) =>
+    bx = drawbx ? box.new(bar_index - (htfFlag ? 6 : 2), top, bar_index, bot, border_color = color.new(dir == 1 ? #22c55e : #ef4444, 40), bgcolor = dir == 1 ? bullCol : bearCol, text = nm + " FVG", text_color = color.new(color.white, 10), text_size = size.normal, text_halign = text.align_right, text_valign = text.align_center) : na
+    array.push(fvgs, FVG.new(bx, na, na, top, bot, dir, false, bar_index, htfFlag, time, lifeMs, nm, drawbx))
+
 disp    = (high[1] - low[1]) > atr * mult
 bullFVG = allowB and low > high[2] and close[1] > open[1] and disp
 bearFVG = allowS and high < low[2] and open[1] > close[1] and disp
 
-if showLTF and bullFVG
-    b = box.new(bar_index[2], low, bar_index, high[2], border_color = color.new(color.teal, 45), bgcolor = bullCol)
-    c = showCE ? line.new(bar_index[2], (low + high[2]) / 2, bar_index, (low + high[2]) / 2, color = color.new(color.teal, 30), style = line.style_dotted) : na
-    array.push(fvgs, FVG.new(b, c, na, low, high[2], 1, false, bar_index, false, 0, 0))
-if showLTF and bearFVG
-    b = box.new(bar_index[2], low[2], bar_index, high, border_color = color.new(color.red, 45), bgcolor = bearCol)
-    c = showCE ? line.new(bar_index[2], (low[2] + high) / 2, bar_index, (low[2] + high) / 2, color = color.new(color.red, 30), style = line.style_dotted) : na
-    array.push(fvgs, FVG.new(b, c, na, low[2], high, -1, false, bar_index, false, 0, 0))
+nmCur = f_tfn(timeframe.period)
+if showCur and bullFVG
+    f_pushGap(low, high[2], 1, nmCur, 0, false, false)
+if showCur and bearFVG
+    f_pushGap(low[2], high, -1, nmCur, 0, false, false)
 
 // trim memory
 while array.size(fvgs) > 60
@@ -3811,7 +3816,8 @@ if array.size(fvgs) > 0
         if f.htf and high >= f.bot and low <= f.top
             htfTapped := true
         if not f.inv
-            box.set_right(f.bx, bar_index)
+            if not na(f.bx)
+                box.set_right(f.bx, bar_index)
             if not na(f.ce)
                 line.set_x2(f.ce, bar_index)
             age = bar_index - f.born
@@ -3825,9 +3831,14 @@ if array.size(fvgs) > 0
                 f.inv := true
                 f.dir := invUp ? 1 : -1
                 lvl = invUp ? f.top : f.bot
-                box.set_text(f.bx, "IFVG")
-                box.set_bgcolor(f.bx, color.new(#a855f7, 85))
-                box.set_border_color(f.bx, color.new(#a855f7, 35))
+                icol = invUp ? ibullCol : ibearCol
+                ibrd = color.new(invUp ? #22c55e : #ef4444, 35)
+                if na(f.bx)
+                    f.bx := box.new(f.born, f.top, bar_index, f.bot, border_color = ibrd, bgcolor = icol, text = f.nm + " IFVG", text_color = color.new(color.white, 10), text_size = size.normal, text_halign = text.align_right, text_valign = text.align_center)
+                else
+                    box.set_bgcolor(f.bx, icol)
+                    box.set_border_color(f.bx, ibrd)
+                    box.set_text(f.bx, f.nm + " IFVG")
                 line.delete(ddL)
                 label.delete(ddT)
                 line.delete(beL)
@@ -3854,62 +3865,84 @@ if array.size(fvgs) > 0
                 line.delete(f.ce)
                 array.remove(fvgs, idx)
         else
-            box.set_right(f.bx, bar_index)
+            if not na(f.bx)
+                box.set_right(f.bx, bar_index)
             if (f.dir == 1 and close < f.bot) or (f.dir == -1 and close > f.top)
                 invalidated := true
                 ifvgActive := false
         idx := idx - 1
 
-// ──────────── LIQUIDITY — resting highs/lows drawn as lines, removed when swept ────────────
+// ──────────── LIQUIDITY — bold lines + type labels (BSL / SSL / EQH / EQL), removed when swept ───
 ph = ta.pivothigh(swStr, swStr)
 pl = ta.pivotlow(swStr, swStr)
 var array<line>  hiLn = array.new<line>()
 var array<float> hiLv = array.new<float>()
+var array<label> hiLb = array.new<label>()
 var array<line>  loLn = array.new<line>()
 var array<float> loLv = array.new<float>()
+var array<label> loLb = array.new<label>()
 var float lastPH = na
 var float lastPL = na
+var float prevPH = na
+var float prevPL = na
+eqTol = atr * 0.2
 
 if not na(ph)
-    array.push(hiLn, line.new(bar_index - swStr, ph, bar_index, ph, color = color.new(color.red, 60), style = line.style_dotted))
+    eqh  = not na(prevPH) and math.abs(ph - prevPH) <= eqTol
+    hcol = eqh ? color.new(#f59e0b, 0) : color.new(#ef4444, 5)
+    htxt = eqh ? "EQH" : "BSL"
+    array.push(hiLn, line.new(bar_index - swStr, ph, bar_index + 8, ph, color = hcol, width = 2, style = eqh ? line.style_solid : line.style_dashed))
     array.push(hiLv, ph)
+    array.push(hiLb, label.new(bar_index + 8, ph, htxt, style = label.style_none, textcolor = hcol, size = size.small))
+    prevPH := ph
 if not na(pl)
-    array.push(loLn, line.new(bar_index - swStr, pl, bar_index, pl, color = color.new(color.green, 60), style = line.style_dotted))
+    eql  = not na(prevPL) and math.abs(pl - prevPL) <= eqTol
+    lcol = eql ? color.new(#f59e0b, 0) : color.new(#22c55e, 5)
+    ltxt = eql ? "EQL" : "SSL"
+    array.push(loLn, line.new(bar_index - swStr, pl, bar_index + 8, pl, color = lcol, width = 2, style = eql ? line.style_solid : line.style_dashed))
     array.push(loLv, pl)
+    array.push(loLb, label.new(bar_index + 8, pl, ltxt, style = label.style_none, textcolor = lcol, size = size.small))
+    prevPL := pl
 
 sweepHi = false
 sweepLo = false
 hk = array.size(hiLn) - 1
 while hk >= 0
     lv = array.get(hiLv, hk)
-    ln = array.get(hiLn, hk)
     if high > lv
-        line.delete(ln)
+        line.delete(array.get(hiLn, hk))
+        label.delete(array.get(hiLb, hk))
         array.remove(hiLn, hk)
         array.remove(hiLv, hk)
+        array.remove(hiLb, hk)
         sweepHi := true
         lastPH := lv
     else
-        line.set_x2(ln, bar_index + 6)
+        line.set_x2(array.get(hiLn, hk), bar_index + 8)
+        label.set_x(array.get(hiLb, hk), bar_index + 8)
     hk := hk - 1
 lk = array.size(loLn) - 1
 while lk >= 0
     lv = array.get(loLv, lk)
-    ln = array.get(loLn, lk)
     if low < lv
-        line.delete(ln)
+        line.delete(array.get(loLn, lk))
+        label.delete(array.get(loLb, lk))
         array.remove(loLn, lk)
         array.remove(loLv, lk)
+        array.remove(loLb, lk)
         sweepLo := true
         lastPL := lv
     else
-        line.set_x2(ln, bar_index + 6)
+        line.set_x2(array.get(loLn, lk), bar_index + 8)
+        label.set_x(array.get(loLb, lk), bar_index + 8)
     lk := lk - 1
-while array.size(hiLn) > 8
+while array.size(hiLn) > 6
     line.delete(array.shift(hiLn))
+    label.delete(array.shift(hiLb))
     array.shift(hiLv)
-while array.size(loLn) > 8
+while array.size(loLn) > 6
     line.delete(array.shift(loLn))
+    label.delete(array.shift(loLb))
     array.shift(loLv)
 
 // ════════════════════════ SESSION LIQUIDITY ════════════════
@@ -3950,11 +3983,7 @@ if showData and isData and not isData[1]
     label.new(bar_index, high, "DATA.H", style = label.style_none, textcolor = color.new(color.yellow, 0), size = size.tiny)
     label.new(bar_index, low,  "DATA.L", style = label.style_none, textcolor = color.new(color.yellow, 0), size = size.tiny)
 
-// ═══ HTF FVGs (mid + high TF) — pushed into the pipeline so they INVERT here too ═══
-f_tfn(t) => t == "1" ? "M1" : t == "3" ? "M3" : t == "5" ? "M5" : t == "15" ? "M15" : t == "30" ? "M30" : t == "60" ? "H1" : t == "120" ? "H2" : t == "240" ? "H4" : t == "D" ? "D1" : t
-f_pushHtf(float top, float bot, int dir, string nm, int lifeMs) =>
-    hb = box.new(bar_index - 6, top, bar_index, bot, border_color = color.new(color.gray, 30), bgcolor = color.new(color.gray, 88), text = nm + " FVG", text_color = color.new(color.gray, 0), text_size = size.normal, text_halign = text.align_right, text_valign = text.align_center)
-    array.push(fvgs, FVG.new(hb, na, na, top, bot, dir, false, bar_index, true, time, lifeMs))
+// ═══ HTF FVGs (mid + high TF) — green/red boxes, pushed into the pipeline so they INVERT here too ═══
 nmHi    = f_tfn(htfTf)
 nmMid   = f_tfn(htfTf2)
 lifeHi  = 129600000  // 1.5 days — H1/H4 gaps
@@ -3966,19 +3995,23 @@ htfBear = hH < hL2
 midBull = mL > mH2
 midBear = mH < mL2
 if showHTF and htfBull and not htfBull[1]
-    f_pushHtf(hL, hH2, 1, nmHi, lifeHi)
+    f_pushGap(hL, hH2, 1, nmHi, lifeHi, true, true)
 if showHTF and htfBear and not htfBear[1]
-    f_pushHtf(hL2, hH, -1, nmHi, lifeHi)
+    f_pushGap(hL2, hH, -1, nmHi, lifeHi, true, true)
 if showHTF and midBull and not midBull[1]
-    f_pushHtf(mL, mH2, 1, nmMid, lifeMid)
+    f_pushGap(mL, mH2, 1, nmMid, lifeMid, true, true)
 if showHTF and midBear and not midBear[1]
-    f_pushHtf(mL2, mH, -1, nmMid, lifeMid)
+    f_pushGap(mL2, mH, -1, nmMid, lifeMid, true, true)
 
 // ════════════════════════ SMT DIVERGENCE ═══════════════════
 corrClose = request.security(smtSym, timeframe.period, close, lookahead = barmerge.lookahead_off)
 smtBear = useSMT and not na(lastPH) and high > lastPH and corrClose < corrClose[swStr]
 smtBull = useSMT and not na(lastPL) and low  < lastPL and corrClose > corrClose[swStr]
 smtOn   = smtBear or smtBull
+if smtBear
+    label.new(bar_index, high, "SMT", style = label.style_label_down, color = color.new(#a855f7, 15), textcolor = color.white, size = size.tiny)
+if smtBull
+    label.new(bar_index, low, "SMT", style = label.style_label_up, color = color.new(#a855f7, 15), textcolor = color.white, size = size.tiny)
 
 // ════════════════════════ CHECKLIST + GRADE ════════════════
 cLiq   = sweepHi or sweepLo or ta.barssince(sweepHi or sweepLo) < 20
