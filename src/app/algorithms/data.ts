@@ -3783,7 +3783,7 @@ bearFVG = allowS and high < low[2] and open[1] > close[1] and disp
 
 nmCur   = f_tfn(timeframe.period)
 curLife = 1800000      // keep current-TF gaps ~30 minutes only
-curBig  = atr * 0.55   // only prominent gaps (big displacement)
+curBig  = atr * 1.1    // only the most prominent gaps (big displacement)
 if showCur and bullFVG and (low - high[2]) > curBig
     f_pushGap(low, high[2], 1, nmCur, curLife, false, false, 0)
 if showCur and bearFVG and (low[2] - high) > curBig
@@ -3833,7 +3833,7 @@ if array.size(fvgs) > 0
             htfTapped := true
         if not f.inv
             if not na(f.bx)
-                box.set_right(f.bx, f.tier == 2 ? bar_index : int(math.min(bar_index, f.born + (f.tier == 1 ? 40 : 12))))
+                box.set_right(f.bx, f.tier == 2 ? bar_index : int(math.min(bar_index, f.born + (f.tier == 1 ? 22 : 5))))
             if not na(f.ce)
                 line.set_x2(f.ce, bar_index)
             age = bar_index - f.born
@@ -3882,7 +3882,7 @@ if array.size(fvgs) > 0
                 array.remove(fvgs, idx)
         else
             if not na(f.bx)
-                box.set_right(f.bx, f.tier == 2 ? bar_index : int(math.min(bar_index, f.born + (f.tier == 1 ? 40 : 12))))
+                box.set_right(f.bx, f.tier == 2 ? bar_index : int(math.min(bar_index, f.born + (f.tier == 1 ? 22 : 5))))
             if (f.dir == 1 and close < f.bot) or (f.dir == -1 and close > f.top)
                 invalidated := true
                 ifvgActive := false
