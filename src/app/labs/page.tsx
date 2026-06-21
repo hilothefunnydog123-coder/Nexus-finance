@@ -5,7 +5,8 @@ import { DeskShell, Reveal, Panel, Eyebrow, CYAN, VIOLET, GREEN, TXT, MUTE, FAIN
 export const metadata: Metadata = { title: 'Labs — YN Finance', description: 'Experiments from the BrainStock research desk: watch the neural net think, the AI strategy arena, and the machine in 3D.' }
 
 const LABS = [
-  { href: '/brainstock', emoji: '🧠', tag: 'NEURAL X-RAY', title: 'Watch it think', desc: 'The network’s real forward pass, rendered live — your stock’s features firing through every neuron to the prediction.', color: CYAN, live: true },
+  { href: '/labs/brain', emoji: '🧠', tag: 'THE BRAIN', title: 'See what it’s thinking, live', desc: 'A living brain of neurons, pumping and firing as it forecasts the market in real time — accurate vs wrong, what it’s processing, what it’s reading. Right now.', color: CYAN, live: true },
+  { href: '/brainstock', emoji: '🔬', tag: 'NEURAL X-RAY', title: 'Watch it think', desc: 'The network’s real forward pass, rendered live — your stock’s features firing through every neuron to the prediction.', color: CYAN, live: true },
   { href: '/labs/colosseum', emoji: '⚔️', tag: 'THE COLOSSEUM', title: 'Five AIs, one arena', desc: 'BrainStock vs momentum vs mean-reversion vs contrarian vs pure chance — each running a live paper portfolio, graded forever.', color: VIOLET, live: true },
   { href: '/labs/market-brain', emoji: '🗺️', tag: 'THE MARKET BRAIN', title: 'The whole market, at a glance', desc: 'Every stock the net forecast this morning, as one glowing heatmap — green leaning up, red leaning down. The AI’s view of everything.', color: GREEN, live: true },
   { href: '/labs/trading-floor', emoji: '🌐', tag: 'TRADING FLOOR', title: 'Step inside the machine', desc: 'The neural network in three dimensions — orbit the layers, watch the signals travel. Built in real 3D.', color: GREEN, live: false },
