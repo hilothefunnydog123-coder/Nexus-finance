@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import Link from 'next/link'
 import { YNMark } from '@/components/YNLogo'
+import LiveCount from '@/components/LiveCount'
 
 // ── Custom Cursor ──────────────────────────────────────────────────────────────
 function CustomCursor() {
@@ -90,7 +91,7 @@ function Nav() {
 }
 
 // ── Metric Card ────────────────────────────────────────────────────────────────
-function MetricCard({ value, label, accent, sub }: { value:string; label:string; accent:string; sub?: string }) {
+function MetricCard({ value, label, accent, sub }: { value:ReactNode; label:string; accent:string; sub?: string }) {
   return (
     <div style={{
       background:'rgba(255,255,255,.03)', border:`1px solid ${accent}20`,
@@ -245,7 +246,7 @@ export default function InvestorsPage() {
             <OpportunityCard
               number="03"
               accent="#ff2d78"
-              title="Two founders. 14 years old. Zero outside capital. 3,247 users."
+              title="Two founders. 14 years old. Zero outside capital. Real users."
               desc="This traction wasn't bought with ad spend or VC dollars. It was earned through product quality. Neil built the entire platform solo. Yannai's track record attracted traders and he cold-emailed 47 times to land world-class instructors on 70% revenue share. This team executes."
             />
           </div>
@@ -258,8 +259,8 @@ export default function InvestorsPage() {
           <div style={{ fontSize:11, fontWeight:700, color:'#00d4aa', letterSpacing:'0.2em', fontFamily:'monospace', marginBottom:16, textAlign:'center' }}>TRACTION</div>
           <h2 style={{ fontSize:32, fontWeight:900, color:'#e8f4f8', marginBottom:48, textAlign:'center', letterSpacing:'-0.02em' }}>The numbers so far</h2>
           <div className="metrics-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
-            <MetricCard value="3,247+" label="ACTIVE TRADERS" accent="#00d4aa" sub="Growing without paid acquisition" />
-            <MetricCard value="9" label="INTELLIGENCE TOOLS LIVE" accent="#1e90ff" sub="AI Analyzer, Intel Suite, Congress Tracker + more" />
+            <MetricCard value={<LiveCount metric="users" fallback="—" />} label="REGISTERED USERS" accent="#00d4aa" sub="Live from the database · no paid acquisition" />
+            <MetricCard value={<LiveCount metric="forecasts" fallback="—" />} label="AI FORECASTS MADE" accent="#1e90ff" sub="Every one logged & graded in public" />
             <MetricCard value="9" label="INSTRUCTOR PARTNERS" accent="#a855f7" sub="World-class educators on 70% rev share" />
             <MetricCard value="4" label="REVENUE STREAMS" accent="#ff2d78" sub="Courses, prop challenges, arena, B2B API" />
             <MetricCard value="$0" label="OUTSIDE INVESTMENT" accent="#00d4aa" sub="100% bootstrapped" />

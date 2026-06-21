@@ -130,7 +130,7 @@ export default function Landing() {
   const { signInWithGoogle } = useAuth()
   const [menu, setMenu] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [stats, setStats] = useState<{ winRate: number; total: number } | null>(null)
+  const [stats, setStats] = useState<{ users?: number | null; forecasts?: number | null; gradedCalls?: number | null; winRate?: number | null; stocksDaily?: number | null; nnTrained?: number | null } | null>(null)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -139,14 +139,23 @@ export default function Landing() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // Live, real platform numbers from Supabase — refreshed every 45s.
   useEffect(() => {
-    fetch('/api/track-record').then((r) => r.json()).then((d) => {
-      if (d?.stats) setStats({ winRate: d.stats.winRate, total: d.stats.total })
-    }).catch(() => {})
+    const load = () => fetch('/api/stats').then((r) => r.json()).then(setStats).catch(() => {})
+    load()
+    const id = setInterval(load, 45000)
+    return () => clearInterval(id)
   }, [])
 
-  const winRate = stats?.winRate ?? 64
-  const graded = stats?.total ?? 1200
+  const has = (n?: number | null) => n != null && n >= 0
+  const proof = ([
+    has(stats?.forecasts) && { v: <CountUp to={stats!.forecasts!} />, l: 'AI forecasts made' },
+    has(stats?.winRate) && { v: <CountUp to={stats!.winRate!} decimals={1} suffix="%" />, l: 'graded win rate' },
+    (stats?.gradedCalls ?? 0) > 0 && { v: <><CountUp to={stats!.gradedCalls!} />+</>, l: 'calls graded in public' },
+    has(stats?.stocksDaily) && { v: <CountUp to={stats!.stocksDaily!} />, l: 'stocks scanned each morning' },
+    has(stats?.users) && { v: <CountUp to={stats!.users!} />, l: 'members' },
+    (stats?.nnTrained ?? 0) > 0 && { v: <CountUp to={stats!.nnTrained!} />, l: 'examples the net trained on' },
+  ].filter(Boolean) as { v: ReactNode; l: string }[]).slice(0, 4)
 
   return (
     <div style={{ background: BONE, color: INK, fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden', position: 'relative' }}>
@@ -229,19 +238,17 @@ export default function Landing() {
             </Link>
           </Reveal>
 
-          {/* proof bar */}
-          <Reveal delay={550} style={{ marginTop: 64, borderTop: `1px solid ${LINE}`, paddingTop: 26, display: 'grid', gridTemplateColumns: 'repeat(3,auto)', gap: 'clamp(28px,6vw,80px)', width: 'fit-content' }}>
-            {[
-              { v: <CountUp to={winRate} decimals={1} suffix="%" />, l: 'graded win rate' },
-              { v: <><CountUp to={graded} />+</>, l: 'calls graded in public' },
-              { v: <>~<CountUp to={300} /></>, l: 'stocks forecast daily' },
-            ].map((s, i) => (
-              <div key={i}>
-                <div className="disp" style={{ fontSize: 'clamp(2rem,4vw,3.2rem)', color: INK, fontVariantNumeric: 'tabular-nums' }}>{s.v}</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(10,10,12,.5)', marginTop: 6 }}>{s.l}</div>
-              </div>
-            ))}
-          </Reveal>
+          {/* proof bar — live, real numbers from Supabase */}
+          {proof.length > 0 && (
+            <Reveal delay={550} style={{ marginTop: 64, borderTop: `1px solid ${LINE}`, paddingTop: 26, display: 'flex', flexWrap: 'wrap', gap: 'clamp(26px,6vw,68px)' }}>
+              {proof.map((s, i) => (
+                <div key={i}>
+                  <div className="disp" style={{ fontSize: 'clamp(2rem,4vw,3.2rem)', color: INK, fontVariantNumeric: 'tabular-nums' }}>{s.v}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(10,10,12,.5)', marginTop: 6 }}>{s.l}</div>
+                </div>
+              ))}
+            </Reveal>
+          )}
         </div>
       </section>
 
