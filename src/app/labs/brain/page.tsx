@@ -75,7 +75,9 @@ export default function BrainLab() {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'radial-gradient(1200px 800px at 50% 30%, #0a0f1a, #05060b 80%)', overflow: 'hidden', color: TXT, fontFamily: 'Inter,system-ui,sans-serif' }}>
-      <style>{`@keyframes br-blink{0%,100%{opacity:1}50%{opacity:.3}}@keyframes br-feed{from{opacity:0;transform:translateX(-6px)}to{opacity:1}}@keyframes br-proc{0%{width:5%}100%{width:95%}}.br-t{animation:br-feed .3s ease both}`}</style>
+      <style>{`@keyframes br-blink{0%,100%{opacity:1}50%{opacity:.3}}@keyframes br-feed{from{opacity:0;transform:translateX(-6px)}to{opacity:1}}@keyframes br-proc{0%{width:5%}100%{width:95%}}.br-t{animation:br-feed .3s ease both}
+        /* mobile: the floating HUD panels overlap the brain — hide them; the brain + live thought stream carry it */
+        @media (max-width:820px){ .br-panel{display:none !important} }`}</style>
 
       {/* the brain — centered, with the network drawn inside the silhouette */}
       <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: `radial-gradient(700px 600px at 50% 46%, ${CYAN}10, transparent 60%)` }} />
