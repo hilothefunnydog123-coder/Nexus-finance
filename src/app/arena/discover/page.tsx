@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Trophy, CheckCircle, TrendingUp, Users, Shield, Star } from 'lucide-react'
+import { Trophy, TrendingUp, Users, Shield, Star } from 'lucide-react'
+import LiveCount from '@/components/LiveCount'
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
 const BG   = '#040508'
@@ -178,14 +179,14 @@ export default function DiscoverPage() {
             </a>
           </div>
 
-          {/* social proof strip */}
+          {/* social proof strip — live count or honest model facts, never fabricated numbers */}
           <div style={{ display: 'flex', gap: 32, justifyContent: 'center', marginTop: 52, flexWrap: 'wrap' }}>
             {[
-              ['3,800+', 'Active Traders'],
-              ['$47K+', 'Paid Out'],
-              ['Top 20%', 'Always Paid'],
-              ['Public', 'Verifiable Record'],
-            ].map(([v, l]) => (
+              { v: <LiveCount metric="users" fallback="Open" />, l: 'Members' },
+              { v: '$10K', l: 'Same Start For All' },
+              { v: 'Top 20%', l: 'Always Cashes' },
+              { v: 'Public', l: 'Verifiable Record' },
+            ].map(({ v, l }) => (
               <div key={l} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 20, fontWeight: 900, color: TE, fontFamily: MONO, letterSpacing: -0.5 }}>{v}</div>
                 <div style={{ fontSize: 10, color: DM, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 3 }}>{l}</div>
@@ -308,12 +309,12 @@ export default function DiscoverPage() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 18, fontWeight: 900, color: TE, letterSpacing: -0.3 }}>Marcus T.</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: `${G}15`, border: `1px solid ${G}30`, borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 700, color: G }}>
-                    <CheckCircle size={9} color={G} /> Verified
+                  <span style={{ fontSize: 18, fontWeight: 900, color: TE, letterSpacing: -0.3 }}>Your profile</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: `${BL}15`, border: `1px solid ${BL}30`, borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 700, color: BL }}>
+                    Example
                   </span>
                 </div>
-                <div style={{ fontSize: 12, color: DM }}>Chicago, IL · Trading since 2023</div>
+                <div style={{ fontSize: 12, color: DM }}>This is what your card looks like — every stat earned on real tournaments.</div>
               </div>
               <div style={{ textAlign: 'right' }} className="sm-hide">
                 <div style={{ fontSize: 10, color: DM, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Trader Score</div>
@@ -325,7 +326,7 @@ export default function DiscoverPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: `1px solid ${BO}` }} className="sm-grid2">
               {[
                 { label: 'Win Rate',      value: '67%',    color: G   },
-                { label: 'Total Earned',  value: '$4,280', color: GD  },
+                { label: 'Top-20% Rate',  value: '41%',    color: GD  },
                 { label: 'Best Finish',   value: '#1',     color: GD  },
                 { label: 'Consistency',   value: '8.4/10', color: BL  },
               ].map(({ label, value, color }) => (

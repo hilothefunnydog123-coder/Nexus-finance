@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Trophy, Zap, DollarSign, Users, TrendingUp, Copy, Check, Radio, Star } from 'lucide-react'
+import LiveCount from '@/components/LiveCount'
 
 const TIERS = [
   { name: 'Rising',     color: '#00ffa3', min: 0,     maxEarn: '$500/mo',  commission: 10, guarantee: 0,    viewers: '0–500',   badge: '🌱' },
@@ -79,7 +80,7 @@ export default function CreatorPage() {
           {[
             { icon: <DollarSign size={18} color="#00ffa3" />, value: '12%',      label: 'Commission per referral',   sub: 'on every entry fee, forever' },
             { icon: <Zap size={18} color="#ffcc00" />,        value: '$500/mo',  label: 'Pro tier floor guarantee',  sub: 'stream 20hrs/mo minimum' },
-            { icon: <Users size={18} color="#0088ff" />,      value: '3,847',    label: 'Active traders watching',   sub: 'ready to watch your stream' },
+            { icon: <Users size={18} color="#0088ff" />,      value: <LiveCount metric="users" fallback="Open" />, label: 'Members on the platform',    sub: 'your built-in audience' },
             { icon: <Star size={18} color="#8855ff" />,       value: '48hr',     label: 'Application review time',   sub: 'fast approval, fast earnings' },
           ].map(({ icon, value, label, sub }) => (
             <div key={label} style={{ background: '#070c16', border: '1px solid #0f1e38', borderRadius: 14, padding: '20px 18px' }}>
