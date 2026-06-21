@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 
 import Link from 'next/link'
 import { ArrowUpRight, ArrowRight, Menu, X } from 'lucide-react'
 import SiteFooter from '@/components/SiteFooter'
+import WelcomeFunnel from '@/components/onboarding/WelcomeFunnel'
 import { useAuth } from '@/hooks/useAuth'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -160,6 +161,7 @@ export default function Landing() {
 
   return (
     <div style={{ background: BONE, color: INK, fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden', position: 'relative' }}>
+      <WelcomeFunnel />
       <style>{`
         @keyframes mq{to{transform:translateX(-50%)}}
         @keyframes grid-drift{to{background-position:48px 48px}}
@@ -234,8 +236,8 @@ export default function Landing() {
             <Magnetic href="/brainstock" style={{ gap: 10, background: INK, color: PAPER, padding: '17px 30px', fontSize: 15, fontWeight: 700 }}>
               See today’s calls <ArrowUpRight size={18} />
             </Magnetic>
-            <Link href="/war-room" className="lk" style={{ fontSize: 15, fontWeight: 600, color: INK, textDecoration: 'none', padding: '17px 6px' }}>
-              Watch the AI debate a stock →
+            <Link href="/demo" className="lk" style={{ fontSize: 15, fontWeight: 600, color: INK, textDecoration: 'none', padding: '17px 6px' }}>
+              Watch the 60-second demo →
             </Link>
           </Reveal>
 
