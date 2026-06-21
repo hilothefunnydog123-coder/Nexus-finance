@@ -106,6 +106,7 @@ function Magnetic({ children, href, className, style, strength = 0.4 }: { childr
 
 const NAV = [
   { label: 'BrainStock', href: '/brainstock' },
+  { label: 'Enter the Net', href: '/brain/live' },
   { label: 'Analyzer', href: '/ai-stocks' },
   { label: 'War Room', href: '/war-room' },
   { label: 'Proof', href: '/proof' },
@@ -126,6 +127,7 @@ const FRAMES = [
   { n: '03', tag: 'THE DEBATE', title: 'The War Room', line: 'Five AI analysts — a long PM, a short-seller, a quant, a risk officer and the CIO — argue your stock live, then the CIO rules.', href: '/war-room', cta: 'Convene the room' },
   { n: '04', tag: 'THE COPILOT', title: 'Voice', line: 'Talk to the market. Ask “what’s happening with Nvidia?” and the neural net answers out loud — with the chart and the news, live.', href: '/copilot', cta: 'Start talking' },
   { n: '05', tag: 'THE EDGE', title: 'Courses & Algorithms', line: 'Learn the edge from pro traders, then automate it — prop-grade strategies with ready-to-run code and one-click alerts.', href: '/courses', cta: 'Learn the edge' },
+  { n: '06', tag: 'THE EXPERIENCE', title: 'Enter the Net', line: 'Fly inside the neural network as it forecasts your stock — the signal fires through every layer in real time, scored live with sound. Nothing in finance looks like this.', href: '/brain/live', cta: 'Enter the net' },
 ]
 
 export default function Landing() {
