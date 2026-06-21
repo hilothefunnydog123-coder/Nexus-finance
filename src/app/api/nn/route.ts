@@ -67,6 +67,14 @@ export async function POST(req: NextRequest) {
 
   if (learned > 0) {
     await saveModel(admin, model)
+    // snapshot the learning curve (loss should trend down over time)
+    try {
+      await admin.from('nn_history').insert({
+        trained: model.trained,
+        avg_loss: model.trained ? +(model.sumLoss / model.trained).toFixed(5) : 0,
+        dir_acc: model.trained ? +((model.dirHits / model.trained) * 100).toFixed(1) : 0,
+      })
+    } catch { /* table may not exist yet */ }
     // mark them done so we don't retrain the same rows
     for (let i = 0; i < trainedIds.length; i += 200) {
       await admin.from('prediction_log').update({ nn_trained: true }).in('id', trainedIds.slice(i, i + 200))

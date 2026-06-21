@@ -6,6 +6,7 @@ import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveCont
 import { ArrowLeft, ArrowUpRight, Loader2 } from 'lucide-react'
 import NeuralBg from '@/components/cinematic/NeuralBg'
 import NeuralXray from '@/components/cinematic/NeuralXray'
+import BrainProof from '@/components/cinematic/BrainProof'
 import { FEATURE_NAMES } from '@/lib/nn'
 
 /* ── palette ─────────────────────────────────────────────────────────────── */
@@ -340,6 +341,9 @@ export default function BrainStock() {
             </Reveal>
           </section>
         )}
+
+        {/* PROOF — calibration + learning curve (real graded data) */}
+        <BrainProof />
 
         {/* EXPLORE */}
         <section style={{ margin: 'clamp(50px,8vw,90px) 0 30px' }}>
