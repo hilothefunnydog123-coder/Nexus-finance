@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { forecastTicker, addBusinessDays } from '@/lib/forecast'
 import { loadTrainedModel } from '@/lib/nnStore'
 import { UNIVERSE } from '@/lib/universe'
+import { proofFor } from '@/lib/provenance'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -157,17 +158,29 @@ export async function POST(req: NextRequest) {
           .upsert({ trade_date, generated_at, picks, bears, attempted, succeeded }, { onConflict: 'trade_date' })
         stored = true
         // Seed the track record with today's bull calls (5-day horizon).
-        const callRows = picks.map((p) => ({
-          trade_date,
-          ticker: p.ticker,
-          start_price: p.price,
-          target: p.target5,
-          pct: p.pct5,
-          horizon: 5,
-          resolve_date,
-          status: 'open',
-        }))
-        if (callRows.length) await admin.from('forecast_calls').upsert(callRows, { onConflict: 'trade_date,ticker' })
+        // Each call carries a signed provenance receipt over its immutable
+        // prediction fields, so it can later be proven un-edited (/api/provenance).
+        const callRows = picks.map((p) => {
+          const core = {
+            trade_date,
+            ticker: p.ticker,
+            start_price: p.price,
+            target: p.target5,
+            pct: p.pct5,
+            horizon: 5,
+            resolve_date,
+          }
+          return { ...core, status: 'open', ...proofFor(core) }
+        })
+        if (callRows.length) {
+          const { error: callErr } = await admin.from('forecast_calls').upsert(callRows, { onConflict: 'trade_date,ticker' })
+          // Fall back to un-signed rows if the provenance columns aren't migrated yet,
+          // so calls are still logged. Run supabase-provenance.sql to enable receipts.
+          if (callErr) {
+            const bare = callRows.map(({ proof_hash, proof_sig, proof_alg, ...rest }) => { void proof_hash; void proof_sig; void proof_alg; return rest })
+            await admin.from('forecast_calls').upsert(bare, { onConflict: 'trade_date,ticker' })
+          }
+        }
         // Seed the neural-net training set with every forecast's feature vector.
         if (predRows.length) await admin.from('prediction_log').upsert(predRows, { onConflict: 'trade_date,ticker,source' })
       } catch {
