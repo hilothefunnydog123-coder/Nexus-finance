@@ -3,11 +3,13 @@
 /* ════════════════════════════════════════════════════════════════════════
    /brain/live — ENTER THE NET.
 
-   A WebGL flythrough *inside* BrainStock's neural network. Type a ticker and
-   the real forward-pass (from /api/forecast `trace`) fires through the net
-   layer by layer: input features ignite, signal pulses race down the edges,
-   the camera dives through the hidden layers, and the output neuron erupts
-   green or red with the predicted move — scored live with WebAudio.
+   A guided, cinematic flythrough THROUGH BrainStock's neural network. Each
+   layer is a ring of neurons — a portal — and the camera flies down the axis,
+   weaving between neurons, banking through the web of connections, following
+   the real forward-pass (from /api/forecast `trace`) as it fires layer by
+   layer: input features ignite, signal pulses race the edges, the camera dives
+   through every hidden layer, and the output neuron erupts green or red —
+   scored live with WebAudio.
 
    Architecture mirrors the real model: [11 → 16 → 12 → 1].
    ════════════════════════════════════════════════════════════════════════ */
@@ -20,6 +22,7 @@ import { FEATURE_NAMES } from '@/lib/nn'
 import { Sonifier } from '@/lib/sonify'
 
 const SIZES = [11, 16, 12, 1]
+const LAYER_LABELS = ['INPUT · 11 FEATURES', 'HIDDEN LAYER · 16', 'HIDDEN LAYER · 12', 'OUTPUT NEURON']
 const GREEN = 0x34d399
 const RED = 0xf87171
 const CYAN = 0x22d3ee
@@ -34,17 +37,15 @@ type Forecast = {
   trace?: number[][] | null
 }
 
-type SceneApi = {
-  fire: (trace: number[][], up: boolean) => void
-  reset: () => void
-}
-
+type SceneApi = { fire: (trace: number[][], up: boolean) => void }
 const POPULAR = ['NVDA', 'AAPL', 'TSLA', 'MSFT', 'PLTR', 'AMD', 'SPY', 'AMZN']
 
 export default function BrainLive() {
   const mountRef = useRef<HTMLDivElement>(null)
   const apiRef = useRef<SceneApi | null>(null)
   const sonRef = useRef<Sonifier | null>(null)
+  const phaseRef = useRef<(s: string) => void>(() => {})
+  const doneRef = useRef<() => void>(() => {})
 
   const [ticker, setTicker] = useState('NVDA')
   const [horizon] = useState(5)
@@ -52,6 +53,11 @@ export default function BrainLive() {
   const [muted, setMuted] = useState(false)
   const [error, setError] = useState('')
   const [data, setData] = useState<Forecast | null>(null)
+  const [flyLabel, setFlyLabel] = useState('')
+  const [revealed, setRevealed] = useState(false)
+
+  phaseRef.current = (s: string) => setFlyLabel(s)
+  doneRef.current = () => { setFlyLabel(''); setRevealed(true) }
 
   // ── build the scene once ──────────────────────────────────────────────────
   useEffect(() => {
@@ -63,64 +69,71 @@ export default function BrainLive() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setClearColor(0x04060d, 1)
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.3
+    renderer.toneMappingExposure = 1.32
     mount.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
-    scene.fog = new THREE.FogExp2(0x04060d, 0.022)
-    const camera = new THREE.PerspectiveCamera(62, mount.clientWidth / mount.clientHeight, 0.1, 400)
+    scene.fog = new THREE.FogExp2(0x04060d, 0.018)
+    const camera = new THREE.PerspectiveCamera(64, mount.clientWidth / mount.clientHeight, 0.1, 600)
 
-    // starfield ambience
-    const starN = 900
+    // deep starfield
+    const starN = 1100
     const starPos = new Float32Array(starN * 3)
     for (let i = 0; i < starN; i++) {
-      starPos[i * 3] = (Math.random() - 0.5) * 240
-      starPos[i * 3 + 1] = (Math.random() - 0.5) * 140
-      starPos[i * 3 + 2] = (Math.random() - 0.5) * 240
+      starPos[i * 3] = (Math.random() - 0.5) * 320
+      starPos[i * 3 + 1] = (Math.random() - 0.5) * 180
+      starPos[i * 3 + 2] = (Math.random() - 0.5) * 320
     }
     const starGeo = new THREE.BufferGeometry()
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3))
-    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x2a3550, size: 0.5, transparent: true, opacity: 0.7 })))
+    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x2a3550, size: 0.45, transparent: true, opacity: 0.7 })))
 
-    // ── node geometry ──
-    const GAP = 16
-    const SPREAD = 13
-    const totalW = (SIZES.length - 1) * GAP
-    const x0 = -totalW / 2
+    // ── layer geometry: each layer is a RING of neurons in the Y-Z plane ──
+    const GAP = 26
+    const RING_R = [7, 8, 6.5, 0]
+    const layerX = SIZES.map((_, l) => l * GAP - ((SIZES.length - 1) * GAP) / 2)
+    const xEnd = layerX[SIZES.length - 1]
 
     type Node = {
       mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; glow: THREE.Mesh; glowMat: THREE.MeshBasicMaterial
-      layer: number; idx: number; pos: THREE.Vector3; act: number; sign: number; base: number
+      core: THREE.Mesh; coreMat: THREE.MeshBasicMaterial
+      layer: number; idx: number; pos: THREE.Vector3; act: number; sign: number; base: number; r: number
     }
     const nodes: Node[] = []
     const byLayer: Node[][] = SIZES.map(() => [])
 
     SIZES.forEach((count, l) => {
       for (let i = 0; i < count; i++) {
-        const x = x0 + l * GAP
-        const y = count === 1 ? 0 : (i / (count - 1) - 0.5) * SPREAD
-        const z = Math.sin(i * 1.7 + l) * 0.6
+        const x = layerX[l]
+        let y = 0, z = 0
+        if (count > 1) {
+          const th = (i / count) * Math.PI * 2 + l * 0.4
+          const r = RING_R[l] * (0.82 + 0.18 * Math.sin(i * 2.3 + l))
+          y = Math.cos(th) * r
+          z = Math.sin(th) * r
+        }
         const pos = new THREE.Vector3(x, y, z)
-        const r = l === SIZES.length - 1 ? 1.5 : 0.5
-        const mat = new THREE.MeshBasicMaterial({ color: 0x16324a })
-        const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 20), mat)
-        mesh.position.copy(pos)
-        scene.add(mesh)
+        const r = l === SIZES.length - 1 ? 1.7 : 0.46
+        const mat = new THREE.MeshBasicMaterial({ color: 0x12283c })
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 22, 22), mat)
+        mesh.position.copy(pos); scene.add(mesh)
+        // bright inner core
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 })
+        const core = new THREE.Mesh(new THREE.SphereGeometry(r * 0.5, 12, 12), coreMat)
+        core.position.copy(pos); scene.add(core)
+        // additive halo
         const glowMat = new THREE.MeshBasicMaterial({ color: CYAN, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })
-        const glow = new THREE.Mesh(new THREE.SphereGeometry(r * 2.6, 16, 16), glowMat)
-        glow.position.copy(pos)
-        scene.add(glow)
-        const node: Node = { mesh, mat, glow, glowMat, layer: l, idx: i, pos, act: 0, sign: 1, base: Math.random() * Math.PI * 2 }
-        nodes.push(node)
-        byLayer[l].push(node)
+        const glow = new THREE.Mesh(new THREE.SphereGeometry(r * 2.8, 16, 16), glowMat)
+        glow.position.copy(pos); scene.add(glow)
+        const node: Node = { mesh, mat, glow, glowMat, core, coreMat, layer: l, idx: i, pos, act: 0, sign: 1, base: Math.random() * Math.PI * 2, r }
+        nodes.push(node); byLayer[l].push(node)
       }
     })
+    const outputNode = byLayer[SIZES.length - 1][0]
 
-    // ── edges (one LineSegments) ──
+    // ── edges (the web) ──
     const edges: { a: Node; b: Node }[] = []
-    for (let l = 0; l < SIZES.length - 1; l++) {
-      for (const a of byLayer[l]) for (const b of byLayer[l + 1]) edges.push({ a, b })
-    }
+    for (let l = 0; l < SIZES.length - 1; l++) for (const a of byLayer[l]) for (const b of byLayer[l + 1]) edges.push({ a, b })
     const edgePos = new Float32Array(edges.length * 6)
     edges.forEach((e, i) => {
       edgePos[i * 6] = e.a.pos.x; edgePos[i * 6 + 1] = e.a.pos.y; edgePos[i * 6 + 2] = e.a.pos.z
@@ -128,11 +141,11 @@ export default function BrainLive() {
     })
     const edgeGeo = new THREE.BufferGeometry()
     edgeGeo.setAttribute('position', new THREE.BufferAttribute(edgePos, 3))
-    const edgeMat = new THREE.LineBasicMaterial({ color: 0x1b3b55, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending })
+    const edgeMat = new THREE.LineBasicMaterial({ color: 0x163349, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending })
     scene.add(new THREE.LineSegments(edgeGeo, edgeMat))
 
     // ── pulse pool (signal traveling along edges) ──
-    const PN = 600
+    const PN = 1000
     const pPos = new Float32Array(PN * 3).fill(9999)
     const pClr = new Float32Array(PN * 3)
     const pFrom = new Float32Array(PN * 3)
@@ -143,12 +156,11 @@ export default function BrainLive() {
     const pGeo = new THREE.BufferGeometry()
     pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3))
     pGeo.setAttribute('color', new THREE.BufferAttribute(pClr, 3))
-    scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.7, vertexColors: true, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })))
-
+    scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.6, vertexColors: true, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })))
     const spawnPulse = (a: Node, b: Node, color: THREE.Color, intensity: number) => {
       for (let i = 0; i < PN; i++) {
         if (!pAlive[i]) {
-          pAlive[i] = 1; pT[i] = 0; pSpd[i] = 0.7 + Math.random() * 0.5
+          pAlive[i] = 1; pT[i] = 0; pSpd[i] = 0.55 + Math.random() * 0.6
           pFrom[i * 3] = a.pos.x; pFrom[i * 3 + 1] = a.pos.y; pFrom[i * 3 + 2] = a.pos.z
           pTo[i * 3] = b.pos.x; pTo[i * 3 + 1] = b.pos.y; pTo[i * 3 + 2] = b.pos.z
           pClr[i * 3] = color.r * intensity; pClr[i * 3 + 1] = color.g * intensity; pClr[i * 3 + 2] = color.b * intensity
@@ -157,112 +169,182 @@ export default function BrainLive() {
       }
     }
 
-    // shockwave for the final neuron
+    // ── corridor dust (parallax + speed streaks) ──
+    const dN = 480
+    const dPos = new Float32Array(dN * 3)
+    for (let i = 0; i < dN; i++) {
+      dPos[i * 3] = layerX[0] - 10 + Math.random() * (xEnd - layerX[0] + 30)
+      dPos[i * 3 + 1] = (Math.random() - 0.5) * 22
+      dPos[i * 3 + 2] = (Math.random() - 0.5) * 22
+    }
+    const dGeo = new THREE.BufferGeometry()
+    dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3))
+    const dMat = new THREE.PointsMaterial({ color: 0x2f4a66, size: 0.32, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })
+    scene.add(new THREE.Points(dGeo, dMat))
+
+    // ── layer title sprites ──
+    const makeLabel = (text: string) => {
+      const cv = document.createElement('canvas'); cv.width = 512; cv.height = 96
+      const ctx = cv.getContext('2d')!
+      ctx.font = '700 40px Inter, system-ui, sans-serif'
+      ctx.fillStyle = '#dfe8ff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.fillText(text, 256, 52)
+      const tex = new THREE.CanvasTexture(cv)
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, depthTest: false })
+      const sp = new THREE.Sprite(mat)
+      sp.scale.set(16, 3, 1)
+      scene.add(sp)
+      return { sp, mat }
+    }
+    const labels = LAYER_LABELS.map((t, l) => {
+      const o = makeLabel(t)
+      o.sp.position.set(layerX[l], (RING_R[l] || 4) + 4, 0)
+      return { ...o, layer: l, hot: 0 }
+    })
+
+    // output shockwave
     const shockMat = new THREE.MeshBasicMaterial({ color: GREEN, transparent: true, opacity: 0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
-    const shock = new THREE.Mesh(new THREE.RingGeometry(1.4, 1.9, 64), shockMat)
-    shock.position.set(x0 + totalW, 0, 0)
+    const shock = new THREE.Mesh(new THREE.RingGeometry(1.8, 2.4, 72), shockMat)
+    shock.position.copy(outputNode.pos)
     scene.add(shock)
     let shockProg = 1
+
+    // ── cinematic camera path (Catmull-Rom through the rings) ──
+    const weave = [{ y: 3.4, z: 3.0 }, { y: -4.2, z: -2.6 }, { y: 3.6, z: -3.4 }, { y: -2.2, z: 3.0 }]
+    const cp: THREE.Vector3[] = []
+    cp.push(new THREE.Vector3(layerX[0] - 30, 9, 36))   // establish, high & wide
+    cp.push(new THREE.Vector3(layerX[0] - 14, 4, 16))   // approach
+    SIZES.forEach((_, l) => {
+      const w = weave[l]
+      cp.push(new THREE.Vector3(layerX[l] - 7, w.y * 0.45, w.z * 0.45))  // mouth of the ring
+      cp.push(new THREE.Vector3(layerX[l], w.y, w.z))                    // weave through the neurons
+    })
+    cp.push(new THREE.Vector3(xEnd - 6, 1.6, 5.5))      // approach output
+    cp.push(new THREE.Vector3(xEnd - 2.4, 1.2, 3.6))    // hero close-up
+    cp.push(new THREE.Vector3(xEnd + 5, 3.2, 12))       // pull back for the reveal
+    const curve = new THREE.CatmullRomCurve3(cp, false, 'catmullrom', 0.35)
+    // approximate arc-length param u for each layer's "through" waypoint
+    const arrival = [0.17, 0.41, 0.63, 0.85]
+
+    camera.position.copy(cp[0])
 
     // ── firing state ──
     let firing = false
     let fireStart = 0
     let traceData: number[][] | null = null
     let upDir = true
-    let waveLayer = -1
-    const LAYER_MS = 620
+    const firedLayer = new Array(SIZES.length).fill(false)
+    const FLY_MS = 15000
+    const HOLD_MS = 2000
 
-    const tmpGreen = new THREE.Color(GREEN)
-    const tmpRed = new THREE.Color(RED)
-    const tmpCyan = new THREE.Color(CYAN)
+    const cGreen = new THREE.Color(GREEN), cRed = new THREE.Color(RED), cCyan = new THREE.Color(CYAN)
+    const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
     const setLayerActivations = (l: number, vals: number[]) => {
       byLayer[l].forEach((n, i) => {
         const v = vals[i] ?? 0
-        n.act = Math.min(1, Math.abs(v) * (l === 0 ? 1.1 : 1.6) + 0.12)
+        n.act = Math.min(1, Math.abs(v) * (l === 0 ? 1.1 : 1.7) + 0.14)
         n.sign = v >= 0 ? 1 : -1
       })
+    }
+    const fireLayer = (l: number) => {
+      firedLayer[l] = true
+      setLayerActivations(l, traceData?.[l] ?? [])
+      labels.forEach((lb) => { if (lb.layer === l) lb.hot = 1 })
+      phaseRef.current?.(LAYER_LABELS[l])
+      if (l < SIZES.length - 1) {
+        byLayer[l].forEach((a) => {
+          if (a.act < 0.22) return
+          byLayer[l + 1].forEach((b) => {
+            if (Math.random() < a.act * 0.8) spawnPulse(a, b, a.sign > 0 ? cGreen : cRed, 0.6 + a.act)
+          })
+        })
+        sonRef.current?.note(2 + l, { dur: 0.45, type: 'triangle', gain: 0.2 })
+      } else {
+        shockProg = 0; shockMat.color.set(upDir ? GREEN : RED)
+        outputNode.act = 1; outputNode.sign = upDir ? 1 : -1
+        const col = upDir ? cGreen : cRed
+        byLayer[SIZES.length - 2].forEach((a) => spawnPulse(a, outputNode, col, 1.6))
+        sonRef.current?.chord(upDir)
+        doneRef.current?.()
+      }
     }
 
     apiRef.current = {
       fire: (trace, up) => {
-        traceData = trace
-        upDir = up
-        firing = true
-        fireStart = performance.now()
-        waveLayer = -1
-        shockProg = 1
+        traceData = trace; upDir = up; firing = true; fireStart = performance.now()
+        firedLayer.fill(false); shockProg = 1
         nodes.forEach((n) => { n.act = 0 })
+        labels.forEach((lb) => { lb.hot = 0 })
+        phaseRef.current?.('ENTERING THE NET…')
       },
-      reset: () => { firing = false; traceData = null; waveLayer = -1; nodes.forEach((n) => { n.act = 0 }) },
     }
 
-    // camera path
-    const camStart = new THREE.Vector3(x0 - 10, 3, 24)
-    const camIdleLook = new THREE.Vector3(0, 0, 0)
-    camera.position.copy(camStart)
-
-    let t = 0
-    let raf = 0
+    const lookTmp = new THREE.Vector3()
+    const posTmp = new THREE.Vector3()
+    let t = 0, raf = 0
     const animate = () => {
       raf = requestAnimationFrame(animate)
       t += 0.016
 
-      // firing progression
-      let waveProg = 0
+      // firing progression along the path
       if (firing && traceData) {
         const elapsed = performance.now() - fireStart
-        waveProg = Math.min(1, elapsed / (LAYER_MS * SIZES.length))
-        const curLayer = Math.floor(elapsed / LAYER_MS)
-        if (curLayer !== waveLayer && curLayer < SIZES.length) {
-          waveLayer = curLayer
-          const vals = traceData[curLayer] ?? []
-          setLayerActivations(curLayer, vals)
-          // spawn pulses from this layer to the next
-          if (curLayer < SIZES.length - 1) {
-            byLayer[curLayer].forEach((a) => {
-              if (a.act < 0.25) return
-              byLayer[curLayer + 1].forEach((b) => {
-                if (Math.random() < a.act * 0.85) spawnPulse(a, b, a.sign > 0 ? tmpGreen : tmpRed, 0.6 + a.act)
-              })
-            })
-            sonRef.current?.note(2 + curLayer, { dur: 0.4, type: 'triangle', gain: 0.22 })
-          }
-          // reached output
-          if (curLayer === SIZES.length - 1) {
-            shockProg = 0
-            shockMat.color.set(upDir ? GREEN : RED)
-            sonRef.current?.chord(upDir)
-            const out = byLayer[SIZES.length - 1][0]
-            out.act = 1; out.sign = upDir ? 1 : -1
-            const col = upDir ? tmpGreen : tmpRed
-            byLayer[SIZES.length - 2].forEach((a) => spawnPulse(a, out, col, 1.4))
-          }
-        }
-        if (waveProg >= 1 && elapsed > LAYER_MS * SIZES.length + 1400) firing = false
+        const raw = Math.min(1, elapsed / FLY_MS)
+        const u = easeInOut(raw)
+        for (let l = 0; l < SIZES.length; l++) if (!firedLayer[l] && u >= arrival[l]) fireLayer(l)
+
+        curve.getPointAt(Math.min(0.999, u), posTmp)
+        camera.position.lerp(posTmp, 0.18)
+        // look ahead along the path → the feeling of travel
+        curve.getPointAt(Math.min(0.999, u + 0.05), lookTmp)
+        if (u > 0.8) lookTmp.lerp(outputNode.pos, (u - 0.8) / 0.2) // settle on the output for the reveal
+        camera.up.set(0, 1, 0)
+        camera.lookAt(lookTmp)
+        // banking: roll into the turns
+        const tan = curve.getTangentAt(Math.min(0.999, u))
+        camera.rotateZ(THREE.MathUtils.clamp(-tan.z * 0.45, -0.22, 0.22))
+
+        if (elapsed > FLY_MS + HOLD_MS) firing = false
+      } else {
+        // idle: slow majestic orbit of the whole net
+        const a = t * 0.1
+        const tx = Math.sin(a) * 46, tz = Math.cos(a) * 46, ty = 7 + Math.sin(t * 0.4) * 4
+        camera.position.lerp(posTmp.set(tx, ty, tz), 0.015)
+        camera.up.set(0, 1, 0)
+        camera.lookAt(0, 0, 0)
       }
 
-      // node visuals
+      // node visuals + glints as the camera passes
       nodes.forEach((n) => {
-        const idlePulse = 0.5 + Math.sin(t * 2 + n.base) * 0.5
+        const idle = 0.5 + Math.sin(t * 2 + n.base) * 0.5
         const a = n.act
-        const col = a > 0.02 ? (n.sign > 0 ? tmpGreen : tmpRed) : tmpCyan
-        // base color: dark when idle, ignites with activation
-        n.mat.color.copy(col).multiplyScalar(0.18 + a * 0.82)
-        const s = 1 + a * (n.layer === SIZES.length - 1 ? 1.4 : 0.8) + (a < 0.05 ? idlePulse * 0.06 : 0)
-        n.mesh.scale.setScalar(s)
-        n.glow.scale.setScalar(s)
+        const col = a > 0.02 ? (n.sign > 0 ? cGreen : cRed) : cCyan
+        n.mat.color.copy(col).multiplyScalar(0.16 + a * 0.84)
+        // proximity glint
+        const d = camera.position.distanceTo(n.pos)
+        const near = d < 16 ? (1 - d / 16) : 0
+        const s = 1 + a * (n.layer === SIZES.length - 1 ? 1.5 : 0.8) + (a < 0.05 ? idle * 0.06 : 0) + near * 0.4
+        n.mesh.scale.setScalar(s); n.glow.scale.setScalar(s); n.core.scale.setScalar(s)
         n.glowMat.color.copy(col)
-        n.glowMat.opacity = a > 0.02 ? 0.25 + a * 0.6 : 0.04 + idlePulse * 0.04
+        n.glowMat.opacity = (a > 0.02 ? 0.28 + a * 0.6 : 0.04 + idle * 0.04) + near * 0.4
+        n.coreMat.opacity = a > 0.3 ? 0.5 + a * 0.5 : near * 0.5
       })
 
-      // edges shimmer / brighten while firing
-      edgeMat.opacity = 0.14 + (firing ? 0.18 : 0) + Math.sin(t * 1.5) * 0.03
+      edgeMat.opacity = 0.13 + (firing ? 0.16 : 0) + Math.sin(t * 1.5) * 0.03
 
-      // pulses travel
+      // label fade: hot when active, gentle when near
+      labels.forEach((lb) => {
+        const dist = Math.abs(camera.position.x - layerX[lb.layer])
+        const prox = dist < 18 ? 1 - dist / 18 : 0
+        lb.hot *= 0.985
+        lb.mat.opacity += ((Math.max(lb.hot, prox * 0.5)) - lb.mat.opacity) * 0.08
+      })
+
+      // pulses
       for (let i = 0; i < PN; i++) {
         if (!pAlive[i]) continue
-        pT[i] += 0.02 * pSpd[i]
+        pT[i] += 0.018 * pSpd[i]
         if (pT[i] >= 1) { pAlive[i] = 0; pPos[i * 3] = 9999; pPos[i * 3 + 1] = 9999; pPos[i * 3 + 2] = 9999; continue }
         const e = 1 - Math.pow(1 - pT[i], 2)
         pPos[i * 3] = pFrom[i * 3] + (pTo[i * 3] - pFrom[i * 3]) * e
@@ -272,28 +354,18 @@ export default function BrainLive() {
       pGeo.attributes.position.needsUpdate = true
       pGeo.attributes.color.needsUpdate = true
 
+      // dust drift
+      for (let i = 0; i < dN; i++) {
+        dPos[i * 3] -= 0.02
+        if (dPos[i * 3] < layerX[0] - 12) dPos[i * 3] = xEnd + 18
+      }
+      dGeo.attributes.position.needsUpdate = true
+
       // shockwave
       if (shockProg < 1) {
-        shockProg += 0.018
-        const s = 1 + shockProg * 18
-        shock.scale.setScalar(s)
-        shockMat.opacity = Math.max(0, (1 - shockProg) * 0.8)
-      }
-
-      // camera: idle orbit until firing, then dive through the net to the output
-      if (firing) {
-        const targetX = x0 - 6 + waveProg * (totalW + 14)
-        camera.position.x += (targetX - camera.position.x) * 0.05
-        camera.position.y += (2.5 - camera.position.y) * 0.04
-        camera.position.z += (10 - camera.position.z) * 0.04
-        const lookX = Math.min(x0 + totalW, camera.position.x + 12)
-        camera.lookAt(lookX, 0, 0)
-      } else {
-        const a = t * 0.12
-        camera.position.x += ((Math.sin(a) * 6) - camera.position.x) * 0.02
-        camera.position.y += ((3 + Math.sin(t * 0.4) * 1.5) - camera.position.y) * 0.02
-        camera.position.z += (24 - camera.position.z) * 0.02
-        camera.lookAt(camIdleLook)
+        shockProg += 0.016
+        shock.scale.setScalar(1 + shockProg * 20)
+        shockMat.opacity = Math.max(0, (1 - shockProg) * 0.85)
       }
 
       renderer.render(scene, camera)
@@ -301,13 +373,11 @@ export default function BrainLive() {
     animate()
 
     const onResize = () => {
-      if (!mount) return
       camera.aspect = mount.clientWidth / mount.clientHeight
       camera.updateProjectionMatrix()
       renderer.setSize(mount.clientWidth, mount.clientHeight)
     }
     window.addEventListener('resize', onResize)
-
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', onResize)
@@ -323,13 +393,8 @@ export default function BrainLive() {
     return () => { sonRef.current?.dispose(); sonRef.current = null }
   }, [])
 
-  const toggleMute = () => {
-    const m = !muted
-    setMuted(m)
-    sonRef.current?.setMuted(m)
-  }
+  const toggleMute = () => { const m = !muted; setMuted(m); sonRef.current?.setMuted(m) }
 
-  // Synthesize a believable activation trace from features if the model didn't return one.
   const synthTrace = (features: number[] | undefined, up: boolean): number[][] => {
     const input = (features && features.length === SIZES[0]) ? features.map((v) => Math.tanh(v)) : Array.from({ length: SIZES[0] }, () => (Math.random() * 2 - 1) * 0.6)
     const layers: number[][] = [input]
@@ -345,9 +410,8 @@ export default function BrainLive() {
   const run = async (sym: string) => {
     const t = sym.trim().toUpperCase()
     if (!t) return
-    setError(''); setLoading(true); setData(null)
-    sonRef.current?.resume()
-    sonRef.current?.startPad()
+    setError(''); setLoading(true); setData(null); setRevealed(false)
+    sonRef.current?.resume(); sonRef.current?.startPad()
     try {
       const res = await fetch('/api/forecast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: t, horizon, source: 'forecast' }) })
       const json = await res.json()
@@ -363,11 +427,10 @@ export default function BrainLive() {
       setError(e instanceof Error ? e.message : "Couldn't reach the forecast API.")
     } finally {
       setLoading(false)
-      setTimeout(() => sonRef.current?.stopPad(), 6000)
+      setTimeout(() => sonRef.current?.stopPad(), 17000)
     }
   }
 
-  // verdict math
   const px = data?.history[data.history.length - 1]?.price ?? 0
   const tgt = data?.forecast[data.forecast.length - 1]?.price ?? 0
   const pct = px ? ((tgt - px) / px) * 100 : 0
@@ -377,15 +440,11 @@ export default function BrainLive() {
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#04060d', color: '#e7ecf5', fontFamily: 'Inter, system-ui, sans-serif', overflow: 'hidden' }}>
       <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
-
-      {/* vignette */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.55) 100%)' }} />
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at center, transparent 42%, rgba(0,0,0,.6) 100%)', transition: 'opacity .6s', opacity: flyLabel ? 1 : 0.7 }} />
 
       {/* top bar */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px' }}>
-        <Link href="/brainstock" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#8a93a8', textDecoration: 'none', fontSize: 14 }}>
-          <ArrowLeft size={15} /> BrainStock
-        </Link>
+        <Link href="/brainstock" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#8a93a8', textDecoration: 'none', fontSize: 14 }}><ArrowLeft size={15} /> BrainStock</Link>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 11, letterSpacing: '0.34em', color: '#22d3ee', fontFamily: 'var(--font-mono), monospace' }}>ENTER THE NET</div>
           <div style={{ fontSize: 11, color: '#46566e', marginTop: 2 }}>{SIZES.join(' → ')} · live forward pass</div>
@@ -395,9 +454,17 @@ export default function BrainLive() {
         </button>
       </div>
 
+      {/* travel caption during the dive */}
+      {flyLabel && (
+        <div style={{ position: 'absolute', top: 84, left: '50%', transform: 'translateX(-50%)', textAlign: 'center', pointerEvents: 'none' }}>
+          <div style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 12, letterSpacing: '0.28em', color: '#22d3ee', animation: 'el-pulse 1.4s ease-in-out infinite' }}>{flyLabel}</div>
+        </div>
+      )}
+      <style>{`@keyframes el-pulse{0%,100%{opacity:.5}50%{opacity:1}}`}</style>
+
       {/* input features readout (left) */}
       {data && (
-        <div style={{ position: 'absolute', left: 22, top: '50%', transform: 'translateY(-50%)', width: 220, background: 'rgba(5,8,16,.55)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, padding: 14, backdropFilter: 'blur(8px)' }}>
+        <div style={{ position: 'absolute', left: 22, top: '50%', transform: 'translateY(-50%)', width: 220, background: 'rgba(5,8,16,.5)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, padding: 14, backdropFilter: 'blur(8px)' }}>
           <div style={{ fontSize: 10, letterSpacing: '0.2em', color: '#46566e', marginBottom: 10 }}>INPUT NEURONS · {data.ticker}</div>
           {FEATURE_NAMES.map((name, i) => {
             const v = data.features?.[i] ?? 0
@@ -417,9 +484,9 @@ export default function BrainLive() {
         </div>
       )}
 
-      {/* verdict (right) */}
-      {data && (
-        <div style={{ position: 'absolute', right: 22, top: '50%', transform: 'translateY(-50%)', width: 240, background: 'rgba(5,8,16,.55)', border: `1px solid ${accent}40`, borderRadius: 14, padding: 18, backdropFilter: 'blur(8px)' }}>
+      {/* verdict (right) — revealed when the signal reaches the output neuron */}
+      {data && revealed && (
+        <div style={{ position: 'absolute', right: 22, top: '50%', transform: 'translateY(-50%)', width: 240, background: 'rgba(5,8,16,.55)', border: `1px solid ${accent}40`, borderRadius: 14, padding: 18, backdropFilter: 'blur(8px)', animation: 'el-rise .5s ease both' }}>
           <div style={{ fontSize: 10, letterSpacing: '0.2em', color: '#46566e' }}>OUTPUT NEURON</div>
           <div style={{ fontSize: 34, fontWeight: 800, marginTop: 4 }}>{data.ticker}</div>
           <div style={{ fontSize: 44, fontWeight: 800, color: accent, fontVariantNumeric: 'tabular-nums', lineHeight: 1.1, marginTop: 6 }}>
@@ -438,6 +505,7 @@ export default function BrainLive() {
           </Link>
         </div>
       )}
+      <style>{`@keyframes el-rise{from{opacity:0;transform:translateY(-50%) translateX(12px)}to{opacity:1;transform:translateY(-50%)}}`}</style>
 
       {/* control dock (bottom) */}
       <div style={{ position: 'absolute', bottom: 26, left: '50%', transform: 'translateX(-50%)', width: 'min(560px, 92vw)' }}>
@@ -459,7 +527,7 @@ export default function BrainLive() {
           ))}
         </div>
         {error && <div style={{ marginTop: 10, textAlign: 'center', color: '#f87171', fontSize: 12 }}>{error}</div>}
-        {!data && !error && <div style={{ marginTop: 10, textAlign: 'center', color: '#46566e', fontSize: 12 }}>Type a ticker and watch the signal fire through the network — with sound.</div>}
+        {!data && !error && <div style={{ marginTop: 10, textAlign: 'center', color: '#46566e', fontSize: 12 }}>Type a ticker and dive through the entire network — layer by layer, with sound.</div>}
       </div>
     </div>
   )
