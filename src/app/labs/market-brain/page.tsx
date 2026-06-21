@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { DeskShell, Reveal, Eyebrow, CYAN, GREEN, RED, TXT, MUTE, FAINT, BORDER } from '@/components/cinematic/Desk'
+import NeuralBg from '@/components/cinematic/NeuralBg'
 
 type Tile = { ticker: string; pct: number; price: number }
 type Data = { ready: boolean; asOf: string | null; count: number; bull: number; bear: number; avg: number; lean: string; tiles: Tile[] }
@@ -21,6 +22,12 @@ export default function MarketBrain() {
 
   return (
     <DeskShell title="Labs · Market Brain" accent={CYAN} back="/labs">
+      {/* the brain, thinking, behind the whole field */}
+      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <NeuralBg opacity={0.5} />
+        <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(900px 600px at 50% 30%, ${CYAN}10, transparent 60%)` }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 75% 65% at 50% 42%, transparent, rgba(6,7,12,.78) 92%)' }} />
+      </div>
       <style>{`@keyframes mb-in{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:none}}
         @keyframes mb-scan{0%{transform:translateY(-100%)}100%{transform:translateY(2400%)}}
         .mb-tile{animation:mb-in .5s cubic-bezier(.16,1,.3,1) both;transition:transform .15s ease, box-shadow .2s ease, filter .2s ease}
