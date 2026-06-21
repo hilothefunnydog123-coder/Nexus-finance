@@ -74,19 +74,30 @@ export default function CineFX() {
 
     enhance(document)
 
-    // catch client-rendered / route-changed content
+    // Catch client-rendered / route-changed content. Coalesce mutation bursts
+    // into a single rAF-batched scan — on live pages (tickers, scoreboards)
+    // the DOM churns constantly, and per-node querySelectorAll calls add up.
+    let rafId = 0
+    const pending: Element[] = []
+    const flush = () => {
+      rafId = 0
+      const nodes = pending.splice(0)
+      for (const n of nodes) enhance(n)
+    }
     const mo = new MutationObserver((muts) => {
       for (const m of muts) {
         m.addedNodes.forEach((n) => {
-          if (n.nodeType === 1) enhance(n as Element)
+          if (n.nodeType === 1) pending.push(n as Element)
         })
       }
+      if (pending.length && !rafId) rafId = requestAnimationFrame(flush)
     })
     mo.observe(document.body, { childList: true, subtree: true })
 
     return () => {
       io?.disconnect()
       mo.disconnect()
+      if (rafId) cancelAnimationFrame(rafId)
       cleaners.forEach((c) => c())
     }
   }, [])

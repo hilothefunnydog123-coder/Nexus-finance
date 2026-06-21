@@ -123,15 +123,23 @@ function TwitterTimeline() {
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
+    // widgets.js loads lazily (off the critical path), so poll until it's ready
+    // instead of giving up after one retry — keeps the embed reliable.
+    let done = false
     const tryLoad = () => {
+      if (done) return true
       if (window.twttr?.widgets && ref.current) {
         window.twttr.widgets.load(ref.current)
-        setTimeout(() => setLoaded(true), 2000)
+        done = true
+        setTimeout(() => setLoaded(true), 1500)
+        return true
       }
+      return false
     }
-    tryLoad()
-    const t = setTimeout(tryLoad, 2000)
-    return () => clearTimeout(t)
+    if (tryLoad()) return
+    const iv = setInterval(() => { if (tryLoad()) clearInterval(iv) }, 1000)
+    const stop = setTimeout(() => clearInterval(iv), 20000) // give up after 20s
+    return () => { clearInterval(iv); clearTimeout(stop) }
   }, [])
 
   return (

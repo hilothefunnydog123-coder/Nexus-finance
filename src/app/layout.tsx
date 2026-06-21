@@ -83,8 +83,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <CineFX />
         <AnalyticsBeacon />
         {children}
-        {/* Twitter/X widget — loads the embedded timeline on the Pulse tab */}
-        <Script src="https://platform.twitter.com/widgets.js" strategy="afterInteractive" />
+        {/* Twitter/X widget — only the Pulse tab / app use it, so load it off the
+            critical path (lazyOnload). widgets.js auto-scans .twitter-timeline on load. */}
+        <Script src="https://platform.twitter.com/widgets.js" strategy="lazyOnload" />
         <script dangerouslySetInnerHTML={{ __html: `
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'))
