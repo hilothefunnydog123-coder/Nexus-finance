@@ -107,6 +107,7 @@ const NAV = [
   { label: 'BrainStock', href: '/brainstock' },
   { label: 'Analyzer', href: '/ai-stocks' },
   { label: 'War Room', href: '/war-room' },
+  { label: 'Proof', href: '/proof' },
   { label: 'Labs', href: '/labs' },
   { label: 'Voice', href: '/copilot' },
   { label: 'Courses', href: '/courses' },
