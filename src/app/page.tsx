@@ -6,6 +6,7 @@ import { ArrowUpRight, ArrowRight, Menu, X } from 'lucide-react'
 import SiteFooter from '@/components/SiteFooter'
 import WelcomeFunnel from '@/components/onboarding/WelcomeFunnel'
 import AccountMenu from '@/components/auth/AccountMenu'
+import ColdOpen from '@/components/cinematic/ColdOpen'
 
 /* ════════════════════════════════════════════════════════════════════════
    YN FINANCE — cinematic editorial landing. Light "paper noir": bone stock,
@@ -128,6 +129,10 @@ const FRAMES = [
   { n: '04', tag: 'THE COPILOT', title: 'Voice', line: 'Talk to the market. Ask “what’s happening with Nvidia?” and the neural net answers out loud — with the chart and the news, live.', href: '/copilot', cta: 'Start talking' },
   { n: '05', tag: 'THE EDGE', title: 'Courses & Algorithms', line: 'Learn the edge from pro traders, then automate it — prop-grade strategies with ready-to-run code and one-click alerts.', href: '/courses', cta: 'Learn the edge' },
   { n: '06', tag: 'THE EXPERIENCE', title: 'Enter the Net', line: 'Fly inside the neural network as it forecasts your stock — the signal fires through every layer in real time, scored live with sound. Nothing in finance looks like this.', href: '/brain/live', cta: 'Enter the net' },
+  { n: '07', tag: 'THE UNIVERSE', title: 'Market Galaxy', line: 'Every stock a star, clustered into sector constellations, sized by market cap and pulsing with today’s real move. Fly through it. Click a star to forecast it.', href: '/galaxy', cta: 'Explore the galaxy' },
+  { n: '08', tag: 'THE STORM', title: 'Conviction Storm', line: 'A live particle field of the whole tape — bulls lift, bears sink, the strongest moves burn brightest. Turn the sound on and listen to the market breathe.', href: '/storm', cta: 'Enter the storm' },
+  { n: '09', tag: 'THE VERDICT', title: 'War Room, Live', line: 'Five AI analysts argue your ticker out loud — a long PM, a short-seller, a quant, a risk officer — and the CIO rules. Spoken, not typed.', href: '/war-room/live', cta: 'Convene the room' },
+  { n: '10', tag: 'THE OPEN', title: 'The Open', line: 'A self-running cinematic of the trading day: the net wakes, scans the market, slams down its top calls, and shows the public win rate. Built to be shared.', href: '/the-open', cta: 'Watch The Open' },
 ]
 
 export default function Landing() {
@@ -162,6 +167,7 @@ export default function Landing() {
 
   return (
     <div style={{ background: BONE, color: INK, fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden', position: 'relative' }}>
+      <ColdOpen />
       <WelcomeFunnel />
       <style>{`
         @keyframes mq{to{transform:translateX(-50%)}}
