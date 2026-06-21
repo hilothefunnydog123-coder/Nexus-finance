@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, type CSSProperties } from 'react'
 import Link from 'next/link'
+import { saveToHistory } from '@/lib/history'
 
 const POPULAR = ['AAPL','NVDA','TSLA','MSFT','AMZN','META','AMD','GOOGL','SPY','QQQ','JPM','NFLX']
 
@@ -803,6 +804,26 @@ export default function AIStocksPage() {
           take_profit_1: a.take_profit_1, confidence: a.confidence,
         }),
       }).catch(()=>{})
+
+      // Save to the signed-in user's profile history (no-op if signed out).
+      saveToHistory({
+        kind: 'analysis',
+        ticker: t,
+        title: `${t} — ${a.rating}`,
+        summary: a.executive_summary || `${a.rating} · ${a.confidence}% confidence · target $${Number(a.price_target).toFixed(2)}`,
+        rating: a.rating,
+        confidence: Number(a.confidence),
+        price: Number(d.price),
+        target: Number(a.price_target),
+        pct: d.price ? ((Number(a.price_target) - Number(d.price)) / Number(d.price)) * 100 : null,
+        payload: {
+          name: d.name, sentiment: a.sentiment, time_horizon: a.time_horizon,
+          entry_low: a.entry_low, entry_high: a.entry_high, stop_loss: a.stop_loss,
+          take_profit_1: a.take_profit_1, take_profit_2: a.take_profit_2,
+          price_target_bull: a.price_target_bull, price_target_bear: a.price_target_bear,
+          fundamentals_score: a.fundamentals_score, technical_score: a.technical_score, sentiment_score: a.sentiment_score,
+        },
+      })
 
       setTimeout(()=>resultsRef.current?.scrollIntoView({behavior:'smooth',block:'start'}),100)
     } catch {setError('Network error.')}

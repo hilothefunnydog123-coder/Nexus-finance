@@ -1,7 +1,7 @@
 'use client'
 
 /* ════════════════════════════════════════════════════════════════════════
-   /demo — the 60-second self-running product tour.
+   /demo — the 30-second self-running product tour.
    Five scenes on a single master clock. Auto-plays, shows the loop end to
    end (forecast → analyze → debate → grade → compound), then hands off to
    the real product. Pausable, replayable, skippable. Paper-noir language.
@@ -23,7 +23,7 @@ const RED = '#e5484d'
 const LINE = 'rgba(10,10,12,.12)'
 const MUTE = 'rgba(10,10,12,.6)'
 
-const DURATION = 60_000 // ms, the whole tour
+const DURATION = 30_000 // ms, the whole tour
 
 // Scene boundaries as fractions of the timeline.
 const SCENES = [
@@ -137,7 +137,7 @@ export default function DemoPage() {
           <span style={{ width: 28, height: 28, background: INK, color: PAPER, display: 'grid', placeItems: 'center', fontWeight: 900, fontSize: 12 }}>YN</span>
           <span className="disp" style={{ fontSize: 16 }}>FINANCE</span>
         </Link>
-        <div className="mono" style={{ fontSize: 11, letterSpacing: '0.18em', color: MUTE }}>PRODUCT TOUR · 60s</div>
+        <div className="mono" style={{ fontSize: 11, letterSpacing: '0.18em', color: MUTE }}>PRODUCT TOUR · 30s</div>
         <Link href="/brainstock" style={{ fontSize: 13, fontWeight: 700, color: PAPER, background: INK, padding: '9px 16px', textDecoration: 'none' }}>Skip to app</Link>
       </header>
 

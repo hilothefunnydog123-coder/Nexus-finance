@@ -11,6 +11,17 @@ interface Props {
   redirectTo?: string
 }
 
+function GoogleGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden>
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.3 6.5 29.4 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5c10.8 0 19.5-8.7 19.5-19.5 0-1.3-.1-2.3-.4-3.5z"/>
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.3 6.5 29.4 4.5 24 4.5 16.3 4.5 9.7 8.9 6.3 14.7z"/>
+      <path fill="#4CAF50" d="M24 43.5c5.3 0 10.1-2 13.7-5.3l-6.3-5.3C29.3 34.6 26.8 35.5 24 35.5c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.6 39 16.2 43.5 24 43.5z"/>
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4 5.6l6.3 5.3c-.4.4 6.9-5 6.9-14.9 0-1.3-.1-2.3-.5-3.5z"/>
+    </svg>
+  )
+}
+
 type Mode = 'magic' | 'password'
 type Tab = 'signin' | 'signup'
 
@@ -24,12 +35,40 @@ export default function AuthModal({ onClose, onSuccess, reason, redirectTo }: Pr
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   useEffect(() => {
     if (resendCooldown <= 0) return
     const t = setInterval(() => setResendCooldown(c => Math.max(0, c - 1)), 1000)
     return () => clearInterval(t)
   }, [resendCooldown])
+
+  const signInWithGoogle = async () => {
+    setError(''); setSuccess('')
+    if (!SUPABASE_ENABLED || !supabase) { setError('Auth not configured — add Supabase keys'); return }
+    setGoogleLoading(true)
+    try {
+      const { error: err } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectTo || `${window.location.origin}/account`,
+          queryParams: { prompt: 'select_account' },
+        },
+      })
+      // On success the browser redirects to Google, so we never reach here.
+      if (err) {
+        setGoogleLoading(false)
+        setError(
+          /provider is not enabled/i.test(err.message)
+            ? 'Google sign-in isn’t enabled yet. Enable the Google provider in Supabase → Authentication → Providers, then try again. You can use email or a magic link below in the meantime.'
+            : err.message
+        )
+      }
+    } catch (e) {
+      setGoogleLoading(false)
+      setError(e instanceof Error ? e.message : 'Google sign-in failed')
+    }
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,7 +83,7 @@ export default function AuthModal({ onClose, onSuccess, reason, redirectTo }: Pr
         const { error: err } = await supabase.auth.signInWithOtp({
           email,
           options: {
-            emailRedirectTo: redirectTo || `${window.location.origin}/courses`,
+            emailRedirectTo: redirectTo || `${window.location.origin}/account`,
             shouldCreateUser: true,
           },
         })
@@ -91,6 +130,25 @@ export default function AuthModal({ onClose, onSuccess, reason, redirectTo }: Pr
               <p className="text-[11px] text-[#00d4aa]">{reason}</p>
             </div>
           )}
+
+          {/* Google — one-click OAuth */}
+          <button onClick={signInWithGoogle} disabled={googleLoading || loading}
+            className="w-full flex items-center justify-center gap-2.5 py-3 mb-4 rounded-xl bg-white text-[#1f1f1f] font-bold text-[13px] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+            {googleLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-[#1f1f1f]/30 border-t-[#1f1f1f] rounded-full animate-spin" />
+                Redirecting to Google…
+              </>
+            ) : (
+              <><GoogleGlyph /> Continue with Google</>
+            )}
+          </button>
+
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px bg-[#1a2d4a]" />
+            <span className="text-[10px] text-[#4a5e7a] uppercase tracking-wider">or with email</span>
+            <div className="flex-1 h-px bg-[#1a2d4a]" />
+          </div>
 
           {/* Mode toggle */}
           <div className="flex rounded-xl border border-[#1a2d4a] overflow-hidden mb-5">

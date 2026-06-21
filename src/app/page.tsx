@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowUpRight, ArrowRight, Menu, X } from 'lucide-react'
 import SiteFooter from '@/components/SiteFooter'
 import WelcomeFunnel from '@/components/onboarding/WelcomeFunnel'
-import { useAuth } from '@/hooks/useAuth'
+import AccountMenu from '@/components/auth/AccountMenu'
 
 /* ════════════════════════════════════════════════════════════════════════
    YN FINANCE — cinematic editorial landing. Light "paper noir": bone stock,
@@ -129,7 +129,6 @@ const FRAMES = [
 ]
 
 export default function Landing() {
-  const { signInWithGoogle } = useAuth()
   const [menu, setMenu] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [stats, setStats] = useState<{ users?: number | null; forecasts?: number | null; gradedCalls?: number | null; winRate?: number | null; stocksDaily?: number | null; nnTrained?: number | null } | null>(null)
@@ -190,7 +189,7 @@ export default function Landing() {
             ))}
           </nav>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }} className="nav-desk">
-            <button onClick={() => signInWithGoogle()} style={{ fontSize: 14, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', color: INK }}>Sign in</button>
+            <AccountMenu tone="light" />
             <Link href="/brainstock" style={{ fontSize: 14, fontWeight: 700, color: PAPER, background: INK, padding: '10px 20px', textDecoration: 'none' }}>Open app</Link>
           </div>
           <button onClick={() => setMenu(true)} className="nav-mob" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'none' }} aria-label="Menu"><Menu /></button>
@@ -237,7 +236,7 @@ export default function Landing() {
               See today’s calls <ArrowUpRight size={18} />
             </Magnetic>
             <Link href="/demo" className="lk" style={{ fontSize: 15, fontWeight: 600, color: INK, textDecoration: 'none', padding: '17px 6px' }}>
-              Watch the 60-second demo →
+              Watch the 30-second demo →
             </Link>
           </Reveal>
 

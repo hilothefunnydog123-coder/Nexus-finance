@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEven
 import Link from 'next/link'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ArrowLeft, ArrowUpRight, Loader2 } from 'lucide-react'
+import { saveToHistory } from '@/lib/history'
 import NeuralBg from '@/components/cinematic/NeuralBg'
 import NeuralXray from '@/components/cinematic/NeuralXray'
 import BrainProof from '@/components/cinematic/BrainProof'
@@ -81,20 +82,40 @@ export default function BrainStock() {
 
   useEffect(() => { fetch('/api/nn').then((r) => r.json()).then(setVitals).catch(() => {}) }, [])
 
-  const run = async (sym: string, h = horizon) => {
+  const run = async (sym: string, h = horizon, save = true) => {
     setLoading(true); setError(null)
     try {
       const res = await fetch('/api/forecast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker: sym, horizon: h, source: 'forecast' }) })
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error ?? `Request failed (${res.status})`)
-      setData(json as Forecast)
+      const fc = json as Forecast
+      setData(fc)
+      // Save this forecast to the signed-in user's history (no-op if signed out).
+      if (save) try {
+        const hist = fc.history
+        const px = hist[hist.length - 1]?.price ?? 0
+        const target = fc.forecast[fc.forecast.length - 1]?.price ?? 0
+        const pct = px ? ((target - px) / px) * 100 : 0
+        saveToHistory({
+          kind: 'forecast',
+          ticker: fc.ticker,
+          title: `${fc.ticker} ${h}-day forecast`,
+          summary: `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}% to $${target.toFixed(2)} over ${h} day${h === 1 ? '' : 's'}${fc.engine ? ` · ${fc.engine === 'neural-net' ? 'neural net' : 'baseline'}` : ''}`,
+          rating: pct >= 0 ? 'BULL' : 'BEAR',
+          confidence: fc.metrics?.directional_accuracy != null ? Math.round(fc.metrics.directional_accuracy * 100) : null,
+          price: px,
+          target,
+          pct,
+          payload: { horizon: h, engine: fc.engine ?? null, metrics: fc.metrics ?? null },
+        })
+      } catch {}
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn't reach the forecast API.") } finally { setLoading(false) }
   }
   const submit = (e?: FormEvent) => { e?.preventDefault(); const t = ticker.trim().toUpperCase(); if (t) run(t) }
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('t')
     const sym = t && /^[A-Za-z0-9.\-]{1,8}$/.test(t) ? t.toUpperCase() : 'AAPL'
-    setTicker(sym); run(sym)
+    setTicker(sym); run(sym, horizon, false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
