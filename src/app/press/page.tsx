@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import Link from 'next/link'
 import { YNMark } from '@/components/YNLogo'
+import LiveCount from '@/components/LiveCount'
 
 // ── Custom Cursor ──────────────────────────────────────────────────────────────
 function CustomCursor() {
@@ -90,7 +91,7 @@ function Nav() {
 }
 
 // ── Fact Cell ──────────────────────────────────────────────────────────────────
-function FactCell({ label, value, accent }: { label: string; value: string; accent?: string }) {
+function FactCell({ label, value, accent }: { label: string; value: ReactNode; accent?: string }) {
   return (
     <div style={{
       background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)',
@@ -220,7 +221,7 @@ export default function PressPage() {
             <FactCell label="FOUNDED" value="2024" accent="#00d4aa" />
             <FactCell label="HEADQUARTERS" value="New York, NY" accent="#1e90ff" />
             <FactCell label="FOUNDERS" value="3 (all age 14)" accent="#a855f7" />
-            <FactCell label="ACTIVE TRADERS" value="3,247+" accent="#ff2d78" />
+            <FactCell label="REGISTERED USERS" value={<LiveCount metric="users" fallback="—" />} accent="#ff2d78" />
             <FactCell label="INTELLIGENCE TOOLS" value="9 live tools" accent="#00d4aa" />
             <FactCell label="INSTRUCTOR PARTNERS" value="9 world-class educators" accent="#1e90ff" />
             <FactCell label="STARTING PRICE" value="$0.99 / course" accent="#a855f7" />
@@ -237,7 +238,7 @@ export default function PressPage() {
           <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.08)', borderRadius:14, padding:'28px 32px' }}>
             <div style={{ fontSize:10, color:'#5a7a8a', letterSpacing:'0.14em', fontFamily:'monospace', marginBottom:16 }}>APPROVED COMPANY DESCRIPTION</div>
             <p style={{ fontSize:15, color:'#c8d8e8', lineHeight:1.85 }}>
-              YN Finance Corp. is an AI-powered trading intelligence platform founded in 2024 by two 14-year-olds — Neil Gilani (CEO) and Yannai Richter (CTO) — with a mission to give every retail trader access to the institutional-grade tools previously reserved for hedge funds and Wall Street banks. The platform offers nine intelligence tools including an AI stock analyzer, a congressional trade tracker, smart money alerts, earnings forensics, and a course marketplace with nine world-class instructors, serving 3,247+ active traders with no outside investment and a starting price of $0.
+              YN Finance Corp. is an AI-powered trading intelligence platform founded in 2024 by two 14-year-olds — Neil Gilani (CEO) and Yannai Richter (CTO) — with a mission to give every retail trader access to the institutional-grade tools previously reserved for hedge funds and Wall Street banks. The platform offers nine intelligence tools including an AI stock analyzer, a congressional trade tracker, smart money alerts, earnings forensics, and a course marketplace with nine world-class instructors, serving a growing base of real users with no outside investment and a starting price of $0.
             </p>
           </div>
         </div>

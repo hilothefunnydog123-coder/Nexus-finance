@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import Link from 'next/link'
 import { YNMark } from '@/components/YNLogo'
+import LiveCount from '@/components/LiveCount'
 
 // ── Custom Cursor ──────────────────────────────────────────────────────────────
 function CustomCursor() {
@@ -172,7 +173,7 @@ function FounderCard({ name, role, accent, bio, detail, linkedin }: { name:strin
 }
 
 // ── Stat ───────────────────────────────────────────────────────────────────────
-function Stat({ value, label, accent }: { value:string; label:string; accent:string }) {
+function Stat({ value, label, accent }: { value:ReactNode; label:string; accent:string }) {
   return (
     <div style={{ textAlign:'center' }}>
       <div style={{ fontSize:36, fontWeight:900, color:accent, fontFamily:'monospace', letterSpacing:'-0.02em', textShadow:`0 0 24px ${accent}60` }}>{value}</div>
@@ -274,7 +275,7 @@ export default function CompanyPage() {
             We believe the gap between institutional and retail isn&apos;t talent — it&apos;s access. We close that gap with AI.
           </p>
           <div className="stats-row" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:32 }}>
-            <Stat value="3,247+" label="ACTIVE TRADERS" accent="#00d4aa" />
+            <Stat value={<LiveCount metric="users" fallback="—" />} label="REGISTERED USERS" accent="#00d4aa" />
             <Stat value="9" label="INSTRUCTORS" accent="#1e90ff" />
             <Stat value="$0" label="TO START" accent="#a855f7" />
             <Stat value="9" label="INTELLIGENCE TOOLS" accent="#ff2d78" />
@@ -303,7 +304,7 @@ export default function CompanyPage() {
           ]}/>
           <TimelineItem year="2025–26" accent="#ff2d78" events={[
             "9 intelligence tools live: AI Analyzer, Intelligence Suite, Congress Tracker, Smart Money Alerts, Earnings Decoder, YN Arena, and more.",
-            "3,247+ active traders. Zero outside investment. $0 to start trading.",
+            "Real users, zero outside investment, $0 to start trading.",
             "The Bloomberg Terminal replacement is no longer hypothetical.",
           ]}/>
         </div>
@@ -352,7 +353,7 @@ export default function CompanyPage() {
       {/* ── CTA ─────────────────────────────────────────────────────────────── */}
       <section style={{ padding:'80px 32px 120px', textAlign:'center' }}>
         <div style={{ maxWidth:700, margin:'0 auto' }}>
-          <h2 style={{ fontSize:36, fontWeight:900, color:'#e8f4f8', letterSpacing:'-0.02em', marginBottom:16 }}>Join 3,247+ traders who already have the edge.</h2>
+          <h2 style={{ fontSize:36, fontWeight:900, color:'#e8f4f8', letterSpacing:'-0.02em', marginBottom:16 }}>Join the traders who already have the edge.</h2>
           <p style={{ fontSize:16, color:'#7a9aaa', marginBottom:40, lineHeight:1.7 }}>Free to start. Nine intelligence tools. Built by traders, for traders.</p>
           <div className="cta-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, maxWidth:600, margin:'0 auto' }}>
             <Link href="/app" style={{ fontSize:13, fontWeight:700, color:'#030a10', background:'linear-gradient(135deg,#00d4aa,#1e90ff)', textDecoration:'none', padding:'13px 20px', borderRadius:9, textAlign:'center' }}>
