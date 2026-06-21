@@ -13,13 +13,15 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Gavel, Loader2, Volume2 } from 'lucide-react'
 
-type Role = { key: string; label: string; color: string; voiceHint: RegExp }
+// Each analyst gets a distinct voice + emotional delivery (rate/pitch). The
+// hints are ordered preferences; assignVoices() guarantees no two share a voice.
+type Role = { key: string; label: string; color: string; voiceHint: RegExp; rate: number; pitch: number; mood: string }
 const ROLES: Role[] = [
-  { key: 'pm', label: 'LONG PM', color: '#34d399', voiceHint: /male|daniel|google us/i },
-  { key: 'short', label: 'SHORT-SELLER', color: '#f87171', voiceHint: /female|samantha|zira/i },
-  { key: 'quant', label: 'QUANT', color: '#22d3ee', voiceHint: /uk|arthur|google uk/i },
-  { key: 'risk', label: 'RISK OFFICER', color: '#fbbf24', voiceHint: /female|victoria|hazel/i },
-  { key: 'cio', label: 'CIO', color: '#a78bfa', voiceHint: /male|alex|david/i },
+  { key: 'pm', label: 'LONG PM', color: '#34d399', voiceHint: /daniel|aaron|tom|fred|google us english|male/i, rate: 1.0, pitch: 1.06, mood: 'warm · confident' },
+  { key: 'short', label: 'SHORT-SELLER', color: '#f87171', voiceHint: /samantha|jenny|aria|zira|female/i, rate: 1.16, pitch: 1.22, mood: 'urgent · sharp' },
+  { key: 'quant', label: 'QUANT', color: '#22d3ee', voiceHint: /arthur|rishi|oliver|google uk english male|uk/i, rate: 1.08, pitch: 0.8, mood: 'flat · precise' },
+  { key: 'risk', label: 'RISK OFFICER', color: '#fbbf24', voiceHint: /victoria|hazel|catherine|libby|susan|female/i, rate: 0.92, pitch: 0.98, mood: 'measured · stern' },
+  { key: 'cio', label: 'CIO', color: '#a78bfa', voiceHint: /alex|david|guy|george|microsoft david/i, rate: 0.9, pitch: 0.82, mood: 'slow · authoritative' },
 ]
 
 type Forecast = {
@@ -54,28 +56,41 @@ export default function WarRoomLive() {
   const [verdict, setVerdict] = useState<{ up: boolean; pct: number } | null>(null)
   const [speaking, setSpeaking] = useState(false)
   const voicesRef = useRef<SpeechSynthesisVoice[]>([])
+  const assignedRef = useRef<Record<string, SpeechSynthesisVoice | undefined>>({})
+
+  // Give every role a *different* voice — prefer its hint, then any unused one.
+  const assignVoices = () => {
+    const all = voicesRef.current
+    const en = all.filter((v) => /^en/i.test(v.lang))
+    const pool = en.length ? en : all
+    const taken = new Set<string>()
+    const out: Record<string, SpeechSynthesisVoice | undefined> = {}
+    ROLES.forEach((r, i) => {
+      let v = pool.find((x) => r.voiceHint.test(x.name) && !taken.has(x.name))
+      if (!v) v = pool.find((x) => !taken.has(x.name))
+      if (!v) v = pool[i % Math.max(1, pool.length)]
+      if (v) { taken.add(v.name); out[r.key] = v }
+    })
+    assignedRef.current = out
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return
-    const load = () => { voicesRef.current = window.speechSynthesis.getVoices() }
+    const load = () => { voicesRef.current = window.speechSynthesis.getVoices(); assignVoices() }
     load()
     window.speechSynthesis.onvoiceschanged = load
     return () => { window.speechSynthesis.cancel() }
   }, [])
 
-  const pickVoice = (hint: RegExp): SpeechSynthesisVoice | undefined => {
-    const vs = voicesRef.current.filter((v) => /en/i.test(v.lang))
-    return vs.find((v) => hint.test(v.name)) || vs[0]
-  }
-
   const speak = (role: Role, text: string): Promise<void> =>
     new Promise((resolve) => {
       if (typeof window === 'undefined' || !window.speechSynthesis) { setTimeout(resolve, 2200); return }
       const u = new SpeechSynthesisUtterance(text)
-      const v = pickVoice(role.voiceHint)
+      const v = assignedRef.current[role.key]
       if (v) u.voice = v
-      u.rate = role.key === 'cio' ? 0.94 : 1.02
-      u.pitch = role.key === 'short' || role.key === 'risk' ? 1.12 : 0.92
+      u.rate = role.rate
+      u.pitch = role.pitch
+      u.volume = 1
       u.onend = () => resolve()
       u.onerror = () => resolve()
       window.speechSynthesis.speak(u)

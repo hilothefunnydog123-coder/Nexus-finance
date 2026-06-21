@@ -4,8 +4,8 @@
    ColdOpen — the first-visit title sequence.
 
    Black screen → a heartbeat → three lines of promise → the brain ignites and
-   the site assembles behind it. Plays once per session, fully skippable, and
-   respects prefers-reduced-motion. Mount once at the top of the landing page.
+   the site assembles behind it. Plays once per user (localStorage), fully
+   skippable, and respects prefers-reduced-motion. Mount once on the landing.
    ════════════════════════════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from 'react'
@@ -23,9 +23,9 @@ export default function ColdOpen() {
     if (typeof window === 'undefined') return
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     let seen = false
-    try { seen = sessionStorage.getItem('yn_coldopen') === '1' } catch {}
+    try { seen = localStorage.getItem('yn_coldopen') === '1' } catch {}
     if (seen || reduce) return
-    try { sessionStorage.setItem('yn_coldopen', '1') } catch {}
+    try { localStorage.setItem('yn_coldopen', '1') } catch {}
     setShow(true)
     const at = (ms: number, fn: () => void) => { timers.current.push(window.setTimeout(fn, ms)) }
     at(250, () => setPhase(1))
