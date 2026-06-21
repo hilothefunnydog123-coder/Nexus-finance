@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import BrainCore from '@/components/cinematic/BrainCore'
+import BrainNetwork from '@/components/cinematic/BrainNetwork'
 
 const CYAN = '#22d3ee', VIOLET = '#a78bfa', GREEN = '#34d399', RED = '#f87171', AMBER = '#fbbf24'
 const TXT = '#e7ecf5', MUTE = '#8a93a8', FAINT = '#46566e', BORDER = 'rgba(255,255,255,.08)'
@@ -77,9 +77,11 @@ export default function BrainLab() {
     <div style={{ position: 'fixed', inset: 0, background: 'radial-gradient(1200px 800px at 50% 30%, #0a0f1a, #05060b 80%)', overflow: 'hidden', color: TXT, fontFamily: 'Inter,system-ui,sans-serif' }}>
       <style>{`@keyframes br-blink{0%,100%{opacity:1}50%{opacity:.3}}@keyframes br-feed{from{opacity:0;transform:translateX(-6px)}to{opacity:1}}@keyframes br-proc{0%{width:5%}100%{width:95%}}.br-t{animation:br-feed .3s ease both}`}</style>
 
-      {/* the brain */}
-      <div style={{ position: 'absolute', inset: 0 }}><BrainCore accuracy={accuracy} opacity={0.95} /></div>
-      <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 60% 55% at 50% 48%, transparent, rgba(5,6,11,.55) 92%)' }} />
+      {/* the brain — centered, with the network drawn inside the silhouette */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: `radial-gradient(700px 600px at 50% 46%, ${CYAN}10, transparent 60%)` }} />
+      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', pointerEvents: 'none' }}>
+        <div style={{ width: 'min(78vh, 720px)', maxWidth: '94vw', aspectRatio: '600 / 560' }}><BrainNetwork accuracy={accuracy} /></div>
+      </div>
 
       {/* top bar */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 'clamp(14px,2.5vw,24px)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
