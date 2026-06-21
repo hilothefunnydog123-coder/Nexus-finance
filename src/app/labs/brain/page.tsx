@@ -23,7 +23,7 @@ export default function BrainLab() {
   const [now, setNow] = useState<Tile | null>(null)
   const [headline, setHeadline] = useState<string | null>(null)
   const [thoughts, setThoughts] = useState<Thought[]>([])
-  const [ops, setOps] = useState(0)
+  const [forecasts, setForecasts] = useState<number | null>(null)
   const tIdx = useRef(0), nIdx = useRef(0), gIdx = useRef(0), tid = useRef(0)
 
   const push = (text: string, color: string) => setThoughts((p) => [{ id: tid.current++, text, color }, ...p].slice(0, 26))
@@ -35,6 +35,7 @@ export default function BrainLab() {
       fetch('/api/market-brain').then((r) => r.json()).then((d) => { if (d?.tiles?.length) setTiles(d.tiles) }).catch(() => {})
       fetch('/api/track-record').then((r) => r.json()).then((d) => { if (d?.stats) setGraded({ wins: d.stats.wins, total: d.stats.total, recent: d.recent || [] }) }).catch(() => {})
       fetch('/api/news').then((r) => r.json()).then((d) => { const arr = (d?.news || d || []).map((n: { headline?: string; title?: string }) => n.headline || n.title).filter(Boolean); if (arr.length) setNews(arr.slice(0, 30)) }).catch(() => {})
+      fetch('/api/stats').then((r) => r.json()).then((d) => { if (typeof d?.forecasts === 'number') setForecasts(d.forecasts) }).catch(() => {})
     }
     loadSlow(); const id = setInterval(loadSlow, 45000); return () => clearInterval(id)
   }, [])
@@ -47,7 +48,6 @@ export default function BrainLab() {
         setNow(t)
         push(`▶ forecasting $${t.ticker} → ${t.pct >= 0 ? '+' : ''}${t.pct}%`, t.pct >= 0 ? GREEN : RED)
       }
-      setOps((o) => o + Math.floor(180 + Math.random() * 240))
     }, 1400)
     return () => clearInterval(id)
   }, [tiles])
@@ -86,7 +86,7 @@ export default function BrainLab() {
         <div>
           <div style={{ fontFamily: mono, fontSize: 11, letterSpacing: '0.28em', color: CYAN, display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 7, height: 7, borderRadius: 99, background: GREEN, animation: 'br-blink 1.2s infinite' }} /> THE BRAIN · LIVE</div>
           <h1 style={{ fontFamily: 'var(--font-display),system-ui,sans-serif', fontWeight: 700, letterSpacing: '-0.04em', fontSize: 'clamp(1.5rem,3.4vw,2.6rem)', marginTop: 8, lineHeight: 1 }}>See what it&apos;s thinking, right now.</h1>
-          <div style={{ fontFamily: mono, fontSize: 11.5, color: MUTE, marginTop: 8 }}>{ops.toLocaleString()} synaptic ops · {vitals?.arch ?? '11→16→12→1'}</div>
+          <div style={{ fontFamily: mono, fontSize: 11.5, color: MUTE, marginTop: 8 }}>{forecasts != null ? `${forecasts.toLocaleString()} real forecasts logged` : 'live'} · {vitals?.arch ?? '11→16→12→1'}</div>
         </div>
         <Link href="/labs" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: MUTE, textDecoration: 'none', ...glass, padding: '8px 14px' }}><ArrowLeft size={14} /> Labs</Link>
       </div>
