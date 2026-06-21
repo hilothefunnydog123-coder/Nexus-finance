@@ -490,7 +490,7 @@ export default function DevelopersPage() {
           DEVELOPERS · API v1
         </div>
         <div style={{ display: 'flex', gap: 20, marginLeft: 'auto', alignItems: 'center' }}>
-          {[['Company', '/company'], ['Research', '/research'], ['Platform', '/app']].map(([l, h]) =>
+          {[['Company', '/company'], ['Research', '/research'], ['Platform', '/brainstock']].map(([l, h]) =>
             <Link key={l} href={h} className="nav-link">{l}</Link>
           )}
           {user && (

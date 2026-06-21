@@ -77,7 +77,7 @@ function Nav() {
             {label}
           </Link>
         ))}
-        <Link href="/app" style={{
+        <Link href="/brainstock" style={{
           fontSize:12, fontWeight:700, color:'#030a10',
           background:'linear-gradient(135deg,#00d4aa,#1e90ff)',
           textDecoration:'none', padding:'7px 16px', borderRadius:7,
@@ -228,7 +228,7 @@ export default function CompanyPage() {
           YN Finance Corp. is an AI trading intelligence platform on a mission to democratize the institutional tools Wall Street has kept from retail traders. Founded in 2024. Age 14.
         </p>
         <div className="fade-up-3" style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
-          <Link href="/app" style={{ fontSize:14, fontWeight:700, color:'#030a10', background:'linear-gradient(135deg,#00d4aa,#1e90ff)', textDecoration:'none', padding:'14px 28px', borderRadius:10 }}>
+          <Link href="/brainstock" style={{ fontSize:14, fontWeight:700, color:'#030a10', background:'linear-gradient(135deg,#00d4aa,#1e90ff)', textDecoration:'none', padding:'14px 28px', borderRadius:10 }}>
             Open Platform →
           </Link>
           <Link href="/courses" style={{ fontSize:14, fontWeight:600, color:'#00d4aa', border:'1px solid rgba(0,212,170,.3)', textDecoration:'none', padding:'14px 28px', borderRadius:10, background:'rgba(0,212,170,.06)' }}>
@@ -356,7 +356,7 @@ export default function CompanyPage() {
           <h2 style={{ fontSize:36, fontWeight:900, color:'#e8f4f8', letterSpacing:'-0.02em', marginBottom:16 }}>Join the traders who already have the edge.</h2>
           <p style={{ fontSize:16, color:'#7a9aaa', marginBottom:40, lineHeight:1.7 }}>Free to start. Nine intelligence tools. Built by traders, for traders.</p>
           <div className="cta-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, maxWidth:600, margin:'0 auto' }}>
-            <Link href="/app" style={{ fontSize:13, fontWeight:700, color:'#030a10', background:'linear-gradient(135deg,#00d4aa,#1e90ff)', textDecoration:'none', padding:'13px 20px', borderRadius:9, textAlign:'center' }}>
+            <Link href="/brainstock" style={{ fontSize:13, fontWeight:700, color:'#030a10', background:'linear-gradient(135deg,#00d4aa,#1e90ff)', textDecoration:'none', padding:'13px 20px', borderRadius:9, textAlign:'center' }}>
               Open Platform
             </Link>
             <Link href="/courses" style={{ fontSize:13, fontWeight:600, color:'#e8f4f8', border:'1px solid rgba(255,255,255,.15)', textDecoration:'none', padding:'13px 20px', borderRadius:9, textAlign:'center', background:'rgba(255,255,255,.04)' }}>

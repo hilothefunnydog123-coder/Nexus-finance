@@ -109,9 +109,9 @@ function SectionContent({ section, onComplete, color, instructor }: { section: S
           <span className="text-sm font-bold text-[#ffa502] uppercase tracking-wider">Practice Exercise</span>
         </div>
         <p className="text-[13px] text-[#cdd6f4] leading-relaxed mb-4">{c.instructions}</p>
-        <Link href="/app" target="_blank"
+        <Link href="/brainstock" target="_blank"
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#ffa502] text-[#040c14] font-bold text-sm rounded-lg hover:bg-[#ffb733] transition-colors no-underline">
-          Open Trading Terminal <ArrowRight size={13} />
+          Open BrainStock <ArrowRight size={13} />
         </Link>
       </div>
       <TradeLogBlock strategy={instructor} color={color} minTrades={2} onComplete={onComplete} />
@@ -274,8 +274,8 @@ function CoursePageInner({ params }: { params: Promise<{ slug: string }> }) {
               <Link href="/courses" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: color, color: '#040c14', fontWeight: 800, textDecoration: 'none', padding: '14px', borderRadius: 12, fontSize: 14 }}>
                 <BookOpen size={15} /> Browse Next Course
               </Link>
-              <Link href="/app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#1e90ff20', color: '#1e90ff', fontWeight: 700, textDecoration: 'none', padding: '13px', borderRadius: 12, fontSize: 13, border: '1px solid #1e90ff30' }}>
-                Practice in Terminal →
+              <Link href="/brainstock" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#1e90ff20', color: '#1e90ff', fontWeight: 700, textDecoration: 'none', padding: '13px', borderRadius: 12, fontSize: 13, border: '1px solid #1e90ff30' }}>
+                Practice in BrainStock →
               </Link>
               <button onClick={() => setShowCelebration(false)} style={{ fontSize: 12, color: '#4a5e7a', background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }}>
                 Review course ↓

@@ -140,29 +140,11 @@ export default function MobilePage() {
         </div>
       </div>
 
-      {/* Enter Now Button */}
-      <div style={{ padding: '14px 16px 0' }}>
-        <Link href="/arena" style={{ textDecoration: 'none' }}>
-          <button style={{
-            width: '100%', background: GREEN, color: '#000',
-            border: 'none', borderRadius: 14, padding: '18px 0',
-            fontSize: 18, fontWeight: 800, letterSpacing: 0.5,
-            cursor: 'pointer', minHeight: 58,
-            boxShadow: `0 4px 24px rgba(34,197,94,0.35)`,
-            display: 'block',
-          }}>
-            ENTER NOW
-          </button>
-        </Link>
-      </div>
-
       {/* Quick Actions */}
       <div style={{ padding: '16px 16px 0' }}>
         <div style={{ display: 'flex', gap: 10 }}>
           {[
-            { icon: '📊', label: 'Trade', href: '/app' },
-            { icon: '📺', label: 'Watch', href: '/arena/watch' },
-            { icon: '🏆', label: 'Board', href: '/arena/leaderboard' },
+            { icon: '📊', label: 'Trade', href: '/brainstock' },
             { icon: '💰', label: 'Courses', href: '/courses' },
           ].map(({ icon, label, href }) => (
             <Link key={label} href={href} style={{ textDecoration: 'none', flex: 1 }}>
@@ -215,14 +197,6 @@ export default function MobilePage() {
               </div>
             </div>
           ))}
-          <Link href="/arena/leaderboard" style={{ textDecoration: 'none' }}>
-            <div style={{
-              padding: '12px 16px', textAlign: 'center',
-              fontSize: 13, color: GREEN, fontWeight: 600, cursor: 'pointer',
-            }}>
-              View Full Leaderboard →
-            </div>
-          </Link>
         </div>
       </div>
 
@@ -264,10 +238,8 @@ export default function MobilePage() {
       }}>
         {[
           { icon: '🏠', label: 'Home', href: '/mobile', active: true },
-          { icon: '⚔️', label: 'Arena', href: '/arena', active: false },
-          { icon: '📊', label: 'Trade', href: '/app', active: false },
-          { icon: '🏆', label: 'Rank', href: '/arena/leaderboard', active: false },
-          { icon: '👤', label: 'Profile', href: '/app', active: false },
+          { icon: '📊', label: 'Trade', href: '/brainstock', active: false },
+          { icon: '👤', label: 'Profile', href: '/brainstock', active: false },
         ].map(({ icon, label, href, active }) => (
           <Link key={label} href={href} style={{ textDecoration: 'none', flex: 1 }}>
             <div style={{

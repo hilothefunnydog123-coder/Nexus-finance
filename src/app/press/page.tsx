@@ -77,7 +77,7 @@ function Nav() {
             {label}
           </Link>
         ))}
-        <Link href="/app" style={{
+        <Link href="/brainstock" style={{
           fontSize:12, fontWeight:700, color:'#030a10',
           background:'linear-gradient(135deg,#00d4aa,#1e90ff)',
           textDecoration:'none', padding:'7px 16px', borderRadius:7,

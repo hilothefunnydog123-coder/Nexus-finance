@@ -82,8 +82,8 @@ export default function CoursesPage() {
           <span style={{ color: '#00d4aa', fontSize: 13, fontWeight: 700 }}>Courses</span>
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <Link href="/app" style={{ fontSize: 12, fontWeight: 700, color: '#1e90ff', textDecoration: 'none', padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(30,144,255,0.3)', background: 'rgba(30,144,255,0.08)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              ⚡ Terminal
+            <Link href="/brainstock" style={{ fontSize: 12, fontWeight: 700, color: '#1e90ff', textDecoration: 'none', padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(30,144,255,0.3)', background: 'rgba(30,144,255,0.08)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              ⚡ BrainStock
             </Link>
             <Link href="/quiz" style={{ fontSize: 12, fontWeight: 700, color: '#040c14', background: '#00d4aa', textDecoration: 'none', padding: '7px 16px', borderRadius: 8, boxShadow: '0 0 16px rgba(0,212,170,0.3)' }}>
               Find My Type →

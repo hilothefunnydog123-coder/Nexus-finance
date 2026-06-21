@@ -1133,7 +1133,7 @@ export default function AIStocksPage() {
           <span style={{fontWeight:900,fontSize:13,color:'#00ff88',letterSpacing:'2px',textShadow:'0 0 12px #00ff88'}}>YN_FINANCE</span>
         </Link>
         <div className="hide-sm" style={{display:'flex',gap:28}}>
-          {[['INTEL','/intelligence'],['DAILY','/daily'],['PERFORMANCE','/performance'],['COURSES','/courses'],['TERMINAL','/app']].map(([l,h])=>(
+          {[['INTEL','/intelligence'],['DAILY','/daily'],['PERFORMANCE','/performance'],['COURSES','/courses']].map(([l,h])=>(
             <Link key={l} href={h} className="nav-link">{l}</Link>
           ))}
         </div>
@@ -1141,7 +1141,7 @@ export default function AIStocksPage() {
           <div style={{fontSize:10,color:'#00ff8870',fontFamily:'monospace'}}>
             <span style={{animation:'blink 1s infinite'}}>█</span> SYSTEM ONLINE
           </div>
-          <Link href="/app" style={{background:'transparent',border:'1px solid #00ff88',color:'#00ff88',padding:'7px 18px',borderRadius:2,fontSize:11,fontWeight:700,textDecoration:'none',letterSpacing:'1px',boxShadow:'0 0 16px #00ff8830',transition:'all .2s'}}>LAUNCH →</Link>
+          <Link href="/brainstock" style={{background:'transparent',border:'1px solid #00ff88',color:'#00ff88',padding:'7px 18px',borderRadius:2,fontSize:11,fontWeight:700,textDecoration:'none',letterSpacing:'1px',boxShadow:'0 0 16px #00ff8830',transition:'all .2s'}}>LAUNCH →</Link>
         </div>
       </nav>
 

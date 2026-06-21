@@ -246,7 +246,6 @@ export default function AlgorithmsPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: '#00d4aa', background: 'rgba(0,212,170,.1)', border: '1px solid rgba(0,212,170,.3)', borderRadius: 6, padding: '3px 10px', fontFamily: 'monospace', letterSpacing: '0.1em' }}>FREE</span>
-          <Link href="/app" style={{ fontSize: 12, color: '#6a90a8', textDecoration: 'none', fontFamily: 'monospace', letterSpacing: '0.08em', padding: '6px 12px', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6 }}>Open Terminal →</Link>
         </div>
       </nav>
 

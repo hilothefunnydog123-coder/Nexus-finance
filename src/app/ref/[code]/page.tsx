@@ -78,7 +78,7 @@ export default function ReferralPage() {
           ))}
         </div>
 
-        <Link href="/app" style={{
+        <Link href="/brainstock" style={{
           display: 'inline-flex', alignItems: 'center', gap: 10,
           background: 'linear-gradient(135deg, #00d4aa, #1e90ff)',
           color: '#040c14', fontWeight: 900, textDecoration: 'none',

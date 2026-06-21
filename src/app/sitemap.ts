@@ -23,8 +23,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/compare`,           lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${base}/methodology`,       lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${base}/affiliates`,        lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
-    { url: `${base}/app`,               lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
-    { url: `${base}/arena`,             lastModified: now, changeFrequency: 'daily',   priority: 0.8 },
     { url: `${base}/intelligence`,      lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${base}/agents`,            lastModified: now, changeFrequency: 'daily',   priority: 0.8 },
     { url: `${base}/analyzer`,          lastModified: now, changeFrequency: 'weekly',  priority: 0.7 },
@@ -36,12 +34,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Daily Intel
     { url: `${base}/daily`,             lastModified: now, changeFrequency: 'daily',   priority: 0.7 },
     { url: `${base}/daily/subscribe`,   lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
-
-    // Arena sub-pages
-    { url: `${base}/arena/how-it-works`,lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${base}/arena/schedule`,    lastModified: now, changeFrequency: 'daily',   priority: 0.6 },
-    { url: `${base}/arena/discover`,    lastModified: now, changeFrequency: 'daily',   priority: 0.6 },
-    { url: `${base}/arena/creator`,     lastModified: now, changeFrequency: 'weekly',  priority: 0.5 },
 
     // Intelligence / Research
     { url: `${base}/intel`,             lastModified: now, changeFrequency: 'daily',   priority: 0.7 },

@@ -661,7 +661,6 @@ export default function IntelligencePage() {
         </div>
         <div style={{display:'flex',gap:20,marginLeft:'auto'}}>
           <Link href="/analyzer" className="nav-link">Trade Analyzer</Link>
-          <Link href="/app"      className="nav-link">Terminal</Link>
         </div>
         {active&&(
           <button onClick={handleBack} style={{marginLeft:8,background:'transparent',border:`1px solid ${acl}35`,color:acl,padding:'6px 16px',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.8px',transition:'all .2s'}}>

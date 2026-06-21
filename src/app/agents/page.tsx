@@ -482,8 +482,8 @@ export default function AgentsPage() {
           <h2 style={{ fontSize:28,fontWeight:900,letterSpacing:'-0.02em',color:'#e8f4f8',marginBottom:16 }}>Be first when signals converge.</h2>
           <p style={{ fontSize:15,color:'#7a9aaa',lineHeight:1.7,marginBottom:40 }}>When two or more agents flag the same ticker at the same time, you get the alert before the crowd reacts — with a plain-English briefing on exactly what to do.</p>
           <div style={{ display:'flex',gap:14,justifyContent:'center',flexWrap:'wrap' }}>
-            <Link href="/app" style={{ display:'inline-flex',alignItems:'center',gap:8,background:'linear-gradient(135deg,#ff2d78,#a855f7)',color:'#fff',fontWeight:800,fontSize:14,letterSpacing:'0.04em',padding:'13px 28px',borderRadius:10,textDecoration:'none',boxShadow:'0 0 30px rgba(255,45,120,.2)' }}>
-              Open Trading Terminal →
+            <Link href="/brainstock" style={{ display:'inline-flex',alignItems:'center',gap:8,background:'linear-gradient(135deg,#ff2d78,#a855f7)',color:'#fff',fontWeight:800,fontSize:14,letterSpacing:'0.04em',padding:'13px 28px',borderRadius:10,textDecoration:'none',boxShadow:'0 0 30px rgba(255,45,120,.2)' }}>
+              Open BrainStock →
             </Link>
             <Link href="/intelligence" style={{ display:'inline-flex',alignItems:'center',gap:8,background:'rgba(255,255,255,.06)',color:'#e8f4f8',fontWeight:700,fontSize:14,letterSpacing:'0.04em',padding:'13px 28px',borderRadius:10,textDecoration:'none',border:'1px solid rgba(255,255,255,.12)' }}>
               Intelligence Suite →
