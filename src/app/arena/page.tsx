@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Trophy, Eye, Zap, ArrowRight, Radio, BarChart2, TrendingUp, Users, DollarSign } from 'lucide-react'
+import { Trophy, Eye, ArrowRight, Radio, BarChart2, TrendingUp, Users, DollarSign } from 'lucide-react'
 import TradingViewChart from '@/components/chart/TradingViewChart'
 import AdsterraBanner from '@/components/ads/AdsterraBanner'
+import LiveCount from '@/components/LiveCount'
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
 const BG  = '#040508'
@@ -39,12 +40,12 @@ const TRADERS = [
 ]
 
 const CONTESTS = [
-  { id:'daily-blitz',   name:'Daily Blitz',      fee:10,  max:500,  filled:390, allowed:'All Markets',  c: G,   tier:'STANDARD', tagline:'Best for new traders'                },
-  { id:'crypto-night',  name:'Crypto Night',      fee:25,  max:250,  filled:188, allowed:'Crypto Only',  c: PU,  tier:'PREMIUM',  tagline:'High volatility, big swings'          },
-  { id:'pro-showdown',  name:'Pro Showdown',      fee:100, max:100,  filled:44,  allowed:'All Markets',  c: GD,  tier:'ELITE',    tagline:'Veterans only. Serious money.'        },
-  { id:'futures-arena', name:'Futures Arena',     fee:50,  max:150,  filled:67,  allowed:'Futures Only', c: BL,  tier:'PREMIUM',  tagline:'ES, NQ, GC, CL — big leverage'       },
-  { id:'h2h-duel',      name:'H2H Duel',          fee:10,  max:2,    filled:1,   allowed:'All Markets',  c: '#f97316', tier:'1v1', tagline:'You vs. one trader. Winner takes $18.' },
-  { id:'weekly-mega',   name:'Weekly Mega',       fee:25,  max:1000, filled:712, allowed:'All Markets',  c: GD,  tier:'MEGA',     tagline:'$22,000 pool. Top 200 paid.'          },
+  { id:'daily-blitz',   name:'Daily Blitz',      fee:10,  max:500,  filled:0, allowed:'All Markets',  c: G,   tier:'STANDARD', tagline:'Best for new traders'                },
+  { id:'crypto-night',  name:'Crypto Night',      fee:25,  max:250,  filled:0, allowed:'Crypto Only',  c: PU,  tier:'PREMIUM',  tagline:'High volatility, big swings'          },
+  { id:'pro-showdown',  name:'Pro Showdown',      fee:100, max:100,  filled:0, allowed:'All Markets',  c: GD,  tier:'ELITE',    tagline:'Veterans only. Serious money.'        },
+  { id:'futures-arena', name:'Futures Arena',     fee:50,  max:150,  filled:0, allowed:'Futures Only', c: BL,  tier:'PREMIUM',  tagline:'ES, NQ, GC, CL — big leverage'       },
+  { id:'h2h-duel',      name:'H2H Duel',          fee:10,  max:2,    filled:0, allowed:'All Markets',  c: '#f97316', tier:'1v1', tagline:'You vs. one trader. Winner takes the pot.' },
+  { id:'weekly-mega',   name:'Weekly Mega',       fee:25,  max:1000, filled:0, allowed:'All Markets',  c: GD,  tier:'MEGA',     tagline:'Biggest field. Top 20% paid.'          },
 ]
 
 const PRIZE_WEIGHTS = [0.30, 0.18, 0.12, 0.08, 0.06, 0.03, 0.03, 0.03, 0.03, 0.03]
@@ -78,12 +79,12 @@ const TICKER_BASE    = [582.40, 494.20, 68420.00, 3840.00, 1.0812, 5824.00]
 const TICKER_CHANGES = [0.84, 1.12, -1.43, 2.31, 0.07, 0.91]
 
 const BREAKING_ALERTS = [
-  { text:"Marcus T. just hit +18.4% — leads the board", icon:"🔥", type:'win'   as const },
-  { text:"Sarah K. moved up 2 spots — now #2",          icon:"📈", type:'rank'  as const },
-  { text:"Pro Showdown filling fast — 12 spots left",   icon:"⚡", type:'warn'  as const },
-  { text:"Devon P. cracked +11% — entering prize zone", icon:"🔥", type:'win'   as const },
-  { text:"Weekly Mega pool crossed $15,600",            icon:"💰", type:'win'   as const },
-  { text:"Aisha B. is on a 3-contest win streak",       icon:"🔥", type:'win'   as const },
+  { text:"$10 entry · $10,000 simulated account",        icon:"⚡", type:'win'   as const },
+  { text:"Top 20% always cash — paid via Stripe",        icon:"💰", type:'rank'  as const },
+  { text:"6 hours. Long or short. P&L% is the score.",   icon:"📈", type:'warn'  as const },
+  { text:"Every result builds your public track record", icon:"🏆", type:'win'   as const },
+  { text:"Prize pool is 88% of all entry fees",          icon:"💰", type:'win'   as const },
+  { text:"Stocks, forex, futures, crypto — your call",   icon:"⚡", type:'win'   as const },
 ]
 
 type BreakingAlert = { text: string; icon: string; type: 'win' | 'rank' | 'warn' }
@@ -102,15 +103,6 @@ function PulseDot({ c = RE }: { c?: string }) {
     <span style={{ position:'relative', display:'inline-flex', width:8, height:8, flexShrink:0 }}>
       <span style={{ position:'absolute', inset:0, borderRadius:'50%', background:c, opacity:0.4, animation:'yn-ping 1.2s ease-in-out infinite' }} />
       <span style={{ position:'relative', borderRadius:'50%', background:c, width:'100%', height:'100%' }} />
-    </span>
-  )
-}
-
-function LiveBadge() {
-  return (
-    <span style={{ display:'inline-flex', alignItems:'center', gap:5, background:`${RE}18`, border:`1px solid ${RE}45`, borderRadius:4, padding:'2px 8px' }}>
-      <PulseDot c={RE} />
-      <span style={{ fontSize:9, fontWeight:900, color:RE, letterSpacing:'0.18em', fontFamily:MONO }}>LIVE</span>
     </span>
   )
 }
@@ -167,18 +159,18 @@ function MarketTicker({ tick }: { tick: number }) {
               <span style={{ fontSize:10, fontWeight:700, color: p.chg >= 0 ? G : RE, fontFamily:MONO }}>{p.chg >= 0 ? '+':''}{p.chg}%</span>
             </span>
           ))}
-          {/* winner feed */}
+          {/* model feed */}
           <span style={{ display:'inline-flex', alignItems:'center', gap:10, padding:'0 28px', borderRight:`1px solid ${BO}` }}>
             <PulseDot c={G} />
-            <span style={{ fontSize:11, fontWeight:700, color:G, letterSpacing:'0.04em' }}>MARCUS T. +18.4% · DAILY BLITZ LEADER</span>
+            <span style={{ fontSize:11, fontWeight:700, color:G, letterSpacing:'0.04em' }}>$10 ENTRY · $10,000 SIMULATED ACCOUNT</span>
           </span>
           <span style={{ display:'inline-flex', alignItems:'center', gap:10, padding:'0 28px', borderRight:`1px solid ${BO}` }}>
             <PulseDot c={GD} />
-            <span style={{ fontSize:11, fontWeight:700, color:GD, letterSpacing:'0.04em' }}>$47,320 PAID TO TRADERS THIS MONTH</span>
+            <span style={{ fontSize:11, fontWeight:700, color:GD, letterSpacing:'0.04em' }}>TOP 20% ALWAYS CASH · PUBLIC TRACK RECORD</span>
           </span>
           <span style={{ display:'inline-flex', alignItems:'center', gap:10, padding:'0 28px' }}>
             <PulseDot c={BL} />
-            <span style={{ fontSize:11, fontWeight:700, color:MT, letterSpacing:'0.04em' }}>390 TRADERS COMPETING IN TODAY'S BLITZ</span>
+            <span style={{ fontSize:11, fontWeight:700, color:MT, letterSpacing:'0.04em' }}>6 HOURS · LONG OR SHORT · YOUR P&L% IS THE SCORE</span>
           </span>
         </div>
       </div>
@@ -207,7 +199,7 @@ function BreakingAlertBar({ alert, onDismiss }: { alert: BreakingAlert; onDismis
     }}>
       <span style={{ fontSize:16 }}>{alert.icon}</span>
       <span style={{ fontSize:13, fontWeight:800, color:text, letterSpacing:-0.2 }}>{alert.text}</span>
-      <span style={{ marginLeft:'auto', fontSize:10, color:`${text}80`, fontWeight:700 }}>LIVE</span>
+      <span style={{ marginLeft:'auto', fontSize:10, color:`${text}80`, fontWeight:700 }}>ARENA</span>
     </div>
   )
 }
@@ -219,18 +211,17 @@ function TournamentBanner({ contest, onEnter, entering }: {
   onEnter: () => void
   entering: boolean
 }) {
-  const pool = calcPool(contest.filled, contest.fee)
+  const pool = calcPool(contest.max, contest.fee)
   return (
     <div style={{ background:RA, borderBottom:`1px solid ${BO}`, height:40, display:'flex', alignItems:'center', overflow:'hidden' }}>
       <div style={{ maxWidth:1200, margin:'0 auto', padding:'0 24px', width:'100%', display:'flex', alignItems:'center', gap:16 }}>
-        <LiveBadge />
         <span style={{ fontSize:11, fontWeight:800, color:TE, letterSpacing:'0.04em' }}>{contest.name.toUpperCase()}</span>
         <span style={{ fontSize:10, color:DM }}>·</span>
         <span style={{ fontSize:11, color:MT }}>Closes <Countdown h={3} /></span>
         <span style={{ fontSize:10, color:DM }}>·</span>
-        <span style={{ fontSize:11, fontWeight:800, color:GD, fontFamily:MONO }}>${pool.toLocaleString()} pool</span>
+        <span style={{ fontSize:11, fontWeight:800, color:GD, fontFamily:MONO }}>${pool.toLocaleString()} max pool</span>
         <span style={{ fontSize:10, color:DM }}>·</span>
-        <span style={{ fontSize:10, color:MT }}>{contest.filled} traders</span>
+        <span style={{ fontSize:10, color:MT }}>{contest.max} spots</span>
         <button
           onClick={onEnter}
           disabled={entering}
@@ -254,7 +245,7 @@ type BoardEntry = { name: string; init: string; base: number; c: string; ai?: bo
 
 function Scoreboard({ board, inMoney, tick }: { board: BoardEntry[]; inMoney: number; tick: number }) {
   const mainContest = CONTESTS[0]!
-  const pool = calcPool(mainContest.filled, mainContest.fee)
+  const pool = calcPool(mainContest.max, mainContest.fee)
   const medalColor = (i: number) => i === 0 ? GD : i === 1 ? '#94a3b8' : i === 2 ? '#b45309' : BO
   const medalBg    = (i: number) => i === 0 ? `${GD}22` : i === 1 ? '#94a3b822' : i === 2 ? '#b4530922' : 'transparent'
 
@@ -262,13 +253,11 @@ function Scoreboard({ board, inMoney, tick }: { board: BoardEntry[]; inMoney: nu
     <div>
       {/* Board header — ESPN style */}
       <div style={{ background:RA, border:`1px solid ${BO}`, borderBottom:'none', borderRadius:'10px 10px 0 0', padding:'12px 18px', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-        <LiveBadge />
+        <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:`${BL}15`, border:`1px solid ${BL}30`, borderRadius:4, padding:'2px 8px', fontSize:10, fontWeight:700, color:BL }}>Example</span>
         <span style={{ fontSize:14, fontWeight:900, color:TE, letterSpacing:-0.3 }}>DAILY BLITZ</span>
         <span style={{ fontSize:11, color:DM }}>·</span>
-        <span style={{ fontSize:11, color:MT }}><Countdown h={3} /> left</span>
-        <span style={{ fontSize:11, color:DM }}>·</span>
-        <span style={{ fontSize:11, color:MT, fontFamily:MONO }}>{board.length} TRADERS</span>
-        <span style={{ marginLeft:'auto', fontSize:10, color:DM, fontFamily:MONO }}>updates every 3s</span>
+        <span style={{ fontSize:11, color:MT }}>Sample board — this is how rankings look during a contest</span>
+        <span style={{ marginLeft:'auto', fontSize:10, color:DM, fontFamily:MONO }}>simulated · prizes shown if full</span>
       </div>
 
       {/* Column headers */}
@@ -341,7 +330,7 @@ function Scoreboard({ board, inMoney, tick }: { board: BoardEntry[]; inMoney: nu
       {/* Footer */}
       <div style={{ padding:'10px 18px', background:RA, border:`1px solid ${BO}`, borderTop:'none', borderRadius:'0 0 10px 10px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <span style={{ fontSize:11, color:DM }}>
-          <span style={{ color:G, fontWeight:700 }}>{inMoney}</span> traders currently cashing · top {Math.round((inMoney / board.length) * 100)}% · updates every 3s
+          Example: top <span style={{ color:G, fontWeight:700 }}>{Math.round((inMoney / board.length) * 100)}%</span> ({inMoney} of {board.length}) finish in the money
         </span>
         <span style={{ fontSize:10, color:DM, fontFamily:MONO }}>tick #{tick}</span>
       </div>
@@ -356,7 +345,7 @@ function PrizePanel({ contest, onEnter, entering }: {
   onEnter: (c: typeof CONTESTS[0]) => void
   entering: string | null
 }) {
-  const pool = calcPool(contest.filled, contest.fee)
+  const pool = calcPool(contest.max, contest.fee)
   return (
     <div style={{ background:SU, border:`1px solid ${BO}`, borderLeft:`4px solid ${contest.c}`, borderRadius:10, overflow:'hidden' }}>
       {/* Header */}
@@ -368,7 +357,7 @@ function PrizePanel({ contest, onEnter, entering }: {
 
       {/* Prize pool big number */}
       <div style={{ padding:'20px', borderBottom:`1px solid ${BO}` }}>
-        <div style={{ fontSize:10, color:DM, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:6 }}>Prize Pool</div>
+        <div style={{ fontSize:10, color:DM, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:6 }}>Max Prize Pool (if full)</div>
         <div style={{ fontSize:36, fontWeight:900, color:GD, fontFamily:MONO, letterSpacing:-1 }}>${pool.toLocaleString()}</div>
         <div style={{ fontSize:11, color:DM, marginTop:4 }}>1st place: <span style={{ color:GD, fontWeight:800, fontFamily:MONO }}>${calcPrize(1, pool).toLocaleString()}</span></div>
       </div>
@@ -397,7 +386,7 @@ function PrizePanel({ contest, onEnter, entering }: {
       {/* Fill bar */}
       <div style={{ padding:'14px 20px', borderBottom:`1px solid ${BO}` }}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-          <span style={{ fontSize:10, color:DM }}>Contest fill</span>
+          <span style={{ fontSize:10, color:DM }}>Spots filled</span>
           <span style={{ fontSize:10, fontFamily:MONO, color:MT }}>{contest.filled}/{contest.max}</span>
         </div>
         <div style={{ height:4, background:RA, borderRadius:2, overflow:'hidden' }}>
@@ -439,9 +428,9 @@ function ContestCard({ c, selected, onSelect, onEnter, entering }: {
   onEnter: (e: React.MouseEvent) => void
   entering: boolean
 }) {
-  const pool = calcPool(c.filled, c.fee)
+  const pool = calcPool(c.max, c.fee)
   const fill = Math.round((c.filled / c.max) * 100)
-  const late = fill > 90
+  const late = false
 
   return (
     <div
@@ -473,7 +462,7 @@ function ContestCard({ c, selected, onSelect, onEnter, entering }: {
 
       {/* Pool */}
       <div style={{ padding:'12px 16px 0' }}>
-        <div style={{ fontSize:9, color:DM, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:4 }}>Prize Pool</div>
+        <div style={{ fontSize:9, color:DM, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:4 }}>Max Pool (if full)</div>
         <div style={{ fontSize:24, fontWeight:900, color:GD, fontFamily:MONO, letterSpacing:-0.5, marginBottom:3 }}>${pool.toLocaleString()}</div>
         <div style={{ fontSize:11, color:DM }}>
           1st: <span style={{ color:GD, fontWeight:800, fontFamily:MONO }}>${calcPrize(1, pool).toLocaleString()}</span>
@@ -488,7 +477,7 @@ function ContestCard({ c, selected, onSelect, onEnter, entering }: {
           <div style={{ width:`${fill}%`, height:'100%', background: fill > 85 ? '#f97316' : c.c, transition:'width 1s', borderRadius:2 }} />
         </div>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <span style={{ fontSize:10, color:DM }}>{c.filled}/{c.max} entered {fill > 85 && <span style={{ color:'#f97316', fontWeight:700 }}>· filling fast</span>}</span>
+          <span style={{ fontSize:10, color:DM }}>{c.filled}/{c.max} spots filled</span>
           <span style={{ fontSize:10, color:DM, fontFamily:MONO }}>{fill}%</span>
         </div>
       </div>
@@ -520,12 +509,19 @@ function ContestCard({ c, selected, onSelect, onEnter, entering }: {
 function RecentPayouts() {
   return (
     <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:20 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8, flexWrap:'wrap', gap:8 }}>
         <div>
-          <SectionLabel><TrendingUp size={10} /> Verified Payouts</SectionLabel>
-          <div style={{ fontSize:20, fontWeight:900, color:TE, letterSpacing:-0.4 }}>Recent Winners</div>
+          <SectionLabel>
+            <TrendingUp size={10} />
+            <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:`${BL}15`, border:`1px solid ${BL}30`, borderRadius:4, padding:'2px 8px', fontSize:10, fontWeight:700, color:BL, letterSpacing:0 }}>Example</span>
+            What A Winning Card Looks Like
+          </SectionLabel>
+          <div style={{ fontSize:20, fontWeight:900, color:TE, letterSpacing:-0.4 }}>Sample Results</div>
         </div>
-        <span style={{ fontSize:12, color:MT, fontFamily:MONO }}>$47,320 paid this month</span>
+        <span style={{ fontSize:12, color:MT, fontFamily:MONO }}>Illustrative — payouts begin Q3 2026</span>
+      </div>
+      <div style={{ fontSize:12, color:DM, marginBottom:20, maxWidth:560, lineHeight:1.6 }}>
+        These are example cards showing how a finish gets displayed — names, returns and amounts are illustrative, not real payouts.
       </div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:10 }}>
         {PAYOUTS.map((p, i) => (
@@ -534,7 +530,7 @@ function RecentPayouts() {
               <div style={{ width:34, height:34, borderRadius:9, background:`${G}15`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:900, color:G, border:`1px solid ${G}25` }}>
                 {p.name.slice(0, 2).toUpperCase()}
               </div>
-              <span style={{ fontSize:9, color:DM, background:RA, padding:'3px 8px', borderRadius:4, border:`1px solid ${BO}` }}>{p.date}</span>
+              <span style={{ fontSize:9, color:BL, background:`${BL}15`, padding:'3px 8px', borderRadius:4, border:`1px solid ${BL}30`, fontWeight:700 }}>Example</span>
             </div>
             <div style={{ fontSize:14, fontWeight:800, color:TE, marginBottom:2 }}>{p.name}</div>
             <div style={{ fontSize:10, color:DM, marginBottom:12 }}>{p.contest}</div>
@@ -569,7 +565,6 @@ function ArenaInner() {
   const sp = useSearchParams()
   const [board, setBoard]       = useState(() => buildBoard(0))
   const [tick, setTick]         = useState(0)
-  const [viewers, setViewers]   = useState(3847)
   const [tab, setTab]           = useState<'competition' | 'streams' | 'leaderboard'>('competition')
   const [contest, setContest]   = useState(CONTESTS[0]!)
   const [stream, setStream]     = useState<typeof STREAMS[0] | null>(null)
@@ -583,7 +578,6 @@ function ArenaInner() {
       setTick(n => {
         const next = n + 1
         setBoard(buildBoard(next))
-        setViewers(v => Math.max(3000, v + Math.round((Math.random() - 0.48) * 8)))
         return next
       })
     }, 3000)
@@ -708,15 +702,15 @@ function ArenaInner() {
       {/* MARKET TICKER */}
       <MarketTicker tick={tick} />
 
-      {/* Live Stats Bar */}
+      {/* Stats Bar — honest product terms */}
       <div style={{ background: '#0d1117', borderBottom: `1px solid #21262d`, padding: '0 24px', overflow: 'hidden' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', height: 32, display: 'flex', alignItems: 'center', gap: 24, overflowX: 'auto' }}>
           {[
-            { label: 'TOURNAMENTS TODAY', value: '12', color: '#22c55e' },
-            { label: 'PRIZE POOL LIVE', value: '$31,240', color: '#f59e0b' },
-            { label: 'TRADERS COMPETING', value: '1,847', color: '#22c55e' },
-            { label: 'PAID OUT TODAY', value: '$4,420', color: '#f59e0b' },
-            { label: 'LARGEST WIN TODAY', value: '+312%', color: '#22c55e' },
+            { label: 'MEMBERS', value: <LiveCount metric="users" fallback="Open" />, color: '#22c55e' },
+            { label: 'ENTRY FROM', value: '$10', color: '#f59e0b' },
+            { label: 'STARTING ACCOUNT', value: '$10,000', color: '#22c55e' },
+            { label: 'PAYOUT POOL', value: '88% of fees', color: '#f59e0b' },
+            { label: 'TOP 20%', value: 'always cash', color: '#22c55e' },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
               <span style={{ fontSize: 9, color: '#484f58', letterSpacing: '0.12em', fontWeight: 700 }}>{label}</span>
@@ -739,11 +733,9 @@ function ArenaInner() {
             </div>
           </Link>
 
-          <div className="sm-hide"><LiveBadge /></div>
-
           <div style={{ fontSize:12, color:DM, display:'flex', alignItems:'center', gap:4 }} className="sm-hide">
-            <Eye size={10} color={MT} />
-            <span style={{ fontFamily:MONO, color:MT, fontSize:11 }}>{viewers.toLocaleString()}</span>
+            <Users size={10} color={MT} />
+            <span style={{ fontFamily:MONO, color:MT, fontSize:11 }}><LiveCount metric="users" fallback="Open" /> members</span>
           </div>
 
           {/* Tabs */}
@@ -805,10 +797,10 @@ function ArenaInner() {
               <div>
                 <div style={{ fontSize: 9, color: '#22c55e', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 6 }}>⚡ Featured Tournament</div>
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#f0f6fc', letterSpacing: -0.5 }}>Daily Blitz — All Markets</div>
-                <div style={{ fontSize: 13, color: '#8b949e', marginTop: 4 }}>390 traders · $4,400 prize pool · Closes at 4:00 PM ET</div>
+                <div style={{ fontSize: 13, color: '#8b949e', marginTop: 4 }}>Up to 500 spots · $4,400 max pool if full · Closes at 4:00 PM ET</div>
               </div>
               <div style={{ display: 'flex', gap: 16, marginLeft: 'auto', flexWrap: 'wrap' }}>
-                {([['1st Prize', '$1,320', '#f59e0b'], ['Top 20%', '78 traders', '#22c55e'], ['Entry', '$10', '#f0f6fc']] as [string, string, string][]).map(([l, v, c]) => (
+                {([['1st Prize (max)', '$1,320', '#f59e0b'], ['Paid', 'Top 20%', '#22c55e'], ['Entry', '$10', '#f0f6fc']] as [string, string, string][]).map(([l, v, c]) => (
                   <div key={l} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 9, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>{l}</div>
                     <div style={{ fontSize: 18, fontWeight: 900, color: c, fontFamily: 'monospace' }}>{v}</div>
@@ -869,10 +861,11 @@ function ArenaInner() {
               <AdsterraBanner />
             </div>
 
-            {/* Entry Feed */}
+            {/* Entry Feed — illustrative */}
             <div style={{ marginTop: 40, marginBottom: 40 }}>
-              <div style={{ fontSize: 10, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14, fontWeight: 700 }}>
-                🔴 Live Entries
+              <div style={{ fontSize: 10, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:`${BL}15`, border:`1px solid ${BL}30`, borderRadius:4, padding:'2px 8px', fontSize:10, fontWeight:700, color:BL, letterSpacing:0, textTransform:'none' }}>Example</span>
+                What the entry feed looks like
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {[
@@ -927,9 +920,12 @@ function ArenaInner() {
           <div style={{ paddingTop:8, animation:'yn-in 0.25s ease' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:28, flexWrap:'wrap', gap:12 }}>
               <div>
-                <SectionLabel><PulseDot c={RE} /> Live Broadcasts</SectionLabel>
-                <div style={{ fontSize:26, fontWeight:900, color:TE, letterSpacing:-0.5 }}>Live Streams</div>
-                <div style={{ fontSize:13, color:MT, marginTop:5 }}>Watch traders compete in real-time · Charts update every tick</div>
+                <SectionLabel>
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:`${BL}15`, border:`1px solid ${BL}30`, borderRadius:4, padding:'2px 8px', fontSize:10, fontWeight:700, color:BL, letterSpacing:0 }}>Example</span>
+                  Broadcast Preview
+                </SectionLabel>
+                <div style={{ fontSize:26, fontWeight:900, color:TE, letterSpacing:-0.5 }}>Streams</div>
+                <div style={{ fontSize:13, color:MT, marginTop:5 }}>How streams will look — sample traders on live charts. Real broadcasts open when traders go live.</div>
               </div>
               <Link href="/arena/creator" className="yn-btn yn-btn-ghost" style={{ fontSize:12 }}>
                 <Radio size={11} /> Stream &amp; earn 12%
@@ -979,7 +975,7 @@ function ArenaInner() {
                       <span style={{ fontSize:12, fontWeight:700, color:TE }}>{s.name}</span>
                     </div>
                     <div style={{ position:'absolute', top:8, right:8 }}>
-                      <LiveBadge />
+                      <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(4,5,8,0.85)', border:`1px solid ${BL}45`, borderRadius:4, padding:'2px 8px', fontSize:9, fontWeight:900, color:BL, letterSpacing:'0.12em', fontFamily:MONO }}>EXAMPLE</span>
                     </div>
                     <div style={{ position:'absolute', bottom:8, right:8, fontSize:16, fontWeight:900, color:s.pct >= 0 ? G : RE, fontFamily:MONO, background:'rgba(4,5,8,0.82)', borderRadius:6, padding:'4px 9px', transition:'color 0.3s' }}>
                       {s.pct >= 0 ? '+' : ''}{s.pct.toFixed(1)}%
@@ -1006,11 +1002,11 @@ function ArenaInner() {
             {/* Stat cards */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:12, marginBottom:40 }}>
               {([
-                ['$47,320', 'Paid Out', GD, <DollarSign key="ds" size={12} />],
-                ['3,847',   'Active Traders', G,  <Users key="us" size={12} />],
-                ['2,156',   'Tournaments Run', PU, <Trophy key="tr" size={12} />],
-                ['+912%',   'Biggest Return', BL, <TrendingUp key="tu" size={12} />],
-              ] as [string, string, string, React.ReactNode][]).map(([v, l, c, icon]) => (
+                [<LiveCount key="mem" metric="users" fallback="Open" />, 'Members', G,  <Users key="us" size={12} />],
+                ['$10',       'Entry From', GD, <DollarSign key="ds" size={12} />],
+                ['$10,000',   'Starting Account', PU, <Trophy key="tr" size={12} />],
+                ['Top 20%',   'Always Cash', BL, <TrendingUp key="tu" size={12} />],
+              ] as [React.ReactNode, string, string, React.ReactNode][]).map(([v, l, c, icon]) => (
                 <div key={l} style={{ background:SU, border:`1px solid ${BO}`, borderTop:`3px solid ${c}`, borderRadius:10, padding:'18px 18px' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
                     <span style={{ color:c }}>{icon}</span>
@@ -1022,8 +1018,13 @@ function ArenaInner() {
             </div>
 
             <div style={{ marginBottom:20 }}>
-              <SectionLabel><Trophy size={10} /> All-Time Rankings</SectionLabel>
+              <SectionLabel>
+                <Trophy size={10} />
+                <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:`${BL}15`, border:`1px solid ${BL}30`, borderRadius:4, padding:'2px 8px', fontSize:10, fontWeight:700, color:BL, letterSpacing:0 }}>Example</span>
+                All-Time Rankings
+              </SectionLabel>
               <div style={{ fontSize:22, fontWeight:900, color:TE, letterSpacing:-0.5 }}>Hall of Champions</div>
+              <div style={{ fontSize:12, color:DM, marginTop:6, maxWidth:560, lineHeight:1.6 }}>Sample board showing how all-time rankings will look. Real standings populate as tournaments run.</div>
             </div>
 
             <div style={{ background:SU, border:`1px solid ${BO}`, borderRadius:10, overflow:'hidden' }}>
@@ -1098,7 +1099,7 @@ function ArenaInner() {
               >{l}</Link>
             ))}
           </div>
-          <div style={{ fontSize:11, color:`${DM}` }}>Simulated trading · Real prizes · © 2026 YN Finance</div>
+          <div style={{ fontSize:11, color:`${DM}` }}>Simulated trading · Cash prizes from Q3 2026 · © 2026 YN Finance</div>
         </div>
       </div>
     </div>
