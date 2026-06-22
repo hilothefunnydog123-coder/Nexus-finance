@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { YNMark } from '@/components/YNLogo'
 import { ALGORITHMS, type AlgoMode, type Platform } from './data'
+import { MONTE_CARLO, MONTE_CARLO_META } from './montecarlo'
 
 // ── Bloomberg-style terminal chrome ───────────────────────────────────────────
 function TerminalClock() {
@@ -179,6 +180,103 @@ function StepGuide({ steps }: { steps: string[] }) {
   )
 }
 
+// ── Monte Carlo Lab leaderboard ────────────────────────────────────────────────
+function MonteCarloLab({ onSelect }: { onSelect: (id: string) => void }) {
+  const pc = (x: number) => (x * 100).toFixed(1) + '%'
+  const f2 = (x: number) => x.toFixed(2)
+  const medal = ['🥇', '🥈', '🥉']
+  const cols = ['#00d4aa', '#1e90ff', '#a855f7']
+  const top = MONTE_CARLO.slice(0, 3)
+
+  return (
+    <div style={{ padding: '0 24px 56px', maxWidth: 1100, margin: '0 auto' }} id="montecarlo">
+      <div style={{ border: '1px solid rgba(0,212,170,.22)', borderRadius: 20, overflow: 'hidden', background: 'linear-gradient(180deg,rgba(0,212,170,.05),rgba(255,255,255,.015))' }}>
+        {/* Header */}
+        <div style={{ padding: '26px 32px 22px', borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', color: '#00d4aa', fontFamily: 'monospace', marginBottom: 10 }}>
+            🎲 MONTE CARLO LAB · QUANT DESK
+          </div>
+          <h2 style={{ fontSize: 'clamp(22px,3.4vw,32px)', fontWeight: 900, letterSpacing: '-0.6px', color: '#e8f4f8', marginBottom: 10 }}>
+            We simulated 15 strategies through {MONTE_CARLO_META.trials.toLocaleString()} prop challenges each.
+          </h2>
+          <p style={{ fontSize: 14.5, color: '#6a90a8', lineHeight: 1.7, maxWidth: 760 }}>
+            Each strategy was run through a Monte Carlo of an FTMO-style evaluation —
+            <b style={{ color: '#9fc4d6' }}> {pc(MONTE_CARLO_META.riskPct)} risk/trade</b>, pass at
+            <b style={{ color: '#33ff99' }}> +{pc(MONTE_CARLO_META.profitTarget)}</b>, bust at
+            <b style={{ color: '#ff6b6b' }}> −{pc(MONTE_CARLO_META.maxDrawdown)}</b> trailing, over a {MONTE_CARLO_META.maxTrades}-trade window —
+            with a live edge haircut (slippage, missed fills, regime drift) applied to every strategy first.
+            Ranked by a composite of pass rate, expectancy, and risk of ruin.
+          </p>
+        </div>
+
+        {/* Podium */}
+        <div className="meta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, padding: '22px 32px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+          {top.map((r, i) => (
+            <button key={r.id} onClick={() => onSelect(r.id)} style={{ textAlign: 'left', cursor: 'pointer', background: `${cols[i]}0c`, border: `1px solid ${cols[i]}3a`, borderRadius: 14, padding: '16px 18px', transition: 'all .2s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 22 }}>{medal[i]}</span>
+                <span style={{ fontSize: 10, fontWeight: 800, color: cols[i], fontFamily: 'monospace', letterSpacing: '0.08em', background: `${cols[i]}18`, border: `1px solid ${cols[i]}33`, borderRadius: 5, padding: '2px 8px' }}>SCORE {f2(r.score)}</span>
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#e8f4f8', marginBottom: 8, lineHeight: 1.25 }}>{r.name}</div>
+              <div style={{ display: 'flex', gap: 14, fontSize: 12, fontFamily: 'monospace' }}>
+                <span style={{ color: '#33ff99' }}>{pc(r.passRate)} pass</span>
+                <span style={{ color: '#9fc4d6' }}>{f2(r.expR)}R/trade</span>
+                <span style={{ color: '#ff8a8a' }}>{pc(r.bustRate)} ruin</span>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Full table */}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'ui-monospace,monospace', fontSize: 12.5, minWidth: 720 }}>
+            <thead>
+              <tr style={{ color: '#4a6a7a', textAlign: 'right' }}>
+                {['#', 'STRATEGY', 'WIN*', 'R*', 'EXP(R)', 'PASS%', 'RUIN%', 'MED-RET', 'P95-DD', 'SCORE'].map((h, i) => (
+                  <th key={h} style={{ padding: '12px 16px', fontWeight: 700, letterSpacing: '0.06em', fontSize: 10, textAlign: i === 1 ? 'left' : 'right', borderBottom: '1px solid rgba(255,255,255,.08)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {MONTE_CARLO.map(r => {
+                const color = ALGORITHMS.find(a => a.id === r.id)?.color ?? '#6a90a8'
+                const passCol = r.passRate >= 0.8 ? '#33ff99' : r.passRate >= 0.7 ? '#ffc35c' : '#ff8a8a'
+                return (
+                  <tr key={r.id} onClick={() => onSelect(r.id)} style={{ cursor: 'pointer', textAlign: 'right', borderBottom: '1px solid rgba(255,255,255,.04)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,.03)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    <td style={{ padding: '11px 16px', color: r.rank <= 3 ? '#00d4aa' : '#5a7a8a', fontWeight: 800 }}>{r.rank}</td>
+                    <td style={{ padding: '11px 16px', textAlign: 'left' }}>
+                      <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: color, marginRight: 9, verticalAlign: 'middle' }} />
+                      <span style={{ color: '#dceaf2', fontWeight: 600 }}>{r.name}</span>
+                    </td>
+                    <td style={{ padding: '11px 16px', color: '#9fc4d6' }}>{f2(r.win)}</td>
+                    <td style={{ padding: '11px 16px', color: '#9fc4d6' }}>{f2(r.R)}</td>
+                    <td style={{ padding: '11px 16px', color: '#c8dce8', fontWeight: 700 }}>{f2(r.expR)}</td>
+                    <td style={{ padding: '11px 16px', color: passCol, fontWeight: 700 }}>{pc(r.passRate)}</td>
+                    <td style={{ padding: '11px 16px', color: '#ff8a8a' }}>{pc(r.bustRate)}</td>
+                    <td style={{ padding: '11px 16px', color: '#8aacbc' }}>{pc(r.medReturn)}</td>
+                    <td style={{ padding: '11px 16px', color: '#8aacbc' }}>{pc(r.p95MaxDD)}</td>
+                    <td style={{ padding: '11px 16px', color: '#00d4aa', fontWeight: 800 }}>{f2(r.score)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footnote */}
+        <div style={{ padding: '14px 32px 20px', fontSize: 11.5, color: '#4a6a7a', lineHeight: 1.65 }}>
+          * WIN / R are post-haircut (the values actually simulated), not the advertised targets. These are model
+          assumptions, not live backtests — validate each strategy on 6–12 months of real data before trading a funded
+          account. Re-run <span style={{ color: '#7a9aaa' }}>scripts/montecarlo-algos.mjs</span> to refresh.
+          Generated {MONTE_CARLO_META.generated}.
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function AlgorithmsPage() {
   const [selectedId, setSelectedId]   = useState('ict')
@@ -305,6 +403,9 @@ export default function AlgorithmsPage() {
           })}
         </div>
       </div>
+
+      {/* MONTE CARLO LAB */}
+      <MonteCarloLab onSelect={setSelectedId} />
 
       {/* DETAIL PANEL */}
       <div ref={detailRef} style={{ padding: '0 24px 80px', maxWidth: 1100, margin: '0 auto', scrollMarginTop: 80 }}>
