@@ -4119,7 +4119,7 @@ alertcondition(sweepHi or sweepLo,  "Liquidity Sweep", "Liquidity swept")`,
     assets: ['Futures (NQ/MNQ)', 'Indices'],
     timeframes: ['1m', '2m', '5m'],
     propFirms: ['Topstep', 'Apex', 'MyFundedFutures', 'Take Profit Trader'],
-    winTarget: '60–68% (≈1:1)',
+    winTarget: '64–72% (≈1:1, lunch-filtered)',
     riskPerTrade: 'ATR-based',
     color: '#00d4aa',
     indicatorOnly: true,
@@ -4148,6 +4148,8 @@ boxBars  = input.int(20,     "Trade-box width (bars)", minval=4)
 
 inSess  = not na(time(timeframe.period, sess, tz))
 newSess = inSess and not inSess[1]
+skipLunch = input.bool(true, "Skip lunch chop 11:30–13:30 ET", group="Setup")
+lunch = skipLunch and not na(time(timeframe.period, "1130-1330", tz))
 vwap = ta.vwap(hlc3)
 atr  = ta.atr(atrLen)
 upper = vwap + bandMult * atr
@@ -4160,8 +4162,8 @@ if newSess
     lDone := false
     sDone := false
 
-longSig  = inSess and (not lDone or not oneTrade) and low  < lower and close > lower and close > open
-shortSig = inSess and (not sDone or not oneTrade) and high > upper and close < upper and close < open
+longSig  = inSess and not lunch and (not lDone or not oneTrade) and low  < lower and close > lower and close > open
+shortSig = inSess and not lunch and (not sDone or not oneTrade) and high > upper and close < upper and close < open
 
 if longSig
     lDone := true
@@ -4214,7 +4216,7 @@ alertcondition(shortSig, "VWAP Rev Short", "NQ VWAP reversion SHORT")`,
     assets: ['Futures (NQ/MNQ)', 'Indices'],
     timeframes: ['1m', '5m', '15m'],
     propFirms: ['Topstep', 'Apex', 'MyFundedFutures', 'FTMO Futures'],
-    winTarget: '~50% (2:1 R:R)',
+    winTarget: '~55% (2:1, lunch-filtered)',
     riskPerTrade: 'ATR-buffered',
     color: '#1e90ff',
     indicatorOnly: true,
@@ -4246,7 +4248,9 @@ pdl = request.security(syminfo.tickerid, "D", low[1],  lookahead=barmerge.lookah
 atr = ta.atr(atrLen)
 inSess  = not na(time(timeframe.period, sess, tz))
 newSess = inSess and not inSess[1]
-ok = not useSess or inSess
+skipLunch = input.bool(true, "Skip lunch chop 11:30–13:30 ET", group="Setup")
+lunch = skipLunch and not na(time(timeframe.period, "1130-1330", tz))
+ok = (not useSess or inSess) and not lunch
 f_fmt(x) => str.tostring(x, format.mintick)
 
 var bool lDone = false
@@ -4308,7 +4312,7 @@ alertcondition(shortSig, "Sweep Short", "NQ liquidity sweep SHORT")`,
     assets: ['Futures (NQ/MNQ)', 'Indices'],
     timeframes: ['5m', '15m'],
     propFirms: ['Topstep', 'Apex', 'MyFundedFutures', 'Take Profit Trader'],
-    winTarget: '~48–55% (2:1 R:R)',
+    winTarget: '~52–58% (2:1, ADX + lunch filter)',
     riskPerTrade: 'ATR-based',
     color: '#a855f7',
     indicatorOnly: true,
@@ -4342,7 +4346,9 @@ emaS = ta.ema(close, slowLen)
 atr  = ta.atr(atrLen)
 [diP, diM, adx] = ta.dmi(adxLen, adxLen)
 inSess = not na(time(timeframe.period, sess, tz))
-ok = not useSess or inSess
+skipLunch = input.bool(true, "Skip lunch chop 11:30–13:30 ET", group="Setup")
+lunch = skipLunch and not na(time(timeframe.period, "1130-1330", tz))
+ok = (not useSess or inSess) and not lunch
 f_fmt(x) => str.tostring(x, format.mintick)
 
 upTrend = emaF > emaS and adx > adxMin
@@ -4401,7 +4407,7 @@ alertcondition(shortSig, "EMA PB Short", "NQ EMA pullback SHORT")`,
     assets: ['Futures (NQ/MNQ)', 'Indices'],
     timeframes: ['5m', '15m'],
     propFirms: ['Topstep', 'Apex', 'MyFundedFutures', 'Take Profit Trader'],
-    winTarget: '~44–50% (2.5:1 R:R)',
+    winTarget: '~48–54% (2.5:1, coil + lunch filter)',
     riskPerTrade: 'ATR-based',
     color: '#f59e0b',
     indicatorOnly: true,
@@ -4443,7 +4449,9 @@ var int sqzCount = 0
 sqzCount := sqzOn ? sqzCount + 1 : 0
 released = not sqzOn and sqzCount[1] >= minSqz
 inSess = not na(time(timeframe.period, sess, tz))
-ok = not useSess or inSess
+skipLunch = input.bool(true, "Skip lunch chop 11:30–13:30 ET", group="Setup")
+lunch = skipLunch and not na(time(timeframe.period, "1130-1330", tz))
+ok = (not useSess or inSess) and not lunch
 f_fmt(x) => str.tostring(x, format.mintick)
 
 longSig  = ok and released and close > bbU and close > open
@@ -4499,7 +4507,7 @@ alertcondition(shortSig, "Squeeze Short", "NQ squeeze breakout SHORT")`,
     assets: ['Futures (NQ/MNQ)', 'Indices'],
     timeframes: ['5m', '15m'],
     propFirms: ['Topstep', 'Apex', 'MyFundedFutures', 'Take Profit Trader'],
-    winTarget: '~45–52% (≈1.5–2:1)',
+    winTarget: '~50–56% (≈1.5–2:1, lunch-filtered)',
     riskPerTrade: 'IB-range based',
     color: '#2bd17e',
     indicatorOnly: true,
@@ -4529,6 +4537,8 @@ boxBars  = input.int(30,     "Trade-box width (bars)", minval=4)
 inIB  = not na(time(timeframe.period, ibSess,  tz))
 inRTH = not na(time(timeframe.period, rthSess, tz))
 newRTH = inRTH and not inRTH[1]
+skipLunch = input.bool(true, "Skip lunch chop 11:30–13:30 ET", group="Risk")
+lunch = skipLunch and not na(time(timeframe.period, "1130-1330", tz))
 f_fmt(x) => str.tostring(x, format.mintick)
 
 var float ibH = na
@@ -4553,8 +4563,8 @@ if inRTH and not inIB and not ibDone and not na(ibH)
 ibRange = ibH - ibL
 brokeUp = confirm ? close > ibH : high > ibH
 brokeDn = confirm ? close < ibL : low  < ibL
-longSig  = inRTH and ibDone and (not lDone or not oneTrade) and brokeUp and close > open
-shortSig = inRTH and ibDone and (not sDone or not oneTrade) and brokeDn and close < open
+longSig  = inRTH and not lunch and ibDone and (not lDone or not oneTrade) and brokeUp and close > open
+shortSig = inRTH and not lunch and ibDone and (not sDone or not oneTrade) and brokeDn and close < open
 
 if longSig
     lDone := true
@@ -4595,5 +4605,614 @@ alertcondition(shortSig, "IB Short", "NQ IB breakout SHORT")`,
         'IB breakouts pay on trend days and chop on balanced days — let the full-range target run, and skip days that open far outside prior value. Backtest over 6–12 months.',
       ],
     },
+  },
+
+  // 6. NQ OPENING DRIVE
+  {
+    id: 'nqdrive', instructor: 'YN Finance Quant Desk', strategy: 'NQ Opening Drive', tagline: 'The first 5-min candle of the cash open shows the hand. If it is a strong directional bar, trade the break of it on volume. Long/short.',
+    assets: ['Futures (NQ/MNQ)', 'Indices'], timeframes: ['1m', '5m'], propFirms: ['Topstep', 'Apex', 'MyFundedFutures'], winTarget: '~55–60% (2:1)', riskPerTrade: 'Bar-range based', color: '#00d4ff', indicatorOnly: true, init: 'DRV',
+    overview: 'A momentum model for the open. The first 5-minute RTH candle is the "drive" bar. If it closes strong (range above average, body in the top/bottom quartile) it signals one-sided order flow. A break of that bar high on above-average volume goes long; a break of its low goes short. Stop sits on the opposite end of the drive bar; target is a fixed R multiple. Only fires in the first hour, one trade per side.',
+    propNotes: 'For NQ/MNQ. The volume + strong-bar filter is what separates a real drive from a doji open — keep both on. Best the first 30–60 min; it self-disables at lunch. A weak/indecisive first bar simply produces no trade. Backtest the R multiple and the strong-bar threshold over 6–12 months.',
+    auto: { tradingview: '// Signal indicator — open the "📊 Indicator" tab.', mt5: '// Not applicable — TradingView Pine indicator.', steps: ['Use the Indicator tab.'] },
+    signals: { tradingview: `//@version=5
+indicator("YN Finance — NQ Opening Drive (Signals)", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+tz="America/New_York"
+sess=input.session("0930-1030","Drive window (NY)")
+rMult=input.float(2.0,"Target R",step=0.25,group="Risk")
+strongPct=input.float(0.6,"Strong-bar body (% of range)",step=0.05,group="Setup")
+volMult=input.float(1.2,"Min volume vs 20-avg",step=0.1,group="Setup")
+boxBars=input.int(24,"Trade-box width (bars)",minval=4)
+inSess=not na(time(timeframe.period,sess,tz))
+newSess=inSess and not inSess[1]
+volAvg=ta.sma(volume,20)
+f_fmt(x)=>str.tostring(x,format.mintick)
+var float dHi=na
+var float dLo=na
+var bool bull=false
+var bool bear=false
+var bool lDone=false
+var bool sDone=false
+if newSess
+    rng=high-low
+    body=math.abs(close-open)
+    strong=rng>0 and body/rng>=strongPct
+    dHi:=high
+    dLo:=low
+    bull:=strong and close>open
+    bear:=strong and close<open
+    lDone:=false
+    sDone:=false
+longSig = inSess and not newSess and bull and not lDone and high>dHi and volume>volAvg*volMult
+shortSig= inSess and not newSess and bear and not sDone and low<dLo  and volume>volAvg*volMult
+if longSig
+    lDone:=true
+    ePx=dHi
+    slPx=dLo
+    risk=ePx-slPx
+    tpPx=ePx+risk*rMult
+    box.new(bar_index,tpPx,bar_index+boxBars,ePx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,ePx,bar_index+boxBars,slPx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"LONG  Opening drive | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_down,color=color.new(color.lime,20),textcolor=color.black,size=size.small)
+    alert("NQ DRIVE LONG "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+if shortSig
+    sDone:=true
+    ePx=dLo
+    slPx=dHi
+    risk=slPx-ePx
+    tpPx=ePx-risk*rMult
+    box.new(bar_index,ePx,bar_index+boxBars,tpPx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,slPx,bar_index+boxBars,ePx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"SHORT  Opening drive | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_up,color=color.new(color.red,20),textcolor=color.white,size=size.small)
+    alert("NQ DRIVE SHORT "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+plotshape(longSig,title="Long",style=shape.triangleup,location=location.belowbar,color=color.lime,size=size.small)
+plotshape(shortSig,title="Short",style=shape.triangledown,location=location.abovebar,color=color.red,size=size.small)
+alertcondition(longSig,"Drive Long","NQ opening drive LONG")
+alertcondition(shortSig,"Drive Short","NQ opening drive SHORT")`,
+      steps: ['Add to a 5-minute chart of NQ/MNQ. It reads the first RTH candle (09:30 ET) as the "drive" bar.','If that bar is strong (big body) and bullish, a break of its high on above-average volume fires LONG; bearish + break of its low fires SHORT.','The box draws on the signal: dashed entry, green target (2R), red stop on the opposite end of the drive bar.','Create an alert → "Any alert() function call" → Once Per Bar Close.','A weak/doji first bar produces no trade. Tune the strong-bar % and volume multiple. Backtest over 6–12 months.'] },
+  },
+
+  // 7. NQ VALUE-AREA FADE
+  {
+    id: 'nqvafade', instructor: 'YN Finance Quant Desk', strategy: 'NQ Value-Area Fade', tagline: 'Price stretches to the prior-day value-area edge and rejects — fade it back toward the point of control. Mean reversion, long/short.',
+    assets: ['Futures (NQ/MNQ)', 'Indices'], timeframes: ['5m', '15m'], propFirms: ['Topstep', 'Apex', 'MyFundedFutures'], winTarget: '~62–70% (≈1:1)', riskPerTrade: 'ATR-buffered', color: '#7ee787', indicatorOnly: true, init: 'VA',
+    overview: 'A market-profile mean-reversion model. It approximates the prior-day value area from the prior session range — POC at the midpoint, value-area high/low at ±35% of the range (≈70% value area). When price pokes above the VAH and closes back below it, it fades short toward the POC; a poke below the VAL that closes back above fades long. Stop sits beyond the value-area edge; target is the POC (the magnet). Highest hit-rate in balanced, rotational conditions.',
+    propNotes: 'For NQ/MNQ on 5–15m, RTH + lunch-filtered. This is a rotational tool — it underperforms on trend days that leave value entirely, so the close-back-inside requirement is essential (do not fade a clean break). The ±35% VA approximation is a proxy for a true volume profile; tune it to your instrument. Backtest over 6–12 months.',
+    auto: { tradingview: '// Signal indicator — open the "📊 Indicator" tab.', mt5: '// Not applicable — TradingView Pine indicator.', steps: ['Use the Indicator tab.'] },
+    signals: { tradingview: `//@version=5
+indicator("YN Finance — NQ Value-Area Fade (Signals)", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+tz="America/New_York"
+sess=input.session("0930-1600","RTH session (NY)")
+vaPct=input.float(0.35,"Value-area half-width (× prior range)",step=0.05,group="Setup")
+bufMult=input.float(0.4,"Stop beyond VA edge (ATR ×)",step=0.05,group="Risk")
+atrLen=input.int(14,"ATR length",group="Risk")
+skipLunch=input.bool(true,"Skip lunch chop 11:30–13:30 ET",group="Setup")
+oneTrade=input.bool(true,"One trade per side per session")
+boxBars=input.int(26,"Trade-box width (bars)",minval=4)
+pdh=request.security(syminfo.tickerid,"D",high[1],lookahead=barmerge.lookahead_on)
+pdl=request.security(syminfo.tickerid,"D",low[1],lookahead=barmerge.lookahead_on)
+poc=(pdh+pdl)/2
+vah=poc+(pdh-pdl)*vaPct
+val=poc-(pdh-pdl)*vaPct
+atr=ta.atr(atrLen)
+inSess=not na(time(timeframe.period,sess,tz))
+newSess=inSess and not inSess[1]
+lunch=skipLunch and not na(time(timeframe.period,"1130-1330",tz))
+ok=inSess and not lunch
+f_fmt(x)=>str.tostring(x,format.mintick)
+var bool lDone=false
+var bool sDone=false
+if newSess
+    lDone:=false
+    sDone:=false
+longSig = ok and (not lDone or not oneTrade) and low<val and close>val and close>open
+shortSig= ok and (not sDone or not oneTrade) and high>vah and close<vah and close<open
+if longSig
+    lDone:=true
+    ePx=close
+    slPx=val-bufMult*atr
+    tpPx=poc
+    box.new(bar_index,tpPx,bar_index+boxBars,ePx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,ePx,bar_index+boxBars,slPx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"LONG  VAL fade | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_down,color=color.new(color.lime,20),textcolor=color.black,size=size.small)
+    alert("NQ VA FADE LONG "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+if shortSig
+    sDone:=true
+    ePx=close
+    slPx=vah+bufMult*atr
+    tpPx=poc
+    box.new(bar_index,ePx,bar_index+boxBars,tpPx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,slPx,bar_index+boxBars,ePx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"SHORT  VAH fade | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_up,color=color.new(color.red,20),textcolor=color.white,size=size.small)
+    alert("NQ VA FADE SHORT "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+plot(vah,"VAH",color=color.new(color.red,40),style=plot.style_linebr)
+plot(poc,"POC",color=color.new(color.yellow,0),style=plot.style_linebr)
+plot(val,"VAL",color=color.new(color.lime,40),style=plot.style_linebr)
+plotshape(longSig,title="Long",style=shape.triangleup,location=location.belowbar,color=color.lime,size=size.small)
+plotshape(shortSig,title="Short",style=shape.triangledown,location=location.abovebar,color=color.red,size=size.small)
+alertcondition(longSig,"VA Fade Long","NQ value-area fade LONG")
+alertcondition(shortSig,"VA Fade Short","NQ value-area fade SHORT")`,
+      steps: ['Add to a 5–15m chart of NQ/MNQ. It plots POC (yellow), VAH (red) and VAL (green) from the prior session range.','A poke below VAL that closes back inside fires LONG toward POC; a poke above VAH that closes back inside fires SHORT toward POC.','The box draws: dashed entry, green target at POC, red stop beyond the VA edge (ATR-buffered).','Create an alert → "Any alert() function call" → Once Per Bar Close.','Rotational tool — require the close back inside, skip clean breaks/trend days. Backtest the VA width over 6–12 months.'] },
+  },
+
+  // 8. NQ POWER HOUR TREND
+  {
+    id: 'nqpower', instructor: 'YN Finance Quant Desk', strategy: 'NQ Power Hour Trend', tagline: 'The last hour moves. Trade pullbacks to the 9 EMA in the direction of session VWAP between 15:00–16:00 ET. Long/short.',
+    assets: ['Futures (NQ/MNQ)', 'Indices'], timeframes: ['1m', '5m'], propFirms: ['Topstep', 'Apex', 'MyFundedFutures'], winTarget: '~55–62% (1.5:1)', riskPerTrade: 'ATR-based', color: '#ff9e1b', indicatorOnly: true, init: 'PWR',
+    overview: 'A momentum model for the 3–4 PM ET "power hour", when funds rebalance and the day\'s trend often extends. Bias comes from session VWAP: only longs above it, only shorts below. Inside the window it enters pullbacks — a dip to the 9 EMA that closes back in the trend direction. Stop is ATR-based; target a 1.5R multiple to fit the compressed time. One trade per side.',
+    propNotes: 'For NQ/MNQ on 1–5m. The VWAP bias is the win-rate lever — it keeps you on the dominant side into the close. Because the window is short, keep the target modest (1.5R) and take the first clean pullback. Skips automatically outside 15:00–16:00. Backtest over 6–12 months.',
+    auto: { tradingview: '// Signal indicator — open the "📊 Indicator" tab.', mt5: '// Not applicable — TradingView Pine indicator.', steps: ['Use the Indicator tab.'] },
+    signals: { tradingview: `//@version=5
+indicator("YN Finance — NQ Power Hour Trend (Signals)", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+tz="America/New_York"
+sess=input.session("1500-1600","Power hour (NY)")
+emaLen=input.int(9,"Pullback EMA",group="Setup")
+atrLen=input.int(14,"ATR length",group="Risk")
+slMult=input.float(1.0,"Stop (ATR ×)",step=0.1,group="Risk")
+rMult=input.float(1.5,"Target R",step=0.25,group="Risk")
+boxBars=input.int(16,"Trade-box width (bars)",minval=4)
+emaV=ta.ema(close,emaLen)
+vwap=ta.vwap(hlc3)
+atr=ta.atr(atrLen)
+inSess=not na(time(timeframe.period,sess,tz))
+f_fmt(x)=>str.tostring(x,format.mintick)
+longSig = inSess and close>vwap and low<=emaV and close>emaV and close>open
+shortSig= inSess and close<vwap and high>=emaV and close<emaV and close<open
+if longSig
+    ePx=close
+    slPx=ePx-slMult*atr
+    risk=ePx-slPx
+    tpPx=ePx+risk*rMult
+    box.new(bar_index,tpPx,bar_index+boxBars,ePx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,ePx,bar_index+boxBars,slPx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"LONG  Power hour | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_down,color=color.new(color.lime,20),textcolor=color.black,size=size.small)
+    alert("NQ POWER LONG "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+if shortSig
+    ePx=close
+    slPx=ePx+slMult*atr
+    risk=slPx-ePx
+    tpPx=ePx-risk*rMult
+    box.new(bar_index,ePx,bar_index+boxBars,tpPx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,slPx,bar_index+boxBars,ePx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"SHORT  Power hour | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_up,color=color.new(color.red,20),textcolor=color.white,size=size.small)
+    alert("NQ POWER SHORT "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+plot(emaV,"EMA",color=color.new(color.aqua,0))
+plot(inSess?vwap:na,"VWAP",color=color.new(color.fuchsia,0))
+plotshape(longSig,title="Long",style=shape.triangleup,location=location.belowbar,color=color.lime,size=size.small)
+plotshape(shortSig,title="Short",style=shape.triangledown,location=location.abovebar,color=color.red,size=size.small)
+alertcondition(longSig,"Power Long","NQ power hour LONG")
+alertcondition(shortSig,"Power Short","NQ power hour SHORT")`,
+      steps: ['Add to a 1–5m chart of NQ/MNQ. It only signals 15:00–16:00 ET.','Bias = session VWAP (magenta): longs only above, shorts only below.','A pullback to the 9 EMA (aqua) that closes back in the trend direction fires the signal.','Box draws: dashed entry, green target (1.5R), red stop (ATR). Alert → "Any alert() function call" → Once Per Bar Close.','Take the first clean pullback; keep the target modest given the short window. Backtest over 6–12 months.'] },
+  },
+
+  // 9. NQ INSIDE-BAR BREAKOUT
+  {
+    id: 'nqinside', instructor: 'YN Finance Quant Desk', strategy: 'NQ Inside-Bar Breakout', tagline: 'An inside bar = compression. Trade the break of the mother bar in the direction of the 50-EMA trend. Long/short.',
+    assets: ['Futures (NQ/MNQ)', 'Indices'], timeframes: ['5m', '15m'], propFirms: ['Topstep', 'Apex', 'MyFundedFutures'], winTarget: '~50–56% (2:1)', riskPerTrade: 'Bar-range based', color: '#c792ea', indicatorOnly: true, init: 'IB2',
+    overview: 'A price-compression breakout. An inside bar (high lower than the prior high, low higher than the prior low) marks a pause in the auction. A break of the prior (mother) bar high in an uptrend (price above the 50 EMA) goes long; a break of its low in a downtrend goes short. Stop is the opposite end of the mother bar; target a fixed R multiple. The trend filter keeps you breaking in the direction the market is already leaning.',
+    propNotes: 'For NQ/MNQ on 5–15m, RTH + lunch-filtered. The 50-EMA trend filter is the win-rate lever — counter-trend inside-bar breaks fail far more often. Require the breakout candle to close beyond the mother bar to cut wick fakeouts. Backtest the trend filter on/off and R over 6–12 months.',
+    auto: { tradingview: '// Signal indicator — open the "📊 Indicator" tab.', mt5: '// Not applicable — TradingView Pine indicator.', steps: ['Use the Indicator tab.'] },
+    signals: { tradingview: `//@version=5
+indicator("YN Finance — NQ Inside-Bar Breakout (Signals)", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+tz="America/New_York"
+sess=input.session("0930-1600","RTH session (NY)")
+useSess=input.bool(true,"Only signal during RTH")
+trendLen=input.int(50,"Trend EMA",group="Setup")
+useTrend=input.bool(true,"Require 50-EMA trend agreement",group="Setup")
+rMult=input.float(2.0,"Target R",step=0.25,group="Risk")
+skipLunch=input.bool(true,"Skip lunch chop 11:30–13:30 ET",group="Setup")
+boxBars=input.int(22,"Trade-box width (bars)",minval=4)
+emaT=ta.ema(close,trendLen)
+inSess=not na(time(timeframe.period,sess,tz))
+lunch=skipLunch and not na(time(timeframe.period,"1130-1330",tz))
+ok=(not useSess or inSess) and not lunch
+f_fmt(x)=>str.tostring(x,format.mintick)
+inside=high<high[1] and low>low[1]
+mHi=high[1]
+mLo=low[1]
+upOk=not useTrend or close>emaT
+dnOk=not useTrend or close<emaT
+longSig = ok and inside[1] and close>mHi[1] and upOk
+shortSig= ok and inside[1] and close<mLo[1] and dnOk
+if longSig
+    ePx=close
+    slPx=mLo[1]
+    risk=ePx-slPx
+    tpPx=ePx+risk*rMult
+    box.new(bar_index,tpPx,bar_index+boxBars,ePx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,ePx,bar_index+boxBars,slPx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"LONG  Inside-bar break | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_down,color=color.new(color.lime,20),textcolor=color.black,size=size.small)
+    alert("NQ INSIDE LONG "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+if shortSig
+    ePx=close
+    slPx=mHi[1]
+    risk=slPx-ePx
+    tpPx=ePx-risk*rMult
+    box.new(bar_index,ePx,bar_index+boxBars,tpPx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,slPx,bar_index+boxBars,ePx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"SHORT  Inside-bar break | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_up,color=color.new(color.red,20),textcolor=color.white,size=size.small)
+    alert("NQ INSIDE SHORT "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+plot(emaT,"50 EMA",color=color.new(color.orange,0))
+plotshape(longSig,title="Long",style=shape.triangleup,location=location.belowbar,color=color.lime,size=size.small)
+plotshape(shortSig,title="Short",style=shape.triangledown,location=location.abovebar,color=color.red,size=size.small)
+alertcondition(longSig,"Inside Long","NQ inside-bar LONG")
+alertcondition(shortSig,"Inside Short","NQ inside-bar SHORT")`,
+      steps: ['Add to a 5–15m chart of NQ/MNQ. The 50 EMA (orange) sets trend.','After an inside bar forms, a candle that closes above the mother bar high (in an uptrend) fires LONG; a close below the mother low (downtrend) fires SHORT.','Box draws: dashed entry, green target (2R), red stop at the opposite end of the mother bar.','Create an alert → "Any alert() function call" → Once Per Bar Close.','Keep the trend filter on — counter-trend breaks fail more. Backtest over 6–12 months.'] },
+  },
+
+  // 10. NQ RSI-2 PULLBACK
+  {
+    id: 'nqrsi2', instructor: 'YN Finance Quant Desk', strategy: 'NQ RSI-2 Pullback (Connors)', tagline: 'In an established trend, buy the deep short-term dip (RSI-2 oversold) / sell the rip. High hit-rate mean reversion. Long/short.',
+    assets: ['Futures (NQ/MNQ)', 'Indices'], timeframes: ['5m', '15m'], propFirms: ['Topstep', 'Apex', 'MyFundedFutures'], winTarget: '~65–72% (≈1:1)', riskPerTrade: 'ATR-based', color: '#34d399', indicatorOnly: true, init: 'RS2',
+    overview: 'A Connors-style short-term mean reversion that only trades WITH the trend. The 200 EMA defines regime: above it, only longs; below it, only shorts. A 2-period RSI is the trigger — when it drops below the oversold level in an uptrend, price has pulled back hard inside an up market, the highest-probability dip-buy. Stop is ATR-based below the entry; target is a modest R multiple back to the mean. Shorts mirror in a downtrend.',
+    propNotes: 'For NQ/MNQ on 5–15m, RTH + lunch-filtered. RSI-2 is intentionally jumpy — that is the edge; keep the 200-EMA filter strict so you only fade WITH the bigger trend. High win-rate, small R, so do not widen the stop chasing a better fill. Backtest the oversold/overbought thresholds (5/10 and 90/95) over 6–12 months.',
+    auto: { tradingview: '// Signal indicator — open the "📊 Indicator" tab.', mt5: '// Not applicable — TradingView Pine indicator.', steps: ['Use the Indicator tab.'] },
+    signals: { tradingview: `//@version=5
+indicator("YN Finance — NQ RSI-2 Pullback (Signals)", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+tz="America/New_York"
+sess=input.session("0930-1600","RTH session (NY)")
+useSess=input.bool(true,"Only signal during RTH")
+regimeLen=input.int(200,"Regime EMA",group="Setup")
+rsiLen=input.int(2,"RSI length",group="Setup")
+osLevel=input.float(10,"Oversold (long)",step=1,group="Setup")
+obLevel=input.float(90,"Overbought (short)",step=1,group="Setup")
+atrLen=input.int(14,"ATR length",group="Risk")
+slMult=input.float(1.3,"Stop (ATR ×)",step=0.1,group="Risk")
+rMult=input.float(1.2,"Target R",step=0.1,group="Risk")
+skipLunch=input.bool(true,"Skip lunch chop 11:30–13:30 ET",group="Setup")
+boxBars=input.int(20,"Trade-box width (bars)",minval=4)
+emaR=ta.ema(close,regimeLen)
+rsi=ta.rsi(close,rsiLen)
+atr=ta.atr(atrLen)
+inSess=not na(time(timeframe.period,sess,tz))
+lunch=skipLunch and not na(time(timeframe.period,"1130-1330",tz))
+ok=(not useSess or inSess) and not lunch
+f_fmt(x)=>str.tostring(x,format.mintick)
+longSig = ok and close>emaR and ta.crossunder(rsi,osLevel)
+shortSig= ok and close<emaR and ta.crossover(rsi,obLevel)
+if longSig
+    ePx=close
+    slPx=ePx-slMult*atr
+    risk=ePx-slPx
+    tpPx=ePx+risk*rMult
+    box.new(bar_index,tpPx,bar_index+boxBars,ePx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,ePx,bar_index+boxBars,slPx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"LONG  RSI-2 dip | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_down,color=color.new(color.lime,20),textcolor=color.black,size=size.small)
+    alert("NQ RSI2 LONG "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+if shortSig
+    ePx=close
+    slPx=ePx+slMult*atr
+    risk=slPx-ePx
+    tpPx=ePx-risk*rMult
+    box.new(bar_index,ePx,bar_index+boxBars,tpPx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,slPx,bar_index+boxBars,ePx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"SHORT  RSI-2 rip | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_up,color=color.new(color.red,20),textcolor=color.white,size=size.small)
+    alert("NQ RSI2 SHORT "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+plot(emaR,"200 EMA",color=color.new(color.orange,0),linewidth=2)
+plotshape(longSig,title="Long",style=shape.triangleup,location=location.belowbar,color=color.lime,size=size.small)
+plotshape(shortSig,title="Short",style=shape.triangledown,location=location.abovebar,color=color.red,size=size.small)
+alertcondition(longSig,"RSI2 Long","NQ RSI-2 LONG")
+alertcondition(shortSig,"RSI2 Short","NQ RSI-2 SHORT")`,
+      steps: ['Add to a 5–15m chart of NQ/MNQ. The 200 EMA (orange) sets the regime.','Above the 200 EMA, RSI-2 dropping below 10 fires LONG (buy the dip with trend); below it, RSI-2 above 90 fires SHORT.','Box draws: dashed entry, green target (≈1.2R), red stop (ATR).','Create an alert → "Any alert() function call" → Once Per Bar Close.','Keep the regime filter strict and the stop tight — high win-rate, small R. Backtest thresholds over 6–12 months.'] },
+  },
+
+  // 11. NQ EMA RIBBON TREND
+  {
+    id: 'nqribbon', instructor: 'YN Finance Quant Desk', strategy: 'NQ EMA Ribbon Trend (8/13/21)', tagline: 'When the 8/13/21 ribbon stacks and price pulls back into it then resumes, ride the trend leg. Long/short.',
+    assets: ['Futures (NQ/MNQ)', 'Indices'], timeframes: ['5m', '15m'], propFirms: ['Topstep', 'Apex', 'MyFundedFutures'], winTarget: '~50–56% (2:1)', riskPerTrade: 'ATR-based', color: '#1e90ff', indicatorOnly: true, init: 'RBN',
+    overview: 'A trend-continuation model using a three-EMA ribbon (8/13/21). A stacked ribbon (8 > 13 > 21) confirms an orderly uptrend; a pullback that taps the ribbon and then closes back above the fast EMA enters the resumption. Stop sits below the slow EMA (ATR-buffered); target a fixed R. Shorts mirror with the ribbon stacked down. The ribbon stack is a cleaner trend filter than a single MA — it demands the whole short-term structure agree.',
+    propNotes: 'For NQ/MNQ on 5–15m, RTH + lunch-filtered. Take only pullbacks that hold the ribbon — if price closes through and below the 21 on a pullback, the leg is likely done, so the close-back-above requirement matters. Pairs well as a continuation layer with the Opening Drive on trend days. Backtest R and ribbon lengths over 6–12 months.',
+    auto: { tradingview: '// Signal indicator — open the "📊 Indicator" tab.', mt5: '// Not applicable — TradingView Pine indicator.', steps: ['Use the Indicator tab.'] },
+    signals: { tradingview: `//@version=5
+indicator("YN Finance — NQ EMA Ribbon Trend (Signals)", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+tz="America/New_York"
+sess=input.session("0930-1600","RTH session (NY)")
+useSess=input.bool(true,"Only signal during RTH")
+atrLen=input.int(14,"ATR length",group="Risk")
+slMult=input.float(0.6,"Stop beyond slow EMA (ATR ×)",step=0.1,group="Risk")
+rMult=input.float(2.0,"Target R",step=0.25,group="Risk")
+skipLunch=input.bool(true,"Skip lunch chop 11:30–13:30 ET",group="Setup")
+boxBars=input.int(24,"Trade-box width (bars)",minval=4)
+e8=ta.ema(close,8)
+e13=ta.ema(close,13)
+e21=ta.ema(close,21)
+atr=ta.atr(atrLen)
+inSess=not na(time(timeframe.period,sess,tz))
+lunch=skipLunch and not na(time(timeframe.period,"1130-1330",tz))
+ok=(not useSess or inSess) and not lunch
+f_fmt(x)=>str.tostring(x,format.mintick)
+upStack=e8>e13 and e13>e21
+dnStack=e8<e13 and e13<e21
+longSig = ok and upStack and low<=e8 and close>e8 and close>open and close[1]<=e8[1]
+shortSig= ok and dnStack and high>=e8 and close<e8 and close<open and close[1]>=e8[1]
+if longSig
+    ePx=close
+    slPx=e21-slMult*atr
+    risk=ePx-slPx
+    tpPx=ePx+risk*rMult
+    box.new(bar_index,tpPx,bar_index+boxBars,ePx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,ePx,bar_index+boxBars,slPx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"LONG  Ribbon resume | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_down,color=color.new(color.lime,20),textcolor=color.black,size=size.small)
+    alert("NQ RIBBON LONG "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+if shortSig
+    ePx=close
+    slPx=e21+slMult*atr
+    risk=slPx-ePx
+    tpPx=ePx-risk*rMult
+    box.new(bar_index,ePx,bar_index+boxBars,tpPx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,slPx,bar_index+boxBars,ePx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"SHORT  Ribbon resume | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_up,color=color.new(color.red,20),textcolor=color.white,size=size.small)
+    alert("NQ RIBBON SHORT "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+plot(e8,"EMA8",color=color.new(color.aqua,0))
+plot(e13,"EMA13",color=color.new(color.blue,0))
+plot(e21,"EMA21",color=color.new(color.purple,0))
+plotshape(longSig,title="Long",style=shape.triangleup,location=location.belowbar,color=color.lime,size=size.small)
+plotshape(shortSig,title="Short",style=shape.triangledown,location=location.abovebar,color=color.red,size=size.small)
+alertcondition(longSig,"Ribbon Long","NQ ribbon LONG")
+alertcondition(shortSig,"Ribbon Short","NQ ribbon SHORT")`,
+      steps: ['Add to a 5–15m chart of NQ/MNQ. The 8/13/21 EMA ribbon plots on price.','When the ribbon is stacked up (8>13>21), a pullback that taps the ribbon and closes back above the 8 EMA fires LONG; mirror for shorts.','Box draws: dashed entry, green target (2R), red stop below the 21 EMA (ATR-buffered).','Create an alert → "Any alert() function call" → Once Per Bar Close.','Skip pullbacks that close below the 21 — the leg is likely over. Backtest over 6–12 months.'] },
+  },
+
+  // 12. NQ GAP FADE
+  {
+    id: 'nqgap', instructor: 'YN Finance Quant Desk', strategy: 'NQ Opening Gap Fade', tagline: 'When NQ gaps away from the prior close and the first candle stalls, fade it back toward the gap fill. Long/short.',
+    assets: ['Futures (NQ/MNQ)', 'Indices'], timeframes: ['5m'], propFirms: ['Topstep', 'Apex', 'MyFundedFutures'], winTarget: '~58–66% (gap-fill target)', riskPerTrade: 'ATR-buffered', color: '#f78c6c', indicatorOnly: true, init: 'GAP',
+    overview: 'A statistical gap-fill model. NQ fills a large share of its opening gaps the same session. When RTH opens far enough above the prior day\'s close (gap up) and the first 5-minute candle closes red (the drive stalls), it fades short with the prior close as the target (the fill). A gap down with a green first candle fades long. Stop sits beyond the session high/low; target is the prior RTH close. Only the first signal of the day.',
+    propNotes: 'For NQ/MNQ on 5m. The minimum-gap filter keeps it off tiny gaps that mean nothing — tune it in points to your instrument. The stall confirmation (first candle reversing) is what raises the hit rate vs blindly fading the open. Large trend-day gaps that never stall simply don\'t trigger. Backtest the min-gap and over 6–12 months.',
+    auto: { tradingview: '// Signal indicator — open the "📊 Indicator" tab.', mt5: '// Not applicable — TradingView Pine indicator.', steps: ['Use the Indicator tab.'] },
+    signals: { tradingview: `//@version=5
+indicator("YN Finance — NQ Opening Gap Fade (Signals)", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+tz="America/New_York"
+sess=input.session("0930-1600","RTH session (NY)")
+minGap=input.float(20.0,"Min gap (points)",step=1,group="Setup")
+bufMult=input.float(0.5,"Stop beyond extreme (ATR ×)",step=0.1,group="Risk")
+atrLen=input.int(14,"ATR length",group="Risk")
+boxBars=input.int(36,"Trade-box width (bars)",minval=4)
+pdc=request.security(syminfo.tickerid,"D",close[1],lookahead=barmerge.lookahead_on)
+atr=ta.atr(atrLen)
+inSess=not na(time(timeframe.period,sess,tz))
+newSess=inSess and not inSess[1]
+f_fmt(x)=>str.tostring(x,format.mintick)
+var float gOpen=na
+var float sHi=na
+var float sLo=na
+var bool done=false
+if newSess
+    gOpen:=open
+    sHi:=high
+    sLo:=low
+    done:=false
+if inSess
+    sHi:=math.max(sHi,high)
+    sLo:=math.min(sLo,low)
+gapUp = not na(gOpen) and not na(pdc) and gOpen-pdc>=minGap
+gapDn = not na(gOpen) and not na(pdc) and pdc-gOpen>=minGap
+firstBarDone = inSess and not newSess and newSess[1]
+shortSig = inSess and not done and gapUp and firstBarDone and close<open
+longSig  = inSess and not done and gapDn and firstBarDone and close>open
+if longSig
+    done:=true
+    ePx=close
+    slPx=sLo-bufMult*atr
+    tpPx=pdc
+    box.new(bar_index,tpPx,bar_index+boxBars,ePx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,ePx,bar_index+boxBars,slPx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"LONG  Gap fill | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_down,color=color.new(color.lime,20),textcolor=color.black,size=size.small)
+    alert("NQ GAP LONG "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+if shortSig
+    done:=true
+    ePx=close
+    slPx=sHi+bufMult*atr
+    tpPx=pdc
+    box.new(bar_index,ePx,bar_index+boxBars,tpPx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,slPx,bar_index+boxBars,ePx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"SHORT  Gap fill | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_up,color=color.new(color.red,20),textcolor=color.white,size=size.small)
+    alert("NQ GAP SHORT "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+plot(pdc,"Prior close (fill)",color=color.new(color.yellow,0),style=plot.style_linebr)
+plotshape(longSig,title="Long",style=shape.triangleup,location=location.belowbar,color=color.lime,size=size.small)
+plotshape(shortSig,title="Short",style=shape.triangledown,location=location.abovebar,color=color.red,size=size.small)
+alertcondition(longSig,"Gap Long","NQ gap fade LONG")
+alertcondition(shortSig,"Gap Short","NQ gap fade SHORT")`,
+      steps: ['Add to a 5m chart of NQ/MNQ. The yellow line is the prior RTH close = the gap-fill target.','If the session gaps up at least "Min gap" points and the first candle closes red, a SHORT fires toward the fill; gap down + green first candle fires LONG.','Box draws: dashed entry, green target at the prior close, red stop beyond the session extreme (ATR-buffered).','Create an alert → "Any alert() function call" → Once Per Bar Close.','Raise Min gap to skip noise; big trend-day gaps that never stall won\'t trigger. Backtest over 6–12 months.'] },
+  },
+
+  // 13. NQ ENGULFING AT BAND
+  {
+    id: 'nqengulf', instructor: 'YN Finance Quant Desk', strategy: 'NQ Engulfing Reversal at Band', tagline: 'A bullish engulfing at the lower Bollinger band (or bearish at the upper) is a high-quality reversal trigger. Long/short.',
+    assets: ['Futures (NQ/MNQ)', 'Indices'], timeframes: ['5m', '15m'], propFirms: ['Topstep', 'Apex', 'MyFundedFutures'], winTarget: '~58–64% (mean target)', riskPerTrade: 'Pattern-based', color: '#a855f7', indicatorOnly: true, init: 'ENG',
+    overview: 'A candlestick-confirmed reversion. Price reaching a Bollinger band signals over-extension, but a band tag alone is weak — this requires a confirming engulfing candle. A bullish engulfing (body that engulfs the prior down candle) while at/below the lower band fires long; a bearish engulfing at/above the upper band fires short. Stop sits beyond the engulfing candle\'s extreme; target is the band basis (the mean). The pattern + location combo is far more selective than fading a band touch.',
+    propNotes: 'For NQ/MNQ on 5–15m, RTH + lunch-filtered. Demanding a genuine engulfing (not just a close back inside) is the win-rate lever — it confirms the reversal pressure. Target the basis to keep R realistic; do not hold for the opposite band. Trends that ride a band will not produce qualifying engulfings often, which is by design. Backtest over 6–12 months.',
+    auto: { tradingview: '// Signal indicator — open the "📊 Indicator" tab.', mt5: '// Not applicable — TradingView Pine indicator.', steps: ['Use the Indicator tab.'] },
+    signals: { tradingview: `//@version=5
+indicator("YN Finance — NQ Engulfing at Band (Signals)", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+tz="America/New_York"
+sess=input.session("0930-1600","RTH session (NY)")
+useSess=input.bool(true,"Only signal during RTH")
+len=input.int(20,"Bollinger length",group="Setup")
+mult=input.float(2.0,"Bollinger mult",step=0.1,group="Setup")
+skipLunch=input.bool(true,"Skip lunch chop 11:30–13:30 ET",group="Setup")
+boxBars=input.int(22,"Trade-box width (bars)",minval=4)
+basis=ta.sma(close,len)
+dev=mult*ta.stdev(close,len)
+bbU=basis+dev
+bbL=basis-dev
+inSess=not na(time(timeframe.period,sess,tz))
+lunch=skipLunch and not na(time(timeframe.period,"1130-1330",tz))
+ok=(not useSess or inSess) and not lunch
+f_fmt(x)=>str.tostring(x,format.mintick)
+bullEng = close>open and close[1]<open[1] and close>=open[1] and open<=close[1]
+bearEng = close<open and close[1]>open[1] and close<=open[1] and open>=close[1]
+longSig = ok and bullEng and low<=bbL
+shortSig= ok and bearEng and high>=bbU
+if longSig
+    ePx=close
+    slPx=low
+    risk=ePx-slPx
+    tpPx=math.max(basis,ePx+risk)
+    box.new(bar_index,tpPx,bar_index+boxBars,ePx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,ePx,bar_index+boxBars,slPx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"LONG  Engulf @ band | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_down,color=color.new(color.lime,20),textcolor=color.black,size=size.small)
+    alert("NQ ENGULF LONG "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+if shortSig
+    ePx=close
+    slPx=high
+    risk=slPx-ePx
+    tpPx=math.min(basis,ePx-risk)
+    box.new(bar_index,ePx,bar_index+boxBars,tpPx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,slPx,bar_index+boxBars,ePx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"SHORT  Engulf @ band | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_up,color=color.new(color.red,20),textcolor=color.white,size=size.small)
+    alert("NQ ENGULF SHORT "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+plot(basis,"Basis",color=color.new(color.gray,20))
+plot(bbU,"BB Upper",color=color.new(color.purple,40))
+plot(bbL,"BB Lower",color=color.new(color.purple,40))
+plotshape(longSig,title="Long",style=shape.triangleup,location=location.belowbar,color=color.lime,size=size.small)
+plotshape(shortSig,title="Short",style=shape.triangledown,location=location.abovebar,color=color.red,size=size.small)
+alertcondition(longSig,"Engulf Long","NQ engulfing LONG")
+alertcondition(shortSig,"Engulf Short","NQ engulfing SHORT")`,
+      steps: ['Add to a 5–15m chart of NQ/MNQ. Bollinger bands (purple) and basis (gray) plot on price.','A bullish engulfing candle at/below the lower band fires LONG; a bearish engulfing at/above the upper band fires SHORT.','Box draws: dashed entry, green target at the basis (mean), red stop beyond the engulfing candle.','Create an alert → "Any alert() function call" → Once Per Bar Close.','Require a true engulfing — not just a band touch. Target the basis, not the far band. Backtest over 6–12 months.'] },
+  },
+
+  // 14. NQ BREAKOUT-RETEST
+  {
+    id: 'nqretest', instructor: 'YN Finance Quant Desk', strategy: 'NQ Breakout & Retest', tagline: 'Price breaks a recent swing level, comes back to retest it, and holds — enter the continuation off the retest. Long/short.',
+    assets: ['Futures (NQ/MNQ)', 'Indices'], timeframes: ['5m', '15m'], propFirms: ['Topstep', 'Apex', 'MyFundedFutures'], winTarget: '~52–58% (2:1)', riskPerTrade: 'Level-based', color: '#2bd17e', indicatorOnly: true, init: 'RTS',
+    overview: 'A structure model. It tracks the recent swing high/low (highest high / lowest low over a lookback). When price CLOSES beyond that level the breakout is armed; when price then returns to retest the level and closes back in the breakout direction (the old resistance becoming support, or vice-versa), it enters. Stop sits just past the level; target is a fixed R. Trading the retest rather than the initial break cuts the false-breakout losses that plague raw breakout systems.',
+    propNotes: 'For NQ/MNQ on 5–15m, RTH + lunch-filtered. The retest-and-hold requirement is the entire edge — it filters the fakeouts. Lookback sets the level significance: larger = fewer, stronger levels. If price never returns to retest (runaway move) it simply does not enter — accept the miss rather than chasing. Backtest lookback and R over 6–12 months.',
+    auto: { tradingview: '// Signal indicator — open the "📊 Indicator" tab.', mt5: '// Not applicable — TradingView Pine indicator.', steps: ['Use the Indicator tab.'] },
+    signals: { tradingview: `//@version=5
+indicator("YN Finance — NQ Breakout & Retest (Signals)", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+tz="America/New_York"
+sess=input.session("0930-1600","RTH session (NY)")
+useSess=input.bool(true,"Only signal during RTH")
+lookback=input.int(20,"Swing lookback (bars)",minval=5,group="Setup")
+window=input.int(12,"Bars to retest within",minval=2,group="Setup")
+atrLen=input.int(14,"ATR length",group="Risk")
+bufMult=input.float(0.3,"Stop beyond level (ATR ×)",step=0.05,group="Risk")
+rMult=input.float(2.0,"Target R",step=0.25,group="Risk")
+skipLunch=input.bool(true,"Skip lunch chop 11:30–13:30 ET",group="Setup")
+boxBars=input.int(26,"Trade-box width (bars)",minval=4)
+hh=ta.highest(high,lookback)[1]
+ll=ta.lowest(low,lookback)[1]
+atr=ta.atr(atrLen)
+inSess=not na(time(timeframe.period,sess,tz))
+lunch=skipLunch and not na(time(timeframe.period,"1130-1330",tz))
+ok=(not useSess or inSess) and not lunch
+f_fmt(x)=>str.tostring(x,format.mintick)
+var float upLvl=na
+var int   upAge=0
+var float dnLvl=na
+var int   dnAge=0
+if close>hh
+    upLvl:=hh
+    upAge:=0
+else
+    upAge+=1
+if close<ll
+    dnLvl:=ll
+    dnAge:=0
+else
+    dnAge+=1
+longSig = ok and not na(upLvl) and upAge<=window and low<=upLvl and close>upLvl and close>open
+shortSig= ok and not na(dnLvl) and dnAge<=window and high>=dnLvl and close<dnLvl and close<open
+if longSig
+    upLvl:=na
+    ePx=close
+    slPx=low-bufMult*atr
+    risk=ePx-slPx
+    tpPx=ePx+risk*rMult
+    box.new(bar_index,tpPx,bar_index+boxBars,ePx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,ePx,bar_index+boxBars,slPx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"LONG  Break+retest | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_down,color=color.new(color.lime,20),textcolor=color.black,size=size.small)
+    alert("NQ RETEST LONG "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+if shortSig
+    dnLvl:=na
+    ePx=close
+    slPx=high+bufMult*atr
+    risk=slPx-ePx
+    tpPx=ePx-risk*rMult
+    box.new(bar_index,ePx,bar_index+boxBars,tpPx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,slPx,bar_index+boxBars,ePx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"SHORT  Break+retest | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_up,color=color.new(color.red,20),textcolor=color.white,size=size.small)
+    alert("NQ RETEST SHORT "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+plotshape(longSig,title="Long",style=shape.triangleup,location=location.belowbar,color=color.lime,size=size.small)
+plotshape(shortSig,title="Short",style=shape.triangledown,location=location.abovebar,color=color.red,size=size.small)
+alertcondition(longSig,"Retest Long","NQ break+retest LONG")
+alertcondition(shortSig,"Retest Short","NQ break+retest SHORT")`,
+      steps: ['Add to a 5–15m chart of NQ/MNQ. It tracks the recent swing high/low over the lookback.','When price closes beyond a level the breakout arms; when price returns to retest it and closes back in the breakout direction within the window, the signal fires.','Box draws: dashed entry, green target (2R), red stop just beyond the retested level (ATR-buffered).','Create an alert → "Any alert() function call" → Once Per Bar Close.','Trading the retest (not the raw break) filters fakeouts; if price never retests, accept the miss. Backtest lookback + R over 6–12 months.'] },
+  },
+
+  // 15. NQ MACD ZERO-LINE PULSE
+  {
+    id: 'nqmacd', instructor: 'YN Finance Quant Desk', strategy: 'NQ MACD Zero-Line Pulse', tagline: 'Momentum confirmation with a trend filter: MACD crossing zero in the direction of the 200 EMA. Long/short.',
+    assets: ['Futures (NQ/MNQ)', 'Indices'], timeframes: ['5m', '15m'], propFirms: ['Topstep', 'Apex', 'MyFundedFutures'], winTarget: '~50–55% (2:1)', riskPerTrade: 'ATR-based', color: '#82aaff', indicatorOnly: true, init: 'MAC',
+    overview: 'A momentum-with-trend model. The MACD line crossing its zero line marks a genuine shift in momentum (faster EMA crossing the slow), a cleaner signal than the noisy signal-line cross. It is filtered by the 200 EMA so it only takes momentum pulses aligned with the larger trend — MACD crossing up above zero while price is above the 200 EMA goes long; crossing down below zero under the 200 EMA goes short. Stop is ATR-based; target a fixed R.',
+    propNotes: 'For NQ/MNQ on 5–15m, RTH + lunch-filtered. The zero-line cross (not the signal-line cross) plus the 200-EMA filter is what cuts the chop that wrecks naive MACD systems. Fewer, higher-quality pulses. Works best on trend days; the lunch filter and trend gate keep it out of midday rotation. Backtest the MACD lengths and R over 6–12 months.',
+    auto: { tradingview: '// Signal indicator — open the "📊 Indicator" tab.', mt5: '// Not applicable — TradingView Pine indicator.', steps: ['Use the Indicator tab.'] },
+    signals: { tradingview: `//@version=5
+indicator("YN Finance — NQ MACD Zero-Line Pulse (Signals)", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+tz="America/New_York"
+sess=input.session("0930-1600","RTH session (NY)")
+useSess=input.bool(true,"Only signal during RTH")
+fastLen=input.int(12,"MACD fast",group="Setup")
+slowLen=input.int(26,"MACD slow",group="Setup")
+sigLen=input.int(9,"MACD signal",group="Setup")
+regimeLen=input.int(200,"Trend EMA",group="Setup")
+atrLen=input.int(14,"ATR length",group="Risk")
+slMult=input.float(1.3,"Stop (ATR ×)",step=0.1,group="Risk")
+rMult=input.float(2.0,"Target R",step=0.25,group="Risk")
+skipLunch=input.bool(true,"Skip lunch chop 11:30–13:30 ET",group="Setup")
+boxBars=input.int(24,"Trade-box width (bars)",minval=4)
+[macdLine,signalLine,hist]=ta.macd(close,fastLen,slowLen,sigLen)
+emaR=ta.ema(close,regimeLen)
+atr=ta.atr(atrLen)
+inSess=not na(time(timeframe.period,sess,tz))
+lunch=skipLunch and not na(time(timeframe.period,"1130-1330",tz))
+ok=(not useSess or inSess) and not lunch
+f_fmt(x)=>str.tostring(x,format.mintick)
+longSig = ok and close>emaR and ta.crossover(macdLine,0)
+shortSig= ok and close<emaR and ta.crossunder(macdLine,0)
+if longSig
+    ePx=close
+    slPx=ePx-slMult*atr
+    risk=ePx-slPx
+    tpPx=ePx+risk*rMult
+    box.new(bar_index,tpPx,bar_index+boxBars,ePx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,ePx,bar_index+boxBars,slPx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"LONG  MACD zero | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_down,color=color.new(color.lime,20),textcolor=color.black,size=size.small)
+    alert("NQ MACD LONG "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+if shortSig
+    ePx=close
+    slPx=ePx+slMult*atr
+    risk=slPx-ePx
+    tpPx=ePx-risk*rMult
+    box.new(bar_index,ePx,bar_index+boxBars,tpPx,border_color=color.new(color.lime,40),bgcolor=color.new(color.lime,85))
+    box.new(bar_index,slPx,bar_index+boxBars,ePx,border_color=color.new(color.red,40),bgcolor=color.new(color.red,85))
+    line.new(bar_index,ePx,bar_index+boxBars,ePx,color=color.white,style=line.style_dashed)
+    label.new(bar_index,tpPx,"SHORT  MACD zero | Entry "+f_fmt(ePx)+" | TP "+f_fmt(tpPx)+" | SL "+f_fmt(slPx),style=label.style_label_up,color=color.new(color.red,20),textcolor=color.white,size=size.small)
+    alert("NQ MACD SHORT "+syminfo.ticker+" | Entry "+f_fmt(ePx)+" | SL "+f_fmt(slPx)+" | TP "+f_fmt(tpPx),alert.freq_once_per_bar)
+plot(emaR,"200 EMA",color=color.new(color.orange,0),linewidth=2)
+plotshape(longSig,title="Long",style=shape.triangleup,location=location.belowbar,color=color.lime,size=size.small)
+plotshape(shortSig,title="Short",style=shape.triangledown,location=location.abovebar,color=color.red,size=size.small)
+alertcondition(longSig,"MACD Long","NQ MACD zero LONG")
+alertcondition(shortSig,"MACD Short","NQ MACD zero SHORT")`,
+      steps: ['Add to a 5–15m chart of NQ/MNQ. The 200 EMA (orange) is the trend filter.','MACD line crossing above zero while price is above the 200 EMA fires LONG; crossing below zero under the 200 EMA fires SHORT.','Box draws: dashed entry, green target (2R), red stop (ATR).','Create an alert → "Any alert() function call" → Once Per Bar Close.','The zero-line cross + trend gate cuts MACD chop — fewer, cleaner pulses. Backtest lengths + R over 6–12 months.'] },
   },
 ]
