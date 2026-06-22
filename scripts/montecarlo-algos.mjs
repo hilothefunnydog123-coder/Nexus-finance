@@ -17,34 +17,23 @@
 // Run:  node scripts/montecarlo-algos.mjs
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── The 15 strategies (must mirror the targets in src/app/algorithms/data.ts) ──
+// ── The 3 robust strategies. Win/R here are HONEST, literature-grounded *priors*,
+//    not promises — replace them with your own Strategy-Tester numbers per symbol. ──
 const STRATS = [
-  { id: 'nqsupertrend', name: 'SuperTrend + ADX Flip',      win: 0.54, R: 2.2, freq: 1.4 },
-  { id: 'nqturtle',     name: 'Donchian Turtle Breakout',   win: 0.45, R: 3.0, freq: 0.8 },
-  { id: 'nqkelt',       name: 'Keltner Squeeze Release',    win: 0.50, R: 2.5, freq: 1.1 },
-  { id: 'nqgapgo',      name: 'Gap-and-Go Continuation',    win: 0.57, R: 2.0, freq: 0.7 },
-  { id: 'nq3bar',       name: '3-Bar Reversal at Band',     win: 0.63, R: 1.5, freq: 1.6 },
-  { id: 'nqfib',        name: 'Fib 61.8 Trend Pullback',    win: 0.59, R: 2.0, freq: 1.3 },
-  { id: 'nqstophunt',   name: 'Liquidity Stop-Hunt Rev.',   win: 0.65, R: 2.4, freq: 0.9 },
-  { id: 'nqpivot',      name: 'Floor Pivot Reversion',      win: 0.69, R: 1.2, freq: 1.8 },
-  { id: 'nqmomo',       name: 'Momentum Ignition',          win: 0.54, R: 2.2, freq: 1.5 },
-  { id: 'nqdiv',        name: 'RSI Divergence Reversal',    win: 0.60, R: 2.0, freq: 1.2 },
-  { id: 'nqzfade',      name: 'Volatility Z-Score Fade',    win: 0.71, R: 1.0, freq: 2.0 },
-  { id: 'nqcvd',        name: 'Delta Divergence',           win: 0.58, R: 1.8, freq: 1.1 },
-  { id: 'nqcloud',      name: '200-EMA Cloud Pullback',     win: 0.56, R: 2.2, freq: 1.3 },
-  { id: 'nqbos',        name: 'Break-of-Structure Cont.',   win: 0.52, R: 2.6, freq: 1.0 },
-  { id: 'nqkz',         name: 'London–NY Killzone Sweep',   win: 0.61, R: 2.3, freq: 0.9 },
+  { id: 'nqtrendpb', name: 'Trend Pullback (TS-Momentum)', win: 0.46, R: 2.0, freq: 1.0 },
+  { id: 'nqmeanrev', name: 'RSI-2 Mean Reversion',         win: 0.62, R: 1.0, freq: 1.6 },
+  { id: 'nqorb',     name: 'Opening-Range Breakout',       win: 0.42, R: 2.0, freq: 0.8 },
 ]
 
 // ── Simulation config ─────────────────────────────────────────────────────────
 const CFG = {
   trials:        20000,   // Monte Carlo runs per strategy
-  riskPct:       0.02,    // 2% of equity risked per trade (aggressive prop sizing)
-  profitTarget:  0.10,    // +10% → challenge passed (FTMO Phase 1)
+  riskPct:       0.005,   // 0.5% per trade — matches the strategies' actual default sizing
+  profitTarget:  0.08,    // +8% → challenge passed
   maxDrawdown:   0.06,    // -6% trailing from peak → challenge failed
-  maxTrades:     60,      // evaluation window (a strategy must pass *fast*)
-  winHaircut:    0.045,   // subtract from advertised win-rate (slippage/regime)
-  rHaircut:      0.90,    // realised R = advertised R × this (spread/partial fills)
+  maxTrades:     120,     // a realistic evaluation length (these grind, they don't sprint)
+  winHaircut:    0.045,   // subtract from the win-rate prior (slippage/regime drift)
+  rHaircut:      0.90,    // realised R = prior R × this (spread/partial fills)
 }
 
 // Deterministic seed so the ranking is reproducible run-to-run.
@@ -156,7 +145,7 @@ const pc = x => (x * 100).toFixed(1) + '%'
 const f2 = x => x.toFixed(2)
 
 console.log('\n' + '═'.repeat(96))
-console.log('  YN FINANCE — MONTE CARLO RANKING · 15 QUANT DESK STRATEGIES (v17)')
+console.log(`  YN FINANCE — MONTE CARLO RANKING · ${STRATS.length} ROBUST STRATEGIES (v20)`)
 console.log(`  ${CFG.trials.toLocaleString()} trials each · ${pc(CFG.riskPct)} risk/trade · pass +${pc(CFG.profitTarget)} · bust -${pc(CFG.maxDrawdown)} trailing · ${CFG.maxTrades}-trade window · haircut applied`)
 console.log('═'.repeat(96))
 console.log(

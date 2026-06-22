@@ -197,7 +197,7 @@ function MonteCarloLab({ onSelect }: { onSelect: (id: string) => void }) {
             🎲 MONTE CARLO LAB · QUANT DESK
           </div>
           <h2 style={{ fontSize: 'clamp(22px,3.4vw,32px)', fontWeight: 900, letterSpacing: '-0.6px', color: '#e8f4f8', marginBottom: 10 }}>
-            We simulated 15 strategies through {MONTE_CARLO_META.trials.toLocaleString()} prop challenges each.
+            We simulated {MONTE_CARLO.length} robust strategies through {MONTE_CARLO_META.trials.toLocaleString()} prop challenges each.
           </h2>
           <p style={{ fontSize: 14.5, color: '#6a90a8', lineHeight: 1.7, maxWidth: 760 }}>
             Each strategy was run through a Monte Carlo of an FTMO-style evaluation —
