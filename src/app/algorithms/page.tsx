@@ -298,6 +298,7 @@ export default function AlgorithmsPage() {
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: isSelected ? '#e8f4f8' : '#7a9aaa', marginBottom: 4, lineHeight: 1.3 }}>{a.instructor.split('(')[0].trim()}</div>
                 <div style={{ fontSize: 11, color: isSelected ? a.color : '#3a5a6a', fontFamily: 'monospace', lineHeight: 1.4 }}>{a.strategy.split('—')[0].trim()}</div>
+                <div style={{ display: 'inline-block', marginTop: 10, fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', color: a.color, background: `${a.color}12`, border: `1px solid ${a.color}28`, borderRadius: 5, padding: '2px 7px', fontFamily: 'monospace' }}>{a.assets[0]}</div>
                 {isSelected && <div style={{ width: '100%', height: 2, background: a.color, borderRadius: 1, marginTop: 12 }} />}
               </button>
             )
