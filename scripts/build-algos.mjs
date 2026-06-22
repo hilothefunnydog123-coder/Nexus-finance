@@ -208,21 +208,25 @@ ${QUANT_INPUTS('⑤ Order-Flow & Quant')}
 // ═══════════ ⑥ RISK GOVERNOR ═══════════
 riskPct      = input.float(0.5, "Risk % of equity per trade", step=0.1, group="⑥ Risk")
 slAtrMult    = input.float(1.5, "Fallback SL (ATR ×)",        step=0.1, group="⑥ Risk")
+maxSlAtr     = input.float(2.0, "Max SL distance (ATR ×) — caps wide stops", step=0.1, group="⑥ Risk")
 useDailyStop = input.bool(true, "Daily loss kill-switch",               group="⑥ Risk")
 dailyLossPct = input.float(3.0, "Daily loss limit %",         step=0.5, group="⑥ Risk")
 maxTradesDay = input.int(3,     "Max trades per day",                   group="⑥ Risk")
 
-// ═══════════ ⑦ TRADE MANAGEMENT ═══════════
-tp1R     = input.float(1.0, "TP1 (R)",          step=0.1, group="⑦ Trade Mgmt")
-tp1Pct   = input.int(40,    "TP1 close %",                group="⑦ Trade Mgmt")
-tp2R     = input.float(2.0, "TP2 (R)",          step=0.1, group="⑦ Trade Mgmt")
-tp2Pct   = input.int(35,    "TP2 close %",                group="⑦ Trade Mgmt")
-tp3R     = input.float(${s.tp3R || 3.5}, "TP3 runner (R)", step=0.1, group="⑦ Trade Mgmt")
-useBE    = input.bool(true, "Breakeven after TP1",        group="⑦ Trade Mgmt")
-beOffR   = input.float(0.1, "BE offset (R)",    step=0.05,group="⑦ Trade Mgmt")
-useTrail = input.bool(true, "ATR chandelier trail after TP2", group="⑦ Trade Mgmt")
-trailLen = input.int(14,    "Trail lookback",             group="⑦ Trade Mgmt")
-trailAtr = input.float(2.5, "Trail ATR ×",      step=0.1, group="⑦ Trade Mgmt")
+// ═══════════ ⑦ TRADE MANAGEMENT (bank fast · protect · cut dead trades) ═══════════
+tp1R        = input.float(0.5,  "TP1 (R) — bank fast",         step=0.1, group="⑦ Trade Mgmt")
+tp1Pct      = input.int(60,     "TP1 close %",                           group="⑦ Trade Mgmt")
+tp2R        = input.float(1.1,  "TP2 (R)",                     step=0.1, group="⑦ Trade Mgmt")
+tp2Pct      = input.int(25,     "TP2 close %",                           group="⑦ Trade Mgmt")
+tp3R        = input.float(${Math.min(s.tp3R || 2.2, 2.2)}, "TP3 runner (R)", step=0.1, group="⑦ Trade Mgmt")
+beTrigR     = input.float(0.5,  "Move to breakeven after (R)",  step=0.1, group="⑦ Trade Mgmt")
+beLockR     = input.float(0.15, "Lock profit at (R) on BE",     step=0.05,group="⑦ Trade Mgmt")
+useTrail    = input.bool(true,  "ATR trail (ratchets up only)",           group="⑦ Trade Mgmt")
+trailStartR = input.float(0.8,  "Start trailing after (R)",     step=0.1, group="⑦ Trade Mgmt")
+trailLen    = input.int(10,     "Trail lookback",                         group="⑦ Trade Mgmt")
+trailAtr    = input.float(1.3,  "Trail ATR ×",                  step=0.1, group="⑦ Trade Mgmt")
+useTimeStop = input.bool(true,  "Cut dead trades (time stop)",            group="⑦ Trade Mgmt")
+maxBars     = input.int(24,     "Max bars in trade",                      group="⑦ Trade Mgmt")
 
 // ═══════════ ⑧ SESSIONS ═══════════
 useSess   = input.bool(true, "Restrict to session",        group="⑧ Sessions")
@@ -262,11 +266,14 @@ var float eSL    = na
 var float eT1    = na
 var float eT2    = na
 var float eT3    = na
+var int   eBar   = na
+var float lockStop = na
 var bool  t1Done = false
 var bool  t2Done = false
 
 if longCond
-    slp = math.min(nz(slLongPx, close - atr * slAtrMult), close - atr * 0.05)
+    rawSlp = math.min(nz(slLongPx, close - atr * slAtrMult), close - atr * 0.05)
+    slp = math.max(rawSlp, close - atr * maxSlAtr)
     rk  = close - slp
     if rk > 0
         posDir := 1
@@ -275,6 +282,8 @@ if longCond
         eT1    := close + rk * tp1R
         eT2    := close + rk * tp2R
         eT3    := close + rk * tp3R
+        eBar   := bar_index
+        lockStop := slp
         t1Done := false
         t2Done := false
         tradesToday := tradesToday + 1
@@ -287,7 +296,8 @@ if longCond
         alert("${s.tag} LONG " + syminfo.ticker + " @ " + f_fmt(eEntry) + " | SL " + f_fmt(eSL) + " | T1 " + f_fmt(eT1) + " T2 " + f_fmt(eT2) + " T3 " + f_fmt(eT3) + " | score " + str.tostring(lScore, "#"), alert.freq_once_per_bar)
 
 if shortCond
-    slp = math.max(nz(slShortPx, close + atr * slAtrMult), close + atr * 0.05)
+    rawSlp = math.max(nz(slShortPx, close + atr * slAtrMult), close + atr * 0.05)
+    slp = math.min(rawSlp, close + atr * maxSlAtr)
     rk  = slp - close
     if rk > 0
         posDir := -1
@@ -296,6 +306,8 @@ if shortCond
         eT1    := close - rk * tp1R
         eT2    := close - rk * tp2R
         eT3    := close - rk * tp3R
+        eBar   := bar_index
+        lockStop := slp
         t1Done := false
         t2Done := false
         tradesToday := tradesToday + 1
@@ -310,28 +322,39 @@ if shortCond
 // ── Position management: tiered exits + breakeven + ATR chandelier trail ──
 if strategy.position_size > 0
     rk = eEntry - eSL
+    movedR = rk > 0 ? (high - eEntry) / rk : 0.0
     if high >= eT1
         t1Done := true
     if high >= eT2
         t2Done := true
-    beStop = useBE and t1Done ? eEntry + rk * beOffR : eSL
-    trStop = useTrail and t2Done ? math.max(beStop, ta.highest(high, trailLen) - atr * trailAtr) : beStop
-    strategy.exit("L-T1", from_entry="L", qty_percent=tp1Pct, stop=trStop, limit=eT1)
-    strategy.exit("L-T2", from_entry="L", qty_percent=tp2Pct, stop=trStop, limit=eT2)
-    strategy.exit("L-T3", from_entry="L", stop=trStop, limit=eT3)
+    base = (movedR >= beTrigR or t1Done) ? math.max(eSL, eEntry + rk * beLockR) : eSL
+    cand = useTrail and movedR >= trailStartR ? ta.highest(high, trailLen) - atr * trailAtr : base
+    lockStop := math.max(nz(lockStop, base), math.max(base, cand))
+    if useTimeStop and (bar_index - eBar) >= maxBars
+        strategy.close("L", comment="time stop")
+    else
+        strategy.exit("L-T1", from_entry="L", qty_percent=tp1Pct, stop=lockStop, limit=eT1)
+        strategy.exit("L-T2", from_entry="L", qty_percent=tp2Pct, stop=lockStop, limit=eT2)
+        strategy.exit("L-T3", from_entry="L", stop=lockStop, limit=eT3)
 if strategy.position_size < 0
     rk = eSL - eEntry
+    movedR = rk > 0 ? (eEntry - low) / rk : 0.0
     if low <= eT1
         t1Done := true
     if low <= eT2
         t2Done := true
-    beStop = useBE and t1Done ? eEntry - rk * beOffR : eSL
-    trStop = useTrail and t2Done ? math.min(beStop, ta.lowest(low, trailLen) + atr * trailAtr) : beStop
-    strategy.exit("S-T1", from_entry="S", qty_percent=tp1Pct, stop=trStop, limit=eT1)
-    strategy.exit("S-T2", from_entry="S", qty_percent=tp2Pct, stop=trStop, limit=eT2)
-    strategy.exit("S-T3", from_entry="S", stop=trStop, limit=eT3)
+    base = (movedR >= beTrigR or t1Done) ? math.min(eSL, eEntry - rk * beLockR) : eSL
+    cand = useTrail and movedR >= trailStartR ? ta.lowest(low, trailLen) + atr * trailAtr : base
+    lockStop := math.min(nz(lockStop, base), math.min(base, cand))
+    if useTimeStop and (bar_index - eBar) >= maxBars
+        strategy.close("S", comment="time stop")
+    else
+        strategy.exit("S-T1", from_entry="S", qty_percent=tp1Pct, stop=lockStop, limit=eT1)
+        strategy.exit("S-T2", from_entry="S", qty_percent=tp2Pct, stop=lockStop, limit=eT2)
+        strategy.exit("S-T3", from_entry="S", stop=lockStop, limit=eT3)
 if strategy.position_size == 0
     posDir := 0
+    lockStop := na
 ${s.sig.plots ? '\n' + s.sig.plots + '\n' : ''}
 // ── Live dashboard: order flow + technicals + math/physics ──
 var table dash = na
@@ -410,7 +433,8 @@ ${QUANT_INPUTS('③ Order-Flow & Quant')}
 
 // ═══════════ ④ RISK / TARGETS / SESSION ═══════════
 slAtrMult = input.float(1.5, "Fallback SL (ATR ×)", step=0.1, group="④ Risk")
-tgtR      = input.float(${s.tp2R || 2.0}, "Target (R) shown on box", step=0.1, group="④ Risk")
+maxSlAtr  = input.float(2.0, "Max SL distance (ATR ×) — caps wide stops", step=0.1, group="④ Risk")
+tgtR      = input.float(1.0, "Target (R) shown on box — bank fast", step=0.1, group="④ Risk")
 useSess   = input.bool(true, "Restrict to session",  group="④ Risk")
 sess      = input.session("${s.sess || '0930-1600'}", "Session (NY)", group="④ Risk")
 skipLunch = input.bool(${s.skipLunch === false ? 'false' : 'true'}, "Skip lunch 11:30-13:30 ET", group="④ Risk")
@@ -430,7 +454,8 @@ longSig  = rawLong  and lScore >= minScore and sessOk and volRegimeOk and (not u
 shortSig = rawShort and sScore >= minScore and sessOk and volRegimeOk and (not useHTF or htfBear)
 
 if longSig
-    slp = math.min(nz(slLongPx, close - atr * slAtrMult), close - atr * 0.05)
+    rawSlp = math.min(nz(slLongPx, close - atr * slAtrMult), close - atr * 0.05)
+    slp = math.max(rawSlp, close - atr * maxSlAtr)
     rk  = close - slp
     if rk > 0
         tp = close + rk * tgtR
@@ -441,7 +466,8 @@ if longSig
         alert("${s.tag} LONG " + syminfo.ticker + " | E " + f_fmt(close) + " | SL " + f_fmt(slp) + " | TP " + f_fmt(tp) + " | score " + str.tostring(lScore, "#"), alert.freq_once_per_bar)
 
 if shortSig
-    slp = math.max(nz(slShortPx, close + atr * slAtrMult), close + atr * 0.05)
+    rawSlp = math.max(nz(slShortPx, close + atr * slAtrMult), close + atr * 0.05)
+    slp = math.min(rawSlp, close + atr * maxSlAtr)
     rk  = slp - close
     if rk > 0
         tp = close - rk * tgtR
