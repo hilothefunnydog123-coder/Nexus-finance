@@ -5,18 +5,12 @@ import { ArrowUpRight, Award, Crown, X, Check, ChevronLeft, Lock, Sparkles } fro
 import Assessment from './Assessment'
 import { useAuth } from '@/hooks/useAuth'
 import Link from 'next/link'
+import { FIELDS, LEVELS, PASS, type JmField, type JmChallenge } from '@/lib/judgemynt/fields'
 
 const TEAL = '#00d4aa'
 const BLUE = '#1e90ff'
 
-interface Challenge {
-  id: string
-  level: number
-  title: string
-  tagline: string
-  brief: string
-  original: string
-}
+type Challenge = JmChallenge
 
 interface Dimensions {
   detection: number
@@ -38,108 +32,6 @@ interface Grade {
   tip: string
 }
 
-// Public display copy only — hidden flaws + answer keys live server-side.
-const CHALLENGES: Challenge[] = [
-  {
-    id: 'essay',
-    level: 1,
-    title: 'Spot the Fake',
-    tagline: 'A school-essay paragraph with hidden problems.',
-    brief:
-      "This AI wrote a paragraph for a school essay. It looks fine, but it has hidden problems that would get you in trouble. Find them and rewrite it so it's actually trustworthy.",
-    original:
-      "Social media is extremely harmful to teenagers. In fact, 73% of students say it ruins their grades, which proves it's dangerous. Everyone agrees that social media is bad because it is harmful to young people. That is why it should clearly be limited for all teens.",
-  },
-  {
-    id: 'summary',
-    level: 1,
-    title: 'Catch the Lie',
-    tagline: 'A science summary with one false "fact".',
-    brief:
-      "The AI wrote a quick summary for a science presentation. One 'fact' in here is actually false — a famous myth. Catch it, fix it, and tighten the summary.",
-    original:
-      'The Great Wall of China is one of the most impressive structures ever built over many centuries. It is the only man-made object visible from space with the naked eye, which shows how enormous it is. Honestly, summaries like this are always fun to write. It remains a major landmark today.',
-  },
-  {
-    id: 'news',
-    level: 1,
-    title: 'Find the Bias',
-    tagline: 'A "neutral" news summary that secretly editorializes.',
-    brief:
-      "This AI 'news summary' is supposed to be neutral. It isn't — it slips opinion in as fact and frames things unfairly. Catch what's wrong and rewrite it as a fair, factual summary.",
-    original:
-      "The city council's reckless new budget shamelessly slashed funding for parks, proving once again that the council doesn't care about families. Officials claim the cuts are temporary. The plan passed 5-2.",
-  },
-  {
-    id: 'email',
-    level: 2,
-    title: 'Make It Human',
-    tagline: 'A robotic AI email that needs to get a yes.',
-    brief:
-      'You need to ask your teacher for a 2-day extension on an assignment. The AI wrote this email. Fix it so it actually gets a yes — clear, specific, and human.',
-    original:
-      'Dear Esteemed Educator, I am writing to humbly express my sincere hope that you might find it within your considerable generosity to perhaps consider the possibility of allowing some additional time for the completion of the assigned work, as certain circumstances have arisen. I deeply appreciate your boundless understanding in this matter. Yours most respectfully.',
-  },
-  {
-    id: 'cover',
-    level: 2,
-    title: 'Kill the Cliché',
-    tagline: 'A cover-letter line that says absolutely nothing.',
-    brief:
-      "The AI wrote this line for a cover letter. It's generic filler that says nothing. Rewrite it so it's specific, honest, and actually makes someone want to hire you.",
-    original:
-      'I am a passionate, hardworking team player who is excited to leverage my skills and hit the ground running to bring value to your dynamic organization.',
-  },
-  {
-    id: 'explain',
-    level: 2,
-    title: 'Fix the Explainer',
-    tagline: 'A confident explanation that is secretly wrong.',
-    brief:
-      'The AI tried to explain how interest works to a beginner. It sounds smart but it is confusing — and one part is flat-out wrong. Fix it so it is clear and correct.',
-    original:
-      'Interest is the time-value coefficient applied to principal over compounding intervals. Simple interest grows exponentially, while compound interest grows linearly, making simple interest the more aggressive option for long-term growth.',
-  },
-  {
-    id: 'code',
-    level: 3,
-    title: 'Debug the AI',
-    tagline: 'AI-written code with a subtle bug and a missing case.',
-    brief:
-      'The AI wrote this function to average a list of numbers. It has a subtle bug and a case it does not handle. Find both and fix the code.',
-    original:
-      'function average(nums) {\n  let total = 0;\n  for (let i = 1; i <= nums.length; i++) {\n    total += nums[i];\n  }\n  return total / nums.length;\n}',
-  },
-  {
-    id: 'prompt',
-    level: 3,
-    title: 'Direct the AI',
-    tagline: 'A lazy prompt got a weak result. Give better direction.',
-    brief:
-      "Someone gave an AI a lazy prompt and got this weak result. You can't edit the result — instead, write a BETTER instruction that would get a genuinely great answer. You are graded on your direction, not your writing.",
-    original:
-      "PROMPT GIVEN: 'write about dogs'\nAI OUTPUT: 'Dogs are animals. They are pets. People like dogs because they are friendly and fun. There are many kinds of dogs. Dogs are good.'",
-  },
-  {
-    id: 'data',
-    level: 3,
-    title: 'Check the Claim',
-    tagline: 'An AI analysis that overreaches from weak data.',
-    brief:
-      'This AI analysis jumps to a huge conclusion from weak data. Catch the reasoning errors and rewrite the conclusion so it is honest about what the data actually shows.',
-    original:
-      'In our survey, 8 out of 10 people who drink coffee reported feeling productive. This proves coffee causes productivity. Therefore, companies should require all employees to drink coffee to boost performance.',
-  },
-]
-
-const LEVELS = [
-  { n: 1, name: 'Detection', degree: 'AI Detection', blurb: 'Catch what AI gets wrong — fakes, false facts, hidden bias.' },
-  { n: 2, name: 'Correction', degree: 'AI Correction', blurb: 'Fix flawed AI work to a genuinely high standard.' },
-  { n: 3, name: 'Direction', degree: 'AI Direction', blurb: 'Judge and direct AI toward an excellent result.' },
-]
-
-const PASS = 70
-
 function band(score: number): { label: string; color: string } {
   if (score >= 90) return { label: 'Elite judgment', color: TEAL }
   if (score >= PASS) return { label: 'Passed', color: '#5ee0c0' }
@@ -148,8 +40,9 @@ function band(score: number): { label: string; color: string } {
 }
 
 export default function JudgemyntPage() {
-  const [stage, setStage] = useState<'hero' | 'curriculum' | 'challenge' | 'result' | 'certs' | 'assess'>('hero')
+  const [stage, setStage] = useState<'hero' | 'fields' | 'curriculum' | 'challenge' | 'result' | 'certs' | 'assess'>('hero')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [field, setField] = useState<JmField>(FIELDS[0])
   const [active, setActive] = useState<Challenge | null>(null)
   const [submission, setSubmission] = useState('')
   const [loading, setLoading] = useState(false)
@@ -192,9 +85,10 @@ export default function JudgemyntPage() {
     })
   }
 
-  const levelChallenges = (n: number) => CHALLENGES.filter((c) => c.level === n)
-  const levelPassed = (n: number) => levelChallenges(n).every((c) => (progress[c.id] ?? 0) >= PASS)
+  const levelChallenges = (n: number) => field.challenges.filter((c) => c.level === n)
+  const levelPassed = (n: number) => { const cs = levelChallenges(n); return cs.length > 0 && cs.every((c) => (progress[c.id] ?? 0) >= PASS) }
   const capstoneEarned = [1, 2, 3].every((n) => levelPassed(n))
+  const fieldDegree = (base: string) => (field.id === 'everyday' ? base : `${base} · ${field.name}`)
 
   function go(s: typeof stage) {
     // Judgemynt requires an account — any action while signed out triggers Google sign-in.
@@ -245,7 +139,7 @@ export default function JudgemyntPage() {
   }
 
   const navLinks = [
-    { label: 'Curriculum', to: 'curriculum' as const },
+    { label: 'Fields', to: 'fields' as const },
     { label: 'AI Exam', to: 'assess' as const },
     { label: 'Degrees', to: 'certs' as const },
   ]
@@ -343,7 +237,7 @@ export default function JudgemyntPage() {
 
             <div className="jm-fade-up jm-d3 mt-8 lg:mt-10 flex flex-wrap items-center gap-3 sm:gap-4">
               <button
-                onClick={() => go('curriculum')}
+                onClick={() => go('fields')}
                 className="group flex items-center gap-2 px-5 sm:px-7 py-3.5 sm:py-4 text-[11px] sm:text-xs uppercase tracking-widest font-semibold text-[#06121f] transition hover:brightness-110"
                 style={{ background: `linear-gradient(110deg, ${TEAL}, ${BLUE})`, boxShadow: `0 8px 30px ${TEAL}33` }}
               >
@@ -361,8 +255,8 @@ export default function JudgemyntPage() {
 
             <div className="jm-fade-up jm-d4 mt-8 sm:mt-10 lg:mt-14 flex flex-wrap items-center gap-6 sm:gap-10 lg:gap-14">
               {[
-                ['3', 'Degrees to earn'],
-                ['9', 'Judgment exams'],
+                [String(FIELDS.length), 'Career fields'],
+                [String(FIELDS.reduce((n, f) => n + f.challenges.length, 0)), 'Judgment exams'],
                 ['100%', 'AI-graded'],
               ].map(([v, l], i) => (
                 <div key={l} className="flex items-center gap-6 sm:gap-10 lg:gap-14">
@@ -428,6 +322,42 @@ export default function JudgemyntPage() {
         </section>
       )}
 
+      {/* ===================== FIELDS ===================== */}
+      {stage === 'fields' && (
+        <Shell onHome={() => go('hero')} onCerts={() => go('certs')}>
+          <div className="jm-fade-up">
+            <div className="text-xs uppercase tracking-[0.3em]" style={{ color: TEAL }}>Choose your field</div>
+            <h2 className="font-podium text-[clamp(2rem,6vw,4rem)] uppercase leading-[0.95] mt-3">
+              Judgment, for<br />your field.
+            </h2>
+            <p className="text-white/60 max-w-xl mt-4 text-sm sm:text-base">
+              Each field has its own curriculum and its own degrees. Prove you can out-judge AI where it actually counts for you.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-9">
+            {FIELDS.map((f, i) => {
+              const passedCount = [1, 2, 3].filter((n) => { const cs = f.challenges.filter((c) => c.level === n); return cs.length > 0 && cs.every((c) => (progress[c.id] ?? 0) >= PASS) }).length
+              return (
+                <button key={f.id} onClick={() => { setField(f); go('curriculum') }}
+                  className={`jm-fade-up jm-d${Math.min(4, i + 1)} text-left rounded-2xl p-6 border transition group relative overflow-hidden`}
+                  style={{ background: 'rgba(255,255,255,.02)', borderColor: `${f.color}33` }}>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition" style={{ background: `radial-gradient(400px 200px at 0% 0%, ${f.color}12, transparent 70%)` }} />
+                  <div className="relative flex items-center justify-between">
+                    <span className="text-3xl">{f.emoji}</span>
+                    <span className="text-[10px] uppercase tracking-widest" style={{ color: passedCount ? f.color : 'rgba(255,255,255,.3)' }}>{passedCount}/3 degrees</span>
+                  </div>
+                  <div className="relative font-podium text-xl uppercase mt-4" style={{ color: '#fff' }}>{f.name}</div>
+                  <div className="relative text-white/50 text-[13px] leading-snug mt-2">{f.blurb}</div>
+                  <div className="relative mt-4 text-[11px] uppercase tracking-widest flex items-center gap-1" style={{ color: f.color }}>
+                    {f.challenges.length} exams <ArrowUpRight className="w-3 h-3" />
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </Shell>
+      )}
+
       {stage === 'assess' &&
         (ready ? (
           <Assessment
@@ -454,17 +384,17 @@ export default function JudgemyntPage() {
       {stage === 'curriculum' && (
         <Shell onHome={() => go('hero')} onCerts={() => go('certs')}>
           <div className="jm-fade-up">
-            <div className="text-xs uppercase tracking-[0.3em]" style={{ color: TEAL }}>
-              The Curriculum
-            </div>
+            <button onClick={() => go('fields')} className="flex items-center gap-2 text-xs uppercase tracking-[0.3em]" style={{ color: field.color }}>
+              <span className="text-lg">{field.emoji}</span> {field.name} <span className="text-white/30 normal-case tracking-normal">· change field</span>
+            </button>
             <h2 className="font-podium text-[clamp(2rem,6vw,4rem)] uppercase leading-[0.95] mt-3">
               Three levels.
               <br />
               Three degrees.
             </h2>
             <p className="text-white/60 max-w-xl mt-4 text-sm sm:text-base">
-              Pass every exam in a level (score {PASS}+) to earn its degree. Clear all three and you earn the full{' '}
-              <span className="text-white font-semibold">Judgment Degree</span>.
+              Pass every exam in a level (score {PASS}+) to earn its <span className="text-white font-semibold">{field.name}</span> degree. Clear all three and you earn the full{' '}
+              <span className="text-white font-semibold">{fieldDegree('Judgment Degree')}</span>.
             </p>
           </div>
 
@@ -691,22 +621,22 @@ export default function JudgemyntPage() {
               return (
                 <DegreeCard
                   key={lvl.n}
-                  title={lvl.degree}
-                  sub={`Level ${lvl.n} · ${lvl.name}`}
+                  title={fieldDegree(lvl.degree)}
+                  sub={`Level ${lvl.n} · ${lvl.name} · ${field.name}`}
                   earned={earned}
                   onView={() => {
-                    if (earned) setViewDegree(lvl.degree)
+                    if (earned) setViewDegree(fieldDegree(lvl.degree))
                   }}
                 />
               )
             })}
             <DegreeCard
-              title="The Judgment Degree"
-              sub="Capstone · all three levels"
+              title={fieldDegree('The Judgment Degree')}
+              sub={`Capstone · ${field.name}`}
               earned={capstoneEarned}
               capstone
               onView={() => {
-                if (capstoneEarned) setViewDegree('The Judgment Degree')
+                if (capstoneEarned) setViewDegree(fieldDegree('The Judgment Degree'))
               }}
             />
           </div>
@@ -727,7 +657,7 @@ export default function JudgemyntPage() {
         <Diploma
           degree={viewDegree}
           name={fullName}
-          onDownload={() => downloadDegree(viewDegree, fullName, 'Judgemynt verified degree')}
+          onDownload={() => downloadDegree(viewDegree, fullName, `${field.name} · Judgemynt verified degree`)}
           onClose={() => setViewDegree(null)}
         />
       )}

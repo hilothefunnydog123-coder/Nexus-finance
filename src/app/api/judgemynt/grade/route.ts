@@ -139,6 +139,181 @@ const CHALLENGES: Record<
     ideal:
       'A strong fix softens "proves" to a cautious association, notes the sample and causation limits, and drops the overreaching recommendation.',
   },
+
+  // ==================== FIELD: SOFTWARE ENGINEERING ====================
+  'swe-detect': {
+    level: 1,
+    brief: 'The AI wrote this function to apply a discount. It passes a quick glance and even a naive test, but it is wrong in a way that loses money. Find the flaw(s) and fix it.',
+    original: 'function applyDiscount(price, percent) {\n  // percent like 20 for 20% off\n  return price - percent / 100;\n}',
+    knownFlaws: [
+      'Math is wrong: it subtracts percent/100 (e.g. 0.2) from the price instead of price*(percent/100). A $100 item "20% off" returns $99.80, not $80.',
+      'No validation/clamping — negative or >100 percents, or non-numeric input, produce nonsense prices.',
+      'It silently returns a plausible-looking wrong number, so a naive test on the wrong value can pass.',
+    ],
+    ideal: 'A correct fix computes price * (1 - percent/100) (or price - price*percent/100), and ideally guards the percent range / invalid input.',
+  },
+  'swe-correct': {
+    level: 2,
+    brief: 'The AI wrote this Express route to fetch a user. It works in the demo but a reviewer should never approve it. Rewrite it so it is safe and correct.',
+    original: "app.get('/user', (req, res) => {\n  const id = req.query.id;\n  db.query('SELECT * FROM users WHERE id = ' + id, (e, rows) => {\n    res.json(rows[0]);\n  });\n});",
+    knownFlaws: [
+      'SQL injection: the id is concatenated straight into the query — must use a parameterized/prepared query.',
+      'No error handling: the db error `e` is ignored, and rows[0] is returned even on failure or when no user is found.',
+      'No input validation or auth check on the id, and it returns the full row (possibly password hashes) instead of safe fields.',
+    ],
+    ideal: 'A safe fix uses a parameterized query, handles the error, 404s when no user is found, validates the id, and returns only safe fields.',
+  },
+  'swe-direct': {
+    level: 3,
+    brief: "A junior told an AI 'make the checkout code better' and got a 600-line rewrite that changed behavior. Write the instruction a staff engineer would give to get a safe, reviewable change. You are graded on your direction.",
+    original: "TICKET GIVEN TO AI: 'make the checkout code better'\nAI OUTPUT: a 600-line rewrite that renamed everything, switched libraries, removed two edge-case branches, and shipped no tests.",
+    knownFlaws: [
+      'The instruction gave no scope, no definition of "better", and no constraint to preserve behavior — so the AI rewrote everything.',
+      'Good direction must constrain: keep behavior identical, make a small reviewable diff, add tests, and not swap libraries or remove edge cases.',
+      'It should specify the actual goal (readability? a specific bug? performance?) and require the change be incremental and tested.',
+    ],
+    ideal: 'A great answer scopes the task to one concrete goal, forbids behavior changes/library swaps, requires preserving the edge cases, demands a small diff plus tests, and asks for the reasoning.',
+  },
+
+  // ==================== FIELD: MEDICINE & HEALTH ====================
+  'med-detect': {
+    level: 1,
+    brief: 'A user asked an AI about chest pain. The answer sounds calm and helpful — and is dangerous. Catch what is wrong and rewrite it responsibly.',
+    original: "Chest pain is almost always just muscle strain or anxiety, so there's no need to worry. Try some stretches and a glass of water, and it should pass. If it's still there in a few days, maybe mention it to a doctor at your next checkup.",
+    knownFlaws: [
+      'Dangerous false reassurance: chest pain can signal a heart attack or other emergency; telling someone "no need to worry" and to wait days is harmful.',
+      'It fails to advise urgent/emergency evaluation or to list red-flag symptoms (radiating pain, shortness of breath, sweating) that mean call emergency services now.',
+      'It gives unqualified self-treatment advice instead of deferring to a professional for a potentially serious symptom.',
+    ],
+    ideal: 'A responsible rewrite urges urgent medical attention / emergency care for chest pain, names red-flag symptoms, and avoids confident reassurance or self-treatment.',
+  },
+  'med-correct': {
+    level: 2,
+    brief: 'The AI gave dosing guidance for a child. It is overconfident and unsafe. Rewrite it so it is responsible and correct in its judgment, without inventing specifics.',
+    original: 'For a fever in kids, just give them the same acetaminophen dose as an adult — kids are tough and it works faster. You can repeat it every couple of hours until the fever breaks. No need to check weight or the label.',
+    knownFlaws: [
+      'Unsafe dosing: children are dosed by weight, NOT adult doses — an adult dose can seriously harm a child.',
+      'Wrong interval and "repeat until the fever breaks" risks overdose; it ignores maximum daily limits.',
+      'It tells the user to ignore the label and weight and to skip professional/pharmacist guidance.',
+    ],
+    ideal: 'A responsible rewrite says pediatric dosing is by weight per the product label, to follow the label/pharmacist or doctor, to respect max daily limits, and to seek care for high or persistent fever — without inventing a specific dose.',
+  },
+  'med-direct': {
+    level: 3,
+    brief: "A startup told an AI 'build a symptom checker that tells users what they have.' That framing is unsafe. Write the instruction a clinical safety lead would give instead. You are graded on your direction.",
+    original: "PROMPT GIVEN: 'build a symptom checker that tells users what disease they have and what medicine to take.'\nAI OUTPUT: a bot that confidently diagnoses and prescribes from a few questions, with no red-flag escalation and no disclaimer.",
+    knownFlaws: [
+      'The framing demands diagnosis and prescription — both unsafe and often unlawful for an unsupervised bot.',
+      'Good direction must require red-flag triage that escalates emergencies, surfaces possibilities (not a definitive diagnosis), and never prescribes.',
+      'It must require clear disclaimers, a recommendation to see a professional, and conservative behavior under uncertainty.',
+    ],
+    ideal: 'A great answer reframes the bot to triage and inform (not diagnose/prescribe), mandates emergency red-flag escalation, confidence/uncertainty handling, disclaimers, and a push to professional care.',
+  },
+
+  // ==================== FIELD: LAW & CONTRACTS ====================
+  'law-detect': {
+    level: 1,
+    brief: "An AI wrote this for a legal memo. There's a serious professional-conduct problem hiding in it. Catch it and explain how a careful person should handle it.",
+    original: 'As established in Hartwell v. Dominion Logistics (2019), a verbal agreement over $500 is always fully enforceable in every state. This binding precedent settles the matter completely, so your client will certainly win.',
+    knownFlaws: [
+      'Likely hallucinated/unverifiable citation — AI invents realistic-sounding cases; the case must be verified in a real reporter before any reliance.',
+      'Overbroad false legal claim: contract enforceability varies by jurisdiction and facts (e.g., Statute of Frauds), so "always, every state" is wrong.',
+      'Overconfident outcome guarantee ("certainly win") that no responsible analysis should make.',
+    ],
+    ideal: 'A strong answer flags the citation as unverified (must be checked), rejects the absolute "every state" claim, notes jurisdiction/Statute-of-Frauds nuance, and drops the guaranteed-win framing.',
+  },
+  'law-correct': {
+    level: 2,
+    brief: 'The AI drafted this clause for a freelance contract from the client side. It is so one-sided it would scare off any sensible contractor and may not hold up. Rewrite it to be fair and enforceable.',
+    original: 'The Contractor hereby assigns all intellectual property they have ever created or will ever create, in perpetuity, to the Client, and waives all rights to payment if the Client is unsatisfied for any reason at its sole discretion.',
+    knownFlaws: [
+      'Absurd IP overreach: assigning ALL past and future IP (not just the work product for this engagement) is unreasonable and likely unenforceable.',
+      'Payment forfeiture at the client\'s "sole discretion" for being "unsatisfied" is unconscionable and removes any obligation to pay for work done.',
+      'No scope, no definition of deliverables, no kill-fee or acceptance process — wildly one-sided.',
+    ],
+    ideal: 'A fair rewrite limits the IP assignment to the deliverables created under this contract (after payment), replaces the discretionary forfeiture with a reasonable acceptance/revision process, and ties payment to delivered work.',
+  },
+  'law-direct': {
+    level: 3,
+    brief: "Someone asked an AI 'is this NDA enforceable?' and got a confident yes with no caveats. Write the instruction a supervising attorney would give to get genuinely useful, safe research. Graded on direction.",
+    original: "PROMPT GIVEN: 'is this NDA enforceable?'\nAI OUTPUT: 'Yes, it's fully enforceable everywhere and your client has nothing to worry about.' — no jurisdiction, no citations, no caveats, no flag to verify with counsel.",
+    knownFlaws: [
+      'No jurisdiction specified — enforceability depends on governing law; the instruction must require it.',
+      'Good direction demands verifiable citations and an explicit instruction to flag (not invent) authority and to surface counter-arguments and risks.',
+      'It must require caveats / "not legal advice, verify with counsel" rather than a blanket guarantee.',
+    ],
+    ideal: 'A great answer asks for the governing jurisdiction, requires real verifiable authority (and flags uncertainty), demands both sides of the enforceability question and key risks, and forbids guarantees.',
+  },
+
+  // ==================== FIELD: FINANCE & INVESTING ====================
+  'fin-detect': {
+    level: 1,
+    brief: 'An AI gave this investing tip. It sounds confident and exciting — and it breaks a basic rule of honest finance. Catch what is wrong and rewrite it responsibly.',
+    original: "This stock went up 40% last year, so it's guaranteed to keep climbing — past performance like that always continues. Put your entire emergency fund in; you basically can't lose, and you'll easily double your money by next year.",
+    knownFlaws: [
+      'False premise: past performance does not guarantee future results — "guaranteed to keep climbing" is the cardinal finance sin.',
+      'Reckless risk advice: putting an entire emergency fund into one stock destroys diversification and the purpose of an emergency fund.',
+      'Overpromised, fabricated return ("can\'t lose", "double by next year") with no basis.',
+    ],
+    ideal: 'A responsible rewrite removes the guarantee, notes past performance ≠ future results, warns against putting an emergency fund or undiversified money at risk, and avoids fabricated return promises.',
+  },
+  'fin-correct': {
+    level: 2,
+    brief: 'The AI summarized an investment for a beginner. It is technically not lying but it dangerously downplays risk. Rewrite it so the judgment is honest and balanced.',
+    original: "Options are a smart way to grow money fast. You pay a small premium and control a lot of shares, so your gains are huge. Most people who learn options do really well, and the downside is basically just the small premium, which is no big deal.",
+    knownFlaws: [
+      'Downplays risk: most retail options buyers lose money, and time decay means many options expire worthless — "most do really well" is false.',
+      'Frames losing 100% of the premium as "no big deal" — repeated total losses are a major risk, and writing options can lose far more.',
+      'One-sided hype ("grow money fast", "gains are huge") with no mention of probability of loss or suitability.',
+    ],
+    ideal: 'A balanced rewrite states most option buyers lose, explains time decay and the real probability/size of loss, and frames options as high-risk and unsuitable for beginners with money they cannot lose.',
+  },
+  'fin-direct': {
+    level: 3,
+    brief: "A user asked an AI 'should I buy this stock?' and got a flat 'yes, it's a great buy.' Write the instruction that would get a genuinely useful, balanced analysis. Graded on your direction.",
+    original: "PROMPT GIVEN: 'should I buy this stock?'\nAI OUTPUT: 'Yes, it's a great buy, go for it!' — no mention of the user's goals, time horizon, risk tolerance, valuation, or the fact that this isn't personalized advice.",
+    knownFlaws: [
+      'No context: a useful instruction must specify goals, time horizon, and risk tolerance — a buy/sell call is meaningless without them.',
+      'Good direction asks for both the bull and bear case, valuation and risks, not a one-word verdict.',
+      'It must require the answer to state it is not personalized financial advice rather than a confident "go for it".',
+    ],
+    ideal: 'A great answer supplies the investor context (goals, horizon, risk), asks for a balanced bull/bear analysis with valuation and risks, and requires a not-financial-advice framing instead of a verdict.',
+  },
+
+  // ==================== FIELD: MARKETING & COPY ====================
+  'mkt-detect': {
+    level: 1,
+    brief: 'The AI wrote this ad copy for a supplement. It would get the brand sued or fined. Catch the problem(s) and rewrite it so it sells without breaking the rules.',
+    original: 'Our new gummies are clinically proven to cure anxiety and burn fat overnight — guaranteed results or your money back! Doctors everywhere agree this is the #1 best supplement in the world. Nothing else even comes close.',
+    knownFlaws: [
+      'Illegal health claims: "clinically proven to cure" a condition and "burn fat overnight" are unsubstantiated disease/efficacy claims that regulators (FTC/FDA) prohibit for supplements.',
+      'Fake authority/endorsement: "doctors everywhere agree" and "#1 best in the world" are unsubstantiated, deceptive claims.',
+      'Guaranteed-results promise with no basis is deceptive advertising.',
+    ],
+    ideal: 'A compliant rewrite drops the cure/efficacy and "clinically proven" claims, removes fake endorsements and superlatives, and sells with honest, substantiated, benefit-led language (and any required disclaimers).',
+  },
+  'mkt-correct': {
+    level: 2,
+    brief: 'The AI wrote this product description. It is polished but hollow AI-speak with no real substance. Rewrite it so it is specific, honest, and actually persuasive.',
+    original: 'Introducing a revolutionary, game-changing solution that empowers you to unlock your full potential. Our cutting-edge platform seamlessly elevates your experience to the next level. Join thousands who are transforming their journey today.',
+    knownFlaws: [
+      'Pure buzzword filler ("revolutionary", "game-changing", "unlock your potential", "next level") that conveys zero concrete information.',
+      'No specifics: it never says what the product actually does, for whom, or what real benefit it delivers.',
+      'Hollow, interchangeable AI voice that could describe any product — it does not persuade.',
+    ],
+    ideal: 'A strong rewrite replaces buzzwords with what the product concretely does, for whom, and the specific outcome it delivers, in a real, credible voice.',
+  },
+  'mkt-direct': {
+    level: 3,
+    brief: "A founder told an AI 'write me some marketing for my app' and got bland filler. Write the brief a senior strategist would give to get sharp, on-target copy. Graded on your direction.",
+    original: "PROMPT GIVEN: 'write me some marketing for my app'\nAI OUTPUT: 'Download our app today and change your life! It's the best app for everyone. Simple, powerful, and amazing.' — no audience, no value prop, no channel, no voice.",
+    knownFlaws: [
+      'No audience: "for everyone" produces generic copy — a good brief names a specific target user and their pain.',
+      'No value proposition, proof, or differentiator — the instruction must supply what the app does and why it is better.',
+      'No channel, format, length, or brand voice — good direction constrains all of these toward a specific deliverable.',
+    ],
+    ideal: 'A great brief specifies the target audience and their pain, the concrete value prop and proof, the channel/format/length, and the brand voice — enough to produce sharp, specific copy.',
+  },
 }
 
 interface GradeResult {
