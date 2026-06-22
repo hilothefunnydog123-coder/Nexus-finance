@@ -20,6 +20,8 @@ import * as THREE from 'three'
 import { ArrowLeft, Volume2, VolumeX, Zap, Loader2 } from 'lucide-react'
 import { FEATURE_NAMES } from '@/lib/nn'
 import { Sonifier } from '@/lib/sonify'
+import { getQuality } from '@/lib/quality'
+import BrainMemory from '@/components/brain/BrainMemory'
 
 const SIZES = [11, 16, 12, 1]
 const LAYER_LABELS = ['INPUT · 11 FEATURES', 'HIDDEN LAYER · 16', 'HIDDEN LAYER · 12', 'OUTPUT NEURON']
@@ -64,9 +66,10 @@ export default function BrainLive() {
     const mount = mountRef.current
     if (!mount) return
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
+    const Q = getQuality()
+    const renderer = new THREE.WebGLRenderer({ antialias: Q.tier !== 'low', alpha: false })
     renderer.setSize(mount.clientWidth, mount.clientHeight)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, Q.dprCap))
     renderer.setClearColor(0x04060d, 1)
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.32
@@ -77,7 +80,7 @@ export default function BrainLive() {
     const camera = new THREE.PerspectiveCamera(64, mount.clientWidth / mount.clientHeight, 0.1, 600)
 
     // deep starfield
-    const starN = 1100
+    const starN = Q.count(1100, 200)
     const starPos = new Float32Array(starN * 3)
     for (let i = 0; i < starN; i++) {
       starPos[i * 3] = (Math.random() - 0.5) * 320
@@ -145,7 +148,7 @@ export default function BrainLive() {
     scene.add(new THREE.LineSegments(edgeGeo, edgeMat))
 
     // ── pulse pool (signal traveling along edges) ──
-    const PN = 1000
+    const PN = Q.count(1000, 240)
     const pPos = new Float32Array(PN * 3).fill(9999)
     const pClr = new Float32Array(PN * 3)
     const pFrom = new Float32Array(PN * 3)
@@ -170,7 +173,7 @@ export default function BrainLive() {
     }
 
     // ── corridor dust (parallax + speed streaks) ──
-    const dN = 480
+    const dN = Q.count(480, 80)
     const dPos = new Float32Array(dN * 3)
     for (let i = 0; i < dN; i++) {
       dPos[i * 3] = layerX[0] - 10 + Math.random() * (xEnd - layerX[0] + 30)
@@ -285,6 +288,7 @@ export default function BrainLive() {
     let t = 0, raf = 0
     const animate = () => {
       raf = requestAnimationFrame(animate)
+      if (document.hidden) return // pause heavy work when tab is backgrounded
       t += 0.016
 
       // firing progression along the path
@@ -503,6 +507,7 @@ export default function BrainLive() {
           <Link href={`/brainstock?t=${data.ticker}`} style={{ display: 'block', marginTop: 14, textAlign: 'center', background: 'rgba(255,255,255,.06)', color: '#cdd6f4', borderRadius: 9, padding: '9px', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
             Full forecast →
           </Link>
+          <div style={{ marginTop: 12 }}><BrainMemory ticker={data.ticker} compact /></div>
         </div>
       )}
       <style>{`@keyframes el-rise{from{opacity:0;transform:translateY(-50%) translateX(12px)}to{opacity:1;transform:translateY(-50%)}}`}</style>

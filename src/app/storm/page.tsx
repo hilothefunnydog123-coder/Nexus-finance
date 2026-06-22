@@ -14,6 +14,7 @@ import Link from 'next/link'
 import * as THREE from 'three'
 import { ArrowLeft, Volume2, VolumeX } from 'lucide-react'
 import { Sonifier } from '@/lib/sonify'
+import { getQuality } from '@/lib/quality'
 
 const TICKERS = [
   'NVDA', 'AAPL', 'MSFT', 'GOOGL', 'META', 'AMD', 'AVGO', 'CRM', 'ORCL', 'ADBE',
@@ -46,9 +47,10 @@ export default function Storm() {
   useEffect(() => {
     const mount = mountRef.current
     if (!mount) return
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    const Q = getQuality()
+    const renderer = new THREE.WebGLRenderer({ antialias: Q.tier !== 'low' })
     renderer.setSize(mount.clientWidth, mount.clientHeight)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, Q.dprCap))
     renderer.setClearColor(0x04060d, 1)
     mount.appendChild(renderer.domElement)
 
@@ -68,7 +70,7 @@ export default function Storm() {
 
     type P = { sprite: THREE.Sprite; mat: THREE.SpriteMaterial; t: string; vy: number; x: number; z: number }
     const parts: P[] = []
-    const COPIES = 3 // density
+    const COPIES = Q.tier === 'low' ? 1 : Q.tier === 'mid' ? 2 : 3 // density
     TICKERS.forEach((t) => {
       const tex = makeTex(t)
       for (let c = 0; c < COPIES; c++) {
@@ -87,6 +89,7 @@ export default function Storm() {
     let t = 0, raf = 0, soundClock = 0
     const animate = () => {
       raf = requestAnimationFrame(animate)
+      if (document.hidden) return
       t += 0.016
       const q = quotesRef.current
       let totalMag = 0

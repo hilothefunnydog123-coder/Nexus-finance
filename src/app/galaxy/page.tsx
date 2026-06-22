@@ -14,6 +14,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import * as THREE from 'three'
 import { ArrowLeft } from 'lucide-react'
+import { getQuality } from '@/lib/quality'
 
 type Star = { t: string; sector: string; mcap: number }
 // Curated universe: ticker, sector, approx market cap ($B). Color/size go live.
@@ -60,9 +61,10 @@ export default function Galaxy() {
   useEffect(() => {
     const mount = mountRef.current
     if (!mount) return
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    const Q = getQuality()
+    const renderer = new THREE.WebGLRenderer({ antialias: Q.tier !== 'low' })
     renderer.setSize(mount.clientWidth, mount.clientHeight)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, Q.dprCap))
     renderer.setClearColor(0x03040a, 1)
     mount.appendChild(renderer.domElement)
 
@@ -72,7 +74,7 @@ export default function Galaxy() {
     camera.position.set(0, 8, 64)
 
     // background starfield
-    const bgN = 1800
+    const bgN = Q.count(1800, 300)
     const bg = new Float32Array(bgN * 3)
     for (let i = 0; i < bgN; i++) { bg[i * 3] = (Math.random() - 0.5) * 360; bg[i * 3 + 1] = (Math.random() - 0.5) * 240; bg[i * 3 + 2] = (Math.random() - 0.5) * 360 }
     const bgGeo = new THREE.BufferGeometry(); bgGeo.setAttribute('position', new THREE.BufferAttribute(bg, 3))
@@ -121,6 +123,7 @@ export default function Galaxy() {
     let t = 0, raf = 0
     const animate = () => {
       raf = requestAnimationFrame(animate)
+      if (document.hidden) return
       t += 0.005
       const q = quotesRef.current
       stars.forEach((s) => {

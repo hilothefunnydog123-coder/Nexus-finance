@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ArrowLeft, ArrowUpRight, Loader2 } from 'lucide-react'
 import { saveToHistory } from '@/lib/history'
+import BrainMemory from '@/components/brain/BrainMemory'
 import NeuralBg from '@/components/cinematic/NeuralBg'
 import NeuralXray from '@/components/cinematic/NeuralXray'
 import BrainProof from '@/components/cinematic/BrainProof'
@@ -220,8 +221,9 @@ export default function BrainStock() {
         {error && <div style={{ marginTop: 18, color: '#ffb4b4', fontSize: 14, ...glass, padding: '12px 16px', borderColor: `${RED}44` }}>{error}</div>}
 
         {/* RESULT */}
+        {data && <div style={{ marginTop: 20 }}><BrainMemory ticker={data.ticker} /></div>}
         {data && (
-          <section style={{ marginTop: 26, display: 'grid', gridTemplateColumns: 'minmax(0,1.7fr) minmax(0,1fr)', gap: 16 }} className="bs-result">
+          <section style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'minmax(0,1.7fr) minmax(0,1fr)', gap: 16 }} className="bs-result">
             {/* chart panel */}
             <Reveal style={{ ...glass, padding: 'clamp(16px,2vw,22px)', position: 'relative', overflow: 'hidden' }}>
               <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${CYAN}66, transparent)` }} />

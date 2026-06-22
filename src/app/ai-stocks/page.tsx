@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { saveToHistory } from '@/lib/history'
+import BrainMemory from '@/components/brain/BrainMemory'
 
 const POPULAR = ['AAPL','NVDA','TSLA','MSFT','AMZN','META','AMD','GOOGL','SPY','QQQ','JPM','NFLX']
 
@@ -1357,6 +1358,8 @@ export default function AIStocksPage() {
       {/* ══ RESULTS ══════════════════════════════════════════════════════════ */}
       {result && a && !loading && (
         <div ref={resultsRef} className="results-stream" style={{maxWidth:1060,margin:'0 auto 80px',padding:'0 20px',position:'relative',zIndex:2}}>
+
+          <div style={{marginBottom:16}}><BrainMemory ticker={result.ticker} /></div>
 
           {/* SYSTEM OUTPUT HEADER */}
           <div style={{fontFamily:'monospace',fontSize:11,marginBottom:20,padding:'12px 16px',background:'rgba(3,12,6,.9)',border:'1px solid #00ff8820',borderRadius:2,display:'flex',flexWrap:'wrap',gap:12,alignItems:'center'}}>

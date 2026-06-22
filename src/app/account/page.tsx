@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth'
 import AuthModal from '@/components/auth/AuthModal'
 import { displayName } from '@/components/auth/AccountMenu'
 import { fetchHistory, deleteHistory, type HistoryItem } from '@/lib/history'
+import BrainMemory from '@/components/brain/BrainMemory'
 
 const VOID = '#05060b'
 const PANEL = '#0b1220'
@@ -334,6 +335,7 @@ export default function AccountPage() {
                   ? 'Your saved forecasts and analyses will appear here.'
                   : `${stats.total} saved · ${stats.f} forecast${stats.f === 1 ? '' : 's'} · ${stats.a} analys${stats.a === 1 ? 'is' : 'es'}.`}
               </p>
+              <div style={{ marginTop: 14 }}><BrainMemory /></div>
             </div>
 
             {/* tabs */}
