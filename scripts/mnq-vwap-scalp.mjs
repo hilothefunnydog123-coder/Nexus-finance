@@ -50,33 +50,36 @@ function ema(arr, len){const k=2/(len+1);const o=[];let e=arr[0];for(let i=0;i<a
 function atr(bars,len){const tr=bars.map((b,i)=>i?Math.max(b.h-b.l,Math.abs(b.h-bars[i-1].c),Math.abs(b.l-bars[i-1].c)):b.h-b.l);return ema(tr,len)}
 function vwapBands(bars){const vwap=[],sd=[];let pv=0,v=0,pv2=0;for(let i=0;i<bars.length;i++){if(bars[i].bar===0){pv=0;v=0;pv2=0}const tp=(bars[i].h+bars[i].l+bars[i].c)/3;pv+=tp*bars[i].v;v+=bars[i].v;pv2+=tp*tp*bars[i].v;const vw=v?pv/v:tp;const va=v?Math.max(0,pv2/v-vw*vw):0;vwap.push(vw);sd.push(Math.sqrt(va))}return{vwap,sd}}
 
-// VWAP reversion scalp with σ-band entry/target/stop, ranging filter, reversal tick
+// VWAP reversion scalp: σ-band entry/target, HARD ATR stop (caps tail risk), ranging filter
 function backtest(bars, P) {
-  const { entryB = 2.0, tgtB = 1.0, stopB = 3.0, slopeFlat = 0.15, slopeBars = 12,
-          startBar = 3, endBar = 72, cooldown = 3, cost = 1.5, needTick = true } = P
+  const { entryB = 2.0, tgtB = 1.0, stopAtr = 1.5, slopeFlat = 0.15, slopeBars = 12,
+          startBar = 6, endBar = 66, cooldown = 3, cost = 1.5, needTick = true } = P
   const { vwap, sd } = vwapBands(bars)
   const a = atr(bars, 14)
   const trades = []
-  let pos = 0, entryPx = 0, lastExit = -1e9, eDay = -1
+  let pos = 0, entryPx = 0, slPx = 0, lastExit = -1e9
   for (let i = 1; i < bars.length; i++) {
     const b = bars[i]
     const s = sd[i] > 0 ? sd[i] : 1e-9
     const ext = (b.c - vwap[i]) / s
-    // ranging filter: VWAP not sloping hard (in σ over slopeBars)
     const vwSlope = i >= slopeBars ? Math.abs(vwap[i] - vwap[i - slopeBars]) / s : 0
     const ranging = vwSlope <= slopeFlat
     if (pos !== 0) {
       let exitPx = null
-      if (pos > 0) { if (ext >= -tgtB) exitPx = b.c; else if (ext <= -stopB) exitPx = b.c }
-      else { if (ext <= tgtB) exitPx = b.c; else if (ext >= stopB) exitPx = b.c }
-      if (b.bar >= BPD - 1) exitPx = b.c                        // EOD flat
+      if (pos > 0) {
+        if (b.l <= slPx) exitPx = slPx                 // hard ATR stop (intrabar) — caps the loss
+        else if (ext >= -tgtB) exitPx = b.c            // reverted toward VWAP → bank it
+      } else {
+        if (b.h >= slPx) exitPx = slPx
+        else if (ext <= tgtB) exitPx = b.c
+      }
+      if (exitPx === null && b.bar >= BPD - 1) exitPx = b.c     // EOD flat
       if (exitPx !== null) { trades.push((pos > 0 ? exitPx - entryPx : entryPx - exitPx) - cost); pos = 0; lastExit = i }
     }
     if (pos === 0 && ranging && b.bar >= startBar && b.bar <= endBar && i - lastExit >= cooldown) {
-      const tickUp = !needTick || b.c > b.o
-      const tickDn = !needTick || b.c < b.o
-      if (ext <= -entryB && tickUp) { pos = 1; entryPx = b.c }
-      else if (ext >= entryB && tickDn) { pos = -1; entryPx = b.c }
+      const tickUp = !needTick || b.c > b.o, tickDn = !needTick || b.c < b.o
+      if (ext <= -entryB && tickUp) { pos = 1; entryPx = b.c; slPx = b.c - stopAtr * a[i] }
+      else if (ext >= entryB && tickDn) { pos = -1; entryPx = b.c; slPx = b.c + stopAtr * a[i] }
     }
   }
   return trades
@@ -96,13 +99,13 @@ console.log('\n  Grid search → win ≥ 60% AND PF ≥ 1.7 (then max PF):')
 let best=null,n=0,feasible=0
 for(const entryB of [1.5,2.0,2.5])
  for(const tgtB of [0.5,1.0,1.25,1.5])
-  for(const stopB of [2.5,3.0,3.5,4.0])
+  for(const stopAtr of [0.75,1.0,1.5,2.0,2.5])
    for(const slopeFlat of [0.1,0.15,0.25,0.4])
     for(const cooldown of [2,4])
      for(const needTick of [true,false]){
        if(tgtB>=entryB) continue
        n++
-       const P={entryB,tgtB,stopB,slopeFlat,cooldown,needTick}
+       const P={entryB,tgtB,stopAtr,slopeFlat,cooldown,needTick}
        const r=mc(P,8)
        if(r.perMonth>=4 && r.win>=0.60 && r.pf>=1.7 && r.worst<=8){feasible++; if(!best||r.pf>best.r.pf) best={P,r}}
      }
@@ -115,8 +118,8 @@ if(best){
   console.log('\n  ❌ none hit 60%/1.7 simultaneously. Best win-rate and best-PF feasible-ish:')
   // report best by win and best by pf among PF>1.3
   let bw=null,bp=null
-  for(const entryB of [1.5,2.0,2.5])for(const tgtB of [0.5,1.0,1.5])for(const stopB of [2.5,3.0,3.5,4.5])for(const slopeFlat of [0.1,0.2,0.4])for(const needTick of [true,false]){
-    if(tgtB>=entryB)continue; const P={entryB,tgtB,stopB,slopeFlat,cooldown:3,needTick}; const r=mc(P,8)
+  for(const entryB of [1.5,2.0,2.5])for(const tgtB of [0.5,1.0,1.5])for(const stopAtr of [0.75,1.0,1.5,2.0,2.5])for(const slopeFlat of [0.1,0.2,0.4])for(const needTick of [true,false]){
+    if(tgtB>=entryB)continue; const P={entryB,tgtB,stopAtr,slopeFlat,cooldown:3,needTick}; const r=mc(P,8)
     if(r.perMonth>=4&&r.worst<=10){ if(r.pf>=1.3&&(!bw||r.win>bw.r.win))bw={P,r}; if(!bp||r.pf>bp.r.pf)bp={P,r} }
   }
   if(bw){console.log(row('  highest win (PF≥1.3)',bw.r));console.log('     '+JSON.stringify(bw.P))}
