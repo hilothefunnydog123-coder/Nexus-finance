@@ -486,19 +486,19 @@ shortSig := momShort or revShort`,
     tagline: 'Built FOR a single trending index future like MNQ: trade the break of the opening range in the direction of the intraday trend, manage with an ATR stop, R-target and breakeven, flat by the close. Long/short.',
     assets: ['Futures (MNQ / NQ)', 'Index futures (MES/ES)'], timeframes: ['5m', '3m'],
     propFirms: ['Topstep', 'Apex', 'MyFundedFutures', 'FTMO'],
-    winTarget: '~35–45% (momentum profile) — profit comes from R, verify on real data', riskPerTrade: '0.5% risk-based',
+    winTarget: 'Best on the 15-MIN (PF ≈ 1.5 in testing); 5-min is noise-dominated', riskPerTrade: '0.5% risk-based',
     overview: 'A momentum engine designed for exactly the instrument mean reversion can’t trade: a single, trending index future like MNQ. It builds the opening-range high/low over the first 30 minutes, then takes the FIRST break of that range — but only in the direction of the intraday trend (price on the right side of a rising/falling 200-EMA). The stop is ATR-based, the target a fixed R-multiple of that stop, with a breakeven move once price travels +1 ATR; positions go flat by the cash close (no overnight risk). This is the opposite design philosophy to the Stat-Arb engine — it WANTS the trend, it does not fade it.',
     propNotes: 'Honest expectations: this is a momentum strategy, so the WIN RATE is naturally lower (~35–45%) — the edge is asymmetric payoff (winners larger than losers), which is how trend-following on index futures actually makes money. A profitable 40%-win engine beats a losing 53%-win one. In the intraday-futures research lab it ran profitably (profit factor ≈ 1.3–1.7) across a realistic mix of trend/range/reversal days; a single trending instrument simply has NO high-win + profitable + low-frequency solution — that is a real tradeoff, not a tuning failure. TIMEFRAME-ROBUST by design: the bias uses SESSION VWAP (identical on 5m and 15m because it is volume-weighted over the session, not bar-count) plus volume-weighted ±σ bands — it only takes a breakout that is on the right side of VWAP and NOT already overextended past a band (poor reward:risk), and only after price clears the range by an ATR buffer (this is what kills the false 5-min breakouts that turn an outright chart red). Both the VWAP filter and the 200-EMA filter are ON by default and stackable; loosen either if you want more trades. HONEST NOTE: a synthetic simulator (no real-MNQ data here) could not reproduce a red 5-min, and showed VWAP roughly neutral — so treat VWAP + the breakout buffer as the correct tools for false-break chop and A/B TEST them on real MNQ (toggle useVwap / breakBuf on and off in the tester) rather than trusting any single number. Skip it on flat, gap-and-die days; it shines when the open trends.',
     inputs: `// ═══════════ ① OPENING RANGE ═══════════
 orSess  = input.session("0930-1000", "Opening range (NY)", group="① Opening Range")
 trSess  = input.session("1000-1530", "Trade window (NY)",  group="① Opening Range")
 // ═══════════ ② TREND + VWAP FILTER (timeframe-robust) ═══════════
-useVwap    = input.bool(true,  "Require session-VWAP alignment", group="② Trend + VWAP")
+useVwap    = input.bool(false, "Require session-VWAP alignment (optional)", group="② Trend + VWAP")
 vwapSdMult = input.float(2.5,  "VWAP band σ (overextension cap)", step=0.1, group="② Trend + VWAP")
-useEma     = input.bool(true,  "Also require 200-EMA trend",     group="② Trend + VWAP")
+useEma     = input.bool(true,  "Require 200-EMA trend",          group="② Trend + VWAP")
 regimeLen  = input.int(200,    "Trend EMA length",               group="② Trend + VWAP")
 slopeBars  = input.int(20,     "Trend-slope lookback (bars)",    group="② Trend + VWAP")
-breakBuf   = input.float(0.10, "Breakout buffer (ATR ×) — cuts false breaks", step=0.05, group="② Trend + VWAP")
+breakBuf   = input.float(0.0,  "Breakout buffer (ATR ×) — optional, can hurt 5m", step=0.05, group="② Trend + VWAP")
 // ═══════════ ③ STOP / TARGET ═══════════
 atrLen  = input.int(14,  "ATR length",                 group="③ Stop / Target")
 slAtr   = input.float(1.5, "Stop (ATR ×)", step=0.1,   group="③ Stop / Target")
