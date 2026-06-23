@@ -4,7 +4,7 @@
    AccountMenu — the auth surface for the site header.
 
    • Signed OUT → a "Sign in" button that opens the real AuthModal
-     (Google OAuth + magic link + password).
+     (Google OAuth + email/password).
    • Signed IN  → the user's avatar + name. Clicking opens a dropdown with a
      welcome message, a link to their saved history, and Sign out.
 
