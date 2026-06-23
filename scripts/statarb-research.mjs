@@ -132,24 +132,31 @@ function evaluate(P, seeds = 12) {
 }
 
 console.log('\n' + '═'.repeat(112))
-console.log('  STAT-ARB ROBUSTNESS LAB — find a config that wins in RANGES and stands down in TRENDS (Monte Carlo)')
+console.log('  STAT-ARB FREQUENCY LAB — MAXIMISE trade count while keeping win ≥ 60%, PF ≥ 1.6, short streaks')
 console.log('═'.repeat(112))
 
+// Objective flipped: among configs that hold quality, pick the one that TRADES THE MOST.
+// Shorter windows + shallower entry + only the gates the validation actually used (ADF+HL+flat).
 let best = null, tested = 0
-for (const entryZ of [1.75, 2.0, 2.5])
-  for (const exitZ of [0.5, 0.7, 1.0])
-    for (const stopZ of [3.0, 3.5])
-      for (const flatMax of [0.4, 0.6, 0.9])
-        for (const adfThresh of [-2.5, -3.0, -3.5])
-          for (const cooldown of [6, 10]) {
-            tested++
-            const P = { entryZ, exitZ, stopZ, flatMax, adfThresh, cooldown, confirmEntry: true }
-            const e = evaluate(P, 10)
-            if (e.okRev && (!best || e.score > best.e.score)) best = { P, e }
-          }
+for (const entryZ of [1.25, 1.5, 1.75, 2.0])
+  for (const zLen of [40, 60, 80])
+    for (const flatMax of [0.9, 1.2, 1.6])
+      for (const adfThresh of [-1.5, -2.0, -2.5])
+        for (const cooldown of [3, 5]) {
+          tested++
+          const P = { entryZ, exitZ: 0.5, stopZ: 3.5, zLen, statLen: zLen, slopeBars: Math.round(zLen * 0.3),
+                      flatMax, adfThresh, cooldown, confirmEntry: true }
+          const rev = Object.values(REVERT).map(g => mc(g, P, 8))
+          const non = Object.values(NONREV).map(g => mc(g, P, 8))
+          const okRev = rev.every(r => r.trades >= 25 && r.win >= 0.60 && r.pf >= 1.6 && r.worst <= 6 && r.ret > 0)
+          const worstNon = Math.min(...non.map(r => r.ret))
+          const tradesPerSeed = rev.reduce((a, r) => a + r.trades, 0) / (rev.length * 8)
+          if (okRev && worstNon > -0.06 && (!best || tradesPerSeed > best.freq)) best = { P, freq: tradesPerSeed }
+        }
 
-console.log(`\n  Searched ${tested} configs × 7 regimes × 10 seeds.\n`)
-if (!best) { console.log('  No config satisfied all reverting-regime constraints — the bar is high (good).'); process.exit(0) }
+console.log(`\n  Searched ${tested} configs × 7 regimes × 8 seeds.\n`)
+if (!best) { console.log('  No config held the quality bar — loosen win/PF targets.'); process.exit(0) }
+console.log(`  WINNER trades ~${best.freq.toFixed(1)} per 4000-bar series (≈ ${(best.freq / 51 * 21).toFixed(1)} trades/month on 5-min)\n`)
 
 const e = evaluate(best.P, 20)
 console.log('  ── WINNING CONFIG ──')
