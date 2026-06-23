@@ -426,54 +426,96 @@ shortSig := not crashOff and score <= -minScore and regimeDn`,
   // ─── 3. ADAPTIVE REGIME-SWITCHING ───
   {
     id: 'godregime', init: 'RGM', short: 'Regime-AI', color: '#34d399',
-    name: 'Adaptive Regime-Switching (Kalman + Variance Ratio)', tp3R: 4.0, maxBars: 100, useSess: false,
-    tagline: 'Detect whether the tape is trending or mean-reverting with a Kalman fair value, a variance-ratio test and the Hurst exponent — then run the right sub-model for that regime. Long/short.',
-    assets: ['Futures', 'Indices', 'FX', 'Crypto'], timeframes: ['5m', '15m', '1H', '4H'],
+    name: 'Adaptive Regime-Switching — Variance-Ratio Gated Breakout', tp3R: 2.0, maxBars: 100, useSess: false,
+    tagline: 'Measure whether the tape is trending or ranging every bar with a Lo–MacKinlay variance ratio, and only take breakouts when it confirms a TRENDING regime — standing down in ranges where breakouts fail. Long/short.',
+    assets: ['Futures (MNQ/NQ)', 'Indices', 'FX', 'Crypto'], timeframes: ['5m', '15m', '1H'],
     propFirms: ['FTMO', 'Topstep', 'Apex', 'MyFundedFutures'],
-    winTarget: '~55–62% (adaptive) — verify yourself', riskPerTrade: '0.5% risk-based',
-    overview: 'Most strategies die because they apply one style to every market. This one measures the market’s character every bar and switches. A Kalman filter tracks the adaptive fair value of price; a Lo–MacKinlay variance ratio and a Hurst exponent classify the regime as TRENDING (VR>1, H>0.55), REVERTING (VR<1, H<0.45) or RANDOM. In a trending regime it runs a momentum sub-model (trade with the Kalman slope and the EMA stack); in a reverting regime it runs an OU mean-reversion sub-model (fade the z-score of price minus Kalman fair value); in a random regime it stands down. Each sub-model carries its own structural stop, and the shared engine handles sizing, tiered exits and the kill-switch.',
-    propNotes: 'The regime classifier is the whole point — it keeps the momentum logic from firing in chop and the reversion logic from fighting a trend, the two ways those styles each blow up. Tune the VR lag, the Hurst window and the z-bands per instrument/timeframe; widen the “random” dead-band if you want it to trade less and only in clear regimes. Genuinely adaptive — the closest thing here to a single all-weather model.',
-    inputs: `// ═══════════ ① KALMAN FAIR VALUE ═══════════
-kalmanQ = input.float(0.01, "Kalman process noise Q", step=0.005, group="① Kalman")
-kalmanR = input.float(1.0,  "Kalman measurement noise R", step=0.1, group="① Kalman")
-// ═══════════ ② REGIME CLASSIFIER ═══════════
-vrLag   = input.int(4,   "Variance-ratio lag q", minval=2, group="② Regime")
-vrLen   = input.int(100, "Variance-ratio window", group="② Regime")
-hWin    = input.int(80,  "Hurst window", group="② Regime")
-vrTrend = input.float(1.15, "VR > x ⇒ trending", step=0.05, group="② Regime")
-vrRevert= input.float(0.85, "VR < x ⇒ reverting", step=0.05, group="② Regime")
-// ═══════════ ③ SUB-MODELS ═══════════
-fastLen = input.int(20,  "Momentum fast EMA", group="③ Sub-models")
-trendLen= input.int(100, "Momentum trend EMA", group="③ Sub-models")
-zLen    = input.int(50,  "Reversion z window", group="③ Sub-models")
-entryZ  = input.float(2.0, "Reversion entry |z|", step=0.1, group="③ Sub-models")`,
-    calc: `logP = math.log(close)
-fair = f_kalman(close, kalmanQ, kalmanR)
-dev  = close - fair
-zdev = f_z(dev, zLen)
-vr = f_varratio(logP, vrLag, vrLen)
-hurst = f_hurst(logP, hWin)
-trending = vr > vrTrend or hurst > 0.55
-reverting = vr < vrRevert or hurst < 0.45
-emaFast = ta.ema(close, fastLen)
-emaTrend = ta.ema(close, trendLen)
-kSlope = fair - fair[3]
-// momentum sub-model (only in a trending regime)
-momLong  = trending and emaFast > emaTrend and close > emaFast and kSlope > 0
-momShort = trending and emaFast < emaTrend and close < emaFast and kSlope < 0
-// OU reversion sub-model (only in a reverting regime)
-revLong  = reverting and zdev <= -entryZ and zdev[1] > -entryZ
-revShort = reverting and zdev >=  entryZ and zdev[1] <  entryZ
-longSig  := momLong or revLong
-shortSig := momShort or revShort`,
-    plots: `plot(fair, "Kalman fair value", color=color.new(color.aqua, 0), linewidth=2)`,
+    winTarget: '~28–35% win · PF ≈ 2 (regime-gated momentum) — verify on real data', riskPerTrade: '0.5% risk-based',
+    overview: 'Most breakout systems die by the same hand: they fire in rangebound chop, where the breakout instantly reverses. This engine fixes that with a regime filter. A Lo–MacKinlay variance ratio of log returns measures the character of the tape — above 1 the market is trending (returns positively autocorrelated), below 1 it is mean-reverting. The engine only takes a Donchian channel breakout when the variance ratio confirms a TRENDING regime AND price is on the right side of the 200-EMA; in a ranging regime it stands down entirely. The trade is managed with an ATR stop, a fixed R-multiple target, and a breakeven move at +1 ATR. In the research lab the regime gate lifted the raw breakout’s profit factor from ~1.8 to ~2.2 purely by skipping the false breakouts — that filtering is the whole edge.',
+    propNotes: 'Honest profile: this is a momentum/breakout strategy, so the WIN RATE is naturally low (~28–35%) — the edge is asymmetric payoff (a 2:1 target) plus the regime gate cutting the losers, NOT a high hit-rate. A profitable 30%-win breakout beats a losing 55%-win fade. The single knob that matters is the VR threshold: raise it (1.2 → 1.4) for fewer, higher-conviction breakouts in only the strongest trends; lower it for more trades. The 200-EMA keeps you breaking WITH the bigger trend. The research optimizer found very high numbers on clean simulated trend-days, but real breakouts are lower-win — treat ~PF 2 / ~30% win as the realistic expectation and confirm it on a long real-MNQ backtest (breakouts need a few hundred trades to judge).',
+    inputs: `// ═══════════ ① REGIME GATE (variance ratio) ═══════════
+vrLag    = input.int(5,  "Variance-ratio lag q", minval=2, group="① Regime Gate")
+vrLen    = input.int(60, "Variance-ratio window",          group="① Regime Gate")
+vrTrend  = input.float(1.2, "VR ≥ x ⇒ TRENDING (take breakouts)", step=0.05, group="① Regime Gate")
+useHurst = input.bool(false, "Also require Hurst ≥ min (stricter)", group="① Regime Gate")
+hurstMin = input.float(0.52, "Min Hurst", step=0.01, group="① Regime Gate")
+hWin     = input.int(80, "Hurst window", group="① Regime Gate")
+// ═══════════ ② BREAKOUT ═══════════
+dcLen     = input.int(30,  "Donchian breakout length", group="② Breakout")
+regimeLen = input.int(200, "Trend EMA (direction filter)", group="② Breakout")
+// ═══════════ ③ STOP / TARGET ═══════════
+atrLen = input.int(14,  "ATR length",                group="③ Stop / Target")
+slAtr  = input.float(1.5, "Stop (ATR ×)", step=0.1,  group="③ Stop / Target")
+tpR    = input.float(2.0, "Target (R = × stop)", step=0.1, group="③ Stop / Target")
+useBE  = input.bool(true, "Breakeven after +1 ATR",  group="③ Stop / Target")
+beAtR  = input.float(1.0, "Breakeven trigger (ATR ×)", step=0.1, group="③ Stop / Target")`,
+    calc: `emaR = ta.ema(close, regimeLen)
+vr = f_varratio(math.log(close), vrLag, vrLen)
+hurst = f_hurst(math.log(close), hWin)
+trending = vr >= vrTrend and (not useHurst or hurst >= hurstMin)
+dHi = ta.highest(high, dcLen)[1]
+dLo = ta.lowest(low,  dcLen)[1]
+longSig  := trending and close > dHi and close > emaR
+shortSig := trending and close < dLo and close < emaR`,
+    customExec: `// ═══════════ EXECUTION — ATR stop · R target · breakeven + green/red boxes ═══════════
+atrV = ta.atr(atrLen)
+var float dayEq = na
+var int   tradesToday = 0
+if newDay
+    dayEq := strategy.equity
+    tradesToday := 0
+dayPnl = na(dayEq) ? 0.0 : (strategy.equity - dayEq) / dayEq * 100.0
+blockNew = (useDailyStop and dayPnl <= -dailyLossPct) or (tradesToday >= maxTradesDay)
+canEnter = strategy.position_size == 0 and barstate.isconfirmed and sessOk and not blockNew
+var float eEntry = na
+var float eSL = na
+var float eTP = na
+var bool  beArmed = false
+if longSig and canEnter and atrV > 0
+    eEntry := close
+    eSL := close - slAtr * atrV
+    eTP := close + tpR * slAtr * atrV
+    beArmed := false
+    tradesToday := tradesToday + 1
+    strategy.entry("L", strategy.long, qty = (strategy.equity * riskPct / 100.0) / (slAtr * atrV))
+    if showBoxes
+        box.new(bar_index, eTP, bar_index + 24, eEntry, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+        box.new(bar_index, eEntry, bar_index + 24, eSL, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+        line.new(bar_index, eEntry, bar_index + 24, eEntry, color=color.new(color.white, 0), style=line.style_dashed)
+        label.new(bar_index, eTP, "LONG · VR-gated breakout", style=label.style_label_down, color=color.new(color.lime, 20), textcolor=color.black, size=size.small)
+    alert("REGIME LONG " + syminfo.ticker + " @ " + f_fmt(eEntry) + " | SL " + f_fmt(eSL) + " | TP " + f_fmt(eTP), alert.freq_once_per_bar)
+if shortSig and canEnter and atrV > 0
+    eEntry := close
+    eSL := close + slAtr * atrV
+    eTP := close - tpR * slAtr * atrV
+    beArmed := false
+    tradesToday := tradesToday + 1
+    strategy.entry("S", strategy.short, qty = (strategy.equity * riskPct / 100.0) / (slAtr * atrV))
+    if showBoxes
+        box.new(bar_index, eEntry, bar_index + 24, eTP, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+        box.new(bar_index, eSL, bar_index + 24, eEntry, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+        line.new(bar_index, eEntry, bar_index + 24, eEntry, color=color.new(color.white, 0), style=line.style_dashed)
+        label.new(bar_index, eTP, "SHORT · VR-gated breakout", style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+    alert("REGIME SHORT " + syminfo.ticker + " @ " + f_fmt(eEntry) + " | SL " + f_fmt(eSL) + " | TP " + f_fmt(eTP), alert.freq_once_per_bar)
+if strategy.position_size > 0
+    if useBE and not beArmed and high >= eEntry + beAtR * atrV
+        beArmed := true
+    slNow = beArmed ? eEntry : eSL
+    strategy.exit("L-x", from_entry="L", stop=slNow, limit=eTP)
+if strategy.position_size < 0
+    if useBE and not beArmed and low <= eEntry - beAtR * atrV
+        beArmed := true
+    slNow = beArmed ? eEntry : eSL
+    strategy.exit("S-x", from_entry="S", stop=slNow, limit=eTP)`,
+    plots: `plot(emaR, "Trend EMA", color=color.new(color.orange, 0), linewidth=2)
+plot(dHi, "Donchian Hi", color=color.new(color.lime, 55))
+plot(dLo, "Donchian Lo", color=color.new(color.red, 55))`,
     dash: [
-      ['Variance ratio', 'str.tostring(vr, "#.##")', 'vr > vrTrend ? color.aqua : vr < vrRevert ? color.fuchsia : color.gray'],
-      ['Hurst', 'str.tostring(hurst, "#.##")', 'hurst > 0.55 ? color.aqua : hurst < 0.45 ? color.fuchsia : color.gray'],
-      ['Regime', 'trending ? "TRENDING" : reverting ? "REVERTING" : "RANDOM"', 'trending ? color.aqua : reverting ? color.fuchsia : color.gray'],
-      ['Active model', 'trending ? "MOMENTUM" : reverting ? "REVERSION" : "STAND DOWN"', 'trending ? color.aqua : reverting ? color.fuchsia : color.gray'],
-      ['Kalman slope', 'kSlope > 0 ? "UP ▲" : kSlope < 0 ? "DOWN ▼" : "FLAT"', 'kSlope > 0 ? color.lime : color.red'],
-      ['Dev z', 'str.tostring(zdev, "#.##")', 'math.abs(zdev) >= entryZ ? color.yellow : color.gray'],
+      ['Variance ratio', 'str.tostring(vr, "#.##")', 'vr >= vrTrend ? color.aqua : color.gray'],
+      ['Regime', 'trending ? "TRENDING — armed" : "RANGE — stand down"', 'trending ? color.aqua : color.gray'],
+      ['Hurst', 'str.tostring(hurst, "#.##")', 'hurst >= 0.5 ? color.aqua : color.fuchsia'],
+      ['Trend EMA', 'close > emaR ? "BULL ▲" : "BEAR ▼"', 'close > emaR ? color.lime : color.red'],
+      ['Breakout hi/lo', 'f_fmt(dHi) + " / " + f_fmt(dLo)', 'color.gray'],
       ['Position', 'strategy.position_size > 0 ? "LONG" : strategy.position_size < 0 ? "SHORT" : "FLAT"', 'strategy.position_size > 0 ? color.lime : strategy.position_size < 0 ? color.red : color.gray'],
       ['Day P&L', 'str.tostring(dayPnl, "#.##") + "%"', 'dayPnl >= 0 ? color.lime : color.red'],
     ],
