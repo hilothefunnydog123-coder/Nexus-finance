@@ -729,7 +729,7 @@ threshPct = input.float(0.15, "Min |predictor| (%)",       step=0.05, group="①
 useTrendFilter = input.bool(true, "Require day-trend agreement", group="① Signal")
 // ═══════════ ② RISK ═══════════
 atrLen = input.int(14,  "ATR length",                group="② Risk")
-slAtr  = input.float(3.0, "Protective stop (ATR ×)", step=0.1, group="② Risk")`,
+slAtr  = input.float(5.0, "Disaster stop (ATR ×) — wide on purpose: the trade is meant to hold to the close", step=0.1, group="② Risk")`,
     calc: `h  = hour(time, tz)
 mn = minute(time, tz)
 inRth = not na(time(timeframe.period, "0930-1600", tz))
@@ -769,9 +769,10 @@ if longSig and canEnter and atrV > 0
     tradesToday := tradesToday + 1
     strategy.entry("L", strategy.long, qty = (strategy.equity * riskPct / 100.0) / (slAtr * atrV))
     if showBoxes
+        box.new(bar_index, eEntry + slAtr * atrV, bar_index + 8, eEntry, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
         box.new(bar_index, eEntry, bar_index + 8, eSL, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
         line.new(bar_index, eEntry, bar_index + 8, eEntry, color=color.new(color.white, 0), style=line.style_dashed)
-        label.new(bar_index, eEntry, "LONG · intraday-momentum · hold to close", style=label.style_label_up, color=color.new(color.lime, 20), textcolor=color.black, size=size.small)
+        label.new(bar_index, eEntry + slAtr * atrV, "LONG · intraday-momentum · hold to close", style=label.style_label_down, color=color.new(color.lime, 20), textcolor=color.black, size=size.small)
     alert("INTRADAY-MOMO LONG " + syminfo.ticker + " @ " + f_fmt(eEntry) + " | SL " + f_fmt(eSL) + " | exit MOC", alert.freq_once_per_bar)
 if shortSig and canEnter and atrV > 0
     tradedToday := true
@@ -780,9 +781,10 @@ if shortSig and canEnter and atrV > 0
     tradesToday := tradesToday + 1
     strategy.entry("S", strategy.short, qty = (strategy.equity * riskPct / 100.0) / (slAtr * atrV))
     if showBoxes
+        box.new(bar_index, eEntry, bar_index + 8, eEntry - slAtr * atrV, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
         box.new(bar_index, eSL, bar_index + 8, eEntry, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
         line.new(bar_index, eEntry, bar_index + 8, eEntry, color=color.new(color.white, 0), style=line.style_dashed)
-        label.new(bar_index, eEntry, "SHORT · intraday-momentum · hold to close", style=label.style_label_down, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+        label.new(bar_index, eEntry - slAtr * atrV, "SHORT · intraday-momentum · hold to close", style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
     alert("INTRADAY-MOMO SHORT " + syminfo.ticker + " @ " + f_fmt(eEntry) + " | SL " + f_fmt(eSL) + " | exit MOC", alert.freq_once_per_bar)
 atExit = (h == exitHour and mn >= exitMin) or not inRth
 if strategy.position_size > 0
