@@ -478,6 +478,118 @@ shortSig := momShort or revShort`,
       ['Day P&L', 'str.tostring(dayPnl, "#.##") + "%"', 'dayPnl >= 0 ? color.lime : color.red'],
     ],
   },
+
+  // ─── 4. MNQ INTRADAY MOMENTUM (Opening-Range Breakout) ───
+  {
+    id: 'godmnq', init: 'MNQ', short: 'MNQ Momo', color: '#22d3ee',
+    name: 'MNQ Intraday Momentum — Opening-Range Breakout', tp3R: 2.0, maxBars: 78, useSess: true,
+    tagline: 'Built FOR a single trending index future like MNQ: trade the break of the opening range in the direction of the intraday trend, manage with an ATR stop, R-target and breakeven, flat by the close. Long/short.',
+    assets: ['Futures (MNQ / NQ)', 'Index futures (MES/ES)'], timeframes: ['5m', '3m'],
+    propFirms: ['Topstep', 'Apex', 'MyFundedFutures', 'FTMO'],
+    winTarget: '~35–45% (momentum profile) — profit comes from R, verify on real data', riskPerTrade: '0.5% risk-based',
+    overview: 'A momentum engine designed for exactly the instrument mean reversion can’t trade: a single, trending index future like MNQ. It builds the opening-range high/low over the first 30 minutes, then takes the FIRST break of that range — but only in the direction of the intraday trend (price on the right side of a rising/falling 200-EMA). The stop is ATR-based, the target a fixed R-multiple of that stop, with a breakeven move once price travels +1 ATR; positions go flat by the cash close (no overnight risk). This is the opposite design philosophy to the Stat-Arb engine — it WANTS the trend, it does not fade it.',
+    propNotes: 'Honest expectations: this is a momentum strategy, so the WIN RATE is naturally lower (~35–45%) — the edge is asymmetric payoff (winners larger than losers), which is how trend-following on index futures actually makes money. A profitable 40%-win engine beats a losing 53%-win one. In the intraday-futures research lab it ran profitably (profit factor ≈ 1.3–1.7) across a realistic mix of trend/range/reversal days; a single trending instrument simply has NO high-win + profitable + low-frequency solution — that is a real tradeoff, not a tuning failure. CRITICAL: that result is from a synthetic simulator (no real-MNQ data access here), and simulators are imperfect — backtest this on real MNQ in the Strategy Tester, then tell the desk the numbers so the trend filter, stop and R-target can be tuned to YOUR data. Skip it on flat, gap-and-die days; it shines when the open trends.',
+    inputs: `// ═══════════ ① OPENING RANGE ═══════════
+orSess  = input.session("0930-1000", "Opening range (NY)", group="① Opening Range")
+trSess  = input.session("1000-1530", "Trade window (NY)",  group="① Opening Range")
+// ═══════════ ② TREND FILTER ═══════════
+regimeLen = input.int(200, "Trend EMA (only trade with it)", group="② Trend Filter")
+slopeBars = input.int(20,  "Trend-slope lookback (bars)",    group="② Trend Filter")
+// ═══════════ ③ STOP / TARGET ═══════════
+atrLen  = input.int(14,  "ATR length",                 group="③ Stop / Target")
+slAtr   = input.float(1.5, "Stop (ATR ×)", step=0.1,   group="③ Stop / Target")
+tpR     = input.float(1.5, "Target (R = × stop)", step=0.1, group="③ Stop / Target")
+useBE   = input.bool(true, "Breakeven after +1 ATR",   group="③ Stop / Target")
+beAtR   = input.float(1.0, "Breakeven trigger (ATR ×)", step=0.1, group="③ Stop / Target")`,
+    calc: `emaR = ta.ema(close, regimeLen)
+upBias = close > emaR and emaR > emaR[slopeBars]
+dnBias = close < emaR and emaR < emaR[slopeBars]
+inOR = not na(time(timeframe.period, orSess, tz))
+inTrade = not na(time(timeframe.period, trSess, tz))
+newOR = inOR and not inOR[1]
+var float orH = na
+var float orL = na
+var bool lDone = false
+var bool sDone = false
+if newOR
+    orH := high
+    orL := low
+    lDone := false
+    sDone := false
+else if inOR
+    orH := math.max(orH, high)
+    orL := math.min(orL, low)
+longSig  := inTrade and not lDone and not na(orH) and close > orH and upBias
+shortSig := inTrade and not sDone and not na(orL) and close < orL and dnBias
+if longSig
+    lDone := true
+if shortSig
+    sDone := true`,
+    customExec: `// ═══════════ EXECUTION — ATR stop · R target · breakeven · EOD flat + boxes ═══════════
+atrV = ta.atr(atrLen)
+var float dayEq = na
+var int   tradesToday = 0
+if newDay
+    dayEq := strategy.equity
+    tradesToday := 0
+dayPnl = na(dayEq) ? 0.0 : (strategy.equity - dayEq) / dayEq * 100.0
+blockNew = (useDailyStop and dayPnl <= -dailyLossPct) or (tradesToday >= maxTradesDay)
+canEnter = strategy.position_size == 0 and barstate.isconfirmed and sessOk and not blockNew
+var float eEntry = na
+var float eSL = na
+var float eTP = na
+var bool  beArmed = false
+if longSig and canEnter and atrV > 0
+    eEntry := close
+    eSL := close - slAtr * atrV
+    eTP := close + tpR * slAtr * atrV
+    beArmed := false
+    tradesToday := tradesToday + 1
+    strategy.entry("L", strategy.long, qty = (strategy.equity * riskPct / 100.0) / (slAtr * atrV))
+    if showBoxes
+        box.new(bar_index, eTP, bar_index + 24, eEntry, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+        box.new(bar_index, eEntry, bar_index + 24, eSL, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+        line.new(bar_index, eEntry, bar_index + 24, eEntry, color=color.new(color.white, 0), style=line.style_dashed)
+        label.new(bar_index, eTP, "LONG ORB break", style=label.style_label_down, color=color.new(color.lime, 20), textcolor=color.black, size=size.small)
+    alert("MNQ MOMO LONG " + syminfo.ticker + " @ " + f_fmt(eEntry) + " | SL " + f_fmt(eSL) + " | TP " + f_fmt(eTP), alert.freq_once_per_bar)
+if shortSig and canEnter and atrV > 0
+    eEntry := close
+    eSL := close + slAtr * atrV
+    eTP := close - tpR * slAtr * atrV
+    beArmed := false
+    tradesToday := tradesToday + 1
+    strategy.entry("S", strategy.short, qty = (strategy.equity * riskPct / 100.0) / (slAtr * atrV))
+    if showBoxes
+        box.new(bar_index, eEntry, bar_index + 24, eTP, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+        box.new(bar_index, eSL, bar_index + 24, eEntry, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+        line.new(bar_index, eEntry, bar_index + 24, eEntry, color=color.new(color.white, 0), style=line.style_dashed)
+        label.new(bar_index, eTP, "SHORT ORB break", style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+    alert("MNQ MOMO SHORT " + syminfo.ticker + " @ " + f_fmt(eEntry) + " | SL " + f_fmt(eSL) + " | TP " + f_fmt(eTP), alert.freq_once_per_bar)
+if strategy.position_size > 0
+    if useBE and not beArmed and high >= eEntry + beAtR * atrV
+        beArmed := true
+    slNow = beArmed ? eEntry : eSL
+    strategy.exit("L-x", from_entry="L", stop=slNow, limit=eTP)
+if strategy.position_size < 0
+    if useBE and not beArmed and low <= eEntry - beAtR * atrV
+        beArmed := true
+    slNow = beArmed ? eEntry : eSL
+    strategy.exit("S-x", from_entry="S", stop=slNow, limit=eTP)
+if strategy.position_size != 0 and not inTrade
+    strategy.close_all(comment="EOD flat")`,
+    plots: `plot(ta.ema(close, regimeLen), "Trend EMA", color=color.new(color.orange, 0), linewidth=2)
+plot((inOR or inTrade) and not na(orH) ? orH : na, "OR High", color=color.new(color.lime, 40), style=plot.style_linebr)
+plot((inOR or inTrade) and not na(orL) ? orL : na, "OR Low",  color=color.new(color.red, 40), style=plot.style_linebr)`,
+    dash: [
+      ['Trend bias', 'upBias ? "BULL ▲" : dnBias ? "BEAR ▼" : "FLAT — no trade"', 'upBias ? color.lime : dnBias ? color.red : color.gray'],
+      ['OR High', 'na(orH) ? "—" : f_fmt(orH)', 'color.aqua'],
+      ['OR Low', 'na(orL) ? "—" : f_fmt(orL)', 'color.aqua'],
+      ['Window', 'inOR ? "BUILDING OR" : inTrade ? "TRADING" : "CLOSED"', 'inTrade ? color.lime : inOR ? color.yellow : color.gray'],
+      ['Trades today', 'str.tostring(tradesToday) + " / " + str.tostring(maxTradesDay)', 'color.white'],
+      ['Position', 'strategy.position_size > 0 ? "LONG" : strategy.position_size < 0 ? "SHORT" : "FLAT"', 'strategy.position_size > 0 ? color.lime : strategy.position_size < 0 ? color.red : color.gray'],
+      ['Day P&L', 'str.tostring(dayPnl, "#.##") + "%"', 'dayPnl >= 0 ? color.lime : color.red'],
+    ],
+  },
 ]
 
 // ─── Steps + signals (a trimmed indicator twin) ───────────────────────────────

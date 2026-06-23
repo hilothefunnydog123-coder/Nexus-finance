@@ -159,6 +159,27 @@ function sigDonchian(bars, P) {
   return sig
 }
 
+// ── ARCHETYPE D: Intraday VWAP fade, RANGE days only (flat-trend filter) ──
+function sigVWAP(bars, P) {
+  const { extAtr = 2.0, regime = 200, slopeBars = 20, flatMax = 1.0 } = P
+  const c = bars.map(b => b.c); const eR = ema(c, regime); const a = atr(bars, 14)
+  const sig = new Array(bars.length).fill(0)
+  let cumPV = 0, cumV = 0
+  for (let i = 0; i < bars.length; i++) {
+    const b = bars[i]
+    if (b.bar === 0) { cumPV = 0; cumV = 0 }
+    const tp = (b.h + b.l + b.c) / 3; cumPV += tp * b.v; cumV += b.v
+    const vwap = cumV ? cumPV / cumV : b.c
+    if (i < regime + slopeBars || b.bar < 6) continue
+    const flat = a[i] > 0 && Math.abs(eR[i] - eR[i - slopeBars]) / a[i] <= flatMax  // ranging (trend flat)
+    const dev = a[i] > 0 ? (b.c - vwap) / a[i] : 0
+    const longF = flat && dev <= -extAtr && b.c > b.o      // stretched below VWAP, ticking up → fade up
+    const shortF = flat && dev >= extAtr && b.c < b.o
+    sig[i] = longF ? 1 : shortF ? -1 : 0
+  }
+  return sig
+}
+
 function stats(trades, nDays) {
   const wins = trades.filter(t => t > 0), losses = trades.filter(t => t <= 0)
   const gW = wins.reduce((a, b) => a + b, 0), gL = -losses.reduce((a, b) => a + b, 0)
@@ -189,50 +210,27 @@ console.log('  A) Archetype shootout (default params):')
 console.log(row('  EMA Trend-Pullback', mc(sigTrendPullback, { slAtr: 1.5, tpR: 1.5 })))
 console.log(row('  Opening-Range Breakout', mc(sigORB, { slAtr: 1.5, tpR: 1.5 })))
 console.log(row('  Donchian Momentum', mc(sigDonchian, { slAtr: 1.5, tpR: 1.5 })))
+console.log(row('  VWAP fade (range days)', mc(sigVWAP, { extAtr: 2.0, slAtr: 1.5, tpR: 1.0 })))
 
-// Objective: win ≥ 55%, 6–14 trades/mo, PF ≥ 1.4, short streaks → maximise win×PF
-console.log('\n  B) Tune for HIGH WIN RATE (≥55%), ~6–14 trades/mo, PF ≥ 1.4:')
-let best = null, tested = 0
-// Trend-Pullback grid (proper cross trigger + closer targets lift win rate)
-for (const fast of [9, 20])
-  for (const slow of [50, 100])
-    for (const slopeBars of [10, 20])
-      for (const minSep of [0.0, 0.5, 1.0])
-        for (const slAtr of [1.5, 2.0])
-          for (const tpR of [0.75, 1.0, 1.5])
-            for (const cooldown of [4, 8]) {
-              tested++
-              const P = { kind: 'TrendPB', fast, slow, regime: 200, slopeBars, minSep, slAtr, tpR, useBE: true, cooldown }
-              const r = mc(sigTrendPullback, P, 6)
-              if (r.perMonth >= 6 && r.perMonth <= 14 && r.win >= 0.55 && r.pf >= 1.4 && r.worst <= 6 && r.pts > 0 &&
-                  (!best || r.win * r.pf > best.score)) best = { fn: sigTrendPullback, P, r, score: r.win * r.pf }
-            }
-// Donchian grid (longer channels = fewer/stronger; closer targets lift win)
-for (const dc of [20, 40, 60])
-  for (const slAtr of [1.5, 2.0])
-    for (const tpR of [0.75, 1.0, 1.5])
-      for (const cooldown of [4, 8]) {
-        tested++
-        const P = { kind: 'Donchian', dc, regime: 200, slAtr, tpR, useBE: true, cooldown }
-        const r = mc(sigDonchian, P, 6)
-        if (r.perMonth >= 6 && r.perMonth <= 14 && r.win >= 0.55 && r.pf >= 1.4 && r.worst <= 6 && r.pts > 0 &&
-            (!best || r.win * r.pf > best.score)) best = { fn: sigDonchian, P, r, score: r.win * r.pf }
-      }
-console.log(`     searched ${tested} configs × 6 seeds`)
-if (best) {
-  console.log(row(`  WINNER [${best.P.kind}]`, best.r))
-  console.log('     ' + JSON.stringify(best.P))
-  console.log('\n  C) Confirmation (20 seeds):')
-  console.log(row(`  ${best.P.kind} (tuned)`, mc(best.fn, best.P, 20)))
-} else {
-  console.log('     no config hit win≥55% + PF≥1.4 → the honest finding: high win + profit on a single')
-  console.log('     trending instrument needs a CLOSER target; relaxing win to 50%:')
-  let b2 = null
-  for (const dc of [20, 30, 40, 60]) for (const slAtr of [1.5, 2.0]) for (const tpR of [0.5, 0.75, 1.0]) for (const cooldown of [4, 8]) {
-    const P = { kind: 'Donchian', dc, regime: 200, slAtr, tpR, useBE: true, cooldown }
-    const r = mc(sigDonchian, P, 6)
-    if (r.perMonth >= 5 && r.perMonth <= 16 && r.pf >= 1.3 && r.pts > 0 && (!b2 || r.win > b2.r.win)) b2 = { fn: sigDonchian, P, r }
-  }
-  if (b2) { console.log(row(`  best-win [${b2.P.kind}]`, b2.r)); console.log('     ' + JSON.stringify(b2.P)); console.log('\n  C) Confirmation (20 seeds):'); console.log(row(`  ${b2.P.kind}`, mc(b2.fn, b2.P, 20))) }
-}
+// Build a candidate pool across ALL archetypes, then report the best HIGH-WIN and the best PROFIT.
+const pool = []
+let tested = 0
+const add = (kind, fn, P) => { const r = mc(fn, P, 6); if (r.perMonth >= 5 && r.perMonth <= 16 && r.pts > 0) pool.push({ kind, fn, P, r }); tested++ }
+for (const dc of [20, 30, 40, 60]) for (const slAtr of [1.5, 2.0]) for (const tpR of [0.75, 1.0, 1.5, 2.0]) for (const cooldown of [4, 8])
+  add('Donchian', sigDonchian, { dc, regime: 200, slAtr, tpR, useBE: true, cooldown })
+for (const orBars of [3, 6, 9]) for (const slAtr of [1.5, 2.0]) for (const tpR of [1.0, 1.5, 2.0])
+  add('ORB', sigORB, { orBars, regime: 200, slAtr, tpR, useBE: true, cooldown: 4 })
+for (const extAtr of [1.5, 2.0, 2.5]) for (const flatMax of [0.6, 1.0, 1.5]) for (const slAtr of [1.0, 1.5]) for (const tpR of [0.75, 1.0, 1.5]) for (const cooldown of [4, 8])
+  add('VWAP-fade', sigVWAP, { extAtr, regime: 200, slopeBars: 20, flatMax, slAtr, tpR, useBE: true, cooldown })
+
+console.log(`\n  B) Searched ${tested} configs × 6 seeds across Donchian / ORB / VWAP-fade. Profitable candidates: ${pool.length}\n`)
+const bestWin = pool.filter(x => x.r.perMonth >= 6 && x.r.perMonth <= 14 && x.r.pf >= 1.3 && x.r.worst <= 7).sort((a, b) => b.r.win - a.r.win)[0]
+const bestProfit = pool.filter(x => x.r.perMonth >= 6 && x.r.perMonth <= 14 && x.r.worst <= 9).sort((a, b) => b.r.pf * b.r.pts - a.r.pf * a.r.pts)[0]
+if (bestWin) { console.log('  HIGHEST WIN RATE (PF≥1.3, 6–14/mo):'); console.log(row(`  [${bestWin.kind}]`, bestWin.r)); console.log('     ' + JSON.stringify(bestWin.P)) }
+else console.log('  No config reached PF≥1.3 at 6–14/mo — momentum on this instrument is inherently low-win.')
+if (bestProfit) { console.log('\n  MOST PROFITABLE (6–14/mo):'); console.log(row(`  [${bestProfit.kind}]`, bestProfit.r)); console.log('     ' + JSON.stringify(bestProfit.P)) }
+
+console.log('\n  C) Confirmation (20 seeds):')
+if (bestWin) console.log(row(`  WIN pick [${bestWin.kind}]`, mc(bestWin.fn, bestWin.P, 20)))
+if (bestProfit && bestProfit !== bestWin) console.log(row(`  PROFIT pick [${bestProfit.kind}]`, mc(bestProfit.fn, bestProfit.P, 20)))
 console.log('')
