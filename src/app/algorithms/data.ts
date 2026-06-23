@@ -1,4 +1,5 @@
 import { QUANT_STRATEGIES } from './quant-pro'
+import { GOD_MODE } from './god-mode'
 export type AlgoMode = 'auto' | 'signals'
 export type Platform = 'tradingview' | 'mt5' | 'ninjatrader'
 
@@ -14,6 +15,7 @@ export interface Algorithm {
   riskPerTrade: string
   color: string
   indicatorOnly?: boolean
+  god?: boolean
   init: string
   overview: string
   propNotes: string
@@ -5217,4 +5219,5 @@ alertcondition(shortSig,"MACD Short","NQ MACD zero SHORT")`,
       steps: ['Add to a 5–15m chart of NQ/MNQ. The 200 EMA (orange) is the trend filter.','MACD line crossing above zero while price is above the 200 EMA fires LONG; crossing below zero under the 200 EMA fires SHORT.','Box draws: dashed entry, green target (2R), red stop (ATR).','Create an alert → "Any alert() function call" → Once Per Bar Close.','The zero-line cross + trend gate cuts MACD chop — fewer, cleaner pulses. Backtest lengths + R over 6–12 months.'] },
   },
   ...QUANT_STRATEGIES,
+  ...GOD_MODE,
 ]

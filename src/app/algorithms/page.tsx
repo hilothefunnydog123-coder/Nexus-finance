@@ -391,8 +391,11 @@ export default function AlgorithmsPage() {
                   transform: isSelected ? 'translateY(-2px)' : 'none',
                 }}
               >
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: `${a.color}18`, border: `1px solid ${a.color}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: a.color, fontFamily: 'monospace', marginBottom: 12 }}>
-                  {a.init}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 12, background: `${a.color}18`, border: `1px solid ${a.color}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: a.color, fontFamily: 'monospace' }}>
+                    {a.init}
+                  </div>
+                  {a.god && <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: '0.1em', color: '#040c14', background: `linear-gradient(135deg, ${a.color}, #fff)`, borderRadius: 5, padding: '3px 7px', fontFamily: 'monospace', boxShadow: `0 0 14px ${a.color}66` }}>⚡ GOD MODE</span>}
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: isSelected ? '#e8f4f8' : '#7a9aaa', marginBottom: 4, lineHeight: 1.3 }}>{a.instructor.split('(')[0].trim()}</div>
                 <div style={{ fontSize: 11, color: isSelected ? a.color : '#3a5a6a', fontFamily: 'monospace', lineHeight: 1.4 }}>{a.strategy.split('—')[0].trim()}</div>
@@ -418,6 +421,7 @@ export default function AlgorithmsPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg,${algo.color},${algo.color}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{algo.init}</div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: algo.color, fontFamily: 'monospace', letterSpacing: '0.14em' }}>{algo.instructor.toUpperCase()}</span>
+                  {algo.god && <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', color: '#040c14', background: `linear-gradient(135deg, ${algo.color}, #fff)`, borderRadius: 6, padding: '3px 10px', fontFamily: 'monospace', boxShadow: `0 0 18px ${algo.color}66` }}>⚡ GOD MODE</span>}
                 </div>
                 <h2 style={{ fontSize: 'clamp(20px,3vw,30px)', fontWeight: 900, color: '#e8f4f8', letterSpacing: '-0.5px', marginBottom: 8 }}>{algo.strategy}</h2>
                 <p style={{ fontSize: 15, color: '#6a90a8', lineHeight: 1.6 }}>{algo.tagline}</p>
