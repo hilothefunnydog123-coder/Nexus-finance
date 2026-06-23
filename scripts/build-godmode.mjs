@@ -214,7 +214,7 @@ ${BASE}
 // ════════════════════ STRATEGY CORE ════════════════════
 ${s.calc}
 
-${EXEC}
+${s.customExec || EXEC}
 ${s.plots ? '\n' + s.plots + '\n' : ''}
 ${dash(s, s.dash)}`
 }
@@ -224,55 +224,134 @@ const SPECS = [
   // ─── 1. STATISTICAL ARBITRAGE ───
   {
     id: 'godstatarb', init: 'SAB', short: 'Stat-Arb', color: '#00d4ff',
-    name: 'Statistical Arbitrage — Cointegrated Pairs (OU)', tp3R: 3.0, maxBars: 120, useSess: false,
-    tagline: 'The classic market-neutral edge: model the spread between two cointegrated assets as an Ornstein–Uhlenbeck process and fade it when it dislocates. Long/short.',
-    assets: ['Pairs (any 2 correlated symbols)', 'Futures', 'Equities'], timeframes: ['15m', '1H', '4H', 'Daily'],
+    name: 'Statistical Arbitrage — Cointegrated Mean Reversion (OU)', tp3R: 3.0, maxBars: 200, useSess: false,
+    tagline: 'The classic market-neutral edge done correctly: trade a stationary spread as an Ornstein–Uhlenbeck process — enter when stretched, EXIT WHEN IT REVERTS TO THE MEAN (never a fixed target), and only when the cointegration test passes. Long/short.',
+    assets: ['Ratio / spread charts (A/B)', 'Pairs', 'Futures', 'Equities'], timeframes: ['15m', '1H', '4H', 'Daily'],
     propFirms: ['FTMO', 'Topstep', 'Apex', 'MyFundedFutures'],
-    winTarget: '~65–75% (mean-reversion) — verify yourself', riskPerTrade: '0.5% risk-based',
-    overview: 'A genuine statistical-arbitrage engine. It regresses the chart symbol (leg A) on a second symbol (leg B) with a rolling OLS to get the hedge ratio β and intercept α, builds the residual spread S = log(A) − (α + β·log(B)), and treats S as an Ornstein–Uhlenbeck mean-reverting process. It estimates the half-life of reversion from the AR(1) coefficient, confirms the spread is actually stationary with a Lo–MacKinlay variance ratio (<1) and a Hurst exponent (<0.5), and only then trades the z-score: long the spread (long A) when z ≤ −entry, short when z ≥ +entry, exiting back at the mean. Stops widen with the spread; positions time-stop after a multiple of the half-life.',
-    propNotes: 'This is the single-leg (chart-symbol) expression of a market-neutral pairs trade — for a fully hedged book you also short β units of leg B in a second order/account. Pick a genuinely cointegrated leg B (e.g. ES vs NQ, GLD vs GDX, KO vs PEP). The variance-ratio + Hurst gates are not decoration — they stop you trading a spread that has stopped mean-reverting (the way every pairs trade eventually breaks). Tune the entry/exit z-bands and the OLS window to the half-life. Highest win rate of the three, modest R.',
-    inputs: `// ═══════════ ① PAIR / SPREAD ═══════════
-pairSym = input.symbol("CME_MINI:ES1!", "Leg B (the hedge symbol)", group="① Pair / Spread")
-olsLen  = input.int(100, "OLS hedge-ratio window",   minval=20, group="① Pair / Spread")
-zLen    = input.int(100, "Spread z-score / stats window", minval=20, group="① Pair / Spread")
-// ═══════════ ② ENTRY / EXIT (z) ═══════════
-entryZ  = input.float(2.0, "Entry |z|",   step=0.1, group="② Entry / Exit")
-exitZ   = input.float(0.3, "Exit |z| (mean)", step=0.1, group="② Entry / Exit")
-stopZ   = input.float(3.5, "Hard stop |z|", step=0.1, group="② Entry / Exit")
-// ═══════════ ③ STATIONARITY GATES ═══════════
-useVR   = input.bool(true,  "Require variance ratio < 1", group="③ Stationarity")
-vrLag   = input.int(4,  "Variance-ratio lag q", minval=2, group="③ Stationarity")
-vrLen   = input.int(120, "Variance-ratio window", minval=20, group="③ Stationarity")
-useHurst= input.bool(true, "Require Hurst < 0.5", group="③ Stationarity")
-useHL   = input.bool(true, "Require valid half-life", group="③ Stationarity")
-hlMaxMult = input.float(3.0, "Time-stop = HL ×", step=0.5, group="③ Stationarity")
-minCorr = input.float(0.6, "Min |correlation| of legs", step=0.05, group="③ Stationarity")`,
-    calc: `legA = math.log(close)
+    winTarget: 'Edge from reversion + costs — verify in tester', riskPerTrade: '0.5% risk-based',
+    overview: 'A faithful statistical-arbitrage engine rebuilt around the one rule that makes stat-arb profitable: you EXIT ON MEAN REVERSION, never on a fixed price target. It models the series as an Ornstein–Uhlenbeck process, enters with Avellaneda–Lee asymmetric bands (open at a wide z, take profit back at the mean), and dynamically tracks the moving mean for the exit — the take-profit follows the equilibrium each bar. Critically, it only trades when the spread is actually cointegrated/stationary, confirmed by an Augmented-Dickey-Fuller-style t-statistic, a finite OU half-life, a Lo–MacKinlay variance ratio (<1) and a Hurst exponent (<0.5). Validated in scripts/statarb-research.mjs: on cointegrated data the mean-reversion exit turns the same entries from a break-even loser into a profit factor > 1.4; with the cointegration gate OFF on trending data it loses badly — which is exactly why the gate is mandatory.',
+    propNotes: 'RUN IT ON A RATIO / SPREAD CHART (e.g. "NQ1!/ES1!", "KO/PEP", "GLD/GDX") — that makes the trade market-neutral with the leg hedge built in, which is how desks actually do it. (Pair-vs-symbol mode builds the spread internally but trades only the chart leg.) The ADF + half-life gate is the risk control: it forces the engine to STAND DOWN the moment the spread stops mean-reverting (de-cointegration — the way every pairs trade eventually dies). Defaults (enter 1.5σ, exit ~mean, stop 3σ) are the profit-factor-maximising bands from the research harness; re-tune per instrument. The fixed-target version you saw losing money was the bug — this is the fix.',
+    inputs: `// ═══════════ ① INSTRUMENT / SPREAD ═══════════
+mode    = input.string("Ratio / spread chart (recommended)", "Mode", options=["Ratio / spread chart (recommended)", "Pair vs symbol"], group="① Instrument")
+pairSym = input.symbol("CME_MINI:ES1!", "Leg B (Pair-vs-symbol mode only)", group="① Instrument")
+olsLen  = input.int(120, "OLS hedge-ratio window", minval=20, group="① Instrument")
+zLen    = input.int(100, "Mean / z-score window",  minval=20, group="① Instrument")
+// ═══════════ ② BANDS (Avellaneda–Lee) ═══════════
+entryZ  = input.float(1.5, "Entry |z| (open band)",      step=0.1, group="② Bands")
+exitZ   = input.float(0.2, "Exit |z| (take profit ~mean)", step=0.1, group="② Bands")
+stopZ   = input.float(3.0, "Hard stop |z| (de-cohered)",  step=0.1, group="② Bands")
+hlMult  = input.float(4.0, "Time-stop = half-life ×",     step=0.5, group="② Bands")
+// ═══════════ ③ COINTEGRATION GATE ═══════════
+adfThresh = input.float(-2.0, "ADF t-stat must be below (more negative = stronger)", step=0.1, group="③ Cointegration Gate")
+statLen   = input.int(100, "ADF / half-life window", minval=20, group="③ Cointegration Gate")
+useHurst  = input.bool(true, "Require Hurst < 0.5", group="③ Cointegration Gate")
+hWin      = input.int(80, "Hurst window", group="③ Cointegration Gate")
+useVR     = input.bool(true, "Require variance ratio < 1", group="③ Cointegration Gate")
+vrLag     = input.int(4, "Variance-ratio lag q", minval=2, group="③ Cointegration Gate")
+vrLen     = input.int(120, "Variance-ratio window", group="③ Cointegration Gate")
+minCorr   = input.float(0.6, "Min |corr| of legs (Pair mode)", step=0.05, group="③ Cointegration Gate")`,
+    calc: `isPair = mode == "Pair vs symbol"
+logA = math.log(close)
 rawB = request.security(pairSym, timeframe.period, close, lookahead=barmerge.lookahead_off)
-legB = rawB > 0 ? math.log(rawB) : na
-[alpha, beta] = f_ols(legA, legB, olsLen)
-spread = legA - (alpha + beta * legB)
-z = f_z(spread, zLen)
-hl = f_halflife(spread, zLen)
-vr = f_varratio(spread, vrLag, vrLen)
-hurst = f_hurst(spread, zLen)
-corr = f_corr(legA, legB, olsLen)
-statOk = (not useVR or vr < 1.0) and (not useHurst or hurst < 0.5) and (not useHL or not na(hl)) and math.abs(corr) >= minCorr and not na(legB)
-// long the spread (cheap A) when z deeply negative; short when z high
-longSig  := statOk and z <= -entryZ and z[1] > -entryZ
-shortSig := statOk and z >=  entryZ and z[1] <  entryZ`,
-    plots: `// Spread β and z live in the Data Window (display.data_window) so they never
-// distort the PRICE scale — this is what was compressing the chart before.
-plot(beta, "Hedge β",  color=color.new(color.aqua, 0),   display=display.data_window)
-plot(z,    "Spread z", color=color.new(color.orange, 0), display=display.data_window)`,
+logB = rawB > 0 ? math.log(rawB) : na
+[alpha, beta] = f_ols(logA, logB, olsLen)
+fairLogA = alpha + beta * logB
+src = isPair and not na(logB) ? logA - fairLogA : logA
+m  = ta.sma(src, zLen)
+sd = ta.stdev(src, zLen)
+z  = sd > 0 ? (src - m) / sd : 0.0
+// price level corresponding to a given z (drives the dynamic exits and the boxes)
+f_px(float zlvl) => math.exp((isPair ? fairLogA : 0.0) + m + zlvl * sd)
+// Augmented-Dickey-Fuller-style t-stat: AR(1) ΔS = a + b·S_lag ; t = b / SE(b)
+lagS = src[1]
+dS = src - lagS
+[a2, b2] = f_ols(dS, lagS, statLen)
+sresid = ta.stdev(dS - (a2 + b2 * lagS), statLen)
+slag = ta.stdev(lagS, statLen)
+adf_t = (slag > 0 and sresid > 0) ? b2 / (sresid / (slag * math.sqrt(statLen))) : 0.0
+hl = f_halflife(src, statLen)
+vr = f_varratio(src, vrLag, vrLen)
+hurst = f_hurst(src, hWin)
+corr = isPair ? f_corr(logA, logB, olsLen) : 1.0
+stationary = adf_t < adfThresh and not na(hl) and (not useHurst or hurst < 0.5) and (not useVR or vr < 1.0) and (not isPair or (not na(logB) and math.abs(corr) >= minCorr))
+// entries: open at the wide band (Avellaneda–Lee)
+longSig  := stationary and z <= -entryZ and z[1] > -entryZ
+shortSig := stationary and z >=  entryZ and z[1] <  entryZ`,
+    customExec: `// ═══════════ EXECUTION — DYNAMIC MEAN-REVERSION EXIT (the stat-arb way) ═══════════
+var float dayEq = na
+var int   tradesToday = 0
+if newDay
+    dayEq := strategy.equity
+    tradesToday := 0
+dayPnl = na(dayEq) ? 0.0 : (strategy.equity - dayEq) / dayEq * 100.0
+blockNew = (useDailyStop and dayPnl <= -dailyLossPct) or (tradesToday >= maxTradesDay)
+canEnter = strategy.position_size == 0 and barstate.isconfirmed and sessOk and not blockNew
+var int eBar = na
+var int hlBarsV = 0
+hlBars = na(hl) ? maxBars : math.min(maxBars, math.max(5, int(math.round(hl * hlMult))))
+
+if longSig and canEnter
+    tgt = f_px(-exitZ)
+    stp = f_px(-stopZ)
+    rk = close - stp
+    if rk > 0
+        eBar := bar_index
+        hlBarsV := hlBars
+        tradesToday := tradesToday + 1
+        strategy.entry("L", strategy.long, qty = (strategy.equity * riskPct / 100.0) / rk)
+        if showBoxes
+            box.new(bar_index, tgt, bar_index + 30, close, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+            box.new(bar_index, close, bar_index + 30, stp, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+            line.new(bar_index, close, bar_index + 30, close, color=color.new(color.white, 0), style=line.style_dashed)
+            label.new(bar_index, tgt, "LONG spread · z " + str.tostring(z, "#.##") + " → mean", style=label.style_label_down, color=color.new(color.lime, 20), textcolor=color.black, size=size.small)
+        alert("STATARB LONG " + syminfo.ticker + " | z " + str.tostring(z, "#.##") + " | TP " + f_fmt(tgt) + " | SL " + f_fmt(stp), alert.freq_once_per_bar)
+
+if shortSig and canEnter
+    tgt = f_px(exitZ)
+    stp = f_px(stopZ)
+    rk = stp - close
+    if rk > 0
+        eBar := bar_index
+        hlBarsV := hlBars
+        tradesToday := tradesToday + 1
+        strategy.entry("S", strategy.short, qty = (strategy.equity * riskPct / 100.0) / rk)
+        if showBoxes
+            box.new(bar_index, close, bar_index + 30, tgt, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+            box.new(bar_index, stp, bar_index + 30, close, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+            line.new(bar_index, close, bar_index + 30, close, color=color.new(color.white, 0), style=line.style_dashed)
+            label.new(bar_index, tgt, "SHORT spread · z " + str.tostring(z, "#.##") + " → mean", style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+        alert("STATARB SHORT " + syminfo.ticker + " | z " + str.tostring(z, "#.##") + " | TP " + f_fmt(tgt) + " | SL " + f_fmt(stp), alert.freq_once_per_bar)
+
+// dynamic management: take profit at the MOVING mean band, stop at the de-coherence z,
+// and force-exit the instant the spread stops being stationary or the half-life elapses.
+if strategy.position_size > 0
+    tgt = f_px(-exitZ)
+    stp = f_px(-stopZ)
+    if not stationary or (bar_index - eBar) >= hlBarsV
+        strategy.close("L", comment="reverted/decohered")
+    else
+        strategy.exit("L-x", from_entry="L", stop=stp, limit=tgt)
+if strategy.position_size < 0
+    tgt = f_px(exitZ)
+    stp = f_px(stopZ)
+    if not stationary or (bar_index - eBar) >= hlBarsV
+        strategy.close("S", comment="reverted/decohered")
+    else
+        strategy.exit("S-x", from_entry="S", stop=stp, limit=tgt)`,
+    plots: `// Price-space reversion envelope (all near price → never compresses the chart).
+plot(f_px(0.0),     "Mean",        color=color.new(color.gray, 0))
+plot(f_px(entryZ),  "Upper band",  color=color.new(color.red, 55))
+plot(f_px(-entryZ), "Lower band",  color=color.new(color.lime, 55))
+plot(z,     "Spread z", color=color.new(color.orange, 0), display=display.data_window)
+plot(adf_t, "ADF t",    color=color.new(color.purple, 0), display=display.data_window)`,
     dash: [
-      ['Hedge β', 'str.tostring(beta, "#.###")', 'color.aqua'],
-      ['Corr(A,B)', 'str.tostring(corr, "#.##")', 'math.abs(corr) >= minCorr ? color.lime : color.red'],
+      ['ADF t-stat', 'str.tostring(adf_t, "#.##")', 'adf_t < adfThresh ? color.lime : color.red'],
       ['Spread z', 'str.tostring(z, "#.##")', 'math.abs(z) >= entryZ ? color.yellow : color.gray'],
-      ['Half-life', 'na(hl) ? "—" : str.tostring(hl, "#") + " bars"', 'na(hl) ? color.red : color.lime'],
+      ['Half-life', 'na(hl) ? "—" : str.tostring(hl, "#") + "b"', 'na(hl) ? color.red : color.lime'],
       ['Var ratio', 'str.tostring(vr, "#.##")', 'vr < 1.0 ? color.fuchsia : color.gray'],
       ['Hurst', 'str.tostring(hurst, "#.##")', 'hurst < 0.5 ? color.fuchsia : color.gray'],
-      ['Stationary?', 'statOk ? "YES — tradable" : "NO"', 'statOk ? color.lime : color.red'],
+      ['Cointegrated?', 'stationary ? "YES — tradable" : "NO — stand down"', 'stationary ? color.lime : color.red'],
+      ['Mode', 'isPair ? "PAIR vs B" : "RATIO chart"', 'color.aqua'],
       ['Position', 'strategy.position_size > 0 ? "LONG SPRD" : strategy.position_size < 0 ? "SHORT SPRD" : "FLAT"', 'strategy.position_size > 0 ? color.lime : strategy.position_size < 0 ? color.red : color.gray'],
       ['Day P&L', 'str.tostring(dayPnl, "#.##") + "%"', 'dayPnl >= 0 ? color.lime : color.red'],
     ],
