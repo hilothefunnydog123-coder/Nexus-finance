@@ -373,10 +373,10 @@ export default function AlgorithmsPage() {
       {/* STRATEGY SELECTOR */}
       <div style={{ padding: '0 24px 48px', maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', color: '#4a6a7a', fontFamily: 'monospace', marginBottom: 20, textAlign: 'center' }}>
-          SELECT YOUR MENTOR&apos;S STRATEGY
+          SELECT A STRATEGY · ⚡ GOD MODE (RESEARCH-GRADE QUANT) SHOWN FIRST
         </div>
         <div className="algo-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12 }}>
-          {ALGORITHMS.map(a => {
+          {[...ALGORITHMS].sort((a, b) => (b.god ? 1 : 0) - (a.god ? 1 : 0)).map(a => {
             const isSelected = selectedId === a.id
             return (
               <button
