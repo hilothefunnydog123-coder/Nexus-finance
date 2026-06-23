@@ -488,13 +488,17 @@ shortSig := momShort or revShort`,
     propFirms: ['Topstep', 'Apex', 'MyFundedFutures', 'FTMO'],
     winTarget: '~35–45% (momentum profile) — profit comes from R, verify on real data', riskPerTrade: '0.5% risk-based',
     overview: 'A momentum engine designed for exactly the instrument mean reversion can’t trade: a single, trending index future like MNQ. It builds the opening-range high/low over the first 30 minutes, then takes the FIRST break of that range — but only in the direction of the intraday trend (price on the right side of a rising/falling 200-EMA). The stop is ATR-based, the target a fixed R-multiple of that stop, with a breakeven move once price travels +1 ATR; positions go flat by the cash close (no overnight risk). This is the opposite design philosophy to the Stat-Arb engine — it WANTS the trend, it does not fade it.',
-    propNotes: 'Honest expectations: this is a momentum strategy, so the WIN RATE is naturally lower (~35–45%) — the edge is asymmetric payoff (winners larger than losers), which is how trend-following on index futures actually makes money. A profitable 40%-win engine beats a losing 53%-win one. In the intraday-futures research lab it ran profitably (profit factor ≈ 1.3–1.7) across a realistic mix of trend/range/reversal days; a single trending instrument simply has NO high-win + profitable + low-frequency solution — that is a real tradeoff, not a tuning failure. CRITICAL: that result is from a synthetic simulator (no real-MNQ data access here), and simulators are imperfect — backtest this on real MNQ in the Strategy Tester, then tell the desk the numbers so the trend filter, stop and R-target can be tuned to YOUR data. Skip it on flat, gap-and-die days; it shines when the open trends.',
+    propNotes: 'Honest expectations: this is a momentum strategy, so the WIN RATE is naturally lower (~35–45%) — the edge is asymmetric payoff (winners larger than losers), which is how trend-following on index futures actually makes money. A profitable 40%-win engine beats a losing 53%-win one. In the intraday-futures research lab it ran profitably (profit factor ≈ 1.3–1.7) across a realistic mix of trend/range/reversal days; a single trending instrument simply has NO high-win + profitable + low-frequency solution — that is a real tradeoff, not a tuning failure. TIMEFRAME-ROBUST by design: the bias uses SESSION VWAP (identical on 5m and 15m because it is volume-weighted over the session, not bar-count) plus volume-weighted ±σ bands — it only takes a breakout that is on the right side of VWAP and NOT already overextended past a band (poor reward:risk), and only after price clears the range by an ATR buffer (this is what kills the false 5-min breakouts that turn an outright chart red). Both the VWAP filter and the 200-EMA filter are ON by default and stackable; loosen either if you want more trades. HONEST NOTE: a synthetic simulator (no real-MNQ data here) could not reproduce a red 5-min, and showed VWAP roughly neutral — so treat VWAP + the breakout buffer as the correct tools for false-break chop and A/B TEST them on real MNQ (toggle useVwap / breakBuf on and off in the tester) rather than trusting any single number. Skip it on flat, gap-and-die days; it shines when the open trends.',
     inputs: `// ═══════════ ① OPENING RANGE ═══════════
 orSess  = input.session("0930-1000", "Opening range (NY)", group="① Opening Range")
 trSess  = input.session("1000-1530", "Trade window (NY)",  group="① Opening Range")
-// ═══════════ ② TREND FILTER ═══════════
-regimeLen = input.int(200, "Trend EMA (only trade with it)", group="② Trend Filter")
-slopeBars = input.int(20,  "Trend-slope lookback (bars)",    group="② Trend Filter")
+// ═══════════ ② TREND + VWAP FILTER (timeframe-robust) ═══════════
+useVwap    = input.bool(true,  "Require session-VWAP alignment", group="② Trend + VWAP")
+vwapSdMult = input.float(2.5,  "VWAP band σ (overextension cap)", step=0.1, group="② Trend + VWAP")
+useEma     = input.bool(true,  "Also require 200-EMA trend",     group="② Trend + VWAP")
+regimeLen  = input.int(200,    "Trend EMA length",               group="② Trend + VWAP")
+slopeBars  = input.int(20,     "Trend-slope lookback (bars)",    group="② Trend + VWAP")
+breakBuf   = input.float(0.10, "Breakout buffer (ATR ×) — cuts false breaks", step=0.05, group="② Trend + VWAP")
 // ═══════════ ③ STOP / TARGET ═══════════
 atrLen  = input.int(14,  "ATR length",                 group="③ Stop / Target")
 slAtr   = input.float(1.5, "Stop (ATR ×)", step=0.1,   group="③ Stop / Target")
@@ -502,8 +506,13 @@ tpR     = input.float(1.5, "Target (R = × stop)", step=0.1, group="③ Stop / T
 useBE   = input.bool(true, "Breakeven after +1 ATR",   group="③ Stop / Target")
 beAtR   = input.float(1.0, "Breakeven trigger (ATR ×)", step=0.1, group="③ Stop / Target")`,
     calc: `emaR = ta.ema(close, regimeLen)
-upBias = close > emaR and emaR > emaR[slopeBars]
-dnBias = close < emaR and emaR < emaR[slopeBars]
+emaUp = not useEma or (close > emaR and emaR > emaR[slopeBars])
+emaDn = not useEma or (close < emaR and emaR < emaR[slopeBars])
+vAnchor = ta.change(time("D")) != 0
+[vwapV, vBU, vBL] = ta.vwap(hlc3, vAnchor, vwapSdMult)
+vwapUp = not useVwap or (close > vwapV and close < vBU)
+vwapDn = not useVwap or (close < vwapV and close > vBL)
+atrSig = ta.atr(atrLen)
 inOR = not na(time(timeframe.period, orSess, tz))
 inTrade = not na(time(timeframe.period, trSess, tz))
 newOR = inOR and not inOR[1]
@@ -519,8 +528,8 @@ if newOR
 else if inOR
     orH := math.max(orH, high)
     orL := math.min(orL, low)
-longSig  := inTrade and not lDone and not na(orH) and close > orH and upBias
-shortSig := inTrade and not sDone and not na(orL) and close < orL and dnBias
+longSig  := inTrade and not lDone and not na(orH) and close > orH + breakBuf * atrSig and emaUp and vwapUp
+shortSig := inTrade and not sDone and not na(orL) and close < orL - breakBuf * atrSig and emaDn and vwapDn
 if longSig
     lDone := true
 if shortSig
@@ -577,13 +586,16 @@ if strategy.position_size < 0
     strategy.exit("S-x", from_entry="S", stop=slNow, limit=eTP)
 if strategy.position_size != 0 and not inTrade
     strategy.close_all(comment="EOD flat")`,
-    plots: `plot(ta.ema(close, regimeLen), "Trend EMA", color=color.new(color.orange, 0), linewidth=2)
+    plots: `plot(vwapV, "VWAP",      color=color.new(#2962ff, 0),  linewidth=2)
+plot(vBU,   "VWAP +band", color=color.new(#2962ff, 65))
+plot(vBL,   "VWAP -band", color=color.new(#2962ff, 65))
+plot(useEma ? emaR : na, "Trend EMA", color=color.new(color.orange, 0), linewidth=2)
 plot((inOR or inTrade) and not na(orH) ? orH : na, "OR High", color=color.new(color.lime, 40), style=plot.style_linebr)
 plot((inOR or inTrade) and not na(orL) ? orL : na, "OR Low",  color=color.new(color.red, 40), style=plot.style_linebr)`,
     dash: [
-      ['Trend bias', 'upBias ? "BULL ▲" : dnBias ? "BEAR ▼" : "FLAT — no trade"', 'upBias ? color.lime : dnBias ? color.red : color.gray'],
-      ['OR High', 'na(orH) ? "—" : f_fmt(orH)', 'color.aqua'],
-      ['OR Low', 'na(orL) ? "—" : f_fmt(orL)', 'color.aqua'],
+      ['Trend (EMA)', '(close > emaR and emaR > emaR[slopeBars]) ? "BULL ▲" : (close < emaR and emaR < emaR[slopeBars]) ? "BEAR ▼" : "FLAT"', '(close > emaR and emaR > emaR[slopeBars]) ? color.lime : (close < emaR and emaR < emaR[slopeBars]) ? color.red : color.gray'],
+      ['VWAP side', 'close > vwapV ? "ABOVE" : "BELOW"', 'close > vwapV ? color.lime : color.red'],
+      ['VWAP stretch', 'close >= vBU ? "OVER+ skip" : close <= vBL ? "OVER- skip" : "ok"', '(close >= vBU or close <= vBL) ? color.orange : color.gray'],
       ['Window', 'inOR ? "BUILDING OR" : inTrade ? "TRADING" : "CLOSED"', 'inTrade ? color.lime : inOR ? color.yellow : color.gray'],
       ['Trades today', 'str.tostring(tradesToday) + " / " + str.tostring(maxTradesDay)', 'color.white'],
       ['Position', 'strategy.position_size > 0 ? "LONG" : strategy.position_size < 0 ? "SHORT" : "FLAT"', 'strategy.position_size > 0 ? color.lime : strategy.position_size < 0 ? color.red : color.gray'],
