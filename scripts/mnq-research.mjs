@@ -94,7 +94,7 @@ function runExits(bars, sig, P) {
         if (b.h >= sl) exitPx = sl
         else if (b.l <= tp) exitPx = tp
       }
-      const eod = b.bar === BARS_PER_DAY - 1
+      const eod = i + 1 >= bars.length || bars[i + 1].day !== b.day
       if (exitPx === null && eod) exitPx = b.c
       if (exitPx !== null) {
         const pts = (pos > 0 ? exitPx - entry : entry - exitPx) - cost
@@ -233,4 +233,101 @@ if (bestProfit) { console.log('\n  MOST PROFITABLE (6–14/mo):'); console.log(r
 console.log('\n  C) Confirmation (20 seeds):')
 if (bestWin) console.log(row(`  WIN pick [${bestWin.kind}]`, mc(bestWin.fn, bestWin.P, 20)))
 if (bestProfit && bestProfit !== bestWin) console.log(row(`  PROFIT pick [${bestProfit.kind}]`, mc(bestProfit.fn, bestProfit.P, 20)))
+console.log('')
+
+// ═════════════════════════════════════════════════════════════════════════════
+// D) VWAP UPGRADE — make it timeframe-robust (5m AND 15m) with session VWAP + σ bands
+// ═════════════════════════════════════════════════════════════════════════════
+// Session VWAP is identical on 5m and 15m (it is volume-weighted over the session,
+// not bar-count) → the perfect timeframe-agnostic trend filter. Add volume-weighted
+// standard-deviation bands and only take breakouts that are on the right side of VWAP
+// and NOT already overextended past a band (poor reward:risk).
+function vwapBands(bars) {
+  const vwap = [], sd = []
+  let pv = 0, v = 0, pv2 = 0
+  for (let i = 0; i < bars.length; i++) {
+    if (bars[i].bar === 0) { pv = 0; v = 0; pv2 = 0 }
+    const tp = (bars[i].h + bars[i].l + bars[i].c) / 3
+    pv += tp * bars[i].v; v += bars[i].v; pv2 += tp * tp * bars[i].v
+    const vw = v ? pv / v : tp
+    const variance = v ? Math.max(0, pv2 / v - vw * vw) : 0
+    vwap.push(vw); sd.push(Math.sqrt(variance))
+  }
+  return { vwap, sd }
+}
+// VWAP-filtered Opening-Range Breakout (timeframe-robust; OR set by TIME via orBars)
+function sigORBvwap(bars, P) {
+  const { orBars = 6, maxExtSd = 2.5, minExtSd = 0.0, useVwapSlope = true } = P
+  const c = bars.map(b => b.c)
+  const { vwap, sd } = vwapBands(bars)
+  const sig = new Array(bars.length).fill(0)
+  let orH = -Infinity, orL = Infinity, doneL = false, doneS = false
+  for (let i = 0; i < bars.length; i++) {
+    const b = bars[i]
+    if (b.bar === 0) { orH = -Infinity; orL = Infinity; doneL = doneS = false }
+    if (b.bar < orBars) { orH = Math.max(orH, b.h); orL = Math.min(orL, b.l); continue }
+    const ext = sd[i] > 0 ? (c[i] - vwap[i]) / sd[i] : 0      // σ-distance from VWAP
+    const slopeUp = !useVwapSlope || vwap[i] >= vwap[i - 1]
+    const slopeDn = !useVwapSlope || vwap[i] <= vwap[i - 1]
+    const longOk = c[i] > vwap[i] && ext >= minExtSd && ext <= maxExtSd && slopeUp
+    const shortOk = c[i] < vwap[i] && ext <= -minExtSd && ext >= -maxExtSd && slopeDn
+    if (!doneL && b.c > orH && longOk) { sig[i] = 1; doneL = true }
+    else if (!doneS && b.c < orL && shortOk) { sig[i] = -1; doneS = true }
+  }
+  return sig
+}
+// resample 5-min bars → coarser TF (factor 3 = 15-min) respecting day boundaries
+function resample(bars, factor) {
+  const out = []
+  let i = 0
+  while (i < bars.length) {
+    const day = bars[i].day
+    let k = i; while (k < bars.length && bars[k].day === day) k++
+    const dayBars = bars.slice(i, k)
+    for (let s = 0; s < dayBars.length; s += factor) {
+      const grp = dayBars.slice(s, s + factor)
+      out.push({ o: grp[0].o, h: Math.max(...grp.map(x => x.h)), l: Math.min(...grp.map(x => x.l)), c: grp[grp.length - 1].c, v: grp.reduce((a, x) => a + x.v, 0), day, bar: Math.floor(s / factor) })
+    }
+    i = k
+  }
+  return out
+}
+function mcOn(genFn, sigFn, P, seeds = 10) {
+  let all = []
+  for (let s = 0; s < seeds; s++) { const bars = genFn(3000 + s * 29); all = all.concat(runExits(bars, sigFn(bars, P), P)) }
+  return stats(all, 252 * seeds)
+}
+const gen5 = (seed) => genMNQ(seed, 252)
+const gen15 = (seed) => resample(genMNQ(seed, 252), 3)
+
+console.log('═'.repeat(112))
+console.log('  D) VWAP TIMEFRAME-ROBUSTNESS — same price path, 5-min vs 15-min, plain ORB vs VWAP-filtered ORB')
+console.log('═'.repeat(112) + '\n')
+const baseExit = { slAtr: 1.5, tpR: 1.5, useBE: true, cooldown: 4 }
+console.log(row('  5m  ORB + 200-EMA', mcOn(gen5, sigORB, { orBars: 6, regime: 200, ...baseExit })))
+console.log(row('  5m  ORB + VWAP', mcOn(gen5, sigORBvwap, { orBars: 6, maxExtSd: 2.5, ...baseExit })))
+console.log(row('  15m ORB + 200-EMA', mcOn(gen15, sigORB, { orBars: 2, regime: 200, ...baseExit, cooldown: 2 })))
+console.log(row('  15m ORB + VWAP', mcOn(gen15, sigORBvwap, { orBars: 2, maxExtSd: 2.5, ...baseExit, cooldown: 2 })))
+
+console.log('\n  Tune ONE VWAP config to work on BOTH timeframes (maximise the worse of the two PFs):')
+let bestBoth = null, n2 = 0
+for (const maxExtSd of [1.5, 2.0, 2.5, 3.0])
+  for (const minExtSd of [0.0, 0.25, 0.5])
+    for (const slAtr of [1.0, 1.5, 2.0])
+      for (const tpR of [1.0, 1.5, 2.0])
+        for (const useVwapSlope of [true, false]) {
+          n2++
+          const E = { slAtr, tpR, useBE: true }
+          const r5 = mcOn(gen5, sigORBvwap, { orBars: 6, maxExtSd, minExtSd, useVwapSlope, cooldown: 4, ...E }, 8)
+          const r15 = mcOn(gen15, sigORBvwap, { orBars: 2, maxExtSd, minExtSd, useVwapSlope, cooldown: 2, ...E }, 8)
+          const bothOk = r5.pts > 0 && r15.pts > 0 && r5.perMonth >= 5 && r5.perMonth <= 20
+          const worsePF = Math.min(r5.pf, r15.pf)
+          if (bothOk && (!bestBoth || worsePF > bestBoth.worsePF)) bestBoth = { maxExtSd, minExtSd, slAtr, tpR, useVwapSlope, r5, r15, worsePF }
+        }
+console.log(`  searched ${n2} configs × 8 seeds × 2 timeframes`)
+if (bestBoth) {
+  console.log(`\n  WINNER (works on both): maxExtSd ${bestBoth.maxExtSd}, minExtSd ${bestBoth.minExtSd}, slAtr ${bestBoth.slAtr}, tpR ${bestBoth.tpR}, vwapSlope ${bestBoth.useVwapSlope}`)
+  console.log(row('  → 5-min ', bestBoth.r5))
+  console.log(row('  → 15-min', bestBoth.r15))
+} else console.log('  no single config was profitable on both timeframes')
 console.log('')
