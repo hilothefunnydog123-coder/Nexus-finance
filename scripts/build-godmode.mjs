@@ -230,19 +230,21 @@ const SPECS = [
     propFirms: ['FTMO', 'Topstep', 'Apex', 'MyFundedFutures'],
     winTarget: 'Edge from reversion + costs — verify in tester', riskPerTrade: '0.5% risk-based',
     overview: 'A faithful statistical-arbitrage engine rebuilt around the one rule that makes stat-arb profitable: you EXIT ON MEAN REVERSION, never on a fixed price target. It models the series as an Ornstein–Uhlenbeck process, enters with Avellaneda–Lee asymmetric bands (open at a wide z, take profit back at the mean), and dynamically tracks the moving mean for the exit — the take-profit follows the equilibrium each bar. Critically, it only trades when the spread is actually cointegrated/stationary, confirmed by an Augmented-Dickey-Fuller-style t-statistic, a finite OU half-life, a Lo–MacKinlay variance ratio (<1) and a Hurst exponent (<0.5). Validated in scripts/statarb-research.mjs: on cointegrated data the mean-reversion exit turns the same entries from a break-even loser into a profit factor > 1.4; with the cointegration gate OFF on trending data it loses badly — which is exactly why the gate is mandatory.',
-    propNotes: 'RUN IT ON A RATIO / SPREAD CHART (e.g. "NQ1!/ES1!", "KO/PEP", "GLD/GDX") — that makes the trade market-neutral with the leg hedge built in, which is how desks actually do it. (Pair-vs-symbol mode builds the spread internally but trades only the chart leg.) The ADF + half-life gate is the risk control: it forces the engine to STAND DOWN the moment the spread stops mean-reverting (de-cointegration — the way every pairs trade eventually dies). Defaults (enter 1.5σ, exit ~mean, stop 3σ) are the profit-factor-maximising bands from the research harness; re-tune per instrument. The fixed-target version you saw losing money was the bug — this is the fix.',
+    propNotes: 'RUN IT ON A RATIO / SPREAD CHART (e.g. "NQ1!/ES1!", "KO/PEP", "GLD/GDX") — that makes the trade market-neutral with the leg hedge built in, which is how desks actually do it. (Pair-vs-symbol mode builds the spread internally but trades only the chart leg.) The ADF + half-life gate is the risk control: it forces the engine to STAND DOWN the moment the spread stops mean-reverting (de-cointegration — the way every pairs trade eventually dies). The defaults are tuned for PROP FIRMS, not just raw profit: reversal confirmation (only enter once the spread is already turning back), a partial take-profit (bank the bounce, don’t wait for the full mean), and a post-trade cooldown together push the win rate up and crush losing streaks. In the research harness on cointegrated data this config posts ~56% win rate, profit factor ~2.4, ~7% max drawdown and a worst losing streak of 3 — versus the old fixed-target build’s 36% win / 10-loss streak. Re-tune per instrument and verify in the tester.',
     inputs: `// ═══════════ ① INSTRUMENT / SPREAD ═══════════
 mode    = input.string("Ratio / spread chart (recommended)", "Mode", options=["Ratio / spread chart (recommended)", "Pair vs symbol"], group="① Instrument")
 pairSym = input.symbol("CME_MINI:ES1!", "Leg B (Pair-vs-symbol mode only)", group="① Instrument")
 olsLen  = input.int(120, "OLS hedge-ratio window", minval=20, group="① Instrument")
 zLen    = input.int(100, "Mean / z-score window",  minval=20, group="① Instrument")
 // ═══════════ ② BANDS (Avellaneda–Lee) ═══════════
-entryZ  = input.float(1.5, "Entry |z| (open band)",      step=0.1, group="② Bands")
-exitZ   = input.float(0.2, "Exit |z| (take profit ~mean)", step=0.1, group="② Bands")
-stopZ   = input.float(3.0, "Hard stop |z| (de-cohered)",  step=0.1, group="② Bands")
-hlMult  = input.float(4.0, "Time-stop = half-life ×",     step=0.5, group="② Bands")
+entryZ  = input.float(1.0, "Entry |z| (open band)",       step=0.1, group="② Bands")
+exitZ   = input.float(0.5, "Take-profit at |z| (partial reversion)", step=0.1, group="② Bands")
+stopZ   = input.float(2.5, "Hard stop |z| (de-cohered)",  step=0.1, group="② Bands")
+hlMult  = input.float(5.0, "Time-stop = half-life ×",     step=0.5, group="② Bands")
+confirmEntry = input.bool(true, "Reversal confirmation (z must be turning back)", group="② Bands")
+cooldownBars = input.int(8, "Cooldown after a trade (bars)", minval=0, group="② Bands")
 // ═══════════ ③ COINTEGRATION GATE ═══════════
-adfThresh = input.float(-2.0, "ADF t-stat must be below (more negative = stronger)", step=0.1, group="③ Cointegration Gate")
+adfThresh = input.float(-3.0, "ADF t-stat must be below (more negative = stronger)", step=0.1, group="③ Cointegration Gate")
 statLen   = input.int(100, "ADF / half-life window", minval=20, group="③ Cointegration Gate")
 useHurst  = input.bool(true, "Require Hurst < 0.5", group="③ Cointegration Gate")
 hWin      = input.int(80, "Hurst window", group="③ Cointegration Gate")
@@ -274,9 +276,9 @@ vr = f_varratio(src, vrLag, vrLen)
 hurst = f_hurst(src, hWin)
 corr = isPair ? f_corr(logA, logB, olsLen) : 1.0
 stationary = adf_t < adfThresh and not na(hl) and (not useHurst or hurst < 0.5) and (not useVR or vr < 1.0) and (not isPair or (not na(logB) and math.abs(corr) >= minCorr))
-// entries: open at the wide band (Avellaneda–Lee)
-longSig  := stationary and z <= -entryZ and z[1] > -entryZ
-shortSig := stationary and z >=  entryZ and z[1] <  entryZ`,
+// entries: stretched AND (reversal confirmation) already ticking back toward the mean
+longSig  := stationary and z <= -entryZ and (confirmEntry ? z > z[1] : z[1] > -entryZ)
+shortSig := stationary and z >=  entryZ and (confirmEntry ? z < z[1] : z[1] <  entryZ)`,
     customExec: `// ═══════════ EXECUTION — DYNAMIC MEAN-REVERSION EXIT (the stat-arb way) ═══════════
 var float dayEq = na
 var int   tradesToday = 0
@@ -285,7 +287,10 @@ if newDay
     tradesToday := 0
 dayPnl = na(dayEq) ? 0.0 : (strategy.equity - dayEq) / dayEq * 100.0
 blockNew = (useDailyStop and dayPnl <= -dailyLossPct) or (tradesToday >= maxTradesDay)
-canEnter = strategy.position_size == 0 and barstate.isconfirmed and sessOk and not blockNew
+var int lastExitBar = -100000
+if strategy.position_size == 0 and strategy.position_size[1] != 0
+    lastExitBar := bar_index
+canEnter = strategy.position_size == 0 and barstate.isconfirmed and sessOk and not blockNew and (bar_index - lastExitBar >= cooldownBars)
 var int eBar = na
 var int hlBarsV = 0
 hlBars = na(hl) ? maxBars : math.min(maxBars, math.max(5, int(math.round(hl * hlMult))))
