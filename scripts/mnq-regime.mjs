@@ -43,25 +43,26 @@ function atr(bars,len){const tr=bars.map((b,i)=>i?Math.max(b.h-b.l,Math.abs(b.h-
 function vwapArr(bars){const vw=[];let pv=0,v=0;for(let i=0;i<bars.length;i++){if(bars[i].bar===0){pv=0;v=0}const tp=(bars[i].h+bars[i].l+bars[i].c)/3;pv+=tp*bars[i].v;v+=bars[i].v;vw.push(v?pv/v:tp)}return vw}
 function rvar(a,i,n){let m=0;for(let k=i-n+1;k<=i;k++)m+=a[k];m/=n;let s=0;for(let k=i-n+1;k<=i;k++)s+=(a[k]-m)**2;return s/(n-1)}
 
-// regime-switching signal
+// regime-switching signal: VR-GATED breakout (momentum) + optional VWAP fade (reversion)
 function sigRegime(bars,P){
-  const {fast=20,slow=50,reg=200,vrLag=5,vrLen=60,vrHi=1.1,vrLo=0.9,extAtr=1.5}=P
+  const {reg=200,vrLag=5,vrLen=60,vrHi=1.1,vrLo=0.9,dc=20,extAtr=1.5,useRevert=false}=P
   const c=bars.map(b=>b.c)
-  const eF=ema(c,fast),eS=ema(c,slow),eR=ema(c,reg),a=atr(bars,14),vw=vwapArr(bars)
+  const eR=ema(c,reg),a=atr(bars,14),vw=vwapArr(bars)
   const lr=c.map((x,i)=>i?Math.log(x/c[i-1]):0)
   const lrq=c.map((x,i)=>i>=vrLag?Math.log(x/c[i-vrLag]):0)
   const sig=new Array(bars.length).fill(0)
-  for(let i=Math.max(reg,vrLen)+vrLag+1;i<bars.length;i++){
+  for(let i=Math.max(reg,vrLen,dc)+vrLag+1;i<bars.length;i++){
     const v1=rvar(lr,i,vrLen), vq=rvar(lrq,i,vrLen)
     const vr=v1>0?vq/(vrLag*v1):1
     const trending=vr>=vrHi, reverting=vr<=vrLo
-    // momentum sub-model (trend regime): pullback-and-resume through fast EMA in trend dir
     let s=0
     if(trending){
-      const up=c[i]>eR[i]&&eF[i]>eS[i], dn=c[i]<eR[i]&&eF[i]<eS[i]
-      if(up&&bars[i].l<=eF[i]&&c[i]>eF[i]&&c[i]>bars[i].o)s=1
-      else if(dn&&bars[i].h>=eF[i]&&c[i]<eF[i]&&c[i]<bars[i].o)s=-1
-    } else if(reverting){
+      // momentum = Donchian breakout in the 200-EMA trend direction (validates well; VR-gated)
+      let hh=-Infinity,ll=Infinity
+      for(let k=i-dc;k<i;k++){hh=Math.max(hh,bars[k].h);ll=Math.min(ll,bars[k].l)}
+      if(c[i]>hh&&c[i]>eR[i])s=1
+      else if(c[i]<ll&&c[i]<eR[i])s=-1
+    } else if(reverting&&useRevert){
       const ext=a[i]>0?(c[i]-vw[i])/a[i]:0
       if(ext<=-extAtr&&c[i]>bars[i].o)s=1
       else if(ext>=extAtr&&c[i]<bars[i].o)s=-1
@@ -95,20 +96,22 @@ const row=(n,r)=>`  ${n.padEnd(36)} ${String(r.trades).padStart(5)}t  ${r.perMon
 console.log('\n'+'═'.repeat(116))
 console.log('  ADAPTIVE REGIME-SWITCHING on MNQ — momentum in trends, fade in ranges, stand down when ambiguous')
 console.log('═'.repeat(116)+'\n')
-console.log(row('  baseline', mc({})))
+console.log(row('  Donchian breakout (no VR gate)', mc({ vrHi: 0, vrLo: -1, dc: 20, slAtr: 1.5, tpR: 2.0 })))
+console.log(row('  + VR trend gate (regime switch)', mc({ vrHi: 1.1, vrLo: 0.9, dc: 20, slAtr: 1.5, tpR: 2.0 })))
+console.log(row('  + VWAP fade in ranges too', mc({ vrHi: 1.1, vrLo: 0.9, dc: 20, slAtr: 1.5, tpR: 2.0, useRevert: true })))
 
-console.log('\n  Grid search → max profit factor (PF), 6–25 trades/mo, win not awful:')
+console.log('\n  Grid search → max PF × √trades, 6–40 trades/mo, PF > 1.3:')
 let best=null,n=0
-for(const vrHi of [1.05,1.1,1.2])
- for(const vrLo of [0.8,0.9,0.95])
-  for(const extAtr of [1.0,1.5,2.0])
-   for(const slAtr of [1.0,1.5,2.0])
-    for(const tpR of [1.0,1.5,2.0,2.5])
-     for(const cooldown of [3,6]){
+for(const vrHi of [1.05,1.1,1.2,1.3])
+ for(const dc of [15,20,30,40])
+  for(const slAtr of [1.0,1.5,2.0])
+   for(const tpR of [1.5,2.0,2.5,3.0])
+    for(const cooldown of [2,5])
+     for(const useBE of [true,false]){
        n++
-       const P={vrHi,vrLo,extAtr,slAtr,tpR,cooldown,useBE:true}
+       const P={vrHi,vrLo:0.9,dc,slAtr,tpR,cooldown,useBE,useRevert:false}
        const r=mc(P,6)
-       if(r.perMonth>=6&&r.perMonth<=30&&r.pf>1.2&&r.worst<=9&&(!best||r.pf*Math.sqrt(r.trades)>best.score)) best={P,r,score:r.pf*Math.sqrt(r.trades)}
+       if(r.perMonth>=6&&r.perMonth<=40&&r.pf>1.3&&r.worst<=12&&(!best||r.pf*Math.sqrt(r.trades)>best.score)) best={P,r,score:r.pf*Math.sqrt(r.trades)}
      }
 console.log(`  searched ${n} configs × 6 seeds`)
 if(best){console.log('\n  ✅ BEST:');console.log('  '+JSON.stringify(best.P));console.log(row('  confirm (20 seeds)',mc(best.P,20)))}
