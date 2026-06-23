@@ -99,30 +99,19 @@ f_rvol(float src, int n, float bpy) =>
 f_corr(float a, float b, int n) => ta.correlation(a, b, n)`
 
 // ─── Shared risk/exit inputs ──────────────────────────────────────────────────
-const RISK_INPUTS = `// ═══════════ RISK & EXECUTION ═══════════
-riskPct   = input.float(0.5, "Risk % of equity per trade", step=0.1, group="⑨ Risk")
-slAtrMult = input.float(2.0, "Stop (ATR ×)",        step=0.1, group="⑨ Risk")
-maxSlAtr  = input.float(3.5, "Max stop (ATR ×)",    step=0.1, group="⑨ Risk")
-useDailyStop = input.bool(true, "Daily loss kill-switch",            group="⑨ Risk")
-dailyLossPct = input.float(4.0, "Daily loss limit %", step=0.5,      group="⑨ Risk")
-maxTradesDay = input.int(6,     "Max trades per day",                group="⑨ Risk")
-tp1R   = input.float(1.0, "TP1 (R)", step=0.1, group="⑩ Exits")
-tp1Pct = input.int(40,    "TP1 close %",        group="⑩ Exits")
-tp2R   = input.float(2.0, "TP2 (R)", step=0.1, group="⑩ Exits")
-tp2Pct = input.int(35,    "TP2 close %",        group="⑩ Exits")
-tp3R   = input.float(${'${tp3R}'}, "TP3 runner (R)", step=0.1, group="⑩ Exits")
-beTrigR  = input.float(0.7, "Breakeven after (R)", step=0.1, group="⑩ Exits")
-beLockR  = input.float(0.1, "Lock at (R) on BE",  step=0.05, group="⑩ Exits")
-useTrail = input.bool(true, "ATR chandelier trail (ratchets up only)", group="⑩ Exits")
-trailStartR = input.float(1.3, "Start trailing after (R)", step=0.1, group="⑩ Exits")
-trailLen = input.int(14, "Trail lookback",                  group="⑩ Exits")
-trailAtr = input.float(2.2, "Trail ATR ×",       step=0.1,  group="⑩ Exits")
-useTimeStop = input.bool(true, "Time stop (cut dead trades)", group="⑩ Exits")
-maxBars  = input.int(${'${maxBars}'}, "Max bars in trade",     group="⑩ Exits")
-useSess  = input.bool(${'${useSess}'}, "Restrict to session", group="⑪ Session")
-sess     = input.session("0930-1600", "Session (NY)",        group="⑪ Session")
-showDash  = input.bool(true, "Show dashboard",   group="⑫ Visuals")
-showBoxes = input.bool(true, "Show trade boxes", group="⑫ Visuals")`
+const RISK_INPUTS = `// ═══════════ RISK & TRADE (fixed-point stop / target) ═══════════
+riskPct   = input.float(0.5, "Risk % of equity per trade", step=0.1, group="⑨ Risk & Trade")
+stopPts   = input.float(50, "Stop (price points)",   step=1, group="⑨ Risk & Trade")
+tgtPts    = input.float(50, "Target (price points)", step=1, group="⑨ Risk & Trade")
+useDailyStop = input.bool(true, "Daily loss kill-switch",        group="⑨ Risk & Trade")
+dailyLossPct = input.float(4.0, "Daily loss limit %", step=0.5,  group="⑨ Risk & Trade")
+maxTradesDay = input.int(10,    "Max trades per day",            group="⑨ Risk & Trade")
+useTimeStop  = input.bool(false, "Time stop (cut dead trades)",  group="⑨ Risk & Trade")
+maxBars      = input.int(${'${maxBars}'}, "Max bars in trade",   group="⑨ Risk & Trade")
+useSess  = input.bool(${'${useSess}'}, "Restrict to session", group="⑩ Session")
+sess     = input.session("0930-1600", "Session (NY)",        group="⑩ Session")
+showDash  = input.bool(true, "Show dashboard",   group="⑪ Visuals")
+showBoxes = input.bool(true, "Show trade boxes", group="⑪ Visuals")`
 
 // ─── Shared base state ────────────────────────────────────────────────────────
 const BASE = `tz = "America/New_York"
@@ -137,12 +126,10 @@ f_fmt(x) => str.tostring(x, format.mintick)
 // signal placeholders (assigned by the strategy core)
 bool  longSig   = false
 bool  shortSig  = false
-float slLongPx  = na
-float slShortPx = na
 float riskScale = 1.0`
 
-// ─── Shared execution engine ──────────────────────────────────────────────────
-const EXEC = `// ═══════════ EXECUTION ENGINE ═══════════
+// ─── Shared execution engine (fixed-point stop/target + signature boxes) ──────
+const EXEC = `// ═══════════ EXECUTION — fixed-point stop/target + green/red boxes ═══════════
 var float dayEq = na
 var int   tradesToday = 0
 if newDay
@@ -152,98 +139,49 @@ dayPnl = na(dayEq) ? 0.0 : (strategy.equity - dayEq) / dayEq * 100.0
 blockNew = (useDailyStop and dayPnl <= -dailyLossPct) or (tradesToday >= maxTradesDay)
 canEnter = strategy.position_size == 0 and barstate.isconfirmed and sessOk and not blockNew
 
-var int   posDir = 0
 var float eEntry = na
 var float eSL    = na
-var float eT1    = na
-var float eT2    = na
-var float eT3    = na
+var float eTP    = na
 var int   eBar   = na
-var float lockStop = na
-var bool  t1Done = false
-var bool  t2Done = false
 
-if longSig and canEnter
-    rawSlp = nz(slLongPx, close - atr * slAtrMult)
-    slp = math.max(math.min(rawSlp, close - atr * 0.05), close - atr * maxSlAtr)
-    rk = close - slp
-    if rk > 0
-        posDir := 1
-        eEntry := close
-        eSL := slp
-        eT1 := close + rk * tp1R
-        eT2 := close + rk * tp2R
-        eT3 := close + rk * tp3R
-        eBar := bar_index
-        lockStop := slp
-        t1Done := false
-        t2Done := false
-        tradesToday := tradesToday + 1
-        strategy.entry("L", strategy.long, qty = (strategy.equity * riskPct * math.max(0.1, riskScale) / 100.0) / rk)
-        if showBoxes
-            box.new(bar_index, eT2, bar_index + 20, eEntry, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 88))
-            box.new(bar_index, eEntry, bar_index + 20, eSL, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 88))
-            line.new(bar_index, eEntry, bar_index + 20, eEntry, color=color.new(color.white, 0), style=line.style_dashed)
-        alert("GODMODE LONG " + syminfo.ticker + " @ " + f_fmt(eEntry) + " | SL " + f_fmt(eSL) + " | T3 " + f_fmt(eT3), alert.freq_once_per_bar)
+if longSig and canEnter and stopPts > 0
+    eEntry := close
+    eSL := close - stopPts
+    eTP := close + tgtPts
+    eBar := bar_index
+    tradesToday := tradesToday + 1
+    strategy.entry("L", strategy.long, qty = (strategy.equity * riskPct * math.max(0.1, riskScale) / 100.0) / stopPts)
+    if showBoxes
+        box.new(bar_index, eTP, bar_index + 30, eEntry, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+        box.new(bar_index, eEntry, bar_index + 30, eSL, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+        line.new(bar_index, eEntry, bar_index + 30, eEntry, color=color.new(color.white, 0), style=line.style_dashed)
+        label.new(bar_index, eTP, "LONG +" + str.tostring(tgtPts, "#.#"), style=label.style_label_down, color=color.new(color.lime, 20), textcolor=color.black, size=size.small)
+    alert("GODMODE LONG " + syminfo.ticker + " @ " + f_fmt(eEntry) + " | SL " + f_fmt(eSL) + " | TP " + f_fmt(eTP), alert.freq_once_per_bar)
 
-if shortSig and canEnter
-    rawSlp = nz(slShortPx, close + atr * slAtrMult)
-    slp = math.min(math.max(rawSlp, close + atr * 0.05), close + atr * maxSlAtr)
-    rk = slp - close
-    if rk > 0
-        posDir := -1
-        eEntry := close
-        eSL := slp
-        eT1 := close - rk * tp1R
-        eT2 := close - rk * tp2R
-        eT3 := close - rk * tp3R
-        eBar := bar_index
-        lockStop := slp
-        t1Done := false
-        t2Done := false
-        tradesToday := tradesToday + 1
-        strategy.entry("S", strategy.short, qty = (strategy.equity * riskPct * math.max(0.1, riskScale) / 100.0) / rk)
-        if showBoxes
-            box.new(bar_index, eEntry, bar_index + 20, eT2, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 88))
-            box.new(bar_index, eSL, bar_index + 20, eEntry, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 88))
-            line.new(bar_index, eEntry, bar_index + 20, eEntry, color=color.new(color.white, 0), style=line.style_dashed)
-        alert("GODMODE SHORT " + syminfo.ticker + " @ " + f_fmt(eEntry) + " | SL " + f_fmt(eSL) + " | T3 " + f_fmt(eT3), alert.freq_once_per_bar)
+if shortSig and canEnter and stopPts > 0
+    eEntry := close
+    eSL := close + stopPts
+    eTP := close - tgtPts
+    eBar := bar_index
+    tradesToday := tradesToday + 1
+    strategy.entry("S", strategy.short, qty = (strategy.equity * riskPct * math.max(0.1, riskScale) / 100.0) / stopPts)
+    if showBoxes
+        box.new(bar_index, eEntry, bar_index + 30, eTP, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+        box.new(bar_index, eSL, bar_index + 30, eEntry, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+        line.new(bar_index, eEntry, bar_index + 30, eEntry, color=color.new(color.white, 0), style=line.style_dashed)
+        label.new(bar_index, eTP, "SHORT +" + str.tostring(tgtPts, "#.#"), style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+    alert("GODMODE SHORT " + syminfo.ticker + " @ " + f_fmt(eEntry) + " | SL " + f_fmt(eSL) + " | TP " + f_fmt(eTP), alert.freq_once_per_bar)
 
 if strategy.position_size > 0
-    rk = eEntry - eSL
-    movedR = rk > 0 ? (high - eEntry) / rk : 0.0
-    if high >= eT1
-        t1Done := true
-    if high >= eT2
-        t2Done := true
-    baseStop = (movedR >= beTrigR or t1Done) ? math.max(eSL, eEntry + rk * beLockR) : eSL
-    cand = useTrail and movedR >= trailStartR ? ta.highest(high, trailLen) - atr * trailAtr : baseStop
-    lockStop := math.max(nz(lockStop, baseStop), math.max(baseStop, cand))
     if useTimeStop and (bar_index - eBar) >= maxBars
         strategy.close("L", comment="time")
     else
-        strategy.exit("L1", from_entry="L", qty_percent=tp1Pct, stop=lockStop, limit=eT1)
-        strategy.exit("L2", from_entry="L", qty_percent=tp2Pct, stop=lockStop, limit=eT2)
-        strategy.exit("L3", from_entry="L", stop=lockStop, limit=eT3)
+        strategy.exit("L-exit", from_entry="L", stop=eSL, limit=eTP)
 if strategy.position_size < 0
-    rk = eSL - eEntry
-    movedR = rk > 0 ? (eEntry - low) / rk : 0.0
-    if low <= eT1
-        t1Done := true
-    if low <= eT2
-        t2Done := true
-    baseStop = (movedR >= beTrigR or t1Done) ? math.min(eSL, eEntry - rk * beLockR) : eSL
-    cand = useTrail and movedR >= trailStartR ? ta.lowest(low, trailLen) + atr * trailAtr : baseStop
-    lockStop := math.min(nz(lockStop, baseStop), math.min(baseStop, cand))
     if useTimeStop and (bar_index - eBar) >= maxBars
         strategy.close("S", comment="time")
     else
-        strategy.exit("S1", from_entry="S", qty_percent=tp1Pct, stop=lockStop, limit=eT1)
-        strategy.exit("S2", from_entry="S", qty_percent=tp2Pct, stop=lockStop, limit=eT2)
-        strategy.exit("S3", from_entry="S", stop=lockStop, limit=eT3)
-if strategy.position_size == 0
-    posDir := 0
-    lockStop := na`
+        strategy.exit("S-exit", from_entry="S", stop=eSL, limit=eTP)`
 
 // ─── Dashboard builder ────────────────────────────────────────────────────────
 const dash = (s, rows) => {
@@ -261,7 +199,7 @@ ${cells}`
 
 // ─── Assemble a full strategy ─────────────────────────────────────────────────
 const buildGod = s => {
-  const risk = RISK_INPUTS.replace('${tp3R}', s.tp3R).replace('${maxBars}', s.maxBars).replace('${useSess}', s.useSess ? 'true' : 'false')
+  const risk = RISK_INPUTS.replace('${maxBars}', s.maxBars).replace('${useSess}', s.useSess ? 'true' : 'false')
   return `//@version=5
 strategy("YN Finance — ⚡ ${s.name} | GOD MODE", overlay=true, max_bars_back=5000, max_boxes_count=500, max_lines_count=500, max_labels_count=500, default_qty_type=strategy.percent_of_equity, default_qty_value=1, commission_type=strategy.commission.percent, commission_value=0.02, slippage=2, process_orders_on_close=true, calc_on_every_tick=false, pyramiding=0)
 
@@ -277,7 +215,6 @@ ${BASE}
 ${s.calc}
 
 ${EXEC}
-${s.exitCode ? '\n' + s.exitCode + '\n' : ''}
 ${s.plots ? '\n' + s.plots + '\n' : ''}
 ${dash(s, s.dash)}`
 }
@@ -323,22 +260,11 @@ corr = f_corr(legA, legB, olsLen)
 statOk = (not useVR or vr < 1.0) and (not useHurst or hurst < 0.5) and (not useHL or not na(hl)) and math.abs(corr) >= minCorr and not na(legB)
 // long the spread (cheap A) when z deeply negative; short when z high
 longSig  := statOk and z <= -entryZ and z[1] > -entryZ
-shortSig := statOk and z >=  entryZ and z[1] <  entryZ
-// stop in price space: project the hard z-band back onto leg A
-sprSd = ta.stdev(spread, zLen)
-sprM  = ta.sma(spread, zLen)
-zToPrice = sprSd * stopZ
-slLongPx  := close * math.exp(-(zToPrice - (spread - sprM)))
-slShortPx := close * math.exp( (zToPrice + (spread - sprM)))`,
-    exitCode: `// signal exits: spread reverted to the mean, or time > hlMaxMult × half-life
-hlBars = na(hl) ? maxBars : math.min(maxBars, math.round(hl * hlMaxMult))
-if strategy.position_size > 0 and (math.abs(z) <= exitZ or (bar_index - eBar) >= hlBars or z >= stopZ)
-    strategy.close("L", comment="reverted")
-if strategy.position_size < 0 and (math.abs(z) <= exitZ or (bar_index - eBar) >= hlBars or z <= -stopZ)
-    strategy.close("S", comment="reverted")`,
-    plots: `plot(beta,  "Hedge β", color=color.new(color.aqua, 0), display=display.data_window)
-plot(z,     "Spread z", color=color.new(color.orange, 0), display=display.data_window)
-hline(0, "mean", color=color.new(color.gray, 60))`,
+shortSig := statOk and z >=  entryZ and z[1] <  entryZ`,
+    plots: `// Spread β and z live in the Data Window (display.data_window) so they never
+// distort the PRICE scale — this is what was compressing the chart before.
+plot(beta, "Hedge β",  color=color.new(color.aqua, 0),   display=display.data_window)
+plot(z,    "Spread z", color=color.new(color.orange, 0), display=display.data_window)`,
     dash: [
       ['Hedge β', 'str.tostring(beta, "#.###")', 'color.aqua'],
       ['Corr(A,B)', 'str.tostring(corr, "#.##")', 'math.abs(corr) >= minCorr ? color.lime : color.red'],
@@ -388,9 +314,7 @@ riskScale := crashOff ? 0.0 : volScalar
 regimeUp = not useRegime or close > ema200
 regimeDn = not useRegime or close < ema200
 longSig  := not crashOff and score >=  minScore and regimeUp
-shortSig := not crashOff and score <= -minScore and regimeDn
-slLongPx  := close - atr * slAtrMult
-slShortPx := close + atr * slAtrMult`,
+shortSig := not crashOff and score <= -minScore and regimeDn`,
     plots: `plot(ema200, "200 EMA", color=color.new(color.orange, 0), linewidth=2)`,
     dash: [
       ['Mom score', 'str.tostring(score, "#") + " / 4"', 'math.abs(score) >= minScore ? (score > 0 ? color.lime : color.red) : color.gray'],
@@ -448,10 +372,7 @@ momShort = trending and emaFast < emaTrend and close < emaFast and kSlope < 0
 revLong  = reverting and zdev <= -entryZ and zdev[1] > -entryZ
 revShort = reverting and zdev >=  entryZ and zdev[1] <  entryZ
 longSig  := momLong or revLong
-shortSig := momShort or revShort
-// structural stops per sub-model
-slLongPx  := reverting ? math.min(low, fair - ta.stdev(dev, zLen) * 3.0) : close - atr * slAtrMult
-slShortPx := reverting ? math.max(high, fair + ta.stdev(dev, zLen) * 3.0) : close + atr * slAtrMult`,
+shortSig := momShort or revShort`,
     plots: `plot(fair, "Kalman fair value", color=color.new(color.aqua, 0), linewidth=2)`,
     dash: [
       ['Variance ratio', 'str.tostring(vr, "#.##")', 'vr > vrTrend ? color.aqua : vr < vrRevert ? color.fuchsia : color.gray'],
