@@ -132,31 +132,37 @@ function evaluate(P, seeds = 12) {
 }
 
 console.log('\n' + '═'.repeat(112))
-console.log('  STAT-ARB FREQUENCY LAB — MAXIMISE trade count while keeping win ≥ 60%, PF ≥ 1.6, short streaks')
+console.log('  STAT-ARB R:R LAB — fix the reward:risk so it survives REALISTIC (trend+chop) single-instrument tape')
 console.log('═'.repeat(112))
 
-// Objective flipped: among configs that hold quality, pick the one that TRADES THE MOST.
-// Shorter windows + shallower entry + only the gates the validation actually used (ADF+HL+flat).
+// The losing single-instrument case (MNQ) is a risk:reward problem: tiny target vs huge
+// stop. Optimise for profitability on the regime-switch regime (the closest proxy to a
+// real intraday instrument that trends AND chops) while ranging regimes stay strong.
+// Tighter stops are the lever.
+const regimeSwitchIdx = 2  // index into NONREV
 let best = null, tested = 0
-for (const entryZ of [1.25, 1.5, 1.75, 2.0])
-  for (const zLen of [40, 60, 80])
-    for (const flatMax of [0.9, 1.2, 1.6])
-      for (const adfThresh of [-1.5, -2.0, -2.5])
-        for (const cooldown of [3, 5]) {
+for (const entryZ of [1.0, 1.25, 1.5])
+  for (const exitZ of [0.5, 0.7, 1.0])
+    for (const stopZ of [1.5, 2.0, 2.5, 3.0])
+      for (const zLen of [40, 60])
+        for (const flatMax of [1.2, 1.6]) {
           tested++
-          const P = { entryZ, exitZ: 0.5, stopZ: 3.5, zLen, statLen: zLen, slopeBars: Math.round(zLen * 0.3),
-                      flatMax, adfThresh, cooldown, confirmEntry: true }
+          const P = { entryZ, exitZ, stopZ, zLen, statLen: zLen, slopeBars: Math.round(zLen * 0.3),
+                      flatMax, adfThresh: -2.0, cooldown: 3, confirmEntry: true }
           const rev = Object.values(REVERT).map(g => mc(g, P, 8))
           const non = Object.values(NONREV).map(g => mc(g, P, 8))
-          const okRev = rev.every(r => r.trades >= 25 && r.win >= 0.60 && r.pf >= 1.6 && r.worst <= 6 && r.ret > 0)
-          const worstNon = Math.min(...non.map(r => r.ret))
-          const tradesPerSeed = rev.reduce((a, r) => a + r.trades, 0) / (rev.length * 8)
-          if (okRev && worstNon > -0.06 && (!best || tradesPerSeed > best.freq)) best = { P, freq: tradesPerSeed }
+          const rs = non[regimeSwitchIdx]              // realistic mixed-tape proxy
+          const rwTrend = Math.min(non[0].ret, non[1].ret)
+          const okRev = rev.every(r => r.trades >= 25 && r.win >= 0.55 && r.pf >= 1.3 && r.ret > 0)
+          // require: profitable on the REALISTIC mixed regime, positive win, small loss on pure trend/rw
+          const ok = okRev && rs.ret > 0.02 && rs.win >= 0.52 && rs.worst <= 7 && rwTrend > -0.04
+          const score = rs.ret + rev.reduce((a, r) => a + r.ret, 0) / rev.length
+          if (ok && (!best || score > best.score)) best = { P, score, rs }
         }
 
 console.log(`\n  Searched ${tested} configs × 7 regimes × 8 seeds.\n`)
-if (!best) { console.log('  No config held the quality bar — loosen win/PF targets.'); process.exit(0) }
-console.log(`  WINNER trades ~${best.freq.toFixed(1)} per 4000-bar series (≈ ${(best.freq / 51 * 21).toFixed(1)} trades/month on 5-min)\n`)
+if (!best) { console.log('  No config was profitable on the realistic mixed regime — that itself is the answer:'); console.log('  a single trending instrument is the wrong market for mean reversion. Use a ratio/spread chart.'); process.exit(0) }
+console.log(`  WINNER — realistic (regime-switch) ret ${(best.rs.ret * 100).toFixed(1)}%, win ${(best.rs.win * 100).toFixed(1)}%, PF ${best.rs.pf.toFixed(2)}\n`)
 
 const e = evaluate(best.P, 20)
 console.log('  ── WINNING CONFIG ──')
