@@ -159,9 +159,9 @@ export default function Landing() {
   const proof = ([
     has(stats?.forecasts) && { v: <CountUp to={stats!.forecasts!} />, l: 'AI forecasts made' },
     has(stats?.winRate) && { v: <CountUp to={stats!.winRate!} decimals={1} suffix="%" />, l: 'graded win rate' },
-    (stats?.gradedCalls ?? 0) > 0 && { v: <><CountUp to={stats!.gradedCalls!} />+</>, l: 'calls graded in public' },
+    has(stats?.users) && { v: <CountUp to={stats!.users!} />, l: 'live users' },
     has(stats?.stocksDaily) && { v: <CountUp to={stats!.stocksDaily!} />, l: 'stocks scanned each morning' },
-    has(stats?.users) && { v: <CountUp to={stats!.users!} />, l: 'members' },
+    (stats?.gradedCalls ?? 0) > 0 && { v: <><CountUp to={stats!.gradedCalls!} />+</>, l: 'calls graded in public' },
     (stats?.nnTrained ?? 0) > 0 && { v: <CountUp to={stats!.nnTrained!} />, l: 'examples the net trained on' },
   ].filter(Boolean) as { v: ReactNode; l: string }[]).slice(0, 4)
 
