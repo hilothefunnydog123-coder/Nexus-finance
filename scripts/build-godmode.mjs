@@ -508,7 +508,8 @@ beAtR   = input.float(1.0, "Breakeven trigger (ATR ×)", step=0.1, group="③ St
     calc: `emaR = ta.ema(close, regimeLen)
 emaUp = not useEma or (close > emaR and emaR > emaR[slopeBars])
 emaDn = not useEma or (close < emaR and emaR < emaR[slopeBars])
-vAnchor = ta.change(time("D")) != 0
+rthV = not na(time(timeframe.period, "0930-1600", tz))
+vAnchor = rthV and not rthV[1]            // anchor session VWAP at 09:30 RTH open, not midnight
 [vwapV, vBU, vBL] = ta.vwap(hlc3, vAnchor, vwapSdMult)
 vwapUp = not useVwap or (close > vwapV and close < vBU)
 vwapDn = not useVwap or (close < vwapV and close > vBL)
@@ -614,18 +615,19 @@ plot((inOR or inTrade) and not na(orL) ? orL : na, "OR Low",  color=color.new(co
     overview: 'Where the other MNQ engine (the ORB) is momentum (low win, high R), THIS one is its opposite — the high-win-rate archetype. Intraday, price is magnetised back to session VWAP: it stretches a couple of volume-weighted standard deviations away, then snaps back, many times a day. The scalp fades that stretch — long when price is ≥ entry-σ BELOW VWAP and ticks back up, short when ≥ entry-σ ABOVE and ticks down — and banks a QUICK partial reversion (take-profit when it recovers to a smaller σ), which is what produces the high hit-rate. A hard ATR stop caps the loss so a trend day that keeps running away from VWAP cannot blow up one trade, and a ranging filter (only fade when VWAP itself is flat) keeps it out of strong trends. Flat by the session window’s end.',
     propNotes: 'STRAIGHT TALK: in exhaustive research (≈900 configs across many archetypes) this fade reliably hits ~60% WIN RATE — that part is real and by design — but in my synthetic simulator it came out roughly break-even, because a crude simulator punishes trend-day fades harshly. Real intraday index futures mean-revert to VWAP far more reliably than any toy model (the "VWAP magnet" is a genuine, strong RTH effect), so this scalp may well be PROFITABLE on real MNQ even though the sim shows it flat. There is also an honest tradeoff you cannot escape: win rate and profit factor pull against each other — fades give high win, momentum gives high profit factor, and no simple rule set delivered both 60% win AND 1.7 PF at once. So: backtest THIS on your real 5-min MNQ, and tune the three knobs — entry-σ (deeper = higher win, fewer trades), take-profit-σ (closer to VWAP = higher win, smaller wins), and the ATR stop (tighter = better PF, lower win) — to push it onto the right side of break-even. Tell me your real numbers and I tune from there.',
     inputs: `// ═══════════ ① VWAP REVERSION SCALP ═══════════
-entrySd = input.float(2.0, "Entry: stretch from VWAP (σ)", step=0.1, group="① Scalp")
-tgtSd   = input.float(1.0, "Take-profit: recover to (σ)",  step=0.1, group="① Scalp")
+entrySd = input.float(1.75, "Entry: stretch from VWAP (σ)", step=0.1, group="① Scalp")
+tgtSd   = input.float(0.75, "Take-profit: recover to (σ)",  step=0.1, group="① Scalp")
 stopAtr = input.float(1.5, "Stop (ATR ×) — caps tail risk", step=0.1, group="① Scalp")
 needTick= input.bool(true, "Require reversal tick (close back toward VWAP)", group="① Scalp")
 atrLen  = input.int(14,    "ATR length", group="① Scalp")
-cooldownBars = input.int(3, "Cooldown after a trade (bars)", minval=0, group="① Scalp")
+cooldownBars = input.int(2, "Cooldown after a trade (bars)", minval=0, group="① Scalp")
 // ═══════════ ② RANGING FILTER (fade only flat tape) ═══════════
-flatMax   = input.float(0.15, "Max VWAP slope over lookback (σ)", step=0.05, group="② Ranging Filter")
+flatMax   = input.float(0.35, "Max VWAP slope over lookback (σ)", step=0.05, group="② Ranging Filter")
 slopeBars = input.int(12,     "VWAP-slope lookback (bars)",       group="② Ranging Filter")
 // ═══════════ ③ SESSION ═══════════
-scalpSess = input.session("1000-1500", "Scalp window NY (avoid open/close trends)", group="③ Session")`,
-    calc: `vAnchor = ta.change(time("D")) != 0
+scalpSess = input.session("0945-1545", "Scalp window NY (avoid open/close trends)", group="③ Session")`,
+    calc: `rthV = not na(time(timeframe.period, "0930-1600", tz))
+vAnchor = rthV and not rthV[1]            // anchor session VWAP at the 09:30 RTH open (NOT midnight)
 [vwapV, vBU, vBL] = ta.vwap(hlc3, vAnchor, 1.0)
 sdV = vBU - vwapV
 ext = sdV > 0 ? (close - vwapV) / sdV : 0.0
