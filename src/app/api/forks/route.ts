@@ -41,7 +41,9 @@ export async function POST(req: NextRequest) {
     const name = typeof body.name === 'string' && body.name.trim() ? body.name.trim().slice(0, 60) : 'My Fork'
     const weights = Array.isArray(body.weights) ? body.weights.slice(0, 11).map((x: unknown) => Number(x) || 1) : []
     const conviction = Number(body.conviction) || 1
-    const { data, error } = await sb.from('brain_forks').insert({ user_id: userId, name, weights, conviction }).select('id').single()
+    const score = body.score == null ? null : Math.max(0, Math.min(100, Number(body.score)))
+    const display_name = typeof body.display_name === 'string' ? body.display_name.trim().slice(0, 40) : null
+    const { data, error } = await sb.from('brain_forks').insert({ user_id: userId, name, weights, conviction, score, display_name }).select('id').single()
     if (error) throw error
     return NextResponse.json({ ok: true, id: data?.id })
   } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }) }

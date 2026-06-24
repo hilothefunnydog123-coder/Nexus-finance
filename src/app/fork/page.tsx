@@ -11,11 +11,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, RotateCcw, Save, Trash2, Zap, GitFork } from 'lucide-react'
+import { ArrowLeft, Loader2, RotateCcw, Save, Trash2, Zap, GitFork, BarChart3, Wand2, Share2, Trophy } from 'lucide-react'
 import { FEATURE_NAMES, FEATURE_COUNT } from '@/lib/nn'
 import { useAuth } from '@/hooks/useAuth'
 import AuthModal from '@/components/auth/AuthModal'
-import { fetchForks, saveFork, deleteFork, type ForkPreset } from '@/lib/forks'
+import { fetchForks, saveFork, deleteFork, fetchLeaderboard, type ForkPreset, type Leader } from '@/lib/forks'
 
 const CYAN = '#22d3ee', VIOLET = '#a78bfa', GREEN = '#34d399', RED = '#f87171', MUTED = '#8a93a8', BORDER = 'rgba(255,255,255,.09)'
 
@@ -67,6 +67,10 @@ export default function ForkPage() {
   const [showAuth, setShowAuth] = useState(false)
   const [saved, setSaved] = useState<ForkPreset[]>([])
   const [savedMsg, setSavedMsg] = useState('')
+  const [bt, setBt] = useState<{ base: { acc: number; edge: number }; fork: { acc: number; edge: number }; samples: number; engine: string } | null>(null)
+  const [btLoading, setBtLoading] = useState(false)
+  const [optLoading, setOptLoading] = useState(false)
+  const [leaders, setLeaders] = useState<Leader[]>([])
   const debRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const run = useCallback(async (sym: string, w: number[], conv: number) => {
@@ -88,6 +92,57 @@ export default function ForkPage() {
   // load saved presets when signed in
   useEffect(() => { if (user) fetchForks().then(setSaved); else setSaved([]) }, [user])
 
+  // public leaderboard
+  useEffect(() => { fetchLeaderboard().then(setLeaders) }, [])
+
+  const runBacktest = async (optimize = false) => {
+    if (optimize) setOptLoading(true); else setBtLoading(true)
+    try {
+      const res = await fetch('/api/fork-backtest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weights, conviction, optimize }) })
+      const d = await res.json()
+      if (res.ok) {
+        if (optimize && d.optimized) {
+          setWeights(d.optimized.weights); setConviction(d.optimized.conviction)
+          run(result?.ticker || ticker, d.optimized.weights, d.optimized.conviction)
+          setBt({ base: d.base, fork: { acc: d.optimized.acc, edge: d.optimized.edge }, samples: d.samples, engine: d.engine })
+        } else setBt(d)
+      }
+    } catch { /* ignore */ }
+    finally { if (optimize) setOptLoading(false); else setBtLoading(false) }
+  }
+
+  const shareFork = () => {
+    const W = 1080, H = 1350
+    const c = document.createElement('canvas'); c.width = W; c.height = H
+    const x = c.getContext('2d'); if (!x) return
+    const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#0a1326'); g.addColorStop(1, '#05060b')
+    x.fillStyle = g; x.fillRect(0, 0, W, H)
+    x.fillStyle = '#a78bfa'; x.fillRect(0, 0, W, 10)
+    x.textAlign = 'left'
+    x.fillStyle = '#fff'; x.font = '800 40px Inter, system-ui, sans-serif'; x.fillText('YN FINANCE', 80, 130)
+    x.fillStyle = '#8a93a8'; x.font = '600 24px Inter, system-ui, sans-serif'; x.fillText('FORK THE BRAIN', 80, 168)
+    x.fillStyle = '#fff'; x.font = '800 120px Inter, system-ui, sans-serif'; x.fillText(presetName.trim() || `${displayName()}'s Fork`, 80, 360)
+    if (bt) {
+      const beat = bt.fork.acc > bt.base.acc
+      x.fillStyle = beat ? '#34d399' : '#f87171'; x.font = '800 150px Inter, system-ui, sans-serif'
+      x.fillText(`${bt.fork.acc.toFixed(0)}%`, 80, 560)
+      x.fillStyle = '#8a93a8'; x.font = '600 30px Inter, system-ui, sans-serif'
+      x.fillText(`backtest accuracy · BrainStock got ${bt.base.acc.toFixed(0)}%`, 80, 610)
+      x.fillStyle = beat ? '#34d399' : '#fbbf24'; x.font = '700 36px Inter, system-ui, sans-serif'
+      x.fillText(beat ? `I beat the AI by ${(bt.fork.acc - bt.base.acc).toFixed(1)}%` : 'Tuning to beat the AI…', 80, 690)
+    }
+    if (result) {
+      x.fillStyle = '#cdd6f4'; x.font = '600 30px Inter, system-ui, sans-serif'
+      const up = result.fork.dir === 'up'
+      x.fillText(`My fork on ${result.ticker}: ${up ? '▲' : '▼'} ${Math.abs(result.fork.pct).toFixed(2)}%`, 80, 820)
+    }
+    x.fillStyle = 'rgba(255,255,255,.5)'; x.font = '500 24px Inter, system-ui, sans-serif'
+    x.fillText('Fork the AI yourself → ynfinance.org/fork', 80, H - 70)
+    c.toBlob(b => { if (!b) return; const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'my-fork.png'; a.click(); setTimeout(() => URL.revokeObjectURL(u), 4000) }, 'image/png')
+    const text = bt ? `My fork of the BrainStock AI hit ${bt.fork.acc.toFixed(0)}% in backtest${bt.fork.acc > bt.base.acc ? ` — beat the original (${bt.base.acc.toFixed(0)}%)` : ''}. Fork your own:` : 'I forked the BrainStock AI. Make your own:'
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://ynfinance.org/fork')}`, '_blank')
+  }
+
   // debounced live re-run when dials change (only after a first result exists)
   const liveRerun = (w: number[], conv: number) => {
     if (!result) return
@@ -96,16 +151,16 @@ export default function ForkPage() {
   }
 
   const setWeight = (i: number, v: number) => {
-    const w = weights.slice(); w[i] = v; setWeights(w); liveRerun(w, conviction)
+    const w = weights.slice(); w[i] = v; setWeights(w); setBt(null); liveRerun(w, conviction)
   }
-  const setConv = (v: number) => { setConviction(v); liveRerun(weights, v) }
-  const applyArchetype = (a: Archetype) => { setWeights(a.weights.slice()); setConviction(a.conviction); run(ticker, a.weights, a.conviction) }
-  const reset = () => { const w = ONES(); setWeights(w); setConviction(1); run(ticker, w, 1) }
+  const setConv = (v: number) => { setConviction(v); setBt(null); liveRerun(weights, v) }
+  const applyArchetype = (a: Archetype) => { setWeights(a.weights.slice()); setConviction(a.conviction); setBt(null); run(ticker, a.weights, a.conviction) }
+  const reset = () => { const w = ONES(); setWeights(w); setConviction(1); setBt(null); run(ticker, w, 1) }
 
   const doSave = async () => {
     if (!user) { setShowAuth(true); return }
     const name = presetName.trim() || `${displayName()} Fork`
-    const r = await saveFork(name, weights, conviction)
+    const r = await saveFork(name, weights, conviction, bt?.fork.acc ?? null, displayName())
     if (r.ok) { setSavedMsg('Saved to your profile ✓'); setPresetName(''); fetchForks().then(setSaved); setTimeout(() => setSavedMsg(''), 2500) }
     else setSavedMsg('Could not save — try again')
   }
@@ -232,6 +287,24 @@ export default function ForkPage() {
               </>
             )}
 
+            {/* backtest + optimize + share */}
+            <div style={{ background: '#0b1018', border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, marginBottom: 16 }}>
+              <div style={{ fontSize: 10.5, letterSpacing: '0.16em', color: '#46566e', marginBottom: 10, fontFamily: 'monospace' }}>WOULD THIS FORK HAVE WORKED?</div>
+              {bt ? (
+                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                  <BtCard label="BrainStock" acc={bt.base.acc} edge={bt.base.edge} dim />
+                  <BtCard label="Your Fork" acc={bt.fork.acc} edge={bt.fork.edge} beat={bt.fork.acc > bt.base.acc} />
+                </div>
+              ) : <p style={{ fontSize: 12.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>Backtest your dials across 8 big stocks over the last ~6 months — head-to-head with the original net. Or let the AI tune itself.</p>}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button onClick={() => runBacktest(false)} disabled={btLoading || optLoading} style={miniBtn(false)}>{btLoading ? <Loader2 size={14} className="animate-spin" /> : <BarChart3 size={14} />} Backtest it</button>
+                <button onClick={() => runBacktest(true)} disabled={btLoading || optLoading} style={miniBtn(true)}>{optLoading ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />} {optLoading ? 'Optimizing…' : 'Auto-optimize'}</button>
+                {bt && <button onClick={shareFork} style={miniBtn(false)}><Share2 size={14} /> Share</button>}
+              </div>
+              {bt?.fork && bt.fork.acc > bt.base.acc && <div style={{ fontSize: 12, color: GREEN, marginTop: 10, fontWeight: 700 }}>🔥 Your fork beat BrainStock by {(bt.fork.acc - bt.base.acc).toFixed(1)}% — save it.</div>}
+              {bt && bt.engine === 'proxy' && <div style={{ fontSize: 10.5, color: '#46566e', marginTop: 8 }}>net still warming up — backtest uses the transparent proxy for now</div>}
+            </div>
+
             {/* save */}
             <div style={{ background: '#0b1018', border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14 }}>
               <div style={{ fontSize: 10.5, letterSpacing: '0.16em', color: '#46566e', marginBottom: 10, fontFamily: 'monospace' }}>SAVE THIS FORK TO YOUR PROFILE</div>
@@ -262,6 +335,27 @@ export default function ForkPage() {
           </div>
         </div>
 
+        {/* leaderboard */}
+        {leaders.length > 0 && (
+          <div style={{ marginTop: 30 }}>
+            <div style={{ fontSize: 11, letterSpacing: '0.18em', color: '#46566e', fontFamily: 'monospace', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}><Trophy size={14} style={{ color: '#fbbf24' }} /> FORK LEADERBOARD · TOP BACKTEST ACCURACY</div>
+            <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
+              {leaders.map((l, i) => (
+                <button key={i} onClick={() => { if (l.weights?.length === FEATURE_COUNT) { setWeights(l.weights); setConviction(l.conviction || 1); setBt(null); run(ticker, l.weights, l.conviction || 1) } }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '11px 16px', background: i % 2 ? 'rgba(255,255,255,.02)' : 'transparent', border: 'none', borderTop: i ? `1px solid ${BORDER}` : 'none', cursor: 'pointer', textAlign: 'left' }}>
+                  <span style={{ width: 22, fontFamily: 'monospace', fontWeight: 800, color: i === 0 ? '#fbbf24' : i === 1 ? '#cbd5e1' : i === 2 ? '#d97706' : MUTED }}>{i + 1}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: '#cdd6f4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.name}</div>
+                    <div style={{ fontSize: 10.5, color: '#46566e' }}>{l.display_name || 'anon'}</div>
+                  </div>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: GREEN }}>{Number(l.score).toFixed(1)}%</span>
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: 10.5, color: '#46566e', marginTop: 8 }}>Tap any fork to load its dials and try it. Ranked by historical backtest accuracy.</div>
+          </div>
+        )}
+
         <p style={{ marginTop: 24, fontSize: 11.5, color: '#46566e', lineHeight: 1.6, maxWidth: 700 }}>
           Your fork runs the same trained network as BrainStock — your dials scale each input signal before the forward pass, so you change what the net emphasizes without retraining it. Educational research tool · not financial advice.
         </p>
@@ -269,6 +363,25 @@ export default function ForkPage() {
 
       {showAuth && <AuthModal reason="Sign in to save your fork as a preset on your profile." onClose={() => setShowAuth(false)} onSuccess={() => { setShowAuth(false); setTimeout(doSave, 300) }} />}
       <style>{`@media(max-width:820px){.fork-grid{grid-template-columns:1fr!important}}`}</style>
+    </div>
+  )
+}
+
+function miniBtn(primary: boolean): React.CSSProperties {
+  return {
+    display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+    background: primary ? 'linear-gradient(135deg, #22d3ee, #a78bfa)' : 'rgba(255,255,255,.05)',
+    color: primary ? '#05060b' : '#cdd6f4', border: primary ? 'none' : `1px solid ${BORDER}`,
+  }
+}
+
+function BtCard({ label, acc, edge, dim, beat }: { label: string; acc: number; edge: number; dim?: boolean; beat?: boolean }) {
+  const accent = beat ? GREEN : dim ? MUTED : CYAN
+  return (
+    <div style={{ flex: 1, background: dim ? 'rgba(255,255,255,.02)' : `${accent}0d`, border: `1px solid ${dim ? BORDER : accent + '40'}`, borderRadius: 10, padding: 12 }}>
+      <div style={{ fontSize: 10.5, color: dim ? MUTED : '#cdd6f4', fontWeight: 700, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: accent, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{acc.toFixed(1)}%</div>
+      <div style={{ fontSize: 10.5, color: MUTED, marginTop: 4 }}>right · {edge >= 0 ? '+' : ''}{edge}% avg edge</div>
     </div>
   )
 }

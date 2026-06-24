@@ -7,7 +7,16 @@ export interface ForkPreset {
   name: string
   weights: number[]
   conviction: number
+  score?: number | null
   created_at: string
+}
+
+export interface Leader {
+  name: string
+  display_name: string | null
+  score: number
+  weights: number[]
+  conviction: number
 }
 
 async function token(): Promise<string | null> {
@@ -26,18 +35,27 @@ export async function fetchForks(): Promise<ForkPreset[]> {
   } catch { return [] }
 }
 
-export async function saveFork(name: string, weights: number[], conviction: number): Promise<{ ok: boolean; id?: string }> {
+export async function saveFork(name: string, weights: number[], conviction: number, score?: number | null, displayName?: string): Promise<{ ok: boolean; id?: string }> {
   try {
     const t = await token(); if (!t) return { ok: false }
     const res = await fetch('/api/forks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
-      body: JSON.stringify({ name, weights, conviction }),
+      body: JSON.stringify({ name, weights, conviction, score: score ?? null, display_name: displayName ?? null }),
     })
     if (!res.ok) return { ok: false }
     const d = await res.json().catch(() => ({}))
     return { ok: true, id: d.id }
   } catch { return { ok: false } }
+}
+
+export async function fetchLeaderboard(): Promise<Leader[]> {
+  try {
+    const res = await fetch('/api/leaderboard/forks')
+    if (!res.ok) return []
+    const d = await res.json().catch(() => ({}))
+    return Array.isArray(d.leaders) ? d.leaders : []
+  } catch { return [] }
 }
 
 export async function deleteFork(id: string): Promise<boolean> {
