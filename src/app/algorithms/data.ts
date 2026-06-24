@@ -5218,6 +5218,314 @@ alertcondition(longSig,"MACD Long","NQ MACD zero LONG")
 alertcondition(shortSig,"MACD Short","NQ MACD zero SHORT")`,
       steps: ['Add to a 5–15m chart of NQ/MNQ. The 200 EMA (orange) is the trend filter.','MACD line crossing above zero while price is above the 200 EMA fires LONG; crossing below zero under the 200 EMA fires SHORT.','Box draws: dashed entry, green target (2R), red stop (ATR).','Create an alert → "Any alert() function call" → Once Per Bar Close.','The zero-line cross + trend gate cuts MACD chop — fewer, cleaner pulses. Backtest lengths + R over 6–12 months.'] },
   },
+  makeChimera(),
   ...QUANT_STRATEGIES,
   ...GOD_MODE,
 ]
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  CHIMERA — Lorentzian-Hurst Regime Engine (experimental "black box")
+// ═════════════════════════════════════════════════════════════════════════════
+function makeChimera(): Algorithm {
+  return {
+  id: 'chimera',
+  instructor: 'YN Finance Quant Desk · Black Box Division',
+  strategy: 'CHIMERA — Lorentzian-Hurst Regime Engine',
+  tagline: 'A non-repainting black box: a Lorentzian-distance KNN classifier votes on direction, a Hurst exponent decides whether to trend-follow or mean-revert, a Kalman filter sets the trend, and volatility-expansion exits manage the trade.',
+  assets: ['Futures (NQ/ES)', 'Stocks', 'Crypto', 'Forex', 'Indices'],
+  timeframes: ['5m', '15m', '1H', '4H'],
+  propFirms: ['Topstep', 'Apex', 'FTMO', 'MyFundedFutures', 'The Funded Trader'],
+  winTarget: '~55–62% · profit-factor focused',
+  riskPerTrade: '1% risk-based sizing',
+  color: '#c792ea',
+  init: 'CHM',
+  overview: 'CHIMERA is four ideas welded together. (1) A LORENTZIAN KNN: each bar is described by three oscillators (RSI-14, RSI-9, Stochastic-14), and the current bar is compared to hundreds of historical bars using Lorentzian distance — log(1+|Δ|), which is robust to the volatility "warps" that wreck Euclidean classifiers. The k nearest historical analogs vote with their own realized 4-bar forward direction, producing a net conviction score. (2) A HURST EXPONENT (rescaled-range / R-S analysis) measures whether the market is persistent (H>0.5, trend) or anti-persistent (H<0.5, mean-revert) and switches the engine\'s personality accordingly — it trend-follows the KNN vote when the tape is trending and fades it from a z-score extreme when the tape is reverting. (3) A KALMAN FILTER provides a smooth, low-lag trend line for the directional gate. (4) Exits are non-standard: a volatility-EXPANSION trailing stop whose multiple widens when ATR is rising (so winners breathe) and tightens when it contracts, a mathematical breakeven trigger that locks the stop to entry after +1 ATR, and a time stop that cuts dead trades that never reach breakeven. Everything is computed on confirmed bars with explicit typing — strictly non-repainting.',
+  propNotes: 'Risk-based sizing targets 1% of equity per trade off a 1.5-ATR initial stop, so the backtest compounds honestly. Because it is regime-adaptive it trades in both trending and choppy tape, but it is an EXPERIMENTAL research engine — treat the defaults as a starting point, not gospel. The KNN lookback (neighbors k, lookback bars) trades signal quality for compute; the Hurst window sets how fast the regime flips; the Kalman noise terms set trend smoothness. The math is heavy, so it runs best on 5m and higher. Walk it forward across 12+ months and multiple symbols before sizing up, and confirm the profit factor and max drawdown hold out-of-sample — sophistication is not the same as edge.',
+  auto: {
+    tradingview: `//@version=5
+strategy("YN Finance — CHIMERA | Lorentzian-Hurst Regime Engine", overlay=true, max_bars_back=5000, calc_on_every_tick=false, process_orders_on_close=true, pyramiding=0, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=10, commission_type=strategy.commission.percent, commission_value=0.02, slippage=2, max_labels_count=500, max_lines_count=500, max_boxes_count=500)
+
+// ════════════════════════ INPUTS ════════════════════════
+int   knnLen    = input.int(400, "KNN lookback (bars)", minval=50, maxval=2000, group="① Lorentzian KNN")
+int   neighbors = input.int(8,   "Neighbors (k)",        minval=1,  maxval=25,  group="① Lorentzian KNN")
+float knnThresh = input.float(2.0,"Signal threshold (net votes)", step=0.5,      group="① Lorentzian KNN")
+int   hurstLen  = input.int(100, "Hurst window",         minval=20,             group="② Regime")
+float pNoise    = input.float(0.05,"Kalman process noise", step=0.01,           group="② Regime")
+float mNoise    = input.float(2.0, "Kalman measure noise", step=0.1,            group="② Regime")
+int   zLen      = input.int(20,  "Z-score window",                              group="② Regime")
+float zEdge     = input.float(1.0,"Mean-revert z-edge",   step=0.1,             group="② Regime")
+int   atrLen    = input.int(14,  "ATR length",                                  group="③ Risk & Exits")
+float trailMult = input.float(2.5,"Vol-expansion trail (ATR x)", step=0.1,      group="③ Risk & Exits")
+float beTrig    = input.float(1.0,"Breakeven trigger (ATR x)",   step=0.1,      group="③ Risk & Exits")
+int   timeStop  = input.int(20,  "Time stop (bars, if no progress)",            group="③ Risk & Exits")
+float riskPct   = input.float(1.0,"Risk per trade (% equity)", step=0.25,       group="③ Risk & Exits")
+bool  useSess   = input.bool(false,"Restrict to RTH",                           group="④ Session")
+string sess     = input.session("0930-1600","RTH session (NY)",                group="④ Session")
+
+// ════════════════════════ FEATURES (non-repainting) ════════════════════════
+float ft1 = ta.rsi(close, 14)
+float ft2 = ta.rsi(close, 9)
+float ft3 = ta.stoch(close, high, low, 14)
+
+// Lorentzian distance: log(1+|Δ|) compresses outliers so one feature's spike
+// can't dominate the match the way Euclidean distance would.
+f_dist(int i) =>
+    math.log(1.0 + math.abs(ft1 - ft1[i])) + math.log(1.0 + math.abs(ft2 - ft2[i])) + math.log(1.0 + math.abs(ft3 - ft3[i]))
+
+// ════════════════════════ ① LORENTZIAN KNN VOTE ════════════════════════
+// Spaced approximate-KNN (O(n)). Each historical bar i carries a label = its
+// realized 4-bar forward direction (close[i-4] vs close[i]) — known on the
+// current confirmed bar, so nothing repaints. The k nearest analogs vote.
+float prediction = 0.0
+float lastDist   = -1.0
+float[] dists = array.new_float(0)
+float[] preds = array.new_float(0)
+int loopN = math.min(knnLen, bar_index - 5)
+if loopN > 5
+    for i = 4 to loopN
+        float d = f_dist(i)
+        if d >= lastDist and i % 4 == 0
+            lastDist := d
+            array.push(dists, d)
+            array.push(preds, math.sign(close[i - 4] - close[i]))
+            if array.size(preds) > neighbors
+                lastDist := array.get(dists, math.round(neighbors * 0.75))
+                array.shift(dists)
+                array.shift(preds)
+    prediction := array.sum(preds)
+
+// ════════════════════════ ② HURST (R/S) — REGIME ════════════════════════
+// Rescaled-range estimate of the Hurst exponent on log returns.
+// H ≥ 0.5 → persistent (trend-follow);  H < 0.5 → anti-persistent (mean-revert).
+f_hurst(int len) =>
+    float[] r = array.new_float(0)
+    for i = 0 to len - 1
+        array.push(r, math.log(close[i] / close[i + 1]))
+    float m = array.avg(r)
+    float cum = 0.0
+    float mn = 0.0
+    float mx = 0.0
+    for i = 0 to len - 1
+        cum := cum + (array.get(r, i) - m)
+        mn := math.min(mn, cum)
+        mx := math.max(mx, cum)
+    float s = array.stdev(r)
+    float rs = s != 0.0 ? (mx - mn) / s : 1.0
+    rs > 0.0 ? math.log(rs) / math.log(len) : 0.5
+float H = f_hurst(hurstLen)
+bool trending = H >= 0.5
+
+// Kalman-filtered trend (recursive, low-lag, non-repainting).
+var float kf = na
+var float pErr = 1.0
+kf := na(kf[1]) ? close : kf[1]
+pErr := pErr + pNoise
+float kGain = pErr / (pErr + mNoise)
+kf := kf + kGain * (close - kf)
+pErr := (1.0 - kGain) * pErr
+bool trendUp = close > kf
+
+float basis = ta.sma(close, zLen)
+float sd = ta.stdev(close, zLen)
+float z = sd != 0.0 ? (close - basis) / sd : 0.0
+
+// ════════════════════════ ENTRY (regime-switched) ════════════════════════
+bool inSess = not useSess or not na(time(timeframe.period, sess, "America/New_York"))
+float atr = ta.atr(atrLen)
+
+bool longTrend  = trending     and prediction >=  knnThresh and trendUp
+bool shortTrend = trending     and prediction <= -knnThresh and not trendUp
+bool longMR     = not trending and prediction >=  knnThresh and z <= -zEdge
+bool shortMR    = not trending and prediction <= -knnThresh and z >=  zEdge
+bool goLong  = inSess and (longTrend  or longMR)  and strategy.position_size == 0
+bool goShort = inSess and (shortTrend or shortMR) and strategy.position_size == 0
+
+float stopDist = atr * 1.5
+f_qty(float sd2) =>
+    float perPt = sd2 > 0.0 ? (strategy.equity * riskPct / 100.0) / sd2 : 1.0
+    math.max(1.0, math.floor(perPt))
+
+var float entryPx = na
+var int   barsIn = 0
+var bool  beDone = false
+
+if goLong
+    entryPx := close
+    beDone := false
+    barsIn := 0
+    strategy.entry("L", strategy.long, qty=f_qty(stopDist))
+if goShort
+    entryPx := close
+    beDone := false
+    barsIn := 0
+    strategy.entry("S", strategy.short, qty=f_qty(stopDist))
+
+// ════════════════════════ ③ EXIT MECHANICS ════════════════════════
+// 1) Vol-expansion trailing stop: the multiple WIDENS when ATR is rising
+//    (winners breathe) and tightens when ATR contracts.
+// 2) Mathematical breakeven: after +beTrig·ATR of progress the stop locks to entry.
+// 3) Time stop: a trade that hasn't reached breakeven within timeStop bars is cut.
+float atrRatio = atr / ta.sma(atr, atrLen)
+float dynMult  = trailMult * math.max(0.7, math.min(1.6, atrRatio))
+
+if strategy.position_size != 0
+    barsIn := barsIn + 1
+    bool isLong = strategy.position_size > 0
+    float prog = isLong ? (high - entryPx) : (entryPx - low)
+    if prog >= beTrig * atr
+        beDone := true
+    float trail = isLong ? close - dynMult * atr : close + dynMult * atr
+    float hardStop = isLong ? entryPx - 1.5 * atr : entryPx + 1.5 * atr
+    float stopLevel = beDone ? (isLong ? math.max(entryPx, trail) : math.min(entryPx, trail)) : hardStop
+    if isLong
+        strategy.exit("xL", from_entry="L", stop=stopLevel)
+    else
+        strategy.exit("xS", from_entry="S", stop=stopLevel)
+    if barsIn >= timeStop and not beDone
+        strategy.close_all(comment="time stop")
+else
+    barsIn := 0
+
+// ════════════════════════ VISUALS ════════════════════════
+plot(kf, "Kalman trend", color=trendUp ? color.new(color.teal, 0) : color.new(color.red, 0), linewidth=2)
+bgcolor(trending ? color.new(color.teal, 93) : color.new(color.orange, 93), title="Regime")
+plotchar(goLong,  "Long",  "▲", location.belowbar, color.lime, size=size.tiny)
+plotchar(goShort, "Short", "▼", location.abovebar, color.red,  size=size.tiny)
+var label hud = na
+if barstate.islast
+    label.delete(hud)
+    hud := label.new(bar_index, high, "H=" + str.tostring(H, "#.##") + (trending ? "  TREND" : "  REVERT") + "  |  KNN=" + str.tostring(prediction, "#.#"), style=label.style_label_down, color=color.new(color.black, 15), textcolor=color.white, size=size.small)`,
+    mt5: `// CHIMERA is a TradingView-native research strategy. Its Hurst R/S estimator
+// and the Lorentzian-distance KNN are built on Pine's array math and historical
+// bar indexing. Use the "TradingView (Pine Script)" build above — there is no
+// 1:1 MQL5 port (the KNN loop would need a custom indicator buffer engine).`,
+    steps: [
+      'Open TradingView → Pine Editor → paste the strategy → "Add to chart". It overlays on price with the Kalman trend line and a regime background (teal = trend, orange = mean-revert).',
+      'Open the Strategy Tester to backtest. Because it is process_orders_on_close + non-repainting, the backtest reflects realistic fills. Check Profit Factor and Max Drawdown first, not just net profit.',
+      'Tune in order: ① KNN (lookback / neighbors / threshold) sets signal selectivity — raise the threshold for fewer, higher-conviction trades. ② Regime (Hurst window, Kalman noise, z-edge) sets how it switches personality. ③ Risk & Exits (ATR, trail, breakeven, time stop, risk %).',
+      'Risk is 1% of equity per trade off a 1.5-ATR stop, so position size scales with volatility automatically. Lower "Risk per trade" for prop-firm drawdown rules.',
+      'To auto-execute: connect a TradingView-supported broker or use webhook alerts (paid TradingView plan). For prop futures, many run it as a signal source and execute in their platform.',
+      'Walk it forward over 12+ months and several symbols/timeframes before trusting it. It is experimental — verify the edge holds out-of-sample; sophistication is not the same as profitability.',
+    ],
+  },
+  signals: {
+    tradingview: `//@version=5
+indicator("YN Finance — CHIMERA (Signals)", overlay=true, max_bars_back=5000, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+
+// Same engine as the strategy, emitting signals + green TP / red SL boxes.
+int   knnLen    = input.int(400, "KNN lookback (bars)", minval=50, maxval=2000, group="① Lorentzian KNN")
+int   neighbors = input.int(8,   "Neighbors (k)",        minval=1, maxval=25,   group="① Lorentzian KNN")
+float knnThresh = input.float(2.0,"Signal threshold (net votes)", step=0.5,      group="① Lorentzian KNN")
+int   hurstLen  = input.int(100, "Hurst window", minval=20, group="② Regime")
+float pNoise    = input.float(0.05,"Kalman process noise", step=0.01, group="② Regime")
+float mNoise    = input.float(2.0, "Kalman measure noise", step=0.1, group="② Regime")
+int   zLen      = input.int(20,  "Z-score window", group="② Regime")
+float zEdge     = input.float(1.0,"Mean-revert z-edge", step=0.1, group="② Regime")
+int   atrLen    = input.int(14,  "ATR length", group="③ Risk")
+float slMult    = input.float(1.5,"Stop (ATR x)", step=0.1, group="③ Risk")
+float tpMult    = input.float(3.0,"Target (ATR x)", step=0.1, group="③ Risk")
+int   boxBars   = input.int(28,  "Trade-box width (bars)", minval=4)
+
+float ft1 = ta.rsi(close, 14)
+float ft2 = ta.rsi(close, 9)
+float ft3 = ta.stoch(close, high, low, 14)
+f_dist(int i) =>
+    math.log(1.0 + math.abs(ft1 - ft1[i])) + math.log(1.0 + math.abs(ft2 - ft2[i])) + math.log(1.0 + math.abs(ft3 - ft3[i]))
+
+float prediction = 0.0
+float lastDist   = -1.0
+float[] dists = array.new_float(0)
+float[] preds = array.new_float(0)
+int loopN = math.min(knnLen, bar_index - 5)
+if loopN > 5
+    for i = 4 to loopN
+        float d = f_dist(i)
+        if d >= lastDist and i % 4 == 0
+            lastDist := d
+            array.push(dists, d)
+            array.push(preds, math.sign(close[i - 4] - close[i]))
+            if array.size(preds) > neighbors
+                lastDist := array.get(dists, math.round(neighbors * 0.75))
+                array.shift(dists)
+                array.shift(preds)
+    prediction := array.sum(preds)
+
+f_hurst(int len) =>
+    float[] r = array.new_float(0)
+    for i = 0 to len - 1
+        array.push(r, math.log(close[i] / close[i + 1]))
+    float m = array.avg(r)
+    float cum = 0.0
+    float mn = 0.0
+    float mx = 0.0
+    for i = 0 to len - 1
+        cum := cum + (array.get(r, i) - m)
+        mn := math.min(mn, cum)
+        mx := math.max(mx, cum)
+    float s = array.stdev(r)
+    float rs = s != 0.0 ? (mx - mn) / s : 1.0
+    rs > 0.0 ? math.log(rs) / math.log(len) : 0.5
+float H = f_hurst(hurstLen)
+bool trending = H >= 0.5
+
+var float kf = na
+var float pErr = 1.0
+kf := na(kf[1]) ? close : kf[1]
+pErr := pErr + pNoise
+float kGain = pErr / (pErr + mNoise)
+kf := kf + kGain * (close - kf)
+pErr := (1.0 - kGain) * pErr
+bool trendUp = close > kf
+
+float basis = ta.sma(close, zLen)
+float sd = ta.stdev(close, zLen)
+float z = sd != 0.0 ? (close - basis) / sd : 0.0
+float atr = ta.atr(atrLen)
+f_fmt(float x) => str.tostring(x, format.mintick)
+
+bool longTrend  = trending     and prediction >=  knnThresh and trendUp
+bool shortTrend = trending     and prediction <= -knnThresh and not trendUp
+bool longMR     = not trending and prediction >=  knnThresh and z <= -zEdge
+bool shortMR    = not trending and prediction <= -knnThresh and z >=  zEdge
+bool goLong  = longTrend  or longMR
+bool goShort = shortTrend or shortMR
+
+var int lastSig = 0
+if goLong and lastSig != 1
+    lastSig := 1
+    float ePx = close
+    float slPx = ePx - slMult * atr
+    float tpPx = ePx + tpMult * atr
+    box.new(bar_index, tpPx, bar_index + boxBars, ePx, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+    box.new(bar_index, ePx, bar_index + boxBars, slPx, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+    line.new(bar_index, ePx, bar_index + boxBars, ePx, color=color.white, style=line.style_dashed)
+    label.new(bar_index, tpPx, "LONG  " + (trending ? "trend" : "revert") + " | Entry " + f_fmt(ePx) + " | TP " + f_fmt(tpPx) + " | SL " + f_fmt(slPx), style=label.style_label_down, color=color.new(color.lime, 20), textcolor=color.black, size=size.small)
+    alert("CHIMERA LONG " + syminfo.ticker + " | Entry " + f_fmt(ePx) + " | SL " + f_fmt(slPx) + " | TP " + f_fmt(tpPx), alert.freq_once_per_bar)
+if goShort and lastSig != -1
+    lastSig := -1
+    float ePx = close
+    float slPx = ePx + slMult * atr
+    float tpPx = ePx - tpMult * atr
+    box.new(bar_index, ePx, bar_index + boxBars, tpPx, border_color=color.new(color.lime, 40), bgcolor=color.new(color.lime, 85))
+    box.new(bar_index, slPx, bar_index + boxBars, ePx, border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 85))
+    line.new(bar_index, ePx, bar_index + boxBars, ePx, color=color.white, style=line.style_dashed)
+    label.new(bar_index, tpPx, "SHORT  " + (trending ? "trend" : "revert") + " | Entry " + f_fmt(ePx) + " | TP " + f_fmt(tpPx) + " | SL " + f_fmt(slPx), style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+    alert("CHIMERA SHORT " + syminfo.ticker + " | Entry " + f_fmt(ePx) + " | SL " + f_fmt(slPx) + " | TP " + f_fmt(tpPx), alert.freq_once_per_bar)
+
+plot(kf, "Kalman trend", color=trendUp ? color.new(color.teal, 0) : color.new(color.red, 0), linewidth=2)
+bgcolor(trending ? color.new(color.teal, 93) : color.new(color.orange, 93), title="Regime")
+plotshape(goLong  and lastSig == 1,  title="Long",  style=shape.triangleup,   location=location.belowbar, color=color.lime, size=size.tiny)
+plotshape(goShort and lastSig == -1, title="Short", style=shape.triangledown, location=location.abovebar, color=color.red,  size=size.tiny)
+alertcondition(goLong,  "CHIMERA Long",  "CHIMERA long signal")
+alertcondition(goShort, "CHIMERA Short", "CHIMERA short signal")`,
+    steps: [
+      'Add the indicator to a 5m–4H chart of any liquid symbol. It plots the Kalman trend line and a regime background (teal = trending, orange = mean-reverting).',
+      'A signal fires when the Lorentzian KNN vote clears the threshold AND the regime agrees: in a trend it follows the vote with the Kalman trend; in mean-revert it fades the vote from a z-score extreme.',
+      'On a signal it draws the trade box: dashed entry, green target (3·ATR), red stop (1.5·ATR) — a 2:1 default — plus a label tagging trend vs revert.',
+      'Create an alert: Condition = this indicator → "Any alert() function call" → Once Per Bar Close. The alert carries ticker, entry, stop and target.',
+      'Raise the KNN threshold for fewer, higher-conviction signals; widen the Hurst window for a steadier regime. Use the strategy build to backtest the full exit logic.',
+      'Experimental research tool — walk it forward across 12+ months and several symbols before trusting it.',
+    ],
+  },
+  }
+}
