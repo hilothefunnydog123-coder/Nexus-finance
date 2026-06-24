@@ -6,6 +6,7 @@ export const metadata: Metadata = { title: 'Labs — YN Finance', description: '
 
 const LABS = [
   { href: '/brain/live', emoji: '⚡', tag: 'ENTER THE NET', title: 'Fly inside the network', desc: 'A WebGL flythrough into the neural net itself — type a ticker and watch the real forward pass fire through every layer, scored live with sound. Nothing in finance looks like this.', color: CYAN, live: true },
+  { href: '/fork', emoji: '🍴', tag: 'FORK THE BRAIN', title: 'Make the net think your way', desc: 'Take BrainStock’s real neural net and tune what it pays attention to with 11 live dials. Watch your fork’s forecast split from the original, then save it as a preset to your profile.', color: VIOLET, live: true },
   { href: '/galaxy', emoji: '🌌', tag: 'THE MARKET GALAXY', title: 'Every stock, a star', desc: 'Sector constellations sized by market cap, pulsing with today’s real move. Drift through the universe and click any star to forecast it.', color: VIOLET, live: true },
   { href: '/storm', emoji: '🌩️', tag: 'THE CONVICTION STORM', title: 'Bulls rise, bears fall', desc: 'A live particle field of the whole tape — green names lift, red names sink, the hardest moves burn brightest. Turn the sound on and hear the market breathe.', color: GREEN, live: true },
   { href: '/war-room/live', emoji: '⚖️', tag: 'WAR ROOM · LIVE', title: 'Five AIs argue, out loud', desc: 'A long PM, a short-seller, a quant and a risk officer debate your ticker — spoken aloud — and the CIO rules. Driven by the real forecast.', color: VIOLET, live: true },

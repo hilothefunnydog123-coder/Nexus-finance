@@ -108,6 +108,7 @@ function Magnetic({ children, href, className, style, strength = 0.4 }: { childr
 const NAV = [
   { label: 'BrainStock', href: '/brainstock' },
   { label: 'Enter the Net', href: '/brain/live' },
+  { label: 'Fork', href: '/fork' },
   { label: 'Analyzer', href: '/ai-stocks' },
   { label: 'War Room', href: '/war-room' },
   { label: 'Proof', href: '/proof' },
@@ -133,6 +134,7 @@ const FRAMES = [
   { n: '08', tag: 'THE STORM', title: 'Conviction Storm', line: 'A live particle field of the whole tape — bulls lift, bears sink, the strongest moves burn brightest. Turn the sound on and listen to the market breathe.', href: '/storm', cta: 'Enter the storm' },
   { n: '09', tag: 'THE VERDICT', title: 'War Room, Live', line: 'Five AI analysts argue your ticker out loud — a long PM, a short-seller, a quant, a risk officer — and the CIO rules. Spoken, not typed.', href: '/war-room/live', cta: 'Convene the room' },
   { n: '10', tag: 'THE OPEN', title: 'The Open', line: 'A self-running cinematic of the trading day: the net wakes, scans the market, slams down its top calls, and shows the public win rate. Built to be shared.', href: '/the-open', cta: 'Watch The Open' },
+  { n: '11', tag: 'THE REMIX', title: 'Fork the Brain', line: 'Take the real neural net and make it think your way — 11 live dials for what it pays attention to. Watch your fork split from BrainStock, then save it to your profile.', href: '/fork', cta: 'Fork the brain' },
 ]
 
 export default function Landing() {
