@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { DeskShell, Reveal, Eyebrow, DeskStat, Panel, CYAN, GREEN, VIOLET, TXT, MUTE, FAINT, BORDER } from '@/components/cinematic/Desk'
 import BrainProof from '@/components/cinematic/BrainProof'
+import Postmortems from '@/components/proof/Postmortems'
 import LiveCount from '@/components/LiveCount'
 import Link from 'next/link'
 
@@ -34,6 +35,9 @@ export default function ProofPage() {
 
         {/* the proof charts (calibration + learning curve) */}
         <div style={{ marginTop: 8 }}><BrainProof /></div>
+
+        {/* AI post-mortems on the misses — the honesty engine */}
+        <Postmortems />
 
         {/* how grading works */}
         <Reveal style={{ marginTop: 'clamp(40px,6vw,64px)' }}>

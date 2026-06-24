@@ -195,6 +195,9 @@ export default function TheOpen() {
             {done ? <RotateCcw size={16} /> : playing ? <Pause size={16} /> : <Play size={16} />} {done ? 'Replay' : playing ? 'Pause' : 'Play'}
           </button>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <Link href="/account" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,.06)', border: `1px solid ${LINE}`, color: '#cdd6f4', padding: '11px 18px', fontSize: 14, fontWeight: 700, textDecoration: 'none', borderRadius: 10 }}>
+              Save forecasts to your profile
+            </Link>
             <Link href="/brainstock" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: `linear-gradient(135deg, ${CYAN}, ${VIOLET})`, color: INK, padding: '11px 20px', fontSize: 14, fontWeight: 800, textDecoration: 'none', borderRadius: 10 }}>
               See today&apos;s real calls <ArrowUpRight size={16} />
             </Link>
