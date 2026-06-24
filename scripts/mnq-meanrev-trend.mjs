@@ -60,12 +60,12 @@ function hurstArr(c,n){const lr=c.map((x,i)=>i?Math.log(x):Math.log(x));const o=
 
 function backtest(bars,P){
   const {emaLen=200,rsiLen=14,rsiLo=25,rsiHi=75,useHurst=false,hurstMin=0.5,hWin=80,
-         winStart=0,winEnd=30,confirm=true,
+         winStart=0,winEnd=30,confirm=true,slopeLkbk=20,
          stopAtr=1.5,tgtAtr=1.5,maxHold=12,cost=1.5,cooldown=3,shortsOn=true}=P
   const c=bars.map(b=>b.c)
   const e=ema(c,emaLen),a=atr(bars,14),rsi=rsiArr(c,rsiLen),hu=useHurst?hurstArr(c,hWin):null
   const trades=[];let pos=0,entry=0,sl=0,tp=0,eI=0,le=-1e9
-  for(let i=Math.max(emaLen,rsiLen)+1;i<bars.length;i++){
+  for(let i=Math.max(emaLen,rsiLen)+slopeLkbk+1;i<bars.length;i++){
     const b=bars[i]
     if(pos!==0){
       let ex=null
@@ -76,7 +76,7 @@ function backtest(bars,P){
       if(ex!==null){trades.push((pos>0?ex-entry:entry-ex)-cost);pos=0;le=i}
     }
     if(pos===0&&b.bar>=winStart&&b.bar<=winEnd&&i-le>=cooldown&&a[i]>0){
-      const up=c[i]>e[i], dn=c[i]<e[i]
+      const up=e[i]>e[i-slopeLkbk], dn=e[i]<e[i-slopeLkbk]   // TREND = the EMA is sloping, not price-above-EMA
       const hOk=!useHurst||(hu[i]>=hurstMin)
       const longTrig = up&&hOk&&rsi[i]<rsiLo&&(!confirm||c[i]>b.o)
       const shortTrig= shortsOn&&dn&&hOk&&rsi[i]>rsiHi&&(!confirm||c[i]<b.o)
@@ -95,11 +95,11 @@ const row=(n,r)=>`  ${n.padEnd(40)} ${String(r.trades).padStart(5)}t  ${r.perMon
 console.log('\n'+'═'.repeat(120))
 console.log('  DYNAMIC MEAN REVERSION + TREND FILTER on MNQ — buy oversold dips in uptrends, fade rips in downtrends (RTH morning)')
 console.log('═'.repeat(120)+'\n')
-console.log(row('  RSI<30 dip, no trend filter, all day', mc({rsiLo:30,rsiHi:70,emaLen:1,winStart:0,winEnd:77})))
-console.log(row('  + 200-EMA trend filter',               mc({rsiLo:30,rsiHi:70,emaLen:200,winStart:0,winEnd:77})))
-console.log(row('  + RTH morning window only',            mc({rsiLo:30,rsiHi:70,emaLen:200,winStart:0,winEnd:30})))
-console.log(row('  + stricter oversold (RSI<25/>75)',     mc({rsiLo:25,rsiHi:75,emaLen:200,winStart:0,winEnd:30})))
-console.log(row('  + reversal confirm + Hurst>0.5',       mc({rsiLo:25,rsiHi:75,emaLen:200,winStart:0,winEnd:30,confirm:true,useHurst:true})))
+console.log('  (FREQUENCY CHECK — the sim punishes fades on WR/PF; here we just confirm it actually TRADES)')
+console.log(row('  OLD: price>EMA200 + RSI<25 + Hurst on', mc({rsiLo:25,rsiHi:75,emaLen:200,winStart:0,winEnd:30,confirm:true,useHurst:true})))
+console.log(row('  NEW: EMA200 SLOPE up + RSI<25, Hurst off', mc({rsiLo:25,rsiHi:75,emaLen:200,slopeLkbk:20,winStart:0,winEnd:30,confirm:true,useHurst:false})))
+console.log(row('  NEW + wider window (to 13:00)',         mc({rsiLo:25,rsiHi:75,emaLen:200,slopeLkbk:20,winStart:0,winEnd:42,confirm:true,useHurst:false})))
+console.log(row('  NEW + RSI<30 (more dips)',              mc({rsiLo:30,rsiHi:70,emaLen:200,slopeLkbk:20,winStart:0,winEnd:30,confirm:true,useHurst:false})))
 
 console.log('\n  Grid → MAX WIN RATE, PF > 1.6, ≥4 trades/mo, streak ≤ 8:')
 let bW=null,bP=null,n=0
