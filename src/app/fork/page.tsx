@@ -19,7 +19,22 @@ import { fetchForks, saveFork, deleteFork, type ForkPreset } from '@/lib/forks'
 
 const CYAN = '#22d3ee', VIOLET = '#a78bfa', GREEN = '#34d399', RED = '#f87171', MUTED = '#8a93a8', BORDER = 'rgba(255,255,255,.09)'
 
-const HINTS = ['1-day move', '5-day move', '10-day move', '20-day move', 'vs 20-day avg', 'vs 50-day avg', 'how choppy', 'volume surge', 'true range', 'overbought/sold', 'high/low of range']
+// Plain-English labels for the 11 signals (same order as the model's features),
+// so a normal investor knows exactly what each dial does.
+const LABELS: { name: string; hint: string }[] = [
+  { name: 'Recent momentum (1 day)', hint: 'how it moved yesterday' },
+  { name: "This week's trend", hint: 'direction over the last 5 days' },
+  { name: 'Two-week trend', hint: 'direction over the last 10 days' },
+  { name: 'Monthly trend', hint: 'direction over the last month' },
+  { name: 'Strength vs recent average', hint: 'is it above its 1-month average price?' },
+  { name: 'Strength vs long-term average', hint: 'is it above its longer-term average?' },
+  { name: 'How jumpy it is', hint: 'size of the day-to-day swings' },
+  { name: 'Unusual volume', hint: 'is it trading much heavier than normal?' },
+  { name: 'Daily price range', hint: 'how far it travels in a day' },
+  { name: 'Overbought vs oversold', hint: 'is it overheated or beaten down? (RSI)' },
+  { name: 'Near its highs or lows', hint: 'where it sits in its recent range' },
+]
+const FRIENDLY: Record<string, string> = Object.fromEntries(FEATURE_NAMES.map((f, i) => [f, LABELS[i].name]))
 
 const ONES = () => Array.from({ length: FEATURE_COUNT }, () => 1)
 type Archetype = { name: string; emoji: string; weights: number[]; conviction: number }
@@ -141,13 +156,13 @@ export default function ForkPage() {
           {/* DIALS */}
           <div style={{ background: '#0b1018', border: `1px solid ${BORDER}`, borderRadius: 16, padding: 20 }}>
             <div style={{ fontSize: 11, letterSpacing: '0.18em', color: '#46566e', marginBottom: 14, fontFamily: 'monospace' }}>FEATURE WEIGHTS — WHAT THE NET PAYS ATTENTION TO</div>
-            {FEATURE_NAMES.map((name, i) => {
+            {LABELS.map((l, i) => {
               const wv = weights[i]
               const c = wv > 1.05 ? CYAN : wv < 0.95 ? '#5a6a82' : '#7f93b5'
               return (
-                <div key={name} style={{ marginBottom: 13 }}>
+                <div key={l.name} style={{ marginBottom: 13 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#cdd6f4' }}>{name} <span style={{ fontSize: 10.5, color: '#46566e', fontWeight: 400 }}>· {HINTS[i]}</span></span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#cdd6f4' }}>{l.name} <span style={{ fontSize: 10.5, color: '#46566e', fontWeight: 400 }}>· {l.hint}</span></span>
                     <span style={{ fontSize: 12, fontWeight: 800, color: c, fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums' }}>{wv.toFixed(2)}×</span>
                   </div>
                   <input type="range" min={0} max={2} step={0.05} value={wv} onChange={e => setWeight(i, parseFloat(e.target.value))}
@@ -204,7 +219,7 @@ export default function ForkPage() {
                     return (
                       <div key={c.name} style={{ marginBottom: 7 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: MUTED, marginBottom: 2 }}>
-                          <span>{c.name} <span style={{ color: '#46566e' }}>· {c.weight}×</span></span>
+                          <span>{FRIENDLY[c.name] ?? c.name} <span style={{ color: '#46566e' }}>· {c.weight}×</span></span>
                           <span style={{ color: pos ? GREEN : RED, fontFamily: 'monospace' }}>{pos ? '+' : ''}{c.weighted}</span>
                         </div>
                         <div style={{ height: 3, background: 'rgba(255,255,255,.06)', borderRadius: 2 }}>
