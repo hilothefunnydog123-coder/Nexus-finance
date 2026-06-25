@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 
 import Link from 'next/link'
 import { ArrowUpRight, ArrowRight, Menu, X } from 'lucide-react'
 import SiteFooter from '@/components/SiteFooter'
+import { fetchProfile, track as brainTrack } from '@/components/brain/siteBrainClient'
 import WelcomeFunnel from '@/components/onboarding/WelcomeFunnel'
 import AccountMenu from '@/components/auth/AccountMenu'
 import ColdOpen from '@/components/cinematic/ColdOpen'
@@ -215,6 +216,28 @@ export default function Landing() {
     return () => clearInterval(id)
   }, [])
 
+  // ── Site Brain: personalized ordering of the non-pinned frames ──────────────
+  const featKey = (href: string) => { const p = href.replace(/^\/+/, ''); return p.startsWith('brain/live') ? 'brain/live' : p.split('/')[0] }
+  const [frameOrder, setFrameOrder] = useState<string[] | null>(null)
+  const pinned = FRAMES.filter((f) => 'featured' in f && f.featured)
+  const rest = FRAMES.filter((f) => !('featured' in f && f.featured))
+  useEffect(() => {
+    fetchProfile(rest.map((f) => featKey(f.href))).then((p) => { if (p?.order?.length) setFrameOrder(p.order) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const orderedRest = frameOrder
+    ? [...rest].sort((a, b) => frameOrder.indexOf(featKey(a.href)) - frameOrder.indexOf(featKey(b.href)))
+    : rest
+  const displayFrames = [...pinned, ...orderedRest]
+  // fire one impression per frame for the bandit (once)
+  const impressed = useRef(false)
+  useEffect(() => {
+    if (impressed.current) return
+    impressed.current = true
+    for (const f of displayFrames) brainTrack({ type: 'impression', path: '/', target: featKey(f.href), meta: { surface: 'home_frames' } })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frameOrder])
+
   const has = (n?: number | null) => n != null && n >= 0
   const proof = ([
     has(stats?.forecasts) && { v: <CountUp to={stats!.forecasts!} />, l: 'AI forecasts made' },
@@ -356,8 +379,9 @@ export default function Landing() {
           <Reveal style={{ padding: 'clamp(60px,8vw,90px) 0 20px' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.2em', color: ACCENT }}>// THE PLATFORM — FORECAST · ANALYZE · DEBATE · TALK · AUTOMATE</div>
           </Reveal>
-          {FRAMES.map((f) => {
+          {displayFrames.map((f, fi) => {
             const feat = 'featured' in f && f.featured
+            const num = String(fi + 1).padStart(2, '0')
             const tint = (feat && 'tint' in f && f.tint) || 'rgba(16,185,129,'
             const deep = (feat && 'deep' in f && f.deep) || '#0a9d6e'
             const badgeBg = (feat && 'badgeBg' in f && f.badgeBg) || 'linear-gradient(135deg,#34d399,#ffd76a)'
@@ -370,10 +394,10 @@ export default function Landing() {
                 ]
               : [['≈80%', 'win rate'], ['≈5.0', 'profit factor'], ['MNQ 5-min', 'live-tuned']]
             return (
-            <Reveal key={f.n}>
-              <Link href={f.href} className="frame-row" style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 'clamp(16px,4vw,56px)', alignItems: 'center', padding: feat ? 'clamp(30px,4vw,46px) clamp(18px,3vw,34px)' : 'clamp(30px,4vw,46px) 0', borderTop: feat ? `1px solid ${tint}.35)` : `1px solid ${LINE}`, borderRadius: feat ? 20 : 0, textDecoration: 'none', color: INK, background: feat ? `linear-gradient(110deg, ${tint}.07), ${tint}.015) 60%)` : 'transparent', boxShadow: feat ? `0 0 0 1px ${tint}.18), 0 18px 50px -28px ${tint}.6)` : 'none', margin: feat ? '14px 0' : 0 }}>
+            <Reveal key={f.href}>
+              <Link href={f.href} data-brain={featKey(f.href)} data-brain-surface="home_frames" className="frame-row" style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 'clamp(16px,4vw,56px)', alignItems: 'center', padding: feat ? 'clamp(30px,4vw,46px) clamp(18px,3vw,34px)' : 'clamp(30px,4vw,46px) 0', borderTop: feat ? `1px solid ${tint}.35)` : `1px solid ${LINE}`, borderRadius: feat ? 20 : 0, textDecoration: 'none', color: INK, background: feat ? `linear-gradient(110deg, ${tint}.07), ${tint}.015) 60%)` : 'transparent', boxShadow: feat ? `0 0 0 1px ${tint}.18), 0 18px 50px -28px ${tint}.6)` : 'none', margin: feat ? '14px 0' : 0 }}>
                 {feat && <span style={{ position: 'absolute', top: -11, left: 'clamp(56px,9vw,96px)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', color: badgeInk, background: badgeBg, borderRadius: 999, padding: '4px 12px', boxShadow: `0 4px 16px ${tint}.4)` }}>{('badge' in f && f.badge) as string}</span>}
-                <div className="frame-num disp" style={{ fontSize: 'clamp(2.2rem,6vw,4.4rem)', color: feat ? `${tint}.4)` : 'rgba(10,10,12,.18)', transition: 'color .3s, transform .3s', minWidth: '1.6em' }}>{f.n}</div>
+                <div className="frame-num disp" style={{ fontSize: 'clamp(2.2rem,6vw,4.4rem)', color: feat ? `${tint}.4)` : 'rgba(10,10,12,.18)', transition: 'color .3s, transform .3s', minWidth: '1.6em' }}>{num}</div>
                 <div style={{ maxWidth: 720 }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.2em', color: feat ? deep : ACCENT, marginBottom: 10 }}>{f.tag}</div>
                   <div className="disp" style={{ fontSize: feat ? 'clamp(1.9rem,4vw,3.1rem)' : 'clamp(1.7rem,3.6vw,2.8rem)', marginBottom: 12 }}>{f.title}</div>
