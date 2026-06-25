@@ -124,8 +124,8 @@ const TICKS = [
 ] as const
 
 const FRAMES = [
-  { n: '01', tag: 'THE FORECASTER', title: 'BrainStock', line: 'A neural network forecasts ~300 stocks every market morning — then grades every call against real prices. A public, un-cherry-picked track record.', href: '/brainstock', cta: 'See today’s calls' },
-  { n: '02', tag: 'THE HOLY GRAIL', title: 'Copy-Paste Quant Algos', line: 'Research-grade trading algorithms you paste straight into TradingView and run — led by the ⚡ Adaptive Regime-Switching engine, refined trade-by-trade on a real MNQ account until the numbers were undeniable. Green target box, red stop box, prop-firm risk rules built in.', href: '/algorithms', cta: 'Deploy an algo', featured: true, badge: '👑 REAL-MONEY PROVEN' },
+  { n: '01', tag: 'THE FORECASTER', title: 'BrainStock', line: 'A real neural network forecasts ~300 stocks every market morning — then publishes whether it was right, graded against real prices. An un-cherry-picked, public track record you can audit call by call.', href: '/brainstock', cta: 'See today’s calls', featured: true, badge: '📊 LIVE · PUBLICLY GRADED', accent: '#1f3bff', deep: '#1f3bff', tint: 'rgba(31,59,255,', badgeBg: 'linear-gradient(135deg,#1f3bff,#8aa6ff)', badgeInk: '#fff' },
+  { n: '02', tag: 'THE HOLY GRAIL', title: 'Copy-Paste Quant Algos', line: 'Research-grade trading algorithms you paste straight into TradingView and run — led by the ⚡ Adaptive Regime-Switching engine, refined trade-by-trade on a real MNQ account until the numbers were undeniable. Green target box, red stop box, prop-firm risk rules built in.', href: '/algorithms', cta: 'Deploy an algo', featured: true, badge: '👑 REAL-MONEY PROVEN', accent: '#10b981', deep: '#0a9d6e', tint: 'rgba(16,185,129,', badgeBg: 'linear-gradient(135deg,#34d399,#ffd76a)', badgeInk: '#06281d' },
   { n: '03', tag: 'THE READ', title: 'AI Analyzer', line: 'A 15-second institutional read on any ticker. Verdict, conviction, payoff math, in plain English. Drop a symbol, get the desk’s answer.', href: '/ai-stocks', cta: 'Analyze a stock' },
   { n: '04', tag: 'THE DEBATE', title: 'The War Room', line: 'Five AI analysts — a long PM, a short-seller, a quant, a risk officer and the CIO — argue your stock live, then the CIO rules.', href: '/war-room', cta: 'Convene the room' },
   { n: '05', tag: 'THE COPILOT', title: 'Voice', line: 'Talk to the market. Ask “what’s happening with Nvidia?” and the neural net answers out loud — with the chart and the news, live.', href: '/copilot', cta: 'Start talking' },
@@ -358,25 +358,36 @@ export default function Landing() {
           </Reveal>
           {FRAMES.map((f) => {
             const feat = 'featured' in f && f.featured
+            const tint = (feat && 'tint' in f && f.tint) || 'rgba(16,185,129,'
+            const deep = (feat && 'deep' in f && f.deep) || '#0a9d6e'
+            const badgeBg = (feat && 'badgeBg' in f && f.badgeBg) || 'linear-gradient(135deg,#34d399,#ffd76a)'
+            const badgeInk = (feat && 'badgeInk' in f && f.badgeInk) || '#06281d'
+            const statPairs: [string, string][] = f.href === '/brainstock'
+              ? [
+                  [stats?.winRate != null ? `${stats.winRate.toFixed(1)}%` : 'graded', 'live win rate'],
+                  [stats?.stocksDaily != null ? `${stats.stocksDaily}` : '~300', 'stocks / morning'],
+                  [(stats?.gradedCalls ?? 0) > 0 ? `${stats!.gradedCalls!.toLocaleString()}+` : 'public', 'calls graded'],
+                ]
+              : [['≈80%', 'win rate'], ['≈5.0', 'profit factor'], ['MNQ 5-min', 'live-tuned']]
             return (
             <Reveal key={f.n}>
-              <Link href={f.href} className="frame-row" style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 'clamp(16px,4vw,56px)', alignItems: 'center', padding: feat ? 'clamp(30px,4vw,46px) clamp(18px,3vw,34px)' : 'clamp(30px,4vw,46px) 0', borderTop: feat ? '1px solid rgba(16,185,129,.35)' : `1px solid ${LINE}`, borderRadius: feat ? 20 : 0, textDecoration: 'none', color: INK, background: feat ? 'linear-gradient(110deg, rgba(16,185,129,.07), rgba(16,185,129,.015) 60%)' : 'transparent', boxShadow: feat ? '0 0 0 1px rgba(16,185,129,.18), 0 18px 50px -28px rgba(16,185,129,.6)' : 'none', margin: feat ? '14px 0' : 0 }}>
-                {feat && <span style={{ position: 'absolute', top: -11, left: 'clamp(56px,9vw,96px)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', color: '#06281d', background: 'linear-gradient(135deg,#34d399,#ffd76a)', borderRadius: 999, padding: '4px 12px', boxShadow: '0 4px 16px rgba(16,185,129,.4)' }}>{('badge' in f && f.badge) as string}</span>}
-                <div className="frame-num disp" style={{ fontSize: 'clamp(2.2rem,6vw,4.4rem)', color: feat ? 'rgba(16,185,129,.4)' : 'rgba(10,10,12,.18)', transition: 'color .3s, transform .3s', minWidth: '1.6em' }}>{f.n}</div>
+              <Link href={f.href} className="frame-row" style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 'clamp(16px,4vw,56px)', alignItems: 'center', padding: feat ? 'clamp(30px,4vw,46px) clamp(18px,3vw,34px)' : 'clamp(30px,4vw,46px) 0', borderTop: feat ? `1px solid ${tint}.35)` : `1px solid ${LINE}`, borderRadius: feat ? 20 : 0, textDecoration: 'none', color: INK, background: feat ? `linear-gradient(110deg, ${tint}.07), ${tint}.015) 60%)` : 'transparent', boxShadow: feat ? `0 0 0 1px ${tint}.18), 0 18px 50px -28px ${tint}.6)` : 'none', margin: feat ? '14px 0' : 0 }}>
+                {feat && <span style={{ position: 'absolute', top: -11, left: 'clamp(56px,9vw,96px)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', color: badgeInk, background: badgeBg, borderRadius: 999, padding: '4px 12px', boxShadow: `0 4px 16px ${tint}.4)` }}>{('badge' in f && f.badge) as string}</span>}
+                <div className="frame-num disp" style={{ fontSize: 'clamp(2.2rem,6vw,4.4rem)', color: feat ? `${tint}.4)` : 'rgba(10,10,12,.18)', transition: 'color .3s, transform .3s', minWidth: '1.6em' }}>{f.n}</div>
                 <div style={{ maxWidth: 720 }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.2em', color: feat ? '#0a9d6e' : ACCENT, marginBottom: 10 }}>{f.tag}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.2em', color: feat ? deep : ACCENT, marginBottom: 10 }}>{f.tag}</div>
                   <div className="disp" style={{ fontSize: feat ? 'clamp(1.9rem,4vw,3.1rem)' : 'clamp(1.7rem,3.6vw,2.8rem)', marginBottom: 12 }}>{f.title}</div>
                   <p style={{ fontSize: 'clamp(1rem,1.4vw,1.15rem)', lineHeight: 1.55, color: 'rgba(10,10,12,.62)' }}>{f.line}</p>
                   {feat && <div style={{ display: 'flex', gap: 18, marginTop: 16, flexWrap: 'wrap' }}>
-                    {[['≈80%', 'win rate'], ['≈5.0', 'profit factor'], ['MNQ 5-min', 'live-tuned']].map(([v, l]) => (
+                    {statPairs.map(([v, l]) => (
                       <span key={l} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                        <b style={{ fontSize: 18, color: '#0a9d6e', fontWeight: 800 }}>{v}</b>
+                        <b style={{ fontSize: 18, color: deep, fontWeight: 800 }}>{v}</b>
                         <span style={{ fontSize: 11, color: 'rgba(10,10,12,.5)', fontFamily: 'var(--font-mono)', letterSpacing: '.04em' }}>{l}</span>
                       </span>
                     ))}
                   </div>}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', color: feat ? '#0a9d6e' : INK }} className="frame-cta">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', color: feat ? deep : INK }} className="frame-cta">
                   {f.cta} <ArrowRight size={16} />
                 </div>
               </Link>
