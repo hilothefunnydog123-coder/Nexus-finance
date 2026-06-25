@@ -183,3 +183,38 @@ if(pBest){
   console.log(row('  >>> TEST (20 unseen seeds) <<<', test(pBest.P,20)))
 }else console.log('  no partial config hit PF≥2.0 at win≥50% — try win≥45%')
 console.log('')
+
+console.log('\n'+'═'.repeat(116))
+console.log('  FREQUENCY PUSH — real ran ~6/mo at ~15/mo sim (ratio ~0.4). Target ~24-30/mo SIM ≈ 10-12/mo REAL,')
+console.log('  keep PF high and win rate strong. Loosen the gates carefully; re-validate OUT-OF-SAMPLE.')
+console.log('═'.repeat(116)+'\n')
+console.log('  Loosening sweep from the validated base (vr1.4/dc30/ext0.5/str0.7/stop2/tpR1.5):')
+const V={vrTrend:1.4,dc:30,slAtr:2,tpR:1.5,extReq:0.5,minStr:0.7,useBE:false}
+console.log(row('  validated base', train(V,10)))
+console.log(row('  VR 1.25', train({...V,vrTrend:1.25},10)))
+console.log(row('  VR 1.25 + ext 0.25', train({...V,vrTrend:1.25,extReq:0.25},10)))
+console.log(row('  VR 1.2 + ext 0.25 + str 0.6', train({...V,vrTrend:1.2,extReq:0.25,minStr:0.6},10)))
+console.log(row('  VR 1.2 + ext 0.25 + dc 20', train({...V,vrTrend:1.2,extReq:0.25,dc:20},10)))
+console.log(row('  VR 1.15 + ext 0.15 + str 0.55 + dc 20', train({...V,vrTrend:1.15,extReq:0.15,minStr:0.55,dc:20},10)))
+
+console.log('\n  GRID → ~24-30/mo SIM (≈10-12/mo real), MAX PF with win ≥ 60%, streak ≤ 8:')
+let fBest=null,k=0
+for(const vrTrend of [1.15,1.2,1.25,1.3])
+ for(const dc of [15,20,25,30])
+  for(const slAtr of [1.5,2.0])
+   for(const tpR of [1.25,1.5,2.0])
+    for(const extReq of [0.1,0.2,0.3])
+     for(const minStr of [0.55,0.6,0.65]){
+       k++
+       const P={vrTrend,dc,slAtr,tpR,extReq,minStr,useBE:false,emaLen:200,vrLag:5,vrLen:60}
+       const r=train(P,8)
+       if(r.perMonth>=24&&r.perMonth<=30&&r.win>=0.60&&r.worst<=8&&r.pf>=2.0&&(!fBest||r.pf>fBest.r.pf)) fBest={P,r}
+     }
+console.log(`  searched ${k} configs × 8 TRAIN seeds`)
+if(fBest){
+  console.log('\n  ✅ BEST higher-frequency config on TRAIN:')
+  console.log('  '+JSON.stringify(fBest.P))
+  console.log(row('  TRAIN (10 seeds)', train(fBest.P,10)))
+  console.log(row('  >>> TEST (20 unseen seeds) <<<', test(fBest.P,20)))
+}else console.log('  none in band — widen the frequency window')
+console.log('')
