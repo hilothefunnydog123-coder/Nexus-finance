@@ -110,7 +110,7 @@ const NAV = [
   { label: 'Enter the Net', href: '/brain/live' },
   { label: 'Fork', href: '/fork' },
   { label: 'Analyzer', href: '/ai-stocks' },
-  { label: 'War Room', href: '/war-room' },
+  { label: 'Algorithms', href: '/algorithms' },
   { label: 'Proof', href: '/proof' },
   { label: 'Labs', href: '/labs' },
   { label: 'Voice', href: '/copilot' },
@@ -136,6 +136,64 @@ const FRAMES = [
   { n: '10', tag: 'THE OPEN', title: 'The Open', line: 'A self-running cinematic of the trading day: the net wakes, scans the market, slams down its top calls, and shows the public win rate. Built to be shared.', href: '/the-open', cta: 'Watch The Open' },
   { n: '11', tag: 'THE REMIX', title: 'Fork the Brain', line: 'Take the real neural net and make it think your way — 11 live dials for what it pays attention to. Watch your fork split from BrainStock, then save it to your profile.', href: '/fork', cta: 'Fork the brain' },
 ]
+
+function RegimeGrailPopup() {
+  const [show, setShow] = useState(false)
+  const [closing, setClosing] = useState(false)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('grailPopupDismissed')) return
+    const t = setTimeout(() => setShow(true), 3800)
+    return () => clearTimeout(t)
+  }, [])
+  const dismiss = (e?: React.MouseEvent) => {
+    e?.preventDefault()
+    e?.stopPropagation()
+    setClosing(true)
+    try { sessionStorage.setItem('grailPopupDismissed', '1') } catch {}
+    setTimeout(() => setShow(false), 420)
+  }
+  if (!show) return null
+  return (
+    <>
+      <style>{`
+        @keyframes grailPopIn { 0%{opacity:0;transform:translateY(46px) translateX(24px) scale(.88)} 100%{opacity:1;transform:translateY(0) translateX(0) scale(1)} }
+        @keyframes grailPopOut { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(34px) scale(.9)} }
+        @keyframes grailRing { 0%,100%{box-shadow:0 20px 54px rgba(0,0,0,.4),0 0 0 1px rgba(52,211,153,.4),0 0 28px rgba(52,211,153,.22)} 50%{box-shadow:0 20px 54px rgba(0,0,0,.4),0 0 0 1px rgba(52,211,153,.75),0 0 52px rgba(52,211,153,.5)} }
+        .grailPop{ animation: grailPopIn .62s cubic-bezier(.16,1,.3,1) both, grailRing 4s ease-in-out infinite 1.1s; transition: transform .3s ease }
+        .grailPop.closing{ animation: grailPopOut .42s ease forwards }
+        .grailPop:hover{ transform: translateY(-5px) }
+        @media(max-width:560px){ .grailPop{ width:248px!important; right:12px!important; bottom:12px!important } }
+      `}</style>
+      <div className={`grailPop${closing ? ' closing' : ''}`} style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 250, width: 324, borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(180deg,#0a1410,#070b0e)', border: '1px solid rgba(52,211,153,.4)' }}>
+        <button onClick={dismiss} aria-label="Dismiss" style={{ position: 'absolute', top: 9, right: 9, zIndex: 3, width: 26, height: 26, borderRadius: 8, border: 'none', background: 'rgba(0,0,0,.5)', color: '#cbeadd', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+          <X size={14} />
+        </button>
+        <Link href="/algorithms" style={{ textDecoration: 'none', display: 'block' }}>
+          <div style={{ position: 'relative' }}>
+            <img src="/regime-grail.webp" alt="Adaptive Regime-Switching — Holy Grail algorithm" style={{ width: '100%', display: 'block' }} />
+            <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 52%, #070b0e)' }} />
+            <div style={{ position: 'absolute', top: 10, left: 10, fontFamily: 'ui-monospace,monospace', fontSize: 9.5, fontWeight: 900, letterSpacing: '.16em', color: '#0a0f10', background: 'linear-gradient(135deg,#ffd76a,#fff3c4)', borderRadius: 999, padding: '4px 10px', boxShadow: '0 0 18px rgba(255,200,80,.5)' }}>👑 HOLY GRAIL</div>
+          </div>
+          <div style={{ padding: '10px 16px 16px' }}>
+            <div style={{ fontFamily: 'ui-monospace,monospace', fontSize: 9, fontWeight: 800, letterSpacing: '.18em', color: '#34d399', marginBottom: 6 }}>⚡ NEW GOD-MODE ALGO · MNQ 5-MIN</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#eafff5', letterSpacing: '-.02em', lineHeight: 1.12, marginBottom: 10 }}>Adaptive Regime-Switching</div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 13 }}>
+              {[['≈80%', 'WIN'], ['≈5.0', 'PF'], ['~10', 'TR/MO']].map(([v, l]) => (
+                <div key={l} style={{ flex: 1, background: 'rgba(52,211,153,.08)', border: '1px solid rgba(52,211,153,.2)', borderRadius: 9, padding: '7px 4px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: '#34d399', lineHeight: 1 }}>{v}</div>
+                  <div style={{ fontSize: 7.5, fontWeight: 700, letterSpacing: '.1em', color: '#5f8f7c', marginTop: 4, fontFamily: 'ui-monospace,monospace' }}>{l}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, fontSize: 13, fontWeight: 800, color: '#06100b', background: 'linear-gradient(135deg,#34d399,#ffd76a)', borderRadius: 10, padding: '11px' }}>
+              Deploy the Holy Grail <ArrowRight size={15} />
+            </div>
+          </div>
+        </Link>
+      </div>
+    </>
+  )
+}
 
 export default function Landing() {
   const [menu, setMenu] = useState(false)
@@ -171,6 +229,7 @@ export default function Landing() {
     <div style={{ background: BONE, color: INK, fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden', position: 'relative' }}>
       <ColdOpen />
       <WelcomeFunnel />
+      <RegimeGrailPopup />
       <style>{`
         @keyframes mq{to{transform:translateX(-50%)}}
         @keyframes grid-drift{to{background-position:48px 48px}}
