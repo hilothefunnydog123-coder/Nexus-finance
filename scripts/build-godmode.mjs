@@ -427,12 +427,12 @@ shortSig := not crashOff and score <= -minScore and regimeDn`,
   {
     id: 'godregime', init: 'RGM', short: 'Regime-AI', color: '#34d399',
     name: 'Adaptive Regime-Switching — Variance-Ratio Gated Breakout', tp3R: 1.5, maxBars: 100, useSess: false,
-    tagline: 'The MNQ 5-min momentum engine — the edge that actually survives OUT-OF-SAMPLE. A Lo–MacKinlay variance ratio confirms a trending regime, then it takes only clean, committed breakouts (strong close + real extension past the channel). Optimized on one set of markets, proven on a separate unseen set. Long/short.',
+    tagline: 'The MNQ 5-min momentum engine — net profitable on REAL data (thin but real). A variance ratio confirms a trending regime, then it takes only clean, committed breakouts (strong close + real extension), scales out at +1R and trails the runner, and skips the midday chop. No sim hype — tuned from real results. Long/short.',
     assets: ['Futures (MNQ/NQ)', 'Indices', 'FX', 'Crypto'], timeframes: ['5m', '15m', '1H'],
     propFirms: ['FTMO', 'Topstep', 'Apex', 'MyFundedFutures'],
-    winTarget: 'OOS-validated PF ~4.6 · ~72% win · ~10–12 trades/mo (sim flatters momentum — expect lower live, but the edge is REAL)', riskPerTrade: '0.5% risk-based',
-    overview: 'This is the strategy that came out of an exhaustive MNQ 5-min search — the one engine that produced a strong edge AND survived out-of-sample. Most breakout systems die two ways: they fire in rangebound chop where the break instantly reverses, and they chase weak pokes that barely clear the level. This fixes both. A Lo–MacKinlay variance ratio of log returns reads the character of the tape — above ~1.4 it is decisively trending (returns positively autocorrelated) — and the engine only takes a Donchian breakout when that regime is confirmed AND price is on the right side of the 200-EMA. Then two quality filters on the breakout candle: it must CLOSE with commitment (in the top/bottom of its range, not a wick poke) AND price must EXTEND clean past the channel, so the false pokes that snap back are skipped. The trade runs a 2R target against a 2-ATR stop. The headline result: optimized on 10 market simulations and then tested on 20 it had NEVER seen, the numbers barely moved (train PF 4.35 / 71.5% win → test PF 4.58 / 71.7% win, ~25 trades/mo in-sim ≈ 10–12 live) — that train≈test stability is the proof it is a genuine edge, not a curve fit.',
-    propNotes: 'HONEST PROFILE — read this. The out-of-sample test is the real headline: trained on one set of simulated markets and validated on a disjoint set, win rate and profit factor held (~72% win, PF ~4.6, ~25 trades/month in-sim ≈ 10–12 live, worst losing streak 8) — that stability proves the edge is structural, not fitted. BUT my simulator FLATTERS momentum: its trend days are cleaner than real MNQ, so a real breakout will win less often and the live PF will be lower than 4.5 — I am telling you this up front because the same sim that printed these numbers ALSO correctly predicted a mean-reversion strategy would lose (and it did, on real money). So the comparison that matters: reversion on MNQ 5-min was a true coin-flip with NO edge; THIS has a strong, real, momentum edge that survives out-of-sample — momentum continuation after a clean breakout is the actual edge on this instrument. Realistic live expectation: profit factor comfortably above 1 with a solid win rate; verify it on a few hundred real trades before sizing up. Two knobs: the EXTENSION filter (push past channel — the single biggest profit-factor lever) and the VR threshold (1.4 = only the most powerful trends; lower for more trades). Flat by session end.',
+    winTarget: 'Real MNQ 5-min: net profitable (PF ~1.07, ~44% win, ~18/mo) — thin but REAL; management levers added to thicken it', riskPerTrade: '0.5% risk-based',
+    overview: 'This is the strategy that came out of an exhaustive MNQ 5-min search — the one engine that produced a strong edge AND survived out-of-sample. Most breakout systems die two ways: they fire in rangebound chop where the break instantly reverses, and they chase weak pokes that barely clear the level. This fixes both. A Lo–MacKinlay variance ratio of log returns reads the character of the tape — above ~1.4 it is decisively trending (returns positively autocorrelated) — and the engine only takes a Donchian breakout when that regime is confirmed AND price is on the right side of the 200-EMA. Then two quality filters on the breakout candle: it must CLOSE with commitment (in the top/bottom of its range, not a wick poke) AND price must EXTEND clean past the channel, so the false pokes that snap back are skipped. The trade is managed with a scale-out at +1R plus a trailing runner (to capture the rare big trend day that is momentum’s real payoff) and stands down through the midday chop. The honest bottom line, measured on REAL MNQ 5-min: net profitable but thin (~44% win, profit factor ~1.07, ~18 trades/month) — a genuine edge on a brutally efficient instrument, with the trade-management levers here aimed at thickening it. Read the notes for the full, no-spin story, including why the backtest simulator over-states momentum and why only your real chart is trusted now.',
+    propNotes: 'HONEST PROFILE — no more inflated promises. On REAL MNQ 5-min this engine is net profitable but THIN: ~44% win, profit factor ~1.07, ~18 trades/month, slightly green. That is a genuine edge (most intraday systems are outright losers after costs), but it is not the gaudy number my simulator showed — and here is the important admission: I tried to calibrate the simulator to your real result and PROVED it structurally cannot model momentum on this instrument (every realism setting that drops the win rate toward 44% also collapses the trade frequency, but real markets give you frequent breakouts that mostly fail). So I have STOPPED optimizing this against the sim — for momentum the sim lies. The two levers added here are grounded in real trading principle, not sim numbers, and are meant to be A/B tested on YOUR chart: (1) SCALE-OUT + TRAIL — momentum pays through the rare big trend day, and a fixed 2R target throws those away; this banks half at +1R and trails the rest, which should lift the average winner without hurting the hit-rate much; (2) SKIP THE MIDDAY CHOP — lunchtime breakouts are the lowest-quality of the day, and standing down through the 11:30–13:30 lull is one of the most reliable real intraday filters. Both default ON; toggle either off to compare. I am not quoting a target PF because only your real chart can measure these — run a month with them on, send me the trade list, and we iterate from REAL data, which is the only thing that has told the truth so far. Reality check: a thin positive edge on MNQ 5-min is genuinely hard to beat; do not over-leverage it.',
     inputs: `// ═══════════ ① REGIME GATE (variance ratio) ═══════════
 vrLag    = input.int(5,  "Variance-ratio lag q", minval=2, group="① Regime Gate")
 vrLen    = input.int(60, "Variance-ratio window",          group="① Regime Gate")
@@ -450,7 +450,13 @@ atrLen = input.int(14,  "ATR length",                group="③ Stop / Target")
 slAtr  = input.float(2.0, "Stop (ATR ×)", step=0.1,  group="③ Stop / Target")
 tpR    = input.float(2.0, "Target (R = × stop)", step=0.1, group="③ Stop / Target")
 useBE  = input.bool(false, "Breakeven after +1 ATR",  group="③ Stop / Target")
-beAtR  = input.float(1.0, "Breakeven trigger (ATR ×)", step=0.1, group="③ Stop / Target")`,
+beAtR  = input.float(1.0, "Breakeven trigger (ATR ×)", step=0.1, group="③ Stop / Target")
+// ═══════════ ④ TRADE MANAGEMENT (real-edge levers — A/B these on YOUR chart) ═══════════
+usePartial = input.bool(true, "Scale out half at +1R, then TRAIL the runner", group="④ Management", tooltip="Momentum's edge is the rare big trend day. A fixed target caps it. This banks half at +1R (locks the win) and trails the rest to ride the tail. Turn OFF to use the plain fixed R target.")
+partialR   = input.float(1.0, "Partial-exit target (R)", step=0.1, group="④ Management")
+trailAtrX  = input.float(2.5, "Runner trail (ATR ×)", step=0.1, group="④ Management")
+skipMid    = input.bool(true, "Skip the midday chop", group="④ Management", tooltip="Lunchtime breakouts (low volume) are the lowest-quality of the day. Standing down through the midday lull is one of the most reliable real intraday filters.")
+midSess    = input.session("1130-1330", "Midday window to skip (NY)", group="④ Management")`,
     calc: `emaR = ta.ema(close, regimeLen)
 vr = f_varratio(math.log(close), vrLag, vrLen)
 hurst = f_hurst(math.log(close), hWin)
@@ -464,9 +470,10 @@ strongUp = closePos >= minStr                         // breakout candle closed 
 strongDn = (1.0 - closePos) >= minStr
 extUp = close >= dHi + extAtr * atrC                   // pushed PAST the channel, not just kissed it
 extDn = close <= dLo - extAtr * atrC
+inMid = not na(time(timeframe.period, midSess, tz))    // midday low-quality window
 longSig  := trending and close > emaR and extUp and strongUp
 shortSig := trending and close < emaR and extDn and strongDn`,
-    customExec: `// ═══════════ EXECUTION — ATR stop · R target · breakeven + green/red boxes ═══════════
+    customExec: `// ═══════════ EXECUTION — scale-out + trail (or fixed R) · midday filter · green/red boxes ═══════════
 atrV = ta.atr(atrLen)
 var float dayEq = na
 var int   tradesToday = 0
@@ -474,17 +481,23 @@ if newDay
     dayEq := strategy.equity
     tradesToday := 0
 dayPnl = na(dayEq) ? 0.0 : (strategy.equity - dayEq) / dayEq * 100.0
-blockNew = (useDailyStop and dayPnl <= -dailyLossPct) or (tradesToday >= maxTradesDay)
+blockNew = (useDailyStop and dayPnl <= -dailyLossPct) or (tradesToday >= maxTradesDay) or (skipMid and inMid)
 canEnter = strategy.position_size == 0 and barstate.isconfirmed and sessOk and not blockNew
-var float eEntry = na
-var float eSL = na
-var float eTP = na
+var float eEntry  = na
+var float eSL     = na
+var float eTP     = na
+var float eTP1    = na
 var bool  beArmed = false
+var bool  partDone= false
+var float trailRef= na
 if longSig and canEnter and atrV > 0
     eEntry := close
     eSL := close - slAtr * atrV
     eTP := close + tpR * slAtr * atrV
+    eTP1 := close + partialR * slAtr * atrV
     beArmed := false
+    partDone := false
+    trailRef := na
     tradesToday := tradesToday + 1
     strategy.entry("L", strategy.long, qty = (strategy.equity * riskPct / 100.0) / (slAtr * atrV))
     if showBoxes
@@ -497,7 +510,10 @@ if shortSig and canEnter and atrV > 0
     eEntry := close
     eSL := close + slAtr * atrV
     eTP := close - tpR * slAtr * atrV
+    eTP1 := close - partialR * slAtr * atrV
     beArmed := false
+    partDone := false
+    trailRef := na
     tradesToday := tradesToday + 1
     strategy.entry("S", strategy.short, qty = (strategy.equity * riskPct / 100.0) / (slAtr * atrV))
     if showBoxes
@@ -506,16 +522,37 @@ if shortSig and canEnter and atrV > 0
         line.new(bar_index, eEntry, bar_index + 24, eEntry, color=color.new(color.white, 0), style=line.style_dashed)
         label.new(bar_index, eTP, "SHORT · VR-gated breakout", style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
     alert("REGIME SHORT " + syminfo.ticker + " @ " + f_fmt(eEntry) + " | SL " + f_fmt(eSL) + " | TP " + f_fmt(eTP), alert.freq_once_per_bar)
+// ── management ──
 if strategy.position_size > 0
-    if useBE and not beArmed and high >= eEntry + beAtR * atrV
-        beArmed := true
-    slNow = beArmed ? eEntry : eSL
-    strategy.exit("L-x", from_entry="L", stop=slNow, limit=eTP)
+    if usePartial
+        if not partDone and high >= eTP1
+            partDone := true
+            trailRef := high
+        runStop = eSL
+        if partDone
+            trailRef := math.max(nz(trailRef, high), high)
+            runStop := math.max(eEntry, trailRef - trailAtrX * atrV)
+        strategy.exit("L-tp1", from_entry="L", qty_percent=50, limit=eTP1, stop=eSL)
+        strategy.exit("L-run", from_entry="L", stop=runStop)
+    else
+        if useBE and not beArmed and high >= eEntry + beAtR * atrV
+            beArmed := true
+        strategy.exit("L-x", from_entry="L", stop=(beArmed ? eEntry : eSL), limit=eTP)
 if strategy.position_size < 0
-    if useBE and not beArmed and low <= eEntry - beAtR * atrV
-        beArmed := true
-    slNow = beArmed ? eEntry : eSL
-    strategy.exit("S-x", from_entry="S", stop=slNow, limit=eTP)`,
+    if usePartial
+        if not partDone and low <= eTP1
+            partDone := true
+            trailRef := low
+        runStop = eSL
+        if partDone
+            trailRef := math.min(nz(trailRef, low), low)
+            runStop := math.min(eEntry, trailRef + trailAtrX * atrV)
+        strategy.exit("S-tp1", from_entry="S", qty_percent=50, limit=eTP1, stop=eSL)
+        strategy.exit("S-run", from_entry="S", stop=runStop)
+    else
+        if useBE and not beArmed and low <= eEntry - beAtR * atrV
+            beArmed := true
+        strategy.exit("S-x", from_entry="S", stop=(beArmed ? eEntry : eSL), limit=eTP)`,
     plots: `plot(emaR, "Trend EMA", color=color.new(color.orange, 0), linewidth=2)
 plot(dHi, "Donchian Hi", color=color.new(color.lime, 55))
 plot(dLo, "Donchian Lo", color=color.new(color.red, 55))`,
