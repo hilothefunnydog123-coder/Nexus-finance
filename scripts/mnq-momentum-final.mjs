@@ -46,13 +46,23 @@ function vrArr(c,q,n){const lr=c.map((x,i)=>i?Math.log(x/c[i-1]):0);const lq=c.m
 // mode 'partial': scale out partialFrac at r1·R (bank it → win rate), move stop to breakeven,
 //                 then TRAIL the runner by trailAtr·ATR (→ big R-multiples → profit factor).
 //                 A trade's win = blended net P&L > 0.
-function backtest(bars,P){
-  const {emaLen=200,vrLag=5,vrLen=60,vrTrend=1.2,dc=30,extReq=0.25,minStr=0.6,
+// Per-seed cache: bars + EMA(200) + ATR(14) + VR(5,60) are constant across the grid,
+// so compute them ONCE per seed instead of per config (≈50× speedup).
+const _cache=new Map()
+function derive(base,seed,nD){
+  const key=base+':'+seed+':'+nD
+  if(_cache.has(key))return _cache.get(key)
+  const bars=genMNQ(base+seed*31,nD), c=bars.map(b=>b.c)
+  const D={bars,c,e:ema(c,200),a:atr(bars,14),vr:vrArr(c,5,60)}
+  _cache.set(key,D);return D
+}
+function backtest(D,P){
+  const {vrTrend=1.2,dc=30,extReq=0.25,minStr=0.6,
          slAtr=1.5,tpR=2.0,useBE=true,beAtR=1.0,maxHold=0,cost=1.5,cooldown=2,
          winStart=0,winEnd=77,shortsOn=true,
          mode='single',partialFrac=0.5,r1=1.0,trailAtr=2.0}=P
-  const c=bars.map(b=>b.c)
-  const e=ema(c,emaLen),a=atr(bars,14),vr=vrArr(c,vrLag,vrLen)
+  const {bars,c,e,a,vr}=D
+  const emaLen=200,vrLen=60,vrLag=5
   const trades=[];let pos=0,entry=0,sl=0,tp=0,eI=0,be=false,le=-1e9
   let tp1=0,partDone=false,partPnl=0,trailRef=0
   const warm=Math.max(emaLen,vrLen,dc)+vrLag+1
@@ -103,7 +113,7 @@ function backtest(bars,P){
 }
 function stats(t,nD){const w=t.filter(x=>x>0),l=t.filter(x=>x<=0);const gW=w.reduce((a,b)=>a+b,0),gL=-l.reduce((a,b)=>a+b,0);const m=t.reduce((a,b)=>a+b,0)/(t.length||1);let eq=0,pk=0,dd=0,st=0,wo=0;for(const x of t){eq+=x;pk=Math.max(pk,eq);dd=Math.max(dd,pk-eq);if(x<=0){st++;wo=Math.max(wo,st)}else st=0}return{trades:t.length,win:t.length?w.length/t.length:0,pf:gL>0?gW/gL:(gW>0?Infinity:0),pts:eq,maxDD:dd,worst:wo,perMonth:t.length/(nD/21)}}
 // TRAIN seeds vs TEST seeds — disjoint, to catch overfitting.
-function run(P,seeds,base,nD=252){let all=[];for(let s=0;s<seeds;s++)all=all.concat(backtest(genMNQ(base+s*31,nD),P));return stats(all,nD*seeds)}
+function run(P,seeds,base,nD=252){let all=[];for(let s=0;s<seeds;s++)all=all.concat(backtest(derive(base,s,nD),P));return stats(all,nD*seeds)}
 const train=(P,seeds=10)=>run(P,seeds,7000)
 const test =(P,seeds=20)=>run(P,seeds,90001)
 
