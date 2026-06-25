@@ -285,6 +285,7 @@ export default function AlgorithmsPage() {
   const detailRef = useRef<HTMLDivElement>(null)
 
   const algo = ALGORITHMS.find(a => a.id === selectedId) ?? ALGORITHMS[0]
+  const grail = ALGORITHMS.find(a => a.id === 'godregime')
 
   const code = mode === 'auto'
     ? (platform === 'ninjatrader'
@@ -325,8 +326,12 @@ export default function AlgorithmsPage() {
         pre::-webkit-scrollbar { width:6px; height:6px }
         pre::-webkit-scrollbar-track { background:#060d18 }
         pre::-webkit-scrollbar-thumb { background:#1e3250; border-radius:3px }
+        @keyframes grail-sheen { from{background-position:140% 0} to{background-position:-140% 0} }
+        @keyframes crown-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+        @keyframes grail-halo { 0%,100%{box-shadow:0 0 60px rgba(52,211,153,.22), inset 0 0 60px rgba(52,211,153,.05)} 50%{box-shadow:0 0 96px rgba(52,211,153,.4), inset 0 0 70px rgba(52,211,153,.09)} }
+        .grail-card:hover { transform:translateY(-3px) }
         @media(max-width:900px) { .algo-grid{grid-template-columns:repeat(2,1fr)!important} .meta-grid{grid-template-columns:1fr 1fr!important} }
-        @media(max-width:600px) { .algo-grid{grid-template-columns:1fr!important} .meta-grid{grid-template-columns:1fr!important} }
+        @media(max-width:600px) { .algo-grid{grid-template-columns:1fr!important} .meta-grid{grid-template-columns:1fr!important} .grail-stats{grid-template-columns:repeat(2,1fr)!important} }
       `}</style>
 
       <CommandBar />
@@ -369,6 +374,59 @@ export default function AlgorithmsPage() {
           ))}
         </div>
       </div>
+
+      {/* ★★★ THE HOLY GRAIL — featured flagship ★★★ */}
+      {grail && (
+        <div style={{ padding: '4px 24px 54px', maxWidth: 1080, margin: '0 auto', animation: 'fadeUp .7s ease both' }}>
+          <div
+            className="grail-card"
+            onClick={() => setSelectedId('godregime')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedId('godregime') }}
+            style={{
+              position: 'relative', cursor: 'pointer', borderRadius: 28, overflow: 'hidden', textAlign: 'center',
+              background: 'radial-gradient(125% 150% at 50% 0%, rgba(52,211,153,.20), rgba(5,8,12,.55) 58%)',
+              border: '1px solid rgba(52,211,153,.5)', transition: 'transform .25s ease',
+              padding: 'clamp(34px,5vw,64px) 24px', animation: 'grail-halo 4.5s ease-in-out infinite',
+            }}
+          >
+            {/* animated golden sheen */}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(110deg, transparent 28%, rgba(255,216,120,.13) 50%, transparent 72%)', backgroundSize: '250% 100%', animation: 'grail-sheen 5.5s linear infinite', pointerEvents: 'none' }} />
+            {/* crown badge */}
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'monospace', fontSize: 12.5, fontWeight: 900, letterSpacing: '.22em', color: '#0a0f10', background: 'linear-gradient(135deg,#ffd76a,#fff3c4,#e0a93a)', borderRadius: 999, padding: '8px 20px', marginBottom: 22, boxShadow: '0 0 32px rgba(255,200,80,.55)', animation: 'crown-float 3s ease-in-out infinite' }}>
+              👑 THE HOLY GRAIL
+            </div>
+            <div style={{ position: 'relative', fontSize: 11, fontWeight: 800, letterSpacing: '.26em', color: '#34d399', fontFamily: 'monospace', marginBottom: 16 }}>
+              ⚡ GOD MODE · MNQ 5-MIN · BATTLE-TESTED ON A REAL ACCOUNT
+            </div>
+            <h2 style={{ position: 'relative', fontSize: 'clamp(36px,6.5vw,72px)', fontWeight: 900, letterSpacing: '-2.5px', lineHeight: 1.0, margin: '0 auto 8px', maxWidth: 920, background: 'linear-gradient(135deg,#ffffff,#34d399 58%,#ffd76a)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              Adaptive Regime-Switching
+            </h2>
+            <div style={{ position: 'relative', fontSize: 'clamp(15px,2.4vw,23px)', fontWeight: 700, color: '#9fe9c9', letterSpacing: '.01em', marginBottom: 22 }}>
+              The Variance-Ratio Gated Breakout — the one that actually prints.
+            </div>
+            <p style={{ position: 'relative', fontSize: 16, color: '#7fae9a', lineHeight: 1.72, maxWidth: 700, margin: '0 auto 32px' }}>
+              Hedge-fund regime detection welded to a sniper breakout entry. It sits silent until a Lo–Mackinlay variance ratio confirms the tape is genuinely trending — then fires only on clean, committed breakouts that push past the channel. Refined trade-by-trade on a live MNQ account until the numbers were undeniable.
+            </p>
+            {/* big stat slabs */}
+            <div className="grail-stats" style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, maxWidth: 780, margin: '0 auto 34px' }}>
+              {[['≈80%', 'WIN RATE'], ['≈5.0', 'PROFIT FACTOR'], ['~10', 'TRADES / MO'], ['MNQ', '5-MIN']].map(([v, l]) => (
+                <div key={l} style={{ background: 'rgba(52,211,153,.07)', border: '1px solid rgba(52,211,153,.28)', borderRadius: 16, padding: '20px 10px' }}>
+                  <div style={{ fontSize: 'clamp(25px,4.2vw,40px)', fontWeight: 900, color: '#34d399', lineHeight: 1 }}>{v}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.13em', color: '#5f8f7c', marginTop: 9, fontFamily: 'monospace' }}>{l}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 16.5, fontWeight: 800, color: '#06100b', background: 'linear-gradient(135deg,#34d399,#ffd76a)', borderRadius: 14, padding: '16px 38px', boxShadow: '0 0 40px rgba(52,211,153,.45)', letterSpacing: '.02em' }}>
+              Deploy the Holy Grail →
+            </div>
+            <div style={{ position: 'relative', fontSize: 10.5, color: '#4f7566', marginTop: 18, fontFamily: 'monospace', letterSpacing: '.03em', maxWidth: 560, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
+              * Real-account sample. At ~10 trades/month these stats scatter month-to-month — read the strategy notes. Past performance ≠ future results. Not financial advice.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* STRATEGY SELECTOR */}
       <div style={{ padding: '0 24px 48px', maxWidth: 1100, margin: '0 auto' }}>
