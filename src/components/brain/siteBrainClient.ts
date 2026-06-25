@@ -146,9 +146,10 @@ export function bindGlobal() {
 
 // fetch the learned profile for this visitor (optionally ranking candidate keys)
 export async function fetchProfile(candidates?: string[]): Promise<null | {
-  ready: boolean; seen?: number; segment?: string
+  ready: boolean; seen?: number; segment?: string; usingModel?: boolean
   features?: { key: string; label: string; score: number }[]
   tickers?: { sym: string; score: number }[]; recommend?: string | null; order?: string[]
+  predictedNext?: string | null; confidence?: number | null; scores?: Record<string, number>
 }> {
   try {
     const q = new URLSearchParams({ vid: visitorId() })

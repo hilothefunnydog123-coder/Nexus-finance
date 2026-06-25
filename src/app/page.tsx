@@ -221,12 +221,22 @@ export default function Landing() {
   // ── Site Brain: personalized ordering of the non-pinned frames ──────────────
   const featKey = (href: string) => { const p = href.replace(/^\/+/, ''); return p.startsWith('brain/live') ? 'brain/live' : p.split('/')[0] }
   const [frameOrder, setFrameOrder] = useState<string[] | null>(null)
+  const [brain, setBrain] = useState<Awaited<ReturnType<typeof fetchProfile>>>(null)
   const pinned = FRAMES.filter((f) => 'featured' in f && f.featured)
   const rest = FRAMES.filter((f) => !('featured' in f && f.featured))
   useEffect(() => {
-    fetchProfile(rest.map((f) => featKey(f.href))).then((p) => { if (p?.order?.length) setFrameOrder(p.order) })
+    fetchProfile(rest.map((f) => featKey(f.href))).then((p) => { if (p?.order?.length) setFrameOrder(p.order); setBrain(p) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  const FEAT_META: Record<string, { label: string; href: string }> = {
+    brainstock: { label: 'BrainStock', href: '/brainstock' }, algorithms: { label: 'the Algorithms', href: '/algorithms' },
+    'ai-stocks': { label: 'the AI Analyzer', href: '/ai-stocks' }, 'war-room': { label: 'the War Room', href: '/war-room' },
+    copilot: { label: 'Voice', href: '/copilot' }, courses: { label: 'Courses', href: '/courses' }, fork: { label: 'Fork the Brain', href: '/fork' },
+    proof: { label: 'the Proof', href: '/proof' }, fund: { label: 'the Fund', href: '/fund' }, galaxy: { label: 'the Galaxy', href: '/galaxy' },
+    storm: { label: 'the Storm', href: '/storm' }, 'the-open': { label: 'The Open', href: '/the-open' }, 'brain/live': { label: 'Enter the Net', href: '/brain/live' },
+  }
+  const rec = brain?.recommend && FEAT_META[brain.recommend] ? FEAT_META[brain.recommend] : null
+  const showForYou = !!brain?.ready && (brain.seen ?? 0) >= 5 && (!!rec || !!(brain.tickers?.length))
   const orderedRest = frameOrder
     ? [...rest].sort((a, b) => frameOrder.indexOf(featKey(a.href)) - frameOrder.indexOf(featKey(b.href)))
     : rest
@@ -390,6 +400,29 @@ export default function Landing() {
           <Reveal style={{ padding: 'clamp(60px,8vw,90px) 0 20px' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.2em', color: ACCENT }}>// THE PLATFORM — FORECAST · ANALYZE · DEBATE · TALK · AUTOMATE</div>
           </Reveal>
+
+          {showForYou && (
+            <div style={{ marginBottom: 28, borderRadius: 18, border: '1px solid rgba(31,59,255,.22)', background: 'linear-gradient(110deg, rgba(31,59,255,.06), rgba(16,185,129,.03))', padding: 'clamp(16px,3vw,22px) clamp(18px,3vw,26px)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'clamp(12px,3vw,28px)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 800, letterSpacing: '.16em', color: ACCENT, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 999, background: ACCENT, boxShadow: `0 0 8px ${ACCENT}` }} />
+                TUNED FOR YOU{brain?.usingModel ? ' · BY THE NET' : ''}
+              </div>
+              {rec && (
+                <Link href={rec.href} data-brain={featKey(rec.href)} style={{ fontSize: 15, fontWeight: 600, color: INK, textDecoration: 'none' }}>
+                  Based on what you explore, try <b style={{ color: ACCENT }}>{rec.label}</b> →
+                </Link>
+              )}
+              {!!brain?.tickers?.length && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 12, color: 'rgba(10,10,12,.5)' }}>on your radar:</span>
+                  {brain.tickers.slice(0, 5).map((t) => (
+                    <Link key={t.sym} href={`/stock/${t.sym}`} data-ticker={t.sym} style={{ fontSize: 12, fontWeight: 700, color: '#0a7d56', background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.25)', borderRadius: 6, padding: '3px 9px', textDecoration: 'none' }}>{t.sym}</Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {displayFrames.map((f, fi) => {
             const feat = 'featured' in f && f.featured
             const num = String(fi + 1).padStart(2, '0')
