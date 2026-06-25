@@ -125,14 +125,14 @@ const TICKS = [
 
 const FRAMES = [
   { n: '01', tag: 'THE FORECASTER', title: 'BrainStock', line: 'A neural network forecasts ~300 stocks every market morning — then grades every call against real prices. A public, un-cherry-picked track record.', href: '/brainstock', cta: 'See today’s calls' },
-  { n: '02', tag: 'THE READ', title: 'AI Analyzer', line: 'A 15-second institutional read on any ticker. Verdict, conviction, payoff math, in plain English. Drop a symbol, get the desk’s answer.', href: '/ai-stocks', cta: 'Analyze a stock' },
-  { n: '03', tag: 'THE DEBATE', title: 'The War Room', line: 'Five AI analysts — a long PM, a short-seller, a quant, a risk officer and the CIO — argue your stock live, then the CIO rules.', href: '/war-room', cta: 'Convene the room' },
-  { n: '04', tag: 'THE COPILOT', title: 'Voice', line: 'Talk to the market. Ask “what’s happening with Nvidia?” and the neural net answers out loud — with the chart and the news, live.', href: '/copilot', cta: 'Start talking' },
-  { n: '05', tag: 'THE EDGE', title: 'Courses & Algorithms', line: 'Learn the edge from pro traders, then automate it — prop-grade strategies with ready-to-run code and one-click alerts.', href: '/courses', cta: 'Learn the edge' },
-  { n: '06', tag: 'THE EXPERIENCE', title: 'Enter the Net', line: 'Fly inside the neural network as it forecasts your stock — the signal fires through every layer in real time, scored live with sound. Nothing in finance looks like this.', href: '/brain/live', cta: 'Enter the net' },
-  { n: '07', tag: 'THE UNIVERSE', title: 'Market Galaxy', line: 'Every stock a star, clustered into sector constellations, sized by market cap and pulsing with today’s real move. Fly through it. Click a star to forecast it.', href: '/galaxy', cta: 'Explore the galaxy' },
-  { n: '08', tag: 'THE STORM', title: 'Conviction Storm', line: 'A live particle field of the whole tape — bulls lift, bears sink, the strongest moves burn brightest. Turn the sound on and listen to the market breathe.', href: '/storm', cta: 'Enter the storm' },
-  { n: '09', tag: 'THE VERDICT', title: 'War Room, Live', line: 'Five AI analysts argue your ticker out loud — a long PM, a short-seller, a quant, a risk officer — and the CIO rules. Spoken, not typed.', href: '/war-room/live', cta: 'Convene the room' },
+  { n: '02', tag: 'THE HOLY GRAIL', title: 'Copy-Paste Quant Algos', line: 'Research-grade trading algorithms you paste straight into TradingView and run — led by the ⚡ Adaptive Regime-Switching engine, refined trade-by-trade on a real MNQ account until the numbers were undeniable. Green target box, red stop box, prop-firm risk rules built in.', href: '/algorithms', cta: 'Deploy an algo', featured: true, badge: '👑 REAL-MONEY PROVEN' },
+  { n: '03', tag: 'THE READ', title: 'AI Analyzer', line: 'A 15-second institutional read on any ticker. Verdict, conviction, payoff math, in plain English. Drop a symbol, get the desk’s answer.', href: '/ai-stocks', cta: 'Analyze a stock' },
+  { n: '04', tag: 'THE DEBATE', title: 'The War Room', line: 'Five AI analysts — a long PM, a short-seller, a quant, a risk officer and the CIO — argue your stock live, then the CIO rules.', href: '/war-room', cta: 'Convene the room' },
+  { n: '05', tag: 'THE COPILOT', title: 'Voice', line: 'Talk to the market. Ask “what’s happening with Nvidia?” and the neural net answers out loud — with the chart and the news, live.', href: '/copilot', cta: 'Start talking' },
+  { n: '06', tag: 'THE EDGE', title: 'Courses', line: 'Learn the edge from pro traders — structured courses that take you from setup to execution to risk management, then hand you the algorithms to automate it.', href: '/courses', cta: 'Learn the edge' },
+  { n: '07', tag: 'THE EXPERIENCE', title: 'Enter the Net', line: 'Fly inside the neural network as it forecasts your stock — the signal fires through every layer in real time, scored live with sound. Nothing in finance looks like this.', href: '/brain/live', cta: 'Enter the net' },
+  { n: '08', tag: 'THE UNIVERSE', title: 'Market Galaxy', line: 'Every stock a star, clustered into sector constellations, sized by market cap and pulsing with today’s real move. Fly through it. Click a star to forecast it.', href: '/galaxy', cta: 'Explore the galaxy' },
+  { n: '09', tag: 'THE STORM', title: 'Conviction Storm', line: 'A live particle field of the whole tape — bulls lift, bears sink, the strongest moves burn brightest. Turn the sound on and listen to the market breathe.', href: '/storm', cta: 'Enter the storm' },
   { n: '10', tag: 'THE OPEN', title: 'The Open', line: 'A self-running cinematic of the trading day: the net wakes, scans the market, slams down its top calls, and shows the public win rate. Built to be shared.', href: '/the-open', cta: 'Watch The Open' },
   { n: '11', tag: 'THE REMIX', title: 'Fork the Brain', line: 'Take the real neural net and make it think your way — 11 live dials for what it pays attention to. Watch your fork split from BrainStock, then save it to your profile.', href: '/fork', cta: 'Fork the brain' },
 ]
@@ -356,21 +356,32 @@ export default function Landing() {
           <Reveal style={{ padding: 'clamp(60px,8vw,90px) 0 20px' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.2em', color: ACCENT }}>// THE PLATFORM — FORECAST · ANALYZE · DEBATE · TALK · AUTOMATE</div>
           </Reveal>
-          {FRAMES.map((f, i) => (
+          {FRAMES.map((f) => {
+            const feat = 'featured' in f && f.featured
+            return (
             <Reveal key={f.n}>
-              <Link href={f.href} className="frame-row" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 'clamp(16px,4vw,56px)', alignItems: 'center', padding: 'clamp(30px,4vw,46px) 0', borderTop: `1px solid ${LINE}`, textDecoration: 'none', color: INK }}>
-                <div className="frame-num disp" style={{ fontSize: 'clamp(2.2rem,6vw,4.4rem)', color: 'rgba(10,10,12,.18)', transition: 'color .3s, transform .3s', minWidth: '1.6em' }}>{f.n}</div>
+              <Link href={f.href} className="frame-row" style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 'clamp(16px,4vw,56px)', alignItems: 'center', padding: feat ? 'clamp(30px,4vw,46px) clamp(18px,3vw,34px)' : 'clamp(30px,4vw,46px) 0', borderTop: feat ? '1px solid rgba(16,185,129,.35)' : `1px solid ${LINE}`, borderRadius: feat ? 20 : 0, textDecoration: 'none', color: INK, background: feat ? 'linear-gradient(110deg, rgba(16,185,129,.07), rgba(16,185,129,.015) 60%)' : 'transparent', boxShadow: feat ? '0 0 0 1px rgba(16,185,129,.18), 0 18px 50px -28px rgba(16,185,129,.6)' : 'none', margin: feat ? '14px 0' : 0 }}>
+                {feat && <span style={{ position: 'absolute', top: -11, left: 'clamp(56px,9vw,96px)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', color: '#06281d', background: 'linear-gradient(135deg,#34d399,#ffd76a)', borderRadius: 999, padding: '4px 12px', boxShadow: '0 4px 16px rgba(16,185,129,.4)' }}>{('badge' in f && f.badge) as string}</span>}
+                <div className="frame-num disp" style={{ fontSize: 'clamp(2.2rem,6vw,4.4rem)', color: feat ? 'rgba(16,185,129,.4)' : 'rgba(10,10,12,.18)', transition: 'color .3s, transform .3s', minWidth: '1.6em' }}>{f.n}</div>
                 <div style={{ maxWidth: 720 }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.2em', color: ACCENT, marginBottom: 10 }}>{f.tag}</div>
-                  <div className="disp" style={{ fontSize: 'clamp(1.7rem,3.6vw,2.8rem)', marginBottom: 12 }}>{f.title}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.2em', color: feat ? '#0a9d6e' : ACCENT, marginBottom: 10 }}>{f.tag}</div>
+                  <div className="disp" style={{ fontSize: feat ? 'clamp(1.9rem,4vw,3.1rem)' : 'clamp(1.7rem,3.6vw,2.8rem)', marginBottom: 12 }}>{f.title}</div>
                   <p style={{ fontSize: 'clamp(1rem,1.4vw,1.15rem)', lineHeight: 1.55, color: 'rgba(10,10,12,.62)' }}>{f.line}</p>
+                  {feat && <div style={{ display: 'flex', gap: 18, marginTop: 16, flexWrap: 'wrap' }}>
+                    {[['≈80%', 'win rate'], ['≈5.0', 'profit factor'], ['MNQ 5-min', 'live-tuned']].map(([v, l]) => (
+                      <span key={l} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                        <b style={{ fontSize: 18, color: '#0a9d6e', fontWeight: 800 }}>{v}</b>
+                        <span style={{ fontSize: 11, color: 'rgba(10,10,12,.5)', fontFamily: 'var(--font-mono)', letterSpacing: '.04em' }}>{l}</span>
+                      </span>
+                    ))}
+                  </div>}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }} className="frame-cta">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', color: feat ? '#0a9d6e' : INK }} className="frame-cta">
                   {f.cta} <ArrowRight size={16} />
                 </div>
               </Link>
             </Reveal>
-          ))}
+          )})}
           <div style={{ height: 1, background: LINE }} />
         </div>
         <style>{`@media(max-width:760px){.frame-cta{display:none!important}}`}</style>
