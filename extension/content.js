@@ -317,7 +317,37 @@
   }
   chrome.runtime.onMessage.addListener((msg) => { if (msg?.type === 'YN_TOGGLE') toggle() })
 
-  // wake on load (badge already tells the user it's available; panel starts hidden until toggled)
-  // Tip: Alt+Y toggles. Auto-open the first time on a chart page.
+  // ── always-visible launcher pill so it's obvious how to talk to it ──────────
+  function mountLauncher() {
+    if (document.getElementById('yn-launch-host')) return
+    const lh = document.createElement('div'); lh.id = 'yn-launch-host'
+    document.documentElement.appendChild(lh)
+    const lr = lh.attachShadow({ mode: 'open' })
+    lr.innerHTML = `
+      <style>
+        :host{ all: initial }
+        .btn{ position:fixed; right:16px; bottom:16px; z-index:2147483500; display:flex; align-items:center; gap:8px;
+          padding:11px 16px; border-radius:99px; cursor:pointer; border:1px solid rgba(31,59,255,.5);
+          background:linear-gradient(135deg,#0b1430,#0a1f17); color:#dfe6ff; font:700 13px ui-monospace,Menlo,monospace;
+          box-shadow:0 10px 30px rgba(0,0,0,.5); animation: ynp 3s ease-in-out infinite }
+        .btn:hover{ transform:translateY(-2px) }
+        .d{ width:9px;height:9px;border-radius:99px;background:#10b981;box-shadow:0 0 10px #10b981 }
+        @keyframes ynp{ 0%,100%{box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 0 rgba(16,185,129,.5)} 50%{box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 7px rgba(16,185,129,0)} }
+      </style>
+      <div class="btn" id="yn-launch"><span class="d"></span>Ask YN ⌥Y</div>`
+    lr.getElementById('yn-launch').onclick = () => { toggle(true); lh.style.display = 'none' }
+    // re-show the pill whenever the panel is closed
+    window.__ynShowLauncher = () => { lh.style.display = 'block' }
+  }
+  // hide the pill while the panel is open; bring it back on close
+  const _toggle = toggle
+  toggle = (force) => {
+    _toggle(force)
+    const lh = document.getElementById('yn-launch-host')
+    if (lh) lh.style.display = open ? 'none' : 'block'
+  }
+
+  mountLauncher()
+  // auto-open once on a chart page so first-timers see it immediately
   if (/\/chart\//.test(location.pathname)) setTimeout(() => toggle(true), 1200)
 })()
