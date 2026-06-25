@@ -10,6 +10,8 @@ type Insights = {
   rising?: { key: string; label: string; trend: number }[]
   dead?: string[]
   topTickers?: { sym: string; n: number }[]
+  experiments?: { exp: string; variants: { variant: string; impressions: number; conversions: number; cvr: number; promoted: boolean }[] }[]
+  model?: { trainedSteps: number; updatedAt: string } | null
 }
 
 const C = { bg: '#05060a', card: 'rgba(255,255,255,.03)', line: 'rgba(255,255,255,.08)', ink: '#e8f4f8', dim: '#5f7080', blue: '#5b8cff', green: '#34d399', amber: '#f5b14b' }
@@ -34,7 +36,11 @@ export default function SiteBrainDashboard() {
         </div>
 
         <h1 style={{ fontSize: 'clamp(26px,5vw,40px)', fontWeight: 900, letterSpacing: '-1px', margin: '4px 0 4px' }}>🧠 Site Brain</h1>
-        <p style={{ color: C.dim, fontSize: 13, marginBottom: 26 }}>What every visitor is actually doing — and which features the net should surface vs sunset.</p>
+        <p style={{ color: C.dim, fontSize: 13, marginBottom: 14 }}>What every visitor is actually doing — and which features the net should surface vs sunset.</p>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 22, fontSize: 12 }}>
+          <Link href="/the-mind" style={{ color: C.blue, textDecoration: 'none' }}>▸ watch The Mind (live viz)</Link>
+          {d?.model ? <span style={{ color: C.green }}>● net trained — {(d.model.trainedSteps).toLocaleString()} SGD steps</span> : <span style={{ color: C.dim }}>○ net not trained yet — call /api/brain/train</span>}
+        </div>
 
         {!d ? (
           <div style={{ color: C.dim }}>Loading…</div>
@@ -97,6 +103,27 @@ export default function SiteBrainDashboard() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* self-evolving experiments */}
+            <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 18, marginTop: 16 }}>
+              <div style={{ fontSize: 11, color: C.dim, letterSpacing: '.14em', marginBottom: 14 }}>🧬 DECISIONS THE NET IS MAKING · live A/B tests it runs + auto-promotes</div>
+              {(d.experiments || []).length ? (d.experiments || []).map(ex => (
+                <div key={ex.exp} style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, color: C.ink, marginBottom: 8 }}>{ex.exp}</div>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    {ex.variants.map(v => (
+                      <div key={v.variant} style={{ display: 'grid', gridTemplateColumns: '90px 1fr auto', gap: 10, alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: v.promoted ? C.green : C.dim }}>{v.variant}{v.promoted ? ' 👑' : ''}</span>
+                        <div style={{ height: 7, background: 'rgba(255,255,255,.05)', borderRadius: 4, overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.min(100, v.cvr * 4)}%`, height: '100%', background: v.promoted ? C.green : C.blue, borderRadius: 4 }} />
+                        </div>
+                        <span style={{ fontSize: 11, color: C.dim }}>{v.cvr}% · {v.conversions}/{v.impressions}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )) : <div style={{ color: C.dim, fontSize: 12 }}>no experiments have logged data yet — the hero headline test starts as soon as visitors land.</div>}
             </div>
           </>
         )}

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowUpRight, ArrowRight, Menu, X } from 'lucide-react'
 import SiteFooter from '@/components/SiteFooter'
 import { fetchProfile, track as brainTrack } from '@/components/brain/siteBrainClient'
+import { useVariant } from '@/components/brain/useVariant'
 import WelcomeFunnel from '@/components/onboarding/WelcomeFunnel'
 import AccountMenu from '@/components/auth/AccountMenu'
 import ColdOpen from '@/components/cinematic/ColdOpen'
@@ -86,12 +87,13 @@ function CountUp({ to, decimals = 0, suffix = '', prefix = '' }: { to: number; d
 }
 
 /* ── magnetic button ──────────────────────────────────────────────────── */
-function Magnetic({ children, href, className, style, strength = 0.4 }: { children: ReactNode; href: string; className?: string; style?: CSSProperties; strength?: number }) {
+function Magnetic({ children, href, className, style, strength = 0.4, onClick }: { children: ReactNode; href: string; className?: string; style?: CSSProperties; strength?: number; onClick?: () => void }) {
   const ref = useRef<HTMLAnchorElement>(null)
   return (
     <Link
       ref={ref}
       href={href}
+      onClick={onClick}
       className={className}
       style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s', willChange: 'transform', ...style }}
       onMouseMove={(e) => {
@@ -238,6 +240,15 @@ export default function Landing() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frameOrder])
 
+  // ── Self-evolving hero: the net A/B-tests the headline and learns from CTAs ──
+  const HEADLINES = {
+    proof: { text: 'An AI that calls the market. And proves it.', accent: [6] as number[] },
+    edge: { text: 'The market has a tell. Our neural net reads it.', accent: [5, 6, 7] as number[] },
+    money: { text: 'Forecasts graded in public. Algorithms proven on real money.', accent: [2, 3, 7, 8] as number[] },
+  } as const
+  const [hl, heroConvert] = useVariant('hero_headline', HEADLINES)
+  const headline = HEADLINES[hl]
+
   const has = (n?: number | null) => n != null && n >= 0
   const proof = ([
     has(stats?.forecasts) && { v: <CountUp to={stats!.forecasts!} />, l: 'AI forecasts made' },
@@ -313,8 +324,8 @@ export default function Landing() {
             </div>
           </Reveal>
 
-          <Kinetic className="disp" accentWords={[6]} style={{ fontSize: 'clamp(2.8rem,8.5vw,7.2rem)', maxWidth: 1100 }}>
-            An AI that calls the market. And proves it.
+          <Kinetic key={hl} className="disp" accentWords={headline.accent} style={{ fontSize: 'clamp(2.8rem,8.5vw,7.2rem)', maxWidth: 1100 }}>
+            {headline.text}
           </Kinetic>
 
           <Reveal delay={250} style={{ marginTop: 30, maxWidth: 620 }}>
@@ -324,7 +335,7 @@ export default function Landing() {
           </Reveal>
 
           <Reveal delay={400} style={{ marginTop: 38, display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Magnetic href="/brainstock" style={{ gap: 10, background: INK, color: PAPER, padding: '17px 30px', fontSize: 15, fontWeight: 700 }}>
+            <Magnetic href="/brainstock" onClick={heroConvert} style={{ gap: 10, background: INK, color: PAPER, padding: '17px 30px', fontSize: 15, fontWeight: 700 }}>
               See today’s calls <ArrowUpRight size={18} />
             </Magnetic>
             <Link href="/demo" className="lk" style={{ fontSize: 15, fontWeight: 600, color: INK, textDecoration: 'none', padding: '17px 6px' }}>

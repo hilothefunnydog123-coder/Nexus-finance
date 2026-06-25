@@ -57,10 +57,21 @@ export async function GET(req: NextRequest) {
     const dead = [...features].filter(f => f.clicks === 0).map(f => f.key)
     const topTickers = [...tickers.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([sym, n]) => ({ sym, n }))
 
+    // self-evolving experiments + whether the model is trained
+    const { data: exps } = await admin.from('brain_experiments').select('exp,variant,impressions,conversions,promoted')
+    const expMap = new Map<string, { variant: string; impressions: number; conversions: number; promoted: boolean }[]>()
+    for (const r of exps || []) { const a = expMap.get(r.exp) || []; a.push(r); expMap.set(r.exp, a) }
+    const experiments = [...expMap.entries()].map(([exp, vs]) => ({
+      exp,
+      variants: vs.map(v => ({ variant: v.variant, impressions: v.impressions, conversions: v.conversions, cvr: v.impressions ? +(v.conversions / v.impressions * 100).toFixed(1) : 0, promoted: v.promoted })).sort((a, b) => b.cvr - a.cvr),
+    }))
+    const { data: mdl } = await admin.from('brain_model').select('trained_n,updated_at').eq('id', 1).maybeSingle()
+
     return NextResponse.json({
       ready: true, days,
       totals: { events: rows.length, visitors: visitors.size, conversions: conves },
-      features, rising, dead, topTickers,
+      features, rising, dead, topTickers, experiments,
+      model: mdl ? { trainedSteps: mdl.trained_n, updatedAt: mdl.updated_at } : null,
     }, { headers: { 'Cache-Control': 's-maxage=120' } })
   } catch {
     return NextResponse.json({ ready: false })
