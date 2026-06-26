@@ -12,10 +12,12 @@ until it works. Not a script of canned actions — a perceive → reason → act
 4. Click **Load unpacked** → select this `extension/` folder.
 5. Open a chart at **tradingview.com/chart** — the copilot wakes automatically (or press **Alt+Y**).
 
-## What it does (v4 — a real agent)
+## What it does (v5 — the cockpit)
 - **Activates only on TradingView.** The toolbar badge turns green ● when you're on a chart; it's dormant everywhere else.
-- **It actually sees the screen.** Each step it can take a screenshot and feed it to the brain (Gemini vision), so it decides from what's *really* on your chart — not assumptions.
-- **It finds and clicks things itself.** It scans the page for the right button/tab (e.g. the Pine "triangle"/editor tab), then clicks it with real trusted input. No coordinates to calibrate.
+- **You watch it think.** A live **SEEING** strip shows the screenshots it's actually looking at, and an **execution plan** ticks itself off as it works. Final analysis comes back as clean markdown. There's a **stop** button any time.
+- **It actually sees the screen.** Every step it screenshots the chart and feeds it to the brain (Gemini vision), so it decides from what's *really* there — not assumptions.
+- **Bigger toolset.** Draw exact levels (one or many at once), **change timeframe**, **switch symbol**, **add indicators** (RSI/VWAP/…), clear drawings, and write+test+refine Pine — it does each itself.
+- **It finds and clicks things itself.** It scans the page for the right control (e.g. the Pine editor tab), then clicks with real trusted input. No coordinates to calibrate.
 - **Talk or type.** Click 🎤 to speak, or type the goal. Toggle "🔊 speak replies" for voice-back.
 - **Reads the REAL price** off your chart (the actual instrument — not a proxy).
 - **Draws NATIVE TradingView lines** at exact prices — it arms the horizontal-line tool and clicks the price itself, auto-mapping the price scale from the crosshair.
