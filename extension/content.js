@@ -91,60 +91,94 @@
   }
   function yForPrice(P) { if (!priceMap) return null; const { yA, pA, yB, pB } = priceMap; return Math.round(yA + (P - pA) * (yB - yA) / (pB - pA)) }
 
-  // Draw a NATIVE horizontal line at an EXACT price. Primary: compute the Y pixel
-  // from a crosshair-read price map and click there (no dialog). Fallback: place
-  // at center and set the price by really typing into the line's dialog field.
+  // ── line-dialog field helpers (used to set exact price + a text label) ───────
+  // kind 'price' → the numeric coordinate field; 'text' → the line's Text label.
+  async function dialogFieldCoords(kind) {
+    return await cdpEval(`(function(kind){try{
+      var dlgs=[].slice.call(document.querySelectorAll('[role="dialog"],[class*="dialog"],[data-name*="dialog"]')).filter(function(d){return d.offsetParent});
+      var dlg=dlgs[dlgs.length-1]; if(!dlg) return '';
+      var ins=[].slice.call(dlg.querySelectorAll('input,textarea')).filter(function(i){return i.offsetParent&&i.type!=='checkbox'&&i.type!=='radio'&&i.type!=='color'});
+      var pick=null;
+      if(kind==='price'){ pick=ins.filter(function(i){return /^[\\d.,\\s-]+$/.test((i.value||'').trim())})[0]||ins[0]; }
+      else { pick=ins.filter(function(i){var a=((i.getAttribute('placeholder')||'')+' '+(i.getAttribute('aria-label')||'')+' '+(i.getAttribute('name')||'')).toLowerCase();return /text|label|note/.test(a)})[0]
+                  || ins.filter(function(i){return i.tagName==='TEXTAREA'||(i.type==='text'&&!/^[\\d.,\\s-]+$/.test((i.value||'').trim()))})[0]; }
+      if(!pick) return '';
+      var r=pick.getBoundingClientRect(); return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)});
+    }catch(e){return ''}})(${JSON.stringify(kind)})`)
+  }
+  async function dialogTypeInto(coordsJson, text) {
+    let f; try { f = JSON.parse(coordsJson) } catch { return false }
+    await cdp('click', f); await sleep(120)
+    await cdp('key', keyEvent('a', 2)); await cdp('key', keyEvent('a', 4)); await sleep(60)   // select all (win+mac)
+    await cdp('key', keyEvent('Delete', 0)); await sleep(70)
+    await cdp('type', { text: String(text) }); await sleep(140)
+    return true
+  }
+  async function dialogSetPrice(price) { const c = await dialogFieldCoords('price'); return c ? dialogTypeInto(c, String(price)) : false }
+  async function dialogSetText(label) { const c = await dialogFieldCoords('text'); return c ? dialogTypeInto(c, String(label)) : false }
+  async function dialogConfirm() {
+    await cdp('key', keyEvent('Enter', 0)); await sleep(150)
+    await cdpEval(`(function(){var b=[].slice.call(document.querySelectorAll('button')).filter(function(e){return e.offsetParent&&/^(ok|apply|save)$/i.test((e.textContent||'').trim())})[0];if(b){b.click();return 1}return 0})()`)
+    await sleep(120); await cdp('key', keyEvent('Escape', 0))
+  }
+  async function readPineErrors() { return await cdpEval(`(function(){var sel=['[class*="errorsContainer"]','[class*="pineConsole"]','[class*="console"] [class*="error"]','[class*="errorTooltip"]','[class*="errors"]','[class*="bottom-widget"] [class*="error"]'];for(var s of sel){var el=document.querySelector(s);if(el){var t=(el.textContent||'').trim();if(/error|line\\s*\\d|expected|undeclared|mismatched|cannot|syntax/i.test(t))return t.replace(/\\s+/g,' ').slice(0,260)}}return ''})()`) }
+
+  // Draw a NATIVE horizontal line at an EXACT price, optionally LABELED. Primary:
+  // compute the Y pixel from a crosshair-read price map and click there. Fallback:
+  // place at center and set the price by really typing into the line's dialog.
   async function tDraw(args) {
     const price = +args.price
+    const label = args.label ? String(args.label).slice(0, 40) : ''
     if (args.price == null || isNaN(price)) return { summary: 'no price given to draw' }
     const cv = chartPane(); if (!cv) return { summary: 'no chart pane found' }
-    const r = cv.getBoundingClientRect(), cx = Math.round(r.left + r.width * 0.5), cy = Math.round(r.top + r.height * 0.5)
+    const r = cv.getBoundingClientRect(), cx = Math.round(r.left + r.width * 0.5), cy = Math.round(r.top + r.height * 0.5), lx = Math.round(r.left + r.width * 0.5)
     // CRITICAL: click the chart first so keyboard focus leaves our panel (else Alt+H
     // goes to our input box and no tool arms).
     await cdp('click', { x: cx, y: cy }); await sleep(150)
     await cdp('key', keyEvent('Escape', 0)); await sleep(110)
-    // refresh the price↔pixel map (read crosshair prices), then place at the exact Y
     if (!priceMap || Date.now() - priceMapTs > 14000) await buildPriceMap()
+    let placedY = null
     if (priceMap) {
       const y = yForPrice(price)
       if (y != null && y > r.top + 8 && y < r.bottom - 8) {
         await cdp('key', keyEvent('h', 1)); await sleep(280)             // arm horizontal line
-        await cdp('click', { x: Math.round(r.left + r.width * 0.5), y }); await sleep(360)  // place at exact price Y
+        await cdp('click', { x: lx, y }); await sleep(340)               // place at exact price Y
         await cdp('key', keyEvent('Escape', 0)); await sleep(120)
-        return { summary: `drew a line at ${price}${args.label ? ' (' + args.label + ')' : ''}` }
+        placedY = y
       }
     }
-    // FALLBACK (no map, or price off-screen): place at center, open dialog, REALLY
-    // type the price into its field.
-    await cdp('key', keyEvent('h', 1)); await sleep(300)
-    await cdp('click', { x: cx, y: cy }); await sleep(500)
-    await cdp('key', keyEvent('Escape', 0)); await sleep(220)
-    await cdp('click', { x: cx, y: cy, clickCount: 2 }); await sleep(680)
-    const field = await cdpEval(`(function(){try{
-      var dlgs=[].slice.call(document.querySelectorAll('[role="dialog"],[class*="dialog"],[data-name*="dialog"]')).filter(function(d){return d.offsetParent});
-      var dlg=dlgs[dlgs.length-1]; if(!dlg) return '';
-      var ins=[].slice.call(dlg.querySelectorAll('input')).filter(function(i){return i.offsetParent&&i.type!=='checkbox'&&i.type!=='radio'});
-      var f=ins.filter(function(i){return /^[\\d.,\\s-]+$/.test((i.value||'').trim())})[0]||ins[0];
-      if(!f) return '';
-      var r=f.getBoundingClientRect(); return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)});
-    }catch(e){return ''}})()`)
-    if (field) {
-      try { const f = JSON.parse(field); await cdp('click', f); await sleep(140) } catch {}
-      await cdp('key', keyEvent('a', 2)); await cdp('key', keyEvent('a', 4)); await sleep(70)
-      await cdp('key', keyEvent('Delete', 0)); await sleep(90)
-      await cdp('type', { text: String(price) }); await sleep(160)
-      await cdp('key', keyEvent('Enter', 0)); await sleep(220)
-      await cdpEval(`(function(){var b=[].slice.call(document.querySelectorAll('button')).filter(function(e){return e.offsetParent&&/^(ok|apply|save)$/i.test((e.textContent||'').trim())})[0];if(b){b.click();return 1}return 0})()`)
-      await sleep(140); await cdp('key', keyEvent('Escape', 0))
-      return { summary: `drew a line and set it to ${price}${args.label ? ' (' + args.label + ')' : ''}` }
+    if (placedY == null) {
+      // FALLBACK (no map / off-screen): place at center, open dialog, type price (+label) for real.
+      await cdp('key', keyEvent('h', 1)); await sleep(300)
+      await cdp('click', { x: cx, y: cy }); await sleep(500)
+      await cdp('key', keyEvent('Escape', 0)); await sleep(220)
+      await cdp('click', { x: cx, y: cy, clickCount: 2 }); await sleep(680)
+      const okp = await dialogSetPrice(price)
+      let okl = false
+      if (label) okl = await dialogSetText(label)
+      await dialogConfirm()
+      if (okp) return { summary: `drew a line set to ${price}${label ? ` labeled "${label}"${okl ? '' : ' (label not set)'}` : ''}` }
+      return { summary: `placed a line near center but couldn't set its price to ${price} (line dialog field not found)` }
     }
-    await cdp('key', keyEvent('Escape', 0))
-    return { summary: `couldn't map the price scale or open the line dialog — drew one line near center but not at ${price}. (Tell me and I'll adjust how I read the axis.)` }
+    // map path worked — add a text label via the line's dialog if requested
+    if (label) {
+      await cdp('click', { x: lx, y: placedY, clickCount: 2 }); await sleep(640)
+      const okl = await dialogSetText(label)
+      await dialogConfirm()
+      return { summary: `drew a line at ${price} labeled "${label}"${okl ? '' : ' (label not set)'}` }
+    }
+    return { summary: `drew a line at ${price}` }
   }
-  async function tLevels(prices) {
-    if (!Array.isArray(prices) || !prices.length) return { summary: 'no prices to draw' }
+  // Accepts numbers or {price,label} objects.
+  async function tLevels(items) {
+    if (!Array.isArray(items) || !items.length) return { summary: 'no levels to draw' }
     const done = []
-    for (const p of prices.slice(0, 8)) { if (abort) break; const r = await tDraw({ price: p }); if (/^drew/.test(r.summary)) done.push(p); await sleep(160) }
+    for (const it of items.slice(0, 8)) {
+      if (abort) break
+      const a = (it && typeof it === 'object') ? { price: it.price, label: it.label } : { price: it }
+      const r = await tDraw(a); if (/^drew/.test(r.summary)) done.push(a.label ? `${a.price} (${a.label})` : a.price)
+      await sleep(150)
+    }
     return { summary: done.length ? `drew ${done.length} levels: ${done.join(', ')}` : 'could not draw the levels' }
   }
   async function tTimeframe(tf) {
@@ -203,12 +237,16 @@
     await sleep(550)
     // 5. add/update on chart
     const add = await cdpEval(`(function(){var b=[].slice.call(document.querySelectorAll('[data-name="add-script-to-chart"],button,[role="button"],[class*="button"]')).filter(function(e){var s=((e.textContent||'')+' '+((e.getAttribute&&e.getAttribute('data-name'))||'')+' '+((e.getAttribute&&e.getAttribute('aria-label'))||'')).toLowerCase();return /add to chart|update on chart|add-script-to-chart|apply to chart/.test(s)}).filter(function(e){var r=e.getBoundingClientRect();return r.width&&r.height&&r.top<innerHeight})[0];if(b){var r=b.getBoundingClientRect();return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)})}return ''})()`)
-    if (add) { try { const p = JSON.parse(add); await cdp('click', p); await sleep(1600) } catch {} ; return { summary: `wrote the script (${how}) and clicked Add/Update on chart` } }
-    // fallback: TV's Add-to-chart keyboard shortcut
-    await cdp('key', keyEvent('Enter', 2)); await sleep(1200)     // Ctrl+Enter
-    return { summary: `wrote the script (${how}); couldn't find the Add-to-chart button so I sent Ctrl+Enter — check it landed` }
+    let added = false
+    if (add) { try { const p = JSON.parse(add); await cdp('click', p); added = true } catch {} }
+    if (!added) { await cdp('key', keyEvent('Enter', 2)) }            // fallback: Ctrl+Enter compiles+adds
+    await sleep(1800)
+    // 6. DEBUG: read the compiler console so the agent can fix errors before moving on
+    const err = await readPineErrors()
+    if (err) return { summary: `wrote the script (${how}) but it has a COMPILE ERROR: ${err} — fix the code and call pine again` }
+    return { summary: `wrote the script (${how}) and added it to the chart — compiled clean ✓` }
   }
-  async function tPineErrors() { const e = await cdpEval(`(function(){var sel=['[class*="errorsContainer"]','[class*="pineConsole"]','[class*="console"] [class*="error"]','[class*="errorTooltip"]'];for(var s of sel){var el=document.querySelector(s);if(el&&/error|line\\s*\\d/i.test(el.textContent||''))return el.textContent.trim().slice(0,260)}return ''})()`); return { summary: e ? ('compiler error → ' + e) : 'compiled clean / no errors' } }
+  async function tPineErrors() { const e = await readPineErrors(); return { summary: e ? ('compiler error → ' + e) : 'compiled clean / no errors' } }
 
   // ════════════════════ THE AGENT LOOP ════════════════════════════════════════
   // A fresh screenshot is captured and sent on EVERY step (mirrored into the
@@ -289,6 +327,12 @@
   let root, log, input, host, lastPx = null, tickTimer = null
   function build() {
     host = document.createElement('div'); host.id = 'yn-copilot-host'; document.documentElement.appendChild(host)
+    // CRITICAL: keep our keystrokes inside the panel. TradingView has global key
+    // listeners on document that treat any typing as chart hotkeys / symbol search
+    // (shadow-DOM events retarget to our host, which TV doesn't see as an input).
+    // Stop key/clipboard events from bubbling out so typing here stays here.
+    ;['keydown', 'keyup', 'keypress', 'input', 'beforeinput', 'textInput', 'paste', 'copy', 'cut'].forEach((ev) =>
+      host.addEventListener(ev, (e) => { e.stopPropagation() }))
     root = host.attachShadow({ mode: 'open' })
     root.innerHTML = `
       <style>
@@ -331,7 +375,7 @@
       <div class="panel" id="yn-panel">
         <div class="glass">
           <div class="hdr" id="yn-hdr">
-            <span class="orb"></span><span class="title">YN Copilot</span><span class="ver">AGENT v5.2</span>
+            <span class="orb"></span><span class="title">YN Copilot</span><span class="ver">AGENT v5.3</span>
             <span class="tick"><span class="s" id="yn-sym">—</span><b id="yn-px">·</b></span>
             <button class="hbtn" id="yn-clear" title="Clear">⌫</button><button class="hbtn" id="yn-gear" title="Settings">⚙</button><button class="hbtn" id="yn-x" title="Close">✕</button>
           </div>
