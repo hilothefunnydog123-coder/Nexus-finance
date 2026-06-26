@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getQuote, getCandles } from '@/lib/finnhub'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,59 +12,65 @@ const CORS = {
 }
 export async function OPTIONS() { return new NextResponse(null, { status: 204, headers: CORS }) }
 
-const FINNHUB = process.env.FINNHUB_API_KEY || ''
 const GEMINI = process.env.GEMINI_API_KEY || ''
 
-// Map common chart symbols → a Finnhub-quotable proxy (futures use the ETF proxy).
-function normalize(sym: string): string {
-  const s = (sym || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-  const map: Record<string, string> = { NQ: 'QQQ', NQ1: 'QQQ', MNQ: 'QQQ', ES: 'SPY', ES1: 'SPY', MES: 'SPY', SPX: 'SPY', NDX: 'QQQ', US100: 'QQQ', US500: 'SPY', BTCUSD: 'BINANCE:BTCUSDT', BTCUSDT: 'BINANCE:BTCUSDT', ETHUSD: 'BINANCE:ETHUSDT' }
-  return map[s] || s
+// Map a TradingView symbol → a Finnhub-quotable symbol. Futures/indices use the
+// liquid ETF proxy; crypto uses Binance pairs. Strips exchange prefix + contract
+// month codes (NQ1!, MNQU2024, CME_MINI:NQ1! → QQQ).
+function normalize(raw: string): { sym: string; proxy: string | null } {
+  let s = (raw || '').toUpperCase().trim()
+  if (s.includes(':')) s = s.split(':').pop() as string
+  s = s.replace(/\s+/g, '')
+  if (/^X?BT|^BTC/.test(s)) return { sym: 'BINANCE:BTCUSDT', proxy: 'BTC' }
+  if (/^ETH/.test(s)) return { sym: 'BINANCE:ETHUSDT', proxy: 'ETH' }
+  if (/^SOL/.test(s)) return { sym: 'BINANCE:SOLUSDT', proxy: 'SOL' }
+  // futures root: drop trailing "1!" or a month-year like U2024 / Z23
+  const root = s.replace(/[0-9]*!$/, '').replace(/[FGHJKMNQUVXZ][0-9]{1,2}$/, '')
+  const FUT: Record<string, string> = {
+    NQ: 'QQQ', MNQ: 'QQQ', NDX: 'QQQ', US100: 'QQQ', NAS100: 'QQQ', USTEC: 'QQQ',
+    ES: 'SPY', MES: 'SPY', SPX: 'SPY', SPX500: 'SPY', US500: 'SPY', SP: 'SPY',
+    YM: 'DIA', MYM: 'DIA', DJI: 'DIA', US30: 'DIA',
+    RTY: 'IWM', M2K: 'IWM', RUT: 'IWM',
+    CL: 'USO', MCL: 'USO', NG: 'UNG', GC: 'GLD', MGC: 'GLD', SI: 'SLV',
+    ZB: 'TLT', ZN: 'IEF', DXY: 'UUP',
+  }
+  if (FUT[root]) return { sym: FUT[root], proxy: root }
+  if (FUT[s]) return { sym: FUT[s], proxy: s }
+  return { sym: (root || s).replace(/!$/, ''), proxy: null }
 }
 
-interface Candles { c: number[]; h: number[]; l: number[]; o: number[]; t: number[]; s: string }
-
 async function marketContext(symbol: string) {
-  if (!FINNHUB || !symbol) return null
-  const sym = normalize(symbol)
+  const { sym, proxy } = normalize(symbol)
+  const out: Record<string, number> = {}
+  let live = false
+  // quote works on the Finnhub free tier — price + today's O/H/L + prev close
+  try {
+    const q = await getQuote(sym)
+    if (q && typeof q.price === 'number' && q.price > 0) {
+      out.price = q.price; out.dayOpen = q.open; out.dayHigh = q.high; out.dayLow = q.low; out.prevClose = q.previousClose
+      live = true
+    }
+  } catch {}
+  // daily candles (premium on some tiers) — adds prior-day H/L + EMAs when available
   try {
     const now = Math.floor(Date.now() / 1000)
-    const from = now - 60 * 86400
-    const [qRes, cRes] = await Promise.all([
-      fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${FINNHUB}`),
-      fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(sym)}&resolution=D&from=${from}&to=${now}&token=${FINNHUB}`),
-    ])
-    const q = await qRes.json()
-    const c: Candles = await cRes.json()
-    const out: Record<string, number> = {}
-    if (q && typeof q.c === 'number') { out.price = q.c; out.prevClose = q.pc; out.dayHigh = q.h; out.dayLow = q.l }
-    if (c && c.s === 'ok' && c.c?.length) {
-      const n = c.c.length
-      out.priorDayHigh = c.h[n - 2]; out.priorDayLow = c.l[n - 2]; out.priorDayClose = c.c[n - 2]
-      const ema = (len: number) => { const k = 2 / (len + 1); let e = c.c[0]; for (let i = 1; i < n; i++) e = c.c[i] * k + e * (1 - k); return +e.toFixed(2) }
-      out.ema20 = ema(20); out.ema50 = ema(50); out.ema200 = ema(200)
-      out.high20 = +Math.max(...c.h.slice(-20)).toFixed(2); out.low20 = +Math.min(...c.l.slice(-20)).toFixed(2)
+    const c = await getCandles(sym, 'D', now - 60 * 86400, now)
+    if (c && c.length > 2) {
+      const n = c.length
+      out.priorDayHigh = +c[n - 2].high.toFixed(2); out.priorDayLow = +c[n - 2].low.toFixed(2); out.priorDayClose = +c[n - 2].close.toFixed(2)
+      const closes = c.map((x) => x.close)
+      const ema = (len: number) => { const k = 2 / (len + 1); let e = closes[0]; for (let i = 1; i < n; i++) e = closes[i] * k + e * (1 - k); return +e.toFixed(2) }
+      if (n >= 20) out.ema20 = ema(20)
+      if (n >= 50) out.ema50 = ema(50)
+      if (n >= 200) out.ema200 = ema(200)
+      out.high20 = +Math.max(...c.slice(-20).map((x) => x.high)).toFixed(2)
+      out.low20 = +Math.min(...c.slice(-20).map((x) => x.low)).toFixed(2)
     }
-    return { sym, data: out }
-  } catch { return null }
+  } catch {}
+  return { sym, proxy, live, data: out }
 }
 
 type Plan = { say: string; draw?: { price: number; label: string; color?: string }[]; annotate?: { price: number; text: string }[]; pine?: { name: string; code: string }; routine?: string }
-
-// Rule-based fallback so the agent is useful even without the LLM key.
-function ruleBased(symbol: string, mc: Awaited<ReturnType<typeof marketContext>>, message: string): Plan {
-  const d = mc?.data || {}
-  const draw: Plan['draw'] = []
-  if (d.priorDayHigh) draw.push({ price: d.priorDayHigh, label: 'PDH', color: '#ef4444' })
-  if (d.priorDayLow) draw.push({ price: d.priorDayLow, label: 'PDL', color: '#10b981' })
-  if (d.ema200) draw.push({ price: d.ema200, label: '200 EMA', color: '#f5a623' })
-  if (/indicator|pine|script|code/i.test(message)) {
-    return { say: `Here's a clean prior-day-high/low + 200 EMA indicator for ${symbol}. Paste it into the Pine editor.`, pine: { name: 'YN Levels', code: PINE_LEVELS } }
-  }
-  const bias = d.price && d.ema200 ? (d.price > d.ema200 ? 'above the 200 EMA — broader trend is up' : 'below the 200 EMA — broader trend is down') : ''
-  const say = mc ? `${symbol} is ${d.price ?? '—'}, ${bias}. Prior day ${d.priorDayLow}–${d.priorDayHigh}. I've marked PDH/PDL and the 200 EMA — watch for reactions there.` : `I can't reach live data for ${symbol} right now, but tell me the levels and I'll mark them.`
-  return { say, draw }
-}
 
 const PINE_LEVELS = `//@version=5
 indicator("YN Levels — PDH/PDL + 200 EMA", overlay=true)
@@ -73,22 +80,42 @@ plot(pdh, "PDH", color=color.red,   linewidth=1, style=plot.style_linebr)
 plot(pdl, "PDL", color=color.green, linewidth=1, style=plot.style_linebr)
 plot(ta.ema(close, 200), "200 EMA", color=color.orange, linewidth=2)`
 
+// Always-useful fallback: build levels from whatever real data we have.
+function ruleBased(symbol: string, mc: Awaited<ReturnType<typeof marketContext>>, message: string): Plan {
+  const d = mc.data
+  if (/indicator|pine|script|code/i.test(message)) return { say: `Here's a prior-day-high/low + 200 EMA indicator for ${symbol}. Hit "Paste into TradingView".`, pine: { name: 'YN Levels', code: PINE_LEVELS } }
+  const draw: Plan['draw'] = []
+  if (d.priorDayHigh) draw.push({ price: d.priorDayHigh, label: 'PDH', color: '#ef4444' })
+  if (d.priorDayLow) draw.push({ price: d.priorDayLow, label: 'PDL', color: '#10b981' })
+  if (d.prevClose) draw.push({ price: d.prevClose, label: 'Prev Close', color: '#9aa3c8' })
+  if (d.dayHigh) draw.push({ price: d.dayHigh, label: 'Day High', color: '#ef4444' })
+  if (d.dayLow) draw.push({ price: d.dayLow, label: 'Day Low', color: '#10b981' })
+  if (d.ema200) draw.push({ price: d.ema200, label: '200 EMA', color: '#f5a623' })
+  const px = d.price ? `${symbol} is ${d.price}` : symbol
+  const rng = d.dayLow && d.dayHigh ? `, today ${d.dayLow}–${d.dayHigh}` : ''
+  const note = mc.proxy ? ` (using ${mc.sym} as the ${mc.proxy} proxy)` : ''
+  const say = draw.length ? `${px}${rng}${note}. Marked ${draw.map((x) => x.label).join(', ')} — watch reactions there.` : `I couldn't pull live data for ${symbol}. Tell me the prices and I'll mark them (e.g. "draw support at 432.5").`
+  return { say, draw }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { symbol = '', timeframe = '', message = '', history = [] } = await req.json()
     const mc = await marketContext(symbol)
+    const hasData = Object.keys(mc.data).length > 0
 
-    if (!GEMINI) return NextResponse.json(ruleBased(symbol, mc, message), { headers: CORS })
+    if (!GEMINI || !hasData) return NextResponse.json(ruleBased(symbol, mc, message), { headers: CORS })
 
-    const sys = `You are YN Copilot, an elite trading assistant embedded INSIDE the user's TradingView chart. You can take ACTIONS on the chart by returning JSON.
-Chart: symbol=${symbol} timeframe=${timeframe}. Live data: ${JSON.stringify(mc?.data || {})}.
-Return ONLY JSON of shape:
-{"say": string (a short spoken-style read, 2-4 sentences, no markdown),
- "draw": [{"price": number, "label": short string, "color"?: hex}],   // horizontal levels to draw — use REAL numbers from the data
- "annotate": [{"price": number, "text": short string}],                 // callouts at a price
- "pine": {"name": string, "code": valid Pine v5} | null,                // only when asked for an indicator
- "routine": short string | null }                                      // suggest a reusable routine if relevant
-Rules: never invent prices — only use the live data provided or prices the user states. Keep "say" punchy and specific. Omit empty fields.`
+    const sys = `You are YN Copilot, an elite trading assistant embedded INSIDE the user's TradingView chart. You take ACTIONS by returning JSON.
+Chart: symbol=${symbol} timeframe=${timeframe}. ${mc.proxy ? `(${symbol} is a future/index — data is the ${mc.sym} proxy; mention this once.)` : ''}
+LIVE DATA (real, use it — never say you lack data): ${JSON.stringify(mc.data)}
+Return ONLY JSON:
+{"say": string (2-4 punchy spoken sentences, no markdown),
+ "draw": [{"price": number, "label": short, "color"?: hex}],   // levels to draw — ONLY numbers from LIVE DATA or that the user states
+ "annotate": [{"price": number, "text": short}],
+ "pine": {"name": string, "code": valid Pine v5} | null,        // only when asked for an indicator
+ "routine": short | null }
+Rules: You ALWAYS have at least the current price + today's range above — give a real read and mark levels from it. NEVER invent prices. NEVER refuse for lack of data. Omit empty fields.`
     const prompt = `${sys}\n\nRecent: ${JSON.stringify((history || []).slice(-6))}\nUser: ${message}`
 
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI}`, {
@@ -99,9 +126,9 @@ Rules: never invent prices — only use the live data provided or prices the use
     const txt = j.candidates?.[0]?.content?.parts?.[0]?.text
     let plan: Plan
     try { plan = JSON.parse(txt) } catch { plan = ruleBased(symbol, mc, message) }
-    if (!plan.say) plan.say = ruleBased(symbol, mc, message).say
+    if (!plan.say && !plan.draw && !plan.pine) plan = ruleBased(symbol, mc, message)
     return NextResponse.json(plan, { headers: CORS })
   } catch {
-    return NextResponse.json({ say: 'Something went wrong on the YN brain. Try again.' }, { headers: CORS })
+    return NextResponse.json({ say: 'Something went wrong on the YN brain. Try again in a sec.' }, { headers: CORS })
   }
 }

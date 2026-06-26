@@ -14,17 +14,16 @@ Talk to it or type to it — it reads your chart, marks levels, points out struc
 - **Activates only on TradingView.** The toolbar badge turns green ● when you're on a chart; it's dormant everywhere else.
 - **Talk or type.** Click 🎤 to speak, or type. Toggle "🔊 speak replies" for voice-back.
 - **Reads your chart.** Detects the symbol + timeframe and pulls live data from the YN backend (Finnhub).
-- **Draws levels & callouts** on a reliable overlay canvas — PDH/PDL, EMAs, anything you ask for.
-  > One-time **Calibrate** (click two points, type their prices) lets it place levels precisely. Re-calibrate after a big zoom.
+- **Draws levels & callouts** — PDH/PDL, EMAs, anything you ask for. **No calibration**: it auto-reads TradingView's own price axis (via the crosshair) to place lines at exact prices. Optional **native-line mode (beta)** drives TradingView's own horizontal-line tool.
 - **Writes indicators.** Ask for a Pine script; it generates valid Pine v5 and pastes it into the editor (or copies to clipboard).
 - **Routines.** Save a macro per symbol (e.g. "Morning levels") and run it with `run Morning levels`.
+- **Draggable + resizable panel.** Drag it by the header, resize from the bottom-right corner; position is remembered.
 
 ## Settings
 - Click the ⚙ in the panel to set the **API base URL** (default `https://ynfinance.org`; use `http://localhost:3000` for local dev).
 
 ## Honest limitations (v1)
-- Drawings live on an **overlay** the extension controls — they are not (yet) native TradingView objects, so they don't persist in your TV layout. Native-object drawing is on the roadmap (brittle, TV-version dependent).
-- The overlay needs a one-time **calibration** because TradingView renders its price axis to a canvas we can't read directly.
+- By default, drawings live on an **overlay** the extension controls (auto-mapped to real prices — no calibration). They don't persist in your TV layout. Turn on **native-line mode (beta)** in settings to use TradingView's own tool — experimental, since TV's UI is undocumented.
 - Automating a third-party site is assistive-only — don't use it for bulk/abusive automation (TradingView ToS).
 
 ## Architecture
