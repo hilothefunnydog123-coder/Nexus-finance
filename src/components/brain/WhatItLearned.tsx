@@ -25,7 +25,7 @@ export default function WhatItLearned() {
   return (
     <>
       <style>{`@keyframes brainPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,59,255,.5)}50%{box-shadow:0 0 0 6px rgba(31,59,255,0)}}
-        @media(max-width:819px){ .yn-brainpill{ bottom:calc(74px + env(safe-area-inset-bottom))!important } .yn-brainpanel{ bottom:calc(120px + env(safe-area-inset-bottom))!important } }`}</style>
+        @media(max-width:819px){ .yn-brainpill{ display:none!important } .yn-brainpanel{ display:none!important } }`}</style>
 
       <button onClick={() => setOpen((v) => !v)} aria-label="What the Site Brain learned" className="yn-brainpill"
         style={{ position: 'fixed', left: 18, bottom: 18, zIndex: 240, display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', borderRadius: 999, border: '1px solid rgba(31,59,255,.4)', background: 'rgba(8,10,20,.86)', color: '#cdd6ff', fontSize: 12, fontWeight: 700, fontFamily: 'ui-monospace,monospace', cursor: 'pointer', backdropFilter: 'blur(8px)', animation: open ? 'none' : 'brainPulse 3.4s ease-in-out infinite' }}>

@@ -331,7 +331,13 @@ export default function AlgorithmsPage() {
         @keyframes grail-halo { 0%,100%{box-shadow:0 0 60px rgba(52,211,153,.22), inset 0 0 60px rgba(52,211,153,.05)} 50%{box-shadow:0 0 96px rgba(52,211,153,.4), inset 0 0 70px rgba(52,211,153,.09)} }
         .grail-card:hover { transform:translateY(-3px) }
         @media(max-width:900px) { .algo-grid{grid-template-columns:repeat(2,1fr)!important} .meta-grid{grid-template-columns:1fr 1fr!important} }
-        @media(max-width:600px) { .algo-grid{grid-template-columns:1fr!important} .meta-grid{grid-template-columns:1fr!important} .grail-stats{grid-template-columns:repeat(2,1fr)!important} }
+        @media(max-width:600px) {
+          .meta-grid{grid-template-columns:1fr!important} .grail-stats{grid-template-columns:repeat(2,1fr)!important}
+          /* strategy selector → a swipeable horizontal strip on mobile */
+          .algo-grid{ display:flex!important; gap:10px!important; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:2px 2px 14px; scrollbar-width:none; }
+          .algo-grid::-webkit-scrollbar{ display:none }
+          .algo-card{ flex:0 0 76%; max-width:300px; scroll-snap-align:center; padding:16px!important }
+        }
       `}</style>
 
       <CommandBar />
@@ -439,6 +445,7 @@ export default function AlgorithmsPage() {
             return (
               <button
                 key={a.id}
+                className="algo-card"
                 onClick={() => setSelectedId(a.id)}
                 style={{
                   padding: '20px 16px', borderRadius: 16, cursor: 'pointer', textAlign: 'left',
