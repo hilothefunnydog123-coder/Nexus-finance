@@ -27,19 +27,22 @@ ACTION TOOLS (you already perceive — these only DO things):
 - click {text} | {x,y}      -> click element by visible text/aria-label (preferred), or exact viewport pixel from the screenshot.
 - type {text}               -> type into the focused field (real keystrokes).
 - key {combo}               -> "Alt+H", "Escape", "Ctrl+Enter", "Enter", "Delete".
-- drawLevel {price, label?} -> draw a NATIVE horizontal line at an exact price (handles tool + click).
-- pine {code, name?}        -> open the Pine Editor, paste Pine v5 code, click Add to chart.
+- drawLevel {price, label?} -> draw a NATIVE horizontal line at an exact price. RELIABLE COMPOSITE: it places the line AND types the exact price into the line's dialog for you. To draw several levels, just call drawLevel once per level on consecutive steps. You do NOT need find/click/key for this.
+- pine {code, name?}        -> RELIABLE COMPOSITE: opens the Pine Editor itself (forces the panel open), waits for it to load, pastes the Pine v5 code, and clicks Add to chart. You do NOT need to find/click the Pine tab yourself — pine() does it. Pass the FULL script.
 - pineErrors {}             -> read the Pine compiler console; after pine(), check it and refine until clean (<=3 tries).
 - say {text}                -> short progress note (use rarely).
 - done {say}                -> finished; give the user the complete answer.
 
 RULES:
 - ONE tool per step. You SEE a fresh screenshot every step — NEVER emit look/chart, and never re-perceive instead of acting or answering.
+- Prefer the COMPOSITE tools: to draw levels use drawLevel (not key "Alt+H" + click); to write an indicator use pine (not find/click/type into the editor). They handle the messy UI themselves.
+- To draw N levels, call drawLevel N times (one per step), reading each price off the chart.
+- After pine(), call pineErrors() once; if it reports an error, fix the code and call pine() again. If clean, you're done.
 - NEVER invent prices — read them from the screenshot / the provided price.
-- The Pine editor is a tab/triangle at the bottom labelled "Pine Editor" — find it, click it, then pine().
+- A "UI" line in the context tells you the real state (pineLoaded, dialogOpen, dialogFields, bottomTabs). Trust it.
 - Be decisive. Minimize steps. If you can answer, answer.`
 
-type Body = { goal?: string; symbol?: string; price?: number; timeframe?: string; log?: { tool: string; args?: unknown; result?: string }[]; shot?: string | null; steps?: number }
+type Body = { goal?: string; symbol?: string; price?: number; timeframe?: string; ui?: string; log?: { tool: string; args?: unknown; result?: string }[]; shot?: string | null; steps?: number }
 
 // Models sometimes wrap JSON in ```fences``` or add stray prose. Pull the JSON out.
 function salvage(t: string): Record<string, unknown> | null {
@@ -57,7 +60,7 @@ export async function POST(req: NextRequest) {
   try {
     const b: Body = await req.json()
     const log = (b.log || []).slice(-10)
-    const ctx = `GOAL: ${b.goal}\nCHART: symbol=${b.symbol || '?'} price=${b.price ?? '?'} timeframe=${b.timeframe || '?'}\nSTEP: ${(b.steps || 0) + 1}\nACTIONS SO FAR:\n${log.length ? log.map((l, i) => `${i + 1}. ${l.tool}(${JSON.stringify(l.args || {})}) → ${l.result || 'ok'}`).join('\n') : '(none yet)'}\n\nDecide the next step. Respond with JSON only.`
+    const ctx = `GOAL: ${b.goal}\nCHART: symbol=${b.symbol || '?'} price=${b.price ?? '?'} timeframe=${b.timeframe || '?'}\nUI: ${b.ui || '(unknown)'}\nSTEP: ${(b.steps || 0) + 1}\nACTIONS SO FAR:\n${log.length ? log.map((l, i) => `${i + 1}. ${l.tool}(${JSON.stringify(l.args || {})}) → ${l.result || 'ok'}`).join('\n') : '(none yet)'}\n\nDecide the next step. Respond with JSON only.`
 
     const parts: ({ text: string } | { inline_data: { mime_type: string; data: string } })[] = [{ text: SYSTEM + '\n\n' + ctx }]
     if (b.shot) parts.push({ inline_data: { mime_type: 'image/jpeg', data: b.shot } }), parts.push({ text: 'Above is the LIVE screenshot of the chart this step. You can see it — decide from it.' })

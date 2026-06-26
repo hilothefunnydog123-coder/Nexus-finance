@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YN Copilot for TradingView",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "A real autonomous AI agent inside TradingView. It sees your chart, reasons step by step, and clicks/types/draws/codes Pine itself — opening the editor, pasting, testing and refining until it works.",
   "permissions": ["storage", "scripting", "activeTab", "tabs", "debugger"],
   "host_permissions": [

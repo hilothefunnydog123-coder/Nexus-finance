@@ -22,14 +22,20 @@
   function detectQuote() { const t = document.title || ''; const m = t.match(/^\s*([A-Za-z0-9!:._-]{1,16})\s+([\d,]+\.?\d*)/); if (m) return { symbol: m[1].replace(/.*:/, '').toUpperCase(), price: parseFloat(m[2].replace(/,/g, '')) }; return { symbol: (t.split(/\s/)[0] || '').toUpperCase(), price: null } }
   function detectTimeframe() { const el = document.querySelector('[id*="interval"] [aria-pressed="true"], [data-name="resolution"] [class*="value"]'); return el ? el.textContent.trim() : '' }
 
-  // ── price↔pixel for native level drawing ────────────────────────────────────
+  // Biggest chart canvas (the price pane).
   function chartPane() { const cs = [...document.querySelectorAll('canvas')].map((c) => ({ c, r: c.getBoundingClientRect() })).filter((o) => o.r.width > 300 && o.r.height > 200); cs.sort((a, b) => b.r.width * b.r.height - a.r.width * a.r.height); return cs[0]?.c || null }
-  function axisPriceAt(y, rect) { let best = null; for (const el of document.querySelectorAll('div,span')) { const t = (el.textContent || '').trim().replace(/,/g, ''); if (!/^\d+(\.\d+)?$/.test(t)) continue; const r = el.getBoundingClientRect(); if (r.left < rect.right - 95 || r.width > 80 || r.height > 28 || r.width < 8) continue; const cy = r.top + r.height / 2, d = Math.abs(cy - y); if (d < 16 && (!best || d < best.d)) best = { v: parseFloat(t), d } } return best ? best.v : null }
-  let pmap = null, pmapAt = 0
-  async function buildMap() { const cv = chartPane(); if (!cv) return false; const r = cv.getBoundingClientRect(), x = Math.round(r.left + r.width * 0.5), pts = []; for (const f of [0.3, 0.7]) { const y = Math.round(r.top + r.height * f); const mv = await cdp('move', { x, y }); if (!mv.ok) return false; await sleep(90); const p = axisPriceAt(y, r); if (p != null) pts.push({ y, p }) } if (pts.length === 2 && pts[0].p !== pts[1].p) { pmap = { p1: pts[0].p, y1: pts[0].y, p2: pts[1].p, y2: pts[1].y }; pmapAt = Date.now(); return true } return false }
-  async function ensureMap() { if (!pmap || Date.now() - pmapAt > 12000) await buildMap(); return !!pmap }
-  const priceToY = (p) => pmap ? pmap.y1 + (p - pmap.p1) * (pmap.y2 - pmap.y1) / (pmap.p2 - pmap.p1) : null
-  async function drawNative(price) { if (!(await ensureMap())) return false; const y = priceToY(price), cv = chartPane(); if (y == null || !cv) return false; const r = cv.getBoundingClientRect(), x = Math.round(r.left + r.width * 0.55); const k = await cdp('key', { key: 'h', code: 'KeyH', vk: 72, mods: 1 }); if (!k.ok) return false; await sleep(170); const c = await cdp('click', { x, y: Math.round(y) }); await sleep(140); return c.ok }
+  // Read a compact snapshot of the TV UI state so the brain can act precisely.
+  async function uiSnapshot() {
+    return await cdpEval(`(function(){try{
+      var o={};
+      o.pineLoaded=!!(window.monaco&&monaco.editor&&monaco.editor.getModels&&monaco.editor.getModels().length);
+      var dlgs=[].slice.call(document.querySelectorAll('[role="dialog"],[class*="dialog"]')).filter(function(d){return d.offsetParent});
+      if(dlgs.length){var d=dlgs[dlgs.length-1];o.dialogOpen=true;o.dialogFields=[].slice.call(d.querySelectorAll('input')).filter(function(i){return i.offsetParent&&i.type!=='checkbox'&&i.type!=='radio'}).slice(0,5).map(function(i){return (i.getAttribute('name')||i.getAttribute('aria-label')||i.placeholder||'field')+'='+(i.value||'')})}
+      var tabs=[].slice.call(document.querySelectorAll('[data-name],[role="tab"],[class*="tab"]')).map(function(e){return (e.textContent||'').trim()}).filter(function(s){return s&&/pine|screener|strategy tester|trading panel|backtesting/i.test(s)});
+      o.bottomTabs=tabs.filter(function(v,i){return tabs.indexOf(v)===i}).slice(0,6);
+      return JSON.stringify(o);
+    }catch(e){return ''}})()`)
+  }
 
   // ════════════════════ TOOLS (executed for the agent brain) ══════════════════
   async function tLook() { const r = await cdp('shot'); return { shot: r.data || null, summary: r.data ? 'screenshot taken' : 'screenshot failed (debugger bar dismissed?)' } }
@@ -53,16 +59,51 @@
     const up = key.toUpperCase(); const vk = VK[up] || (key.length === 1 ? up.charCodeAt(0) : 0); const code = key.length === 1 ? 'Key' + up : (up.charAt(0) + up.slice(1).toLowerCase())
     const r = await cdp('key', { key: key.length === 1 ? key.toLowerCase() : key, code, vk, mods }); return { summary: r.ok ? `pressed ${combo}` : 'key failed' }
   }
-  async function tDraw(args) { const ok = await drawNative(args.price); return { summary: ok ? `drew native line at ${args.price}${args.label ? ' (' + args.label + ')' : ''}` : 'could not place line — is the debugger bar up?' } }
+  // Draw a NATIVE horizontal line at an EXACT price: drop a line at center, then
+  // type the price into its settings dialog — no fragile price-axis reading.
+  async function tDraw(args) {
+    const price = args.price
+    if (price == null || isNaN(+price)) return { summary: 'no price given to draw' }
+    const cv = chartPane(); if (!cv) return { summary: 'no chart pane found' }
+    const r = cv.getBoundingClientRect(), cx = Math.round(r.left + r.width * 0.5), cy = Math.round(r.top + r.height * 0.5)
+    await cdp('key', { key: 'h', code: 'KeyH', vk: 72, mods: 1 }); await sleep(260)   // arm horizontal-line tool
+    await cdp('click', { x: cx, y: cy }); await sleep(460)                              // drop a line at center
+    // open its settings: try the floating "Settings" gear, else double-click the line
+    const gear = await cdpEval(`(function(){var b=[].slice.call(document.querySelectorAll('[data-name="settings"],[aria-label*="ettings"],button')).filter(function(e){var s=((e.getAttribute&&e.getAttribute('data-name'))||'')+' '+((e.getAttribute&&e.getAttribute('aria-label'))||'');return /settings/i.test(s)}).filter(function(e){var q=e.getBoundingClientRect();return q.width&&q.height&&q.top<innerHeight})[0];if(b){var q=b.getBoundingClientRect();return JSON.stringify({x:Math.round(q.left+q.width/2),y:Math.round(q.top+q.height/2)})}return ''})()`)
+    if (gear) { try { const p = JSON.parse(gear); await cdp('click', p) } catch {} } else { await cdp('click', { x: cx, y: cy, clickCount: 2 }) }
+    await sleep(640)
+    // type the exact price into the dialog's price field (React-safe value set)
+    const set = await cdpEval(`(function(p){try{
+      var dlgs=[].slice.call(document.querySelectorAll('[role="dialog"],[class*="dialog"],[data-name*="dialog"]')).filter(function(d){return d.offsetParent});
+      var dlg=dlgs[dlgs.length-1]; if(!dlg) return 'nodialog';
+      var ins=[].slice.call(dlg.querySelectorAll('input')).filter(function(i){return i.offsetParent&&i.type!=='checkbox'&&i.type!=='radio'});
+      var f=ins.filter(function(i){return /^[\\d.,\\s-]+$/.test((i.value||'').trim())})[0]||ins[0];
+      if(!f) return 'nofield';
+      var d=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value');
+      f.focus(); if(d&&d.set){d.set.call(f,String(p))} else {f.value=String(p)}
+      f.dispatchEvent(new Event('input',{bubbles:true})); f.dispatchEvent(new Event('change',{bubbles:true}));
+      return 'set';
+    }catch(e){return 'err:'+(e&&e.message||e)}})(${JSON.stringify(+price)})`)
+    await sleep(220)
+    await cdp('key', { key: 'Enter', code: 'Enter', vk: 13, mods: 0 }); await sleep(200)
+    await cdpEval(`(function(){var b=[].slice.call(document.querySelectorAll('button')).filter(function(e){return e.offsetParent&&/^(ok|apply|save)$/i.test((e.textContent||'').trim())})[0];if(b){b.click();return 1}return 0})()`)
+    await sleep(150); await cdp('key', { key: 'Escape', code: 'Escape', vk: 27, mods: 0 })
+    if (set === 'set') return { summary: `drew a line and set it to ${price}${args.label ? ' (' + args.label + ')' : ''}` }
+    return { summary: `placed a line at center but couldn't open its price field (${set}); it's on the chart — may not be at ${price} exactly` }
+  }
+  // Open the Pine editor (forcing the panel open), wait for Monaco, paste, add to chart.
   async function tPine(code) {
-    const tab = await cdpEval(`(function(){var b=[...document.querySelectorAll('button,[data-name],[role="tab"],[class*="tab"]')].find(function(e){return /pine/i.test((e.textContent||'')+' '+(e.getAttribute&&e.getAttribute('data-name')||''))});if(b){var r=b.getBoundingClientRect();return r.width?{x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)}:null}return null})()`)
-    if (tab) { await cdp('click', tab); await sleep(900) }
-    const set = await cdpEval(`(function(){try{var m=window.monaco&&monaco.editor&&monaco.editor.getModels&&monaco.editor.getModels();if(m&&m.length){m[m.length-1].setValue(${JSON.stringify(code)});return 'ok'}}catch(e){}return 'no'})()`)
-    if (set !== 'ok') { try { await navigator.clipboard.writeText(code) } catch {} }
-    await sleep(450)
-    const add = await cdpEval(`(function(){var b=[...document.querySelectorAll('button,[role="button"]')].find(function(e){return /add to chart|update on chart|create new/i.test(e.textContent||'')});if(b){var r=b.getBoundingClientRect();return r.width?{x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)}:null}return null})()`)
-    if (add) { await cdp('click', add); await sleep(1300); return { summary: set === 'ok' ? 'pasted code + clicked Add to chart' : 'editor model not reachable (copied to clipboard) + clicked Add to chart' } }
-    return { summary: set === 'ok' ? 'pasted code (no Add-to-chart button found — call find "add to chart")' : 'copied to clipboard; open Pine editor and paste' }
+    const tab = await cdpEval(`(function(){var els=[].slice.call(document.querySelectorAll('button,[role="tab"],[data-name],[class*="tab"]'));var c=els.filter(function(e){var s=((e.textContent||'')+' '+((e.getAttribute&&e.getAttribute('data-name'))||'')+' '+((e.getAttribute&&e.getAttribute('aria-label'))||'')).toLowerCase();return /pine\\s*editor|pine_editor|\\bpine\\b/.test(s)}).filter(function(e){var r=e.getBoundingClientRect();return r.width&&r.height&&r.top<innerHeight+40});if(c.length){var r=c[0].getBoundingClientRect();return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)})}return ''})()`)
+    if (tab) { try { const p = JSON.parse(tab); await cdp('click', p); await sleep(1300) } catch {} }
+    let ready = false
+    for (let i = 0; i < 14; i++) { const n = await cdpEval(`(window.monaco&&monaco.editor&&monaco.editor.getModels?monaco.editor.getModels().length:0)`); if (n) { ready = true; break } await sleep(450) }
+    if (!ready) return { summary: 'could not open the Pine editor — open the bottom panel’s “Pine Editor” tab once, then ask again' }
+    const set = await cdpEval(`(function(c){try{var ms=monaco.editor.getModels();if(!ms.length)return 'no';ms[ms.length-1].setValue(c);return 'ok'}catch(e){return 'err:'+(e&&e.message||e)}})(${JSON.stringify(code)})`)
+    if (set !== 'ok') { try { await navigator.clipboard.writeText(code) } catch {} ; return { summary: 'opened Pine editor but couldn’t inject the code (copied to clipboard — paste with Ctrl+V, then Add to chart)' } }
+    await sleep(500)
+    const add = await cdpEval(`(function(){var b=[].slice.call(document.querySelectorAll('[data-name="add-script-to-chart"],button,[role="button"]')).filter(function(e){var s=((e.textContent||'')+' '+((e.getAttribute&&e.getAttribute('data-name'))||'')).toLowerCase();return /add to chart|update on chart|add-script-to-chart|apply to chart/.test(s)}).filter(function(e){var r=e.getBoundingClientRect();return r.width&&r.height})[0];if(b){var r=b.getBoundingClientRect();return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)})}return ''})()`)
+    if (add) { try { const p = JSON.parse(add); await cdp('click', p); await sleep(1500) } catch {} ; return { summary: 'pasted the code into Pine editor and clicked Add/Update on chart' } }
+    return { summary: 'pasted the code into Pine editor (no “Add to chart” button found — press it manually)' }
   }
   async function tPineErrors() { const e = await cdpEval(`(function(){var sel=['[class*="errorsContainer"]','[class*="pineConsole"]','[class*="console"] [class*="error"]','[class*="errorTooltip"]'];for(var s of sel){var el=document.querySelector(s);if(el&&/error|line\\s*\\d/i.test(el.textContent||''))return el.textContent.trim().slice(0,260)}return ''})()`); return { summary: e ? ('compiler error → ' + e) : 'compiled clean / no errors' } }
 
@@ -80,10 +121,11 @@
       while (steps < MAX) {
         let shot = null
         try { const s = await cdp('shot'); shot = s.ok ? (s.data || null) : null } catch {}
+        let ui = ''; try { ui = (await uiSnapshot()) || '' } catch {}
         const q = detectQuote()
         let r
         try {
-          const res = await fetch(API.replace(/\/$/, '') + '/api/copilot/step', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goal, symbol: q.symbol, price: q.price, timeframe: detectTimeframe(), log, shot, steps }) })
+          const res = await fetch(API.replace(/\/$/, '') + '/api/copilot/step', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goal, symbol: q.symbol, price: q.price, timeframe: detectTimeframe(), ui, log, shot, steps }) })
           r = await res.json()
         } catch { endStatus(st); say('Lost the brain connection — check the API URL (⚙).', 'bot'); break }
         if (r.done) { endStatus(st); const m = r.say || (r.thought || 'Done.'); say(m, 'bot'); speakOn && speak(m); break }
@@ -142,7 +184,7 @@
         .settings{ position:absolute; inset:0; background:#070912; padding:16px; display:none; flex-direction:column; gap:12px; z-index:5 } .settings.show{ display:flex } .settings label{ font-size:12px;color:#9aa3c8 }
       </style>
       <div class="panel" id="yn-panel">
-        <div class="hdr" id="yn-hdr"><span class="dot"></span><span class="title">YN Copilot</span><span class="ver">AGENT v4.1</span><span class="sym" id="yn-sym"></span><button class="gear" id="yn-gear">⚙</button><button class="x" id="yn-x">✕</button></div>
+        <div class="hdr" id="yn-hdr"><span class="dot"></span><span class="title">YN Copilot</span><span class="ver">AGENT v4.2</span><span class="sym" id="yn-sym"></span><button class="gear" id="yn-gear">⚙</button><button class="x" id="yn-x">✕</button></div>
         <div class="log" id="yn-log"></div>
         <div class="row"><span class="chip" data-act="analyze">Analyze</span><span class="chip" data-act="levels">Mark levels</span><span class="chip" data-act="indicator">Build indicator</span><span class="chip" data-act="routine">＋ Routine</span><span class="speak" id="yn-speak">🔊 speak</span></div>
         <div class="in"><input id="yn-input" placeholder="Tell the agent what to do…" /><button class="mic" id="yn-mic">🎤</button><button class="send" id="yn-send">➤</button></div>
