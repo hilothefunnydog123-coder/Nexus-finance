@@ -198,6 +198,91 @@ function RegimeGrailPopup() {
   )
 }
 
+function CopilotPopup() {
+  const [show, setShow] = useState(false)
+  const [closing, setClosing] = useState(false)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('copilotPopupDismissed')) return
+    const t = setTimeout(() => setShow(true), 7200) // after the Grail card so they don't pop together
+    return () => clearTimeout(t)
+  }, [])
+  const dismiss = (e?: React.MouseEvent) => {
+    e?.preventDefault()
+    e?.stopPropagation()
+    setClosing(true)
+    try { sessionStorage.setItem('copilotPopupDismissed', '1') } catch {}
+    setTimeout(() => setShow(false), 420)
+  }
+  if (!show) return null
+  const candles: [number, number, boolean][] = [[30, 18, true], [44, 26, false], [22, 40, true], [54, 30, true], [34, 58, false], [60, 44, true], [40, 72, true], [50, 60, false]]
+  return (
+    <>
+      <style>{`
+        @keyframes coPopIn { 0%{opacity:0;transform:translateY(46px) translateX(-24px) scale(.88)} 100%{opacity:1;transform:none} }
+        @keyframes coPopOut { 0%{opacity:1;transform:none} 100%{opacity:0;transform:translateY(34px) scale(.9)} }
+        @keyframes coAura { to{ transform:rotate(360deg) } }
+        @keyframes coBreathe { 0%,100%{ transform:scale(1); box-shadow:0 0 8px rgba(16,214,147,.7) } 50%{ transform:scale(1.25); box-shadow:0 0 16px rgba(31,107,255,.9) } }
+        @keyframes coScan { 0%{ transform:translateX(-120%) } 100%{ transform:translateX(320%) } }
+        @keyframes coLevel { 0%,100%{ opacity:.55; box-shadow:0 0 10px rgba(52,211,153,.4) } 50%{ opacity:1; box-shadow:0 0 18px rgba(52,211,153,.8) } }
+        .coPop{ animation: coPopIn .62s cubic-bezier(.16,1,.3,1) both; transition: transform .3s ease }
+        .coPop.closing{ animation: coPopOut .42s ease forwards }
+        .coPop:hover{ transform: translateY(-5px) }
+        .coPop:hover .coAura{ opacity:.95 }
+        .coAura{ position:absolute; inset:-60%; z-index:0; background:conic-gradient(from 0deg,#3b6bff,#10d693,#8b5bff,#3b6bff); animation:coAura 9s linear infinite; opacity:.62; filter:blur(13px) }
+        @media(max-width:819px){ .coPop{ display:none!important } }
+      `}</style>
+      <div className={`coPop${closing ? ' closing' : ''}`} style={{ position: 'fixed', left: 24, bottom: 92, zIndex: 249, width: 332, borderRadius: 19, overflow: 'hidden', padding: 1.5, boxShadow: '0 24px 60px rgba(0,0,0,.55)' }}>
+        <div className="coAura" />
+        <div style={{ position: 'relative', zIndex: 1, borderRadius: 17, overflow: 'hidden', background: 'linear-gradient(180deg,#0b0f1e,#070912)' }}>
+          <button onClick={dismiss} aria-label="Dismiss" style={{ position: 'absolute', top: 9, right: 9, zIndex: 4, width: 26, height: 26, borderRadius: 8, border: 'none', background: 'rgba(0,0,0,.5)', color: '#cdd6ff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+            <X size={14} />
+          </button>
+          <Link href="/copilot/desktop" style={{ textDecoration: 'none', display: 'block' }}>
+            {/* mini chart cockpit */}
+            <div style={{ position: 'relative', height: 124, overflow: 'hidden', background: 'radial-gradient(120% 90% at 50% 0%, #0e1430, #060810)', borderBottom: '1px solid rgba(31,59,255,.18)' }}>
+              <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px)', backgroundSize: '26px 22px' }} />
+              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 96, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 7, padding: '0 16px' }}>
+                {candles.map(([body, base, up], i) => (
+                  <div key={i} style={{ width: 8, position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: '50%', bottom: base, transform: 'translateX(-50%)', width: 1.5, height: body + 14, background: up ? 'rgba(52,211,153,.6)' : 'rgba(255,106,138,.6)' }} />
+                    <div style={{ height: body, marginBottom: base, borderRadius: 2, background: up ? 'linear-gradient(#34d399,#10b981)' : 'linear-gradient(#ff6a8a,#e8456a)', boxShadow: up ? '0 0 8px rgba(52,211,153,.35)' : '0 0 8px rgba(255,106,138,.3)' }} />
+                  </div>
+                ))}
+              </div>
+              {/* drawn support level */}
+              <div style={{ position: 'absolute', left: 12, right: 12, top: 64, height: 0, borderTop: '1.5px dashed #34d399', animation: 'coLevel 2.6s ease-in-out infinite' }} />
+              <div style={{ position: 'absolute', right: 12, top: 55, fontFamily: 'ui-monospace,monospace', fontSize: 9, fontWeight: 800, color: '#04140c', background: '#34d399', borderRadius: 5, padding: '2px 6px', boxShadow: '0 0 12px rgba(52,211,153,.6)' }}>20,140</div>
+              {/* scan shimmer */}
+              <div aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, width: 60, background: 'linear-gradient(90deg,transparent,rgba(124,156,255,.16),transparent)', animation: 'coScan 4.6s linear infinite' }} />
+              {/* agent chat bubble */}
+              <div style={{ position: 'absolute', left: 12, top: 12, display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'Inter,system-ui,sans-serif', fontSize: 10.5, fontWeight: 600, color: '#cdd6ff', background: 'rgba(8,10,20,.78)', border: '1px solid rgba(31,59,255,.3)', borderRadius: 9, padding: '5px 9px', backdropFilter: 'blur(6px)' }}>
+                <span style={{ width: 7, height: 7, borderRadius: 99, background: 'radial-gradient(circle at 30% 30%,#7fffcf,#10d693 45%,#1f3bff)', animation: 'coBreathe 2.4s ease-in-out infinite' }} />
+                drawing support…
+              </div>
+            </div>
+            {/* copy */}
+            <div style={{ padding: '12px 16px 16px' }}>
+              <div style={{ fontFamily: 'ui-monospace,monospace', fontSize: 9, fontWeight: 800, letterSpacing: '.16em', color: '#7c9cff', marginBottom: 7 }}>⌥Y · NEW · LIVES IN TRADINGVIEW</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#eaf0ff', letterSpacing: '-.02em', lineHeight: 1.14, marginBottom: 11 }}>An AI agent, right on your chart</div>
+              <div style={{ display: 'flex', gap: 7, marginBottom: 13 }}>
+                {[['👁', 'SEES'], ['📐', 'DRAWS'], ['⚡', 'CODES PINE']].map(([ic, l]) => (
+                  <div key={l} style={{ flex: 1, background: 'rgba(31,59,255,.09)', border: '1px solid rgba(31,59,255,.22)', borderRadius: 9, padding: '8px 4px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 14, lineHeight: 1 }}>{ic}</div>
+                    <div style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: '.08em', color: '#8fa0d8', marginTop: 5, fontFamily: 'ui-monospace,monospace' }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, fontSize: 13, fontWeight: 800, color: '#04140c', background: 'linear-gradient(135deg,#1f3bff,#34d399)', borderRadius: 10, padding: '11px' }}>
+                Get the Copilot <ArrowRight size={15} />
+              </div>
+            </div>
+          </Link>
+        </div>
+      </div>
+    </>
+  )
+}
+
 export default function Landing() {
   const [menu, setMenu] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -274,6 +359,7 @@ export default function Landing() {
       <ColdOpen />
       <WelcomeFunnel />
       <RegimeGrailPopup />
+      <CopilotPopup />
       <style>{`
         @keyframes mq{to{transform:translateX(-50%)}}
         @keyframes grid-drift{to{background-position:48px 48px}}
