@@ -60,6 +60,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         else if (msg.cmd === 'move') { await send(tabId, 'Input.dispatchMouseEvent', { type: 'mouseMoved', x: msg.x, y: msg.y }); sendResponse({ ok: true }) }
         else if (msg.cmd === 'key') { await realKey(tabId, msg); sendResponse({ ok: true }) }
         else if (msg.cmd === 'eval') { sendResponse({ ok: true, value: await evalp(tabId, msg.expr) }) }
+        else if (msg.cmd === 'type') { await send(tabId, 'Input.insertText', { text: String(msg.text || '') }); sendResponse({ ok: true }) }
+        else if (msg.cmd === 'shot') { const r = await send(tabId, 'Page.captureScreenshot', { format: 'jpeg', quality: 42 }); sendResponse({ ok: true, data: r?.data || null }) }
         else if (msg.cmd === 'detach') { if (attached.has(tabId)) { await chrome.debugger.detach({ tabId }); attached.delete(tabId) } sendResponse({ ok: true }) }
         else sendResponse({ ok: false, error: 'unknown cmd' })
       } catch (e) { sendResponse({ ok: false, error: String(e?.message || e) }) }
