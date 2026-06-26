@@ -3,7 +3,7 @@
   "name": "YN Copilot for TradingView",
   "version": "0.1.0",
   "description": "An AI trading copilot that lives in your browser and wakes up inside TradingView. Talk or type to it — it draws levels, points out key structure, and writes indicators.",
-  "permissions": ["storage", "scripting", "activeTab", "tabs"],
+  "permissions": ["storage", "scripting", "activeTab", "tabs", "debugger"],
   "host_permissions": [
     "*://*.tradingview.com/*",
     "https://ynfinance.org/*",

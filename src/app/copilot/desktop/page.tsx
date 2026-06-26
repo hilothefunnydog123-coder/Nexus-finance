@@ -12,9 +12,9 @@ const STEPS = [
 ]
 const DOES = [
   ['🎙️', 'Talk or type to it', 'Speak (🎤) or type. It can speak its read back to you.'],
-  ['📏', 'Draws your levels', 'PDH/PDL, EMAs, supply/demand — auto-placed at real prices, no calibration.'],
+  ['📏', 'Draws NATIVE lines', 'Real clicks place TradingView’s own horizontal lines at exact prices. No calibration.'],
   ['🧭', 'Points out structure', 'Reads trend + key zones and tells you what to watch.'],
-  ['⚡', 'Writes indicators', 'Ask for a Pine script; it generates it and pastes it into the editor.'],
+  ['⚡', 'Writes + tests indicators', 'Opens Pine editor, pastes, Adds to chart, reads errors and auto-fixes them.'],
   ['🔁', 'Runs routines', 'Save a per-symbol macro ("Morning levels") and run it on open.'],
   ['🔒', 'Only on TradingView', 'Dormant everywhere else. Local to your browser.'],
 ]
@@ -62,7 +62,7 @@ export default function CopilotDesktop() {
         </div>
 
         <div style={{ marginTop: 36, padding: 18, borderRadius: 14, border: '1px solid rgba(245,166,35,.25)', background: 'rgba(245,166,35,.06)', fontSize: 12.5, color: '#d8b78a', lineHeight: 1.65 }}>
-          <b style={{ color: '#f5a623' }}>Heads up (v1):</b> levels are auto-placed at real prices (no calibration) on an overlay the copilot controls; a native-line mode (beta) drives TradingView’s own tool. Assistive use only — please respect TradingView’s terms.
+          <b style={{ color: '#f5a623' }}>How it really works:</b> to genuinely click &amp; type in TradingView it uses Chrome’s debugger API for trusted input — so Chrome shows a “YN Copilot started debugging this browser” bar while it acts. Leave it up; that’s what lets it draw native lines and drive the Pine editor for real. Assistive use only — respect TradingView’s terms.
         </div>
       </div>
     </div>
