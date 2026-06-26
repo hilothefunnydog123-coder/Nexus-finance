@@ -6,6 +6,7 @@ import CineFX from '@/components/cinematic/CineFX'
 import AnalyticsBeacon from '@/components/AnalyticsBeacon'
 import SiteBrainProvider from '@/components/brain/SiteBrainProvider'
 import WhatItLearned from '@/components/brain/WhatItLearned'
+import MobileNav from '@/components/mobile/MobileNav'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-display' })
@@ -87,6 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SiteBrainProvider />
         {children}
         <WhatItLearned />
+        <MobileNav />
         {/* Twitter/X widget — only the Pulse tab / app use it, so load it off the
             critical path (lazyOnload). widgets.js auto-scans .twitter-timeline on load. */}
         <Script src="https://platform.twitter.com/widgets.js" strategy="lazyOnload" />

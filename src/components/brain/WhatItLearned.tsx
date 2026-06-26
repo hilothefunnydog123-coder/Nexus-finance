@@ -24,16 +24,17 @@ export default function WhatItLearned() {
 
   return (
     <>
-      <style>{`@keyframes brainPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,59,255,.5)}50%{box-shadow:0 0 0 6px rgba(31,59,255,0)}}`}</style>
+      <style>{`@keyframes brainPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,59,255,.5)}50%{box-shadow:0 0 0 6px rgba(31,59,255,0)}}
+        @media(max-width:819px){ .yn-brainpill{ bottom:calc(74px + env(safe-area-inset-bottom))!important } .yn-brainpanel{ bottom:calc(120px + env(safe-area-inset-bottom))!important } }`}</style>
 
-      <button onClick={() => setOpen((v) => !v)} aria-label="What the Site Brain learned"
+      <button onClick={() => setOpen((v) => !v)} aria-label="What the Site Brain learned" className="yn-brainpill"
         style={{ position: 'fixed', left: 18, bottom: 18, zIndex: 240, display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', borderRadius: 999, border: '1px solid rgba(31,59,255,.4)', background: 'rgba(8,10,20,.86)', color: '#cdd6ff', fontSize: 12, fontWeight: 700, fontFamily: 'ui-monospace,monospace', cursor: 'pointer', backdropFilter: 'blur(8px)', animation: open ? 'none' : 'brainPulse 3.4s ease-in-out infinite' }}>
         <span style={{ width: 8, height: 8, borderRadius: 999, background: '#1f3bff', boxShadow: '0 0 8px #1f3bff' }} />
         the net is learning
       </button>
 
       {open && (
-        <div style={{ position: 'fixed', left: 18, bottom: 64, zIndex: 241, width: 320, maxWidth: 'calc(100vw - 36px)', borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(180deg,#0b0f1e,#070912)', border: '1px solid rgba(31,59,255,.35)', boxShadow: '0 24px 60px rgba(0,0,0,.5)', color: '#dfe6ff', fontFamily: 'ui-monospace,monospace' }}>
+        <div className="yn-brainpanel" style={{ position: 'fixed', left: 18, bottom: 64, zIndex: 241, width: 320, maxWidth: 'calc(100vw - 36px)', borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(180deg,#0b0f1e,#070912)', border: '1px solid rgba(31,59,255,.35)', boxShadow: '0 24px 60px rgba(0,0,0,.5)', color: '#dfe6ff', fontFamily: 'ui-monospace,monospace' }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '.04em' }}>🧠 What the net learned about you</span>
             <button onClick={() => setOpen(false)} aria-label="Close" style={{ border: 'none', background: 'transparent', color: '#8a93b8', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}>×</button>

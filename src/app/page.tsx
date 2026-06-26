@@ -165,7 +165,7 @@ function RegimeGrailPopup() {
         .grailPop{ animation: grailPopIn .62s cubic-bezier(.16,1,.3,1) both, grailRing 4s ease-in-out infinite 1.1s; transition: transform .3s ease }
         .grailPop.closing{ animation: grailPopOut .42s ease forwards }
         .grailPop:hover{ transform: translateY(-5px) }
-        @media(max-width:560px){ .grailPop{ width:248px!important; right:12px!important; bottom:12px!important } }
+        @media(max-width:819px){ .grailPop{ display:none!important } }
       `}</style>
       <div className={`grailPop${closing ? ' closing' : ''}`} style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 250, width: 324, borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(180deg,#0a1410,#070b0e)', border: '1px solid rgba(52,211,153,.4)' }}>
         <button onClick={dismiss} aria-label="Dismiss" style={{ position: 'absolute', top: 9, right: 9, zIndex: 3, width: 26, height: 26, borderRadius: 8, border: 'none', background: 'rgba(0,0,0,.5)', color: '#cbeadd', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
