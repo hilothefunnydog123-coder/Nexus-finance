@@ -118,17 +118,17 @@ export default function CopilotDesktop() {
         <div className="heroGrid" style={{ display: 'grid', gridTemplateColumns: '1.05fr .95fr', gap: 'clamp(24px,5vw,56px)', alignItems: 'center', marginTop: 'clamp(30px,7vw,70px)' }}>
           <div className="rise">
             <div className="mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 800, letterSpacing: '.2em', color: C.green, border: `1px solid ${C.green}33`, background: `${C.green}10`, borderRadius: 99, padding: '6px 13px', marginBottom: 22 }}>
-              <span style={{ width: 7, height: 7, borderRadius: 99, background: C.green, boxShadow: `0 0 8px ${C.green}` }} /> LIVES IN YOUR BROWSER
+              <span style={{ width: 7, height: 7, borderRadius: 99, background: C.green, boxShadow: `0 0 8px ${C.green}` }} /> AGENT v4 · LIVES IN YOUR BROWSER
             </div>
             <h1 style={{ fontSize: 'clamp(38px,6.6vw,68px)', fontWeight: 900, letterSpacing: '-2.5px', lineHeight: 1.0, margin: '0 0 20px', background: 'linear-gradient(110deg,#fff 10%,#5b8cff 45%,#10d693 75%,#fff 110%)', backgroundSize: '200% auto', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', animation: 'shimmer 6s linear infinite' }}>
-              A co-pilot that trades the chart with you.
+              A real AI agent that trades the chart with you.
             </h1>
             <p style={{ fontSize: 'clamp(15px,1.8vw,18px)', color: '#92a3bd', lineHeight: 1.65, maxWidth: 480, marginBottom: 30 }}>
-              It wakes up inside TradingView. <b style={{ color: C.ink }}>Talk to it or type</b> — it draws native levels, writes & tests indicators, and reads the structure. Real clicks, real keystrokes, your chart.
+              It wakes up inside TradingView and <b style={{ color: C.ink }}>sees your chart</b> — then reasons step by step and does it itself: clicks the Pine editor open, pastes code, tests &amp; refines it, draws native levels. Real clicks, real keystrokes, real eyes on the screen.
             </p>
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
               <a href="/downloads/yn-copilot-tradingview.zip" download style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 16, fontWeight: 800, color: '#04140c', background: 'linear-gradient(135deg,#10d693,#5b8cff)', borderRadius: 13, padding: '15px 30px', textDecoration: 'none', boxShadow: '0 0 44px rgba(16,214,147,.4)' }}>↓ Download for Chrome / Edge</a>
-              <span className="mono" style={{ fontSize: 11.5, color: C.dim }}>Free · ~13 KB · Chromium</span>
+              <span className="mono" style={{ fontSize: 11.5, color: C.dim }}>Free · v4 agent · Chromium</span>
             </div>
           </div>
 

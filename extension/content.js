@@ -122,6 +122,7 @@
           background:linear-gradient(180deg,#0b0f1e,#070912); color:#dfe6ff; border:1px solid rgba(31,59,255,.4); border-radius:16px; box-shadow:0 24px 70px rgba(0,0,0,.55); display:flex; flex-direction:column; font-family:ui-monospace,Menlo,monospace; z-index:2147483600 }
         .hdr{ display:flex; align-items:center; gap:8px; padding:11px 13px; border-bottom:1px solid rgba(255,255,255,.08); cursor:move; user-select:none }
         .dot{ width:8px;height:8px;border-radius:99px;background:#10b981;box-shadow:0 0 8px #10b981 } .title{ font-weight:800; font-size:13px } .sym{ margin-left:auto; font-size:11px; color:#7e8db5 }
+        .ver{ font-size:9px; font-weight:800; letter-spacing:.06em; color:#86f0c0; background:rgba(16,185,129,.14); border:1px solid rgba(16,185,129,.3); border-radius:5px; padding:2px 5px }
         .gear,.x{ background:none;border:none;color:#7e8db5;cursor:pointer;font-size:14px;padding:2px 4px }
         .log{ flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:8px; font-family:Inter,system-ui,sans-serif }
         .msg{ font-size:13px; line-height:1.5; padding:8px 11px; border-radius:12px; max-width:92% } .bot{ background:rgba(31,59,255,.13); border:1px solid rgba(31,59,255,.22); align-self:flex-start } .me{ background:#1f3bff; color:#fff; align-self:flex-end }
@@ -134,7 +135,7 @@
         .settings{ position:absolute; inset:0; background:#070912; padding:16px; display:none; flex-direction:column; gap:12px; z-index:5 } .settings.show{ display:flex } .settings label{ font-size:12px;color:#9aa3c8 }
       </style>
       <div class="panel" id="yn-panel">
-        <div class="hdr" id="yn-hdr"><span class="dot"></span><span class="title">YN Copilot</span><span class="sym" id="yn-sym"></span><button class="gear" id="yn-gear">⚙</button><button class="x" id="yn-x">✕</button></div>
+        <div class="hdr" id="yn-hdr"><span class="dot"></span><span class="title">YN Copilot</span><span class="ver">AGENT v4</span><span class="sym" id="yn-sym"></span><button class="gear" id="yn-gear">⚙</button><button class="x" id="yn-x">✕</button></div>
         <div class="log" id="yn-log"></div>
         <div class="row"><span class="chip" data-act="analyze">Analyze</span><span class="chip" data-act="levels">Mark levels</span><span class="chip" data-act="indicator">Build indicator</span><span class="chip" data-act="routine">＋ Routine</span><span class="speak" id="yn-speak">🔊 speak</span></div>
         <div class="in"><input id="yn-input" placeholder="Tell the agent what to do…" /><button class="mic" id="yn-mic">🎤</button><button class="send" id="yn-send">➤</button></div>
