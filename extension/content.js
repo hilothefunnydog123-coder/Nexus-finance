@@ -74,11 +74,15 @@
     if (price == null || isNaN(+price)) return { summary: 'no price given to draw' }
     const cv = chartPane(); if (!cv) return { summary: 'no chart pane found' }
     const r = cv.getBoundingClientRect(), cx = Math.round(r.left + r.width * 0.5), cy = Math.round(r.top + r.height * 0.5)
-    await cdp('key', keyEvent('h', 1)); await sleep(260)                 // arm horizontal-line tool (Alt+H)
-    await cdp('click', { x: cx, y: cy }); await sleep(460)               // drop a line at center
-    const gear = await cdpEval(`(function(){var b=[].slice.call(document.querySelectorAll('[data-name="settings"],[aria-label*="ettings"],button')).filter(function(e){var s=((e.getAttribute&&e.getAttribute('data-name'))||'')+' '+((e.getAttribute&&e.getAttribute('aria-label'))||'');return /settings/i.test(s)}).filter(function(e){var q=e.getBoundingClientRect();return q.width&&q.height&&q.top<innerHeight})[0];if(b){var q=b.getBoundingClientRect();return JSON.stringify({x:Math.round(q.left+q.width/2),y:Math.round(q.top+q.height/2)})}return ''})()`)
-    if (gear) { try { const p = JSON.parse(gear); await cdp('click', p) } catch {} } else { await cdp('click', { x: cx, y: cy, clickCount: 2 }) }
-    await sleep(640)
+    // CRITICAL: click the chart first so keyboard focus leaves our panel and lands
+    // on the chart — otherwise Alt+H goes to our input box and no tool ever arms.
+    await cdp('click', { x: cx, y: cy }); await sleep(170)
+    await cdp('key', keyEvent('Escape', 0)); await sleep(120)            // clear any armed tool/selection
+    await cdp('key', keyEvent('h', 1)); await sleep(300)                 // Alt+H — arm horizontal-line tool
+    await cdp('click', { x: cx, y: cy }); await sleep(520)               // drop the line at center
+    await cdp('key', keyEvent('Escape', 0)); await sleep(240)            // exit draw mode (line stays)
+    // open THIS line's settings by double-clicking it (it's at cy), then type the exact price
+    await cdp('click', { x: cx, y: cy, clickCount: 2 }); await sleep(680)
     const set = await cdpEval(`(function(p){try{
       var dlgs=[].slice.call(document.querySelectorAll('[role="dialog"],[class*="dialog"],[data-name*="dialog"]')).filter(function(d){return d.offsetParent});
       var dlg=dlgs[dlgs.length-1]; if(!dlg) return 'nodialog';
@@ -95,7 +99,7 @@
     await cdpEval(`(function(){var b=[].slice.call(document.querySelectorAll('button')).filter(function(e){return e.offsetParent&&/^(ok|apply|save)$/i.test((e.textContent||'').trim())})[0];if(b){b.click();return 1}return 0})()`)
     await sleep(150); await cdp('key', keyEvent('Escape', 0))
     if (set === 'set') return { summary: `drew a line and set it to ${price}${args.label ? ' (' + args.label + ')' : ''}` }
-    return { summary: `placed a line at center but couldn't open its price field (${set}); it's on the chart but may not be at ${price} exactly` }
+    return { summary: `placed a line on the chart at center (couldn't reach its price field: ${set}) — it may not be exactly at ${price}` }
   }
   async function tLevels(prices) {
     if (!Array.isArray(prices) || !prices.length) return { summary: 'no prices to draw' }
@@ -132,19 +136,37 @@
     await cdpEval(`(function(){var e=[].slice.call(document.querySelectorAll('[role="menuitem"],button')).filter(function(x){return /remove drawings|clear drawings|remove all/i.test(x.textContent||'')})[0];if(e)e.click()})()`)
     return { summary: 'cleared drawings' }
   }
-  // Open the Pine editor (forcing the panel open), wait for Monaco, paste, add to chart.
+  // Open the Pine editor, focus + clear it, write the code (monaco setValue if
+  // reachable, else REAL typed input that needs no monaco), then Add to chart.
   async function tPine(code) {
+    // 1. open the Pine Editor tab/panel
     const tab = await cdpEval(`(function(){var els=[].slice.call(document.querySelectorAll('button,[role="tab"],[data-name],[class*="tab"]'));var c=els.filter(function(e){var s=((e.textContent||'')+' '+((e.getAttribute&&e.getAttribute('data-name'))||'')+' '+((e.getAttribute&&e.getAttribute('aria-label'))||'')).toLowerCase();return /pine\\s*editor|pine_editor|\\bpine\\b/.test(s)}).filter(function(e){var r=e.getBoundingClientRect();return r.width&&r.height&&r.top<innerHeight+40});if(c.length){var r=c[0].getBoundingClientRect();return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)})}return ''})()`)
-    if (tab) { try { const p = JSON.parse(tab); await cdp('click', p); await sleep(1300) } catch {} }
-    let ready = false
-    for (let i = 0; i < 14; i++) { const n = await cdpEval(`(window.monaco&&monaco.editor&&monaco.editor.getModels?monaco.editor.getModels().length:0)`); if (n) { ready = true; break } await sleep(450) }
-    if (!ready) return { summary: 'could not open the Pine editor — open the bottom panel’s “Pine Editor” tab once, then ask again' }
-    const set = await cdpEval(`(function(c){try{var ms=monaco.editor.getModels();if(!ms.length)return 'no';ms[ms.length-1].setValue(c);return 'ok'}catch(e){return 'err:'+(e&&e.message||e)}})(${JSON.stringify(code)})`)
-    if (set !== 'ok') { try { await navigator.clipboard.writeText(code) } catch {} ; return { summary: 'opened Pine editor but couldn’t inject the code (copied to clipboard — paste with Ctrl+V, then Add to chart)' } }
-    await sleep(500)
-    const add = await cdpEval(`(function(){var b=[].slice.call(document.querySelectorAll('[data-name="add-script-to-chart"],button,[role="button"]')).filter(function(e){var s=((e.textContent||'')+' '+((e.getAttribute&&e.getAttribute('data-name'))||'')).toLowerCase();return /add to chart|update on chart|add-script-to-chart|apply to chart/.test(s)}).filter(function(e){var r=e.getBoundingClientRect();return r.width&&r.height})[0];if(b){var r=b.getBoundingClientRect();return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)})}return ''})()`)
-    if (add) { try { const p = JSON.parse(add); await cdp('click', p); await sleep(1500) } catch {} ; return { summary: 'pasted the code into Pine editor and clicked Add/Update on chart' } }
-    return { summary: 'pasted the code into Pine editor (no “Add to chart” button found — press it manually)' }
+    if (tab) { try { const p = JSON.parse(tab); await cdp('click', p); await sleep(1400) } catch {} }
+    // 2. locate the code area (the monaco editor) and wait for it to render
+    let ed = null
+    for (let i = 0; i < 16; i++) {
+      ed = await cdpEval(`(function(){var t=document.querySelector('.monaco-editor .view-lines')||document.querySelector('.monaco-editor')||document.querySelector('textarea.inputarea');if(t){var r=t.getBoundingClientRect();if(r.width>120&&r.height>60)return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+Math.min(70,r.height/2))})}return ''})()`)
+      if (ed) break
+      await sleep(420)
+    }
+    if (!ed) return { summary: 'opened the bottom panel but couldn’t find the Pine code editor — click the “Pine Editor” tab once so it’s selected, then ask again' }
+    // 3. focus the editor (so keystrokes land HERE, not our panel) and clear it
+    const pt = JSON.parse(ed)
+    await cdp('click', pt); await sleep(220)
+    await cdp('key', keyEvent('a', 2)); await sleep(90)           // Ctrl+A (select all)
+    await cdp('key', keyEvent('a', 4)); await sleep(90)           // Cmd+A too (mac)
+    await cdp('key', keyEvent('Delete', 0)); await sleep(120)     // clear
+    // 4. write the code — monaco model if reachable, else type it for real
+    const set = await cdpEval(`(function(c){try{var ed=null;if(monaco&&monaco.editor){if(monaco.editor.getEditors){var es=monaco.editor.getEditors();ed=es.find(function(e){return e.hasTextFocus&&e.hasTextFocus()})||es[es.length-1]}if(ed&&ed.getModel){ed.getModel().setValue(c);return 'ok'}var ms=monaco.editor.getModels();if(ms&&ms.length){ms[ms.length-1].setValue(c);return 'ok'}}return 'nomonaco'}catch(e){return 'err:'+(e&&e.message||e)}})(${JSON.stringify(code)})`)
+    let how = 'via editor model'
+    if (set !== 'ok') { await cdp('type', { text: code }); how = 'typed in'; await sleep(400) }
+    await sleep(550)
+    // 5. add/update on chart
+    const add = await cdpEval(`(function(){var b=[].slice.call(document.querySelectorAll('[data-name="add-script-to-chart"],button,[role="button"],[class*="button"]')).filter(function(e){var s=((e.textContent||'')+' '+((e.getAttribute&&e.getAttribute('data-name'))||'')+' '+((e.getAttribute&&e.getAttribute('aria-label'))||'')).toLowerCase();return /add to chart|update on chart|add-script-to-chart|apply to chart/.test(s)}).filter(function(e){var r=e.getBoundingClientRect();return r.width&&r.height&&r.top<innerHeight})[0];if(b){var r=b.getBoundingClientRect();return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)})}return ''})()`)
+    if (add) { try { const p = JSON.parse(add); await cdp('click', p); await sleep(1600) } catch {} ; return { summary: `wrote the script (${how}) and clicked Add/Update on chart` } }
+    // fallback: TV's Add-to-chart keyboard shortcut
+    await cdp('key', keyEvent('Enter', 2)); await sleep(1200)     // Ctrl+Enter
+    return { summary: `wrote the script (${how}); couldn't find the Add-to-chart button so I sent Ctrl+Enter — check it landed` }
   }
   async function tPineErrors() { const e = await cdpEval(`(function(){var sel=['[class*="errorsContainer"]','[class*="pineConsole"]','[class*="console"] [class*="error"]','[class*="errorTooltip"]'];for(var s of sel){var el=document.querySelector(s);if(el&&/error|line\\s*\\d/i.test(el.textContent||''))return el.textContent.trim().slice(0,260)}return ''})()`); return { summary: e ? ('compiler error → ' + e) : 'compiled clean / no errors' } }
 
@@ -269,7 +291,7 @@
       <div class="panel" id="yn-panel">
         <div class="glass">
           <div class="hdr" id="yn-hdr">
-            <span class="orb"></span><span class="title">YN Copilot</span><span class="ver">AGENT v5</span>
+            <span class="orb"></span><span class="title">YN Copilot</span><span class="ver">AGENT v5.1</span>
             <span class="tick"><span class="s" id="yn-sym">—</span><b id="yn-px">·</b></span>
             <button class="hbtn" id="yn-clear" title="Clear">⌫</button><button class="hbtn" id="yn-gear" title="Settings">⚙</button><button class="hbtn" id="yn-x" title="Close">✕</button>
           </div>
