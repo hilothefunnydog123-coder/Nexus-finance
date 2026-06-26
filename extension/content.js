@@ -67,39 +67,79 @@
   // Type a string as discrete real keystrokes (for TV's interval/symbol overlays).
   async function typeKeys(s) { for (const ch of String(s)) { await cdp('key', keyEvent(ch, 0)); await sleep(45) } }
 
-  // Draw a NATIVE horizontal line at an EXACT price: drop a line at center, then
-  // type the price into its settings dialog — no fragile price-axis reading.
+  // ── price ↔ pixel mapping (read the crosshair price label on hover) ──────────
+  let priceMap = null, priceMapTs = 0
+  async function readPriceAtY(x, y) {
+    await cdp('move', { x, y }); await sleep(140)
+    return await cdpEval(`(function(Y){
+      function num(e){var t=(e.textContent||'').replace(/[,\\s]/g,'');return /^\\d+(\\.\\d+)?$/.test(t)&&t.length<14?parseFloat(t):null}
+      var cands=[];
+      ['[class*="crosshair"]','[class*="price-axis"]','[class*="priceAxis"]','[class*="axisLabel"]','[class*="currency"]','[class*="highlight"]'].forEach(function(s){[].slice.call(document.querySelectorAll(s)).forEach(function(e){cands.push(e)})});
+      [].slice.call(document.querySelectorAll('span,div')).forEach(function(e){var r=e.getBoundingClientRect();if(r.left>innerWidth-120&&r.width<100&&r.height<26&&r.height>8)cands.push(e)});
+      var best=null,bd=24;
+      for(var i=0;i<cands.length;i++){var v=num(cands[i]);if(v==null)continue;var r=cands[i].getBoundingClientRect();var cy=r.top+r.height/2;var d=Math.abs(cy-Y);if(d<bd){bd=d;best=v}}
+      return best;
+    })(${y})`)
+  }
+  async function buildPriceMap() {
+    const cv = chartPane(); if (!cv) return false
+    const r = cv.getBoundingClientRect(), x = Math.round(r.right - 46)
+    const yA = Math.round(r.top + r.height * 0.26), yB = Math.round(r.top + r.height * 0.74)
+    const pA = await readPriceAtY(x, yA), pB = await readPriceAtY(x, yB)
+    if (pA != null && pB != null && pA !== pB) { priceMap = { yA, pA, yB, pB }; priceMapTs = Date.now(); return true }
+    return false
+  }
+  function yForPrice(P) { if (!priceMap) return null; const { yA, pA, yB, pB } = priceMap; return Math.round(yA + (P - pA) * (yB - yA) / (pB - pA)) }
+
+  // Draw a NATIVE horizontal line at an EXACT price. Primary: compute the Y pixel
+  // from a crosshair-read price map and click there (no dialog). Fallback: place
+  // at center and set the price by really typing into the line's dialog field.
   async function tDraw(args) {
-    const price = args.price
-    if (price == null || isNaN(+price)) return { summary: 'no price given to draw' }
+    const price = +args.price
+    if (args.price == null || isNaN(price)) return { summary: 'no price given to draw' }
     const cv = chartPane(); if (!cv) return { summary: 'no chart pane found' }
     const r = cv.getBoundingClientRect(), cx = Math.round(r.left + r.width * 0.5), cy = Math.round(r.top + r.height * 0.5)
-    // CRITICAL: click the chart first so keyboard focus leaves our panel and lands
-    // on the chart — otherwise Alt+H goes to our input box and no tool ever arms.
-    await cdp('click', { x: cx, y: cy }); await sleep(170)
-    await cdp('key', keyEvent('Escape', 0)); await sleep(120)            // clear any armed tool/selection
-    await cdp('key', keyEvent('h', 1)); await sleep(300)                 // Alt+H — arm horizontal-line tool
-    await cdp('click', { x: cx, y: cy }); await sleep(520)               // drop the line at center
-    await cdp('key', keyEvent('Escape', 0)); await sleep(240)            // exit draw mode (line stays)
-    // open THIS line's settings by double-clicking it (it's at cy), then type the exact price
+    // CRITICAL: click the chart first so keyboard focus leaves our panel (else Alt+H
+    // goes to our input box and no tool arms).
+    await cdp('click', { x: cx, y: cy }); await sleep(150)
+    await cdp('key', keyEvent('Escape', 0)); await sleep(110)
+    // refresh the price↔pixel map (read crosshair prices), then place at the exact Y
+    if (!priceMap || Date.now() - priceMapTs > 14000) await buildPriceMap()
+    if (priceMap) {
+      const y = yForPrice(price)
+      if (y != null && y > r.top + 8 && y < r.bottom - 8) {
+        await cdp('key', keyEvent('h', 1)); await sleep(280)             // arm horizontal line
+        await cdp('click', { x: Math.round(r.left + r.width * 0.5), y }); await sleep(360)  // place at exact price Y
+        await cdp('key', keyEvent('Escape', 0)); await sleep(120)
+        return { summary: `drew a line at ${price}${args.label ? ' (' + args.label + ')' : ''}` }
+      }
+    }
+    // FALLBACK (no map, or price off-screen): place at center, open dialog, REALLY
+    // type the price into its field.
+    await cdp('key', keyEvent('h', 1)); await sleep(300)
+    await cdp('click', { x: cx, y: cy }); await sleep(500)
+    await cdp('key', keyEvent('Escape', 0)); await sleep(220)
     await cdp('click', { x: cx, y: cy, clickCount: 2 }); await sleep(680)
-    const set = await cdpEval(`(function(p){try{
+    const field = await cdpEval(`(function(){try{
       var dlgs=[].slice.call(document.querySelectorAll('[role="dialog"],[class*="dialog"],[data-name*="dialog"]')).filter(function(d){return d.offsetParent});
-      var dlg=dlgs[dlgs.length-1]; if(!dlg) return 'nodialog';
+      var dlg=dlgs[dlgs.length-1]; if(!dlg) return '';
       var ins=[].slice.call(dlg.querySelectorAll('input')).filter(function(i){return i.offsetParent&&i.type!=='checkbox'&&i.type!=='radio'});
       var f=ins.filter(function(i){return /^[\\d.,\\s-]+$/.test((i.value||'').trim())})[0]||ins[0];
-      if(!f) return 'nofield';
-      var d=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value');
-      f.focus(); if(d&&d.set){d.set.call(f,String(p))} else {f.value=String(p)}
-      f.dispatchEvent(new Event('input',{bubbles:true})); f.dispatchEvent(new Event('change',{bubbles:true}));
-      return 'set';
-    }catch(e){return 'err:'+(e&&e.message||e)}})(${JSON.stringify(+price)})`)
-    await sleep(220)
-    await cdp('key', keyEvent('Enter', 0)); await sleep(200)
-    await cdpEval(`(function(){var b=[].slice.call(document.querySelectorAll('button')).filter(function(e){return e.offsetParent&&/^(ok|apply|save)$/i.test((e.textContent||'').trim())})[0];if(b){b.click();return 1}return 0})()`)
-    await sleep(150); await cdp('key', keyEvent('Escape', 0))
-    if (set === 'set') return { summary: `drew a line and set it to ${price}${args.label ? ' (' + args.label + ')' : ''}` }
-    return { summary: `placed a line on the chart at center (couldn't reach its price field: ${set}) — it may not be exactly at ${price}` }
+      if(!f) return '';
+      var r=f.getBoundingClientRect(); return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)});
+    }catch(e){return ''}})()`)
+    if (field) {
+      try { const f = JSON.parse(field); await cdp('click', f); await sleep(140) } catch {}
+      await cdp('key', keyEvent('a', 2)); await cdp('key', keyEvent('a', 4)); await sleep(70)
+      await cdp('key', keyEvent('Delete', 0)); await sleep(90)
+      await cdp('type', { text: String(price) }); await sleep(160)
+      await cdp('key', keyEvent('Enter', 0)); await sleep(220)
+      await cdpEval(`(function(){var b=[].slice.call(document.querySelectorAll('button')).filter(function(e){return e.offsetParent&&/^(ok|apply|save)$/i.test((e.textContent||'').trim())})[0];if(b){b.click();return 1}return 0})()`)
+      await sleep(140); await cdp('key', keyEvent('Escape', 0))
+      return { summary: `drew a line and set it to ${price}${args.label ? ' (' + args.label + ')' : ''}` }
+    }
+    await cdp('key', keyEvent('Escape', 0))
+    return { summary: `couldn't map the price scale or open the line dialog — drew one line near center but not at ${price}. (Tell me and I'll adjust how I read the axis.)` }
   }
   async function tLevels(prices) {
     if (!Array.isArray(prices) || !prices.length) return { summary: 'no prices to draw' }
@@ -291,7 +331,7 @@
       <div class="panel" id="yn-panel">
         <div class="glass">
           <div class="hdr" id="yn-hdr">
-            <span class="orb"></span><span class="title">YN Copilot</span><span class="ver">AGENT v5.1</span>
+            <span class="orb"></span><span class="title">YN Copilot</span><span class="ver">AGENT v5.2</span>
             <span class="tick"><span class="s" id="yn-sym">—</span><b id="yn-px">·</b></span>
             <button class="hbtn" id="yn-clear" title="Clear">⌫</button><button class="hbtn" id="yn-gear" title="Settings">⚙</button><button class="hbtn" id="yn-x" title="Close">✕</button>
           </div>
