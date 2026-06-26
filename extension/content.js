@@ -67,42 +67,46 @@
   async function tPineErrors() { const e = await cdpEval(`(function(){var sel=['[class*="errorsContainer"]','[class*="pineConsole"]','[class*="console"] [class*="error"]','[class*="errorTooltip"]'];for(var s of sel){var el=document.querySelector(s);if(el&&/error|line\\s*\\d/i.test(el.textContent||''))return el.textContent.trim().slice(0,260)}return ''})()`); return { summary: e ? ('compiler error → ' + e) : 'compiled clean / no errors' } }
 
   // ════════════════════ THE AGENT LOOP ════════════════════════════════════════
+  // A fresh screenshot is captured and sent on EVERY step, so the brain always
+  // sees the chart — no wasted "look" round-trips. One status line, not a wall of
+  // narration; only the final answer becomes a real message.
   async function runAgent(goal) {
-    if (running) { say('Hang on — finishing the last task first.', 'bot'); return }
+    if (running) { setStatus('still on the last task…'); return }
     running = true
     await warnDebugger()
-    const log = []; let shot = null, steps = 0; const MAX = 18
+    const st = startStatus('Looking at the chart…')
+    const log = []; let steps = 0; const MAX = 12
     try {
       while (steps < MAX) {
+        let shot = null
+        try { const s = await cdp('shot'); shot = s.ok ? (s.data || null) : null } catch {}
         const q = detectQuote()
         let r
         try {
           const res = await fetch(API.replace(/\/$/, '') + '/api/copilot/step', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goal, symbol: q.symbol, price: q.price, timeframe: detectTimeframe(), log, shot, steps }) })
           r = await res.json()
-        } catch { say('Lost the brain connection — check the API URL (⚙).', 'bot'); break }
-        shot = null
-        if (r.thought) say('· ' + r.thought, 'bot')
-        if (r.done) { if (r.say) { say(r.say, 'bot'); speakOn && speak(r.say) } break }
+        } catch { endStatus(st); say('Lost the brain connection — check the API URL (⚙).', 'bot'); break }
+        if (r.done) { endStatus(st); const m = r.say || (r.thought || 'Done.'); say(m, 'bot'); speakOn && speak(m); break }
+        if (r.thought) setStatus(r.thought)
         const tool = r.tool, args = r.args || {}
         let out = { summary: 'unknown tool: ' + tool }
         try {
-          if (tool === 'look') { out = await tLook(); shot = out.shot }
-          else if (tool === 'chart') out = tChart()
-          else if (tool === 'find') out = await tFind(args.q)
+          if (tool === 'find') out = await tFind(args.q)
           else if (tool === 'click') out = await tClick(args)
           else if (tool === 'type') out = await tType(args.text)
           else if (tool === 'key') out = await tKey(args.combo)
           else if (tool === 'drawLevel') out = await tDraw(args)
           else if (tool === 'pine') out = await tPine(args.code)
           else if (tool === 'pineErrors') out = await tPineErrors()
-          else if (tool === 'say') { if (args.text) say(args.text, 'bot'); out = { summary: 'told the user' } }
+          else if (tool === 'say') { if (args.text) setStatus(args.text); out = { summary: 'noted' } }
+          else if (tool === 'look' || tool === 'chart') out = { summary: 'you already see a fresh screenshot every step' }
         } catch (e) { out = { summary: 'tool error: ' + String(e?.message || e).slice(0, 90) } }
         log.push({ tool, args, result: out.summary })
         steps++
-        await sleep(220)
+        await sleep(70)
       }
-      if (steps >= MAX) say('Reached my step limit. Say “keep going” if it isn’t finished.', 'bot')
-    } finally { running = false }
+      if (steps >= MAX) { endStatus(st); say('That took too many steps — try a more specific ask.', 'bot') }
+    } finally { running = false; endStatus(st) }
   }
 
   function speak(t) { try { const u = new SpeechSynthesisUtterance(t.slice(0, 240)); u.rate = 1.05; speechSynthesis.cancel(); speechSynthesis.speak(u) } catch {} }
@@ -126,6 +130,9 @@
         .gear,.x{ background:none;border:none;color:#7e8db5;cursor:pointer;font-size:14px;padding:2px 4px }
         .log{ flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:8px; font-family:Inter,system-ui,sans-serif }
         .msg{ font-size:13px; line-height:1.5; padding:8px 11px; border-radius:12px; max-width:92% } .bot{ background:rgba(31,59,255,.13); border:1px solid rgba(31,59,255,.22); align-self:flex-start } .me{ background:#1f3bff; color:#fff; align-self:flex-end }
+        .status{ display:flex; align-items:center; gap:9px; color:#9db0ff; font-style:italic }
+        .spin{ width:13px; height:13px; border-radius:99px; border:2px solid rgba(157,176,255,.25); border-top-color:#9db0ff; animation:ynspin .7s linear infinite; flex:none }
+        @keyframes ynspin{ to{ transform:rotate(360deg) } }
         .row{ display:flex; gap:6px; padding:8px 10px; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,.06) }
         .chip{ font-size:11px; color:#cdd6ff; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:99px; padding:5px 10px; cursor:pointer } .chip:hover{ border-color:rgba(31,59,255,.5) }
         .speak{ font-size:11px;color:#7e8db5;cursor:pointer } .speak.on{ color:#10b981 }
@@ -135,7 +142,7 @@
         .settings{ position:absolute; inset:0; background:#070912; padding:16px; display:none; flex-direction:column; gap:12px; z-index:5 } .settings.show{ display:flex } .settings label{ font-size:12px;color:#9aa3c8 }
       </style>
       <div class="panel" id="yn-panel">
-        <div class="hdr" id="yn-hdr"><span class="dot"></span><span class="title">YN Copilot</span><span class="ver">AGENT v4</span><span class="sym" id="yn-sym"></span><button class="gear" id="yn-gear">⚙</button><button class="x" id="yn-x">✕</button></div>
+        <div class="hdr" id="yn-hdr"><span class="dot"></span><span class="title">YN Copilot</span><span class="ver">AGENT v4.1</span><span class="sym" id="yn-sym"></span><button class="gear" id="yn-gear">⚙</button><button class="x" id="yn-x">✕</button></div>
         <div class="log" id="yn-log"></div>
         <div class="row"><span class="chip" data-act="analyze">Analyze</span><span class="chip" data-act="levels">Mark levels</span><span class="chip" data-act="indicator">Build indicator</span><span class="chip" data-act="routine">＋ Routine</span><span class="speak" id="yn-speak">🔊 speak</span></div>
         <div class="in"><input id="yn-input" placeholder="Tell the agent what to do…" /><button class="mic" id="yn-mic">🎤</button><button class="send" id="yn-send">➤</button></div>
@@ -167,6 +174,11 @@
   function send() { const t = input.value.trim(); if (!t) return; say(t, 'me'); input.value = ''; window.__ynLastGoal = t; if (/^run\s+/i.test(t)) return runRoutine(t.replace(/^run\s+/i, '').trim()); runAgent(t) }
   function setMic(on) { const m = root && root.getElementById('yn-mic'); if (m) m.classList.toggle('on', on) }
   function say(text, who) { if (!root) return; const d = document.createElement('div'); d.className = 'msg ' + (who === 'me' ? 'me' : 'bot'); d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight }
+  // One live loader bubble (spinner + updating text), removed when the answer lands.
+  let statusEl = null
+  function startStatus(text) { if (!root) return null; endStatus(statusEl); const d = document.createElement('div'); d.className = 'msg bot status'; d.innerHTML = '<span class="spin"></span><span class="stxt"></span>'; d.querySelector('.stxt').textContent = text || 'Working…'; log.appendChild(d); log.scrollTop = log.scrollHeight; statusEl = d; return d }
+  function setStatus(text) { const d = statusEl; if (!d) return; const s = d.querySelector('.stxt'); if (s) s.textContent = text; log.scrollTop = log.scrollHeight }
+  function endStatus(d) { const t = d || statusEl; if (t && t.parentNode) t.parentNode.removeChild(t); if (t === statusEl || !d) statusEl = null }
 
   let open = false
   function toggle(force) { open = force == null ? !open : force; if (open && !host) build(); if (host) host.style.display = open ? 'block' : 'none'; const lh = document.getElementById('yn-launch-host'); if (lh) lh.style.display = open ? 'none' : 'block' }

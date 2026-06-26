@@ -9,38 +9,48 @@ const GEMINI = process.env.GEMINI_API_KEY || ''
 
 // The agent's tool set. The extension executes these in the page via the Chrome
 // debugger (real trusted input). The model picks ONE per step.
-const SYSTEM = `You are YN Copilot — a REAL autonomous agent operating a human's TradingView chart. You perceive the page (you can take screenshots and read it), then ACT one tool at a time, observe the result, and continue until the user's goal is achieved. Behave like a careful human analyst driving the UI.
+const SYSTEM = `You are YN Copilot — a real autonomous agent operating a human's TradingView chart. Behave like a sharp, fast analyst driving the UI.
 
-You return ONLY JSON for the NEXT single step:
-{"thought": "<one short sentence of what you're doing & why>",
- "tool": "<one tool name>",
- "args": { ... }}
-…or, when the goal is fully done:
-{"thought":"…","done":true,"say":"<final message to the user>"}
+IMPORTANT: A FRESH SCREENSHOT of the user's chart is attached to EVERY step, and you are given the live symbol, price and timeframe as text every step. So you can ALWAYS see and read the chart — you NEVER need a tool just to "look" or "read". Use what you already see.
 
-TOOLS:
-- look {}                      → take a screenshot so you can SEE the current chart/page. Use it whenever you're unsure of the state (before clicking something new, after an action, to read the chart).
-- chart {}                     → returns {symbol, price, timeframe} read off the chart.
-- find {q}                     → returns visible clickable elements whose text/label matches q, with their text. Use to locate buttons/tabs/menus before clicking.
-- click {text}                 → click the on-screen element whose visible text or aria-label best matches "text" (e.g. "Pine Editor", "Add to chart", a menu item). Prefer this over coordinates.
-- click {x,y}                  → fallback: click exact viewport pixel coords (only if you got them from a screenshot).
-- type {text}                  → type text into whatever field is focused (real keystrokes).
-- key {combo}                  → press a key combo: "Alt+H" (horizontal line), "Escape", "Ctrl+Enter", "Enter", "Delete".
-- drawLevel {price, label?}    → draw a NATIVE TradingView horizontal line at an exact price (handles the tool + click for you).
-- pine {code, name?}           → open the Pine Editor, paste this Pine v5 code, and click Add to chart. (Composite — reliable.)
-- pineErrors {}                → read the Pine compiler console. After a pine() call, ALWAYS check this; if there's an error, fix the code and call pine() again (up to 3 tries).
-- say {text}                   → tell the user something mid-task (progress, an observation).
-- done {say}                   → the goal is achieved; give the user a final summary.
+Return ONLY JSON for the NEXT single step:
+{"thought":"<=6 words", "tool":"<name>", "args":{...}}
+…or, when finished:
+{"thought":"<=6 words","done":true,"say":"<the full answer to the user>"}
+
+FINISH FAST:
+- If the goal is to ANALYZE / READ / DESCRIBE the chart (trend, key levels, what to watch, "what do you see"), you ALREADY see it and have the price — answer IMMEDIATELY with done on step 1. Do not take any tool steps first.
+- Only use action tools when the goal requires CHANGING the chart (drawing a line, writing/adding Pine, clicking a UI control).
+
+ACTION TOOLS (you already perceive — these only DO things):
+- find {q}                  -> list visible clickable elements matching q (to locate a button/tab before clicking).
+- click {text} | {x,y}      -> click element by visible text/aria-label (preferred), or exact viewport pixel from the screenshot.
+- type {text}               -> type into the focused field (real keystrokes).
+- key {combo}               -> "Alt+H", "Escape", "Ctrl+Enter", "Enter", "Delete".
+- drawLevel {price, label?} -> draw a NATIVE horizontal line at an exact price (handles tool + click).
+- pine {code, name?}        -> open the Pine Editor, paste Pine v5 code, click Add to chart.
+- pineErrors {}             -> read the Pine compiler console; after pine(), check it and refine until clean (<=3 tries).
+- say {text}                -> short progress note (use rarely).
+- done {say}                -> finished; give the user the complete answer.
 
 RULES:
-- ONE tool per step. Think, act, observe, repeat.
-- Use look()/chart()/find() to PERCEIVE before you assume. Don't click blindly.
-- To open the Pine editor: it's a tab/triangle at the bottom labelled "Pine Editor" — find it, click it. If a panel is collapsed, look() and expand it.
-- After writing an indicator, verify it compiled with pineErrors() and refine until clean.
-- NEVER invent prices — only draw prices from chart()/the user's request.
-- Be decisive and efficient; you have a limited number of steps.`
+- ONE tool per step. You SEE a fresh screenshot every step — NEVER emit look/chart, and never re-perceive instead of acting or answering.
+- NEVER invent prices — read them from the screenshot / the provided price.
+- The Pine editor is a tab/triangle at the bottom labelled "Pine Editor" — find it, click it, then pine().
+- Be decisive. Minimize steps. If you can answer, answer.`
 
 type Body = { goal?: string; symbol?: string; price?: number; timeframe?: string; log?: { tool: string; args?: unknown; result?: string }[]; shot?: string | null; steps?: number }
+
+// Models sometimes wrap JSON in ```fences``` or add stray prose. Pull the JSON out.
+function salvage(t: string): Record<string, unknown> | null {
+  if (!t) return null
+  try { return JSON.parse(t) } catch {}
+  const fenced = t.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fenced) { try { return JSON.parse(fenced[1]) } catch {} }
+  const a = t.indexOf('{'), z = t.lastIndexOf('}')
+  if (a >= 0 && z > a) { try { return JSON.parse(t.slice(a, z + 1)) } catch {} }
+  return null
+}
 
 export async function POST(req: NextRequest) {
   if (!GEMINI) return NextResponse.json({ thought: 'No LLM key configured.', done: true, say: 'Set GEMINI_API_KEY on the server to enable the agent.' }, { headers: CORS })
@@ -50,16 +60,15 @@ export async function POST(req: NextRequest) {
     const ctx = `GOAL: ${b.goal}\nCHART: symbol=${b.symbol || '?'} price=${b.price ?? '?'} timeframe=${b.timeframe || '?'}\nSTEP: ${(b.steps || 0) + 1}\nACTIONS SO FAR:\n${log.length ? log.map((l, i) => `${i + 1}. ${l.tool}(${JSON.stringify(l.args || {})}) → ${l.result || 'ok'}`).join('\n') : '(none yet)'}\n\nDecide the next step. Respond with JSON only.`
 
     const parts: ({ text: string } | { inline_data: { mime_type: string; data: string } })[] = [{ text: SYSTEM + '\n\n' + ctx }]
-    if (b.shot) parts.push({ inline_data: { mime_type: 'image/jpeg', data: b.shot } }), parts.push({ text: 'Above is the CURRENT screenshot of the user’s screen. Use it to decide.' })
+    if (b.shot) parts.push({ inline_data: { mime_type: 'image/jpeg', data: b.shot } }), parts.push({ text: 'Above is the LIVE screenshot of the chart this step. You can see it — decide from it.' })
 
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.2, maxOutputTokens: 1200, responseMimeType: 'application/json' } }),
+      body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.15, maxOutputTokens: 1400, responseMimeType: 'application/json' } }),
     })
     const j = await r.json()
-    const txt = j.candidates?.[0]?.content?.parts?.[0]?.text
-    let out
-    try { out = JSON.parse(txt) } catch { out = { thought: 'parse error', done: true, say: 'I got confused — try rephrasing the task.' } }
+    const txt = j.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const out = salvage(txt) || { thought: 'parse error', done: true, say: txt ? String(txt).slice(0, 500) : 'I got confused — try rephrasing the task.' }
     return NextResponse.json(out, { headers: CORS })
   } catch (e) {
     return NextResponse.json({ thought: 'error', done: true, say: 'Something went wrong: ' + String(e).slice(0, 100) }, { headers: CORS })
