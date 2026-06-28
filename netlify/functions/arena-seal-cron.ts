@@ -16,6 +16,18 @@ export default async function handler() {
   } catch (e) {
     console.error('[ArenaSeal] error:', e)
   }
+
+  // Then the rival AIs take their side on each sealed bout (also sealed).
+  try {
+    const res = await fetch(`${SITE_URL}/api/arena/opponents`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SECRET}` },
+    })
+    const data = await res.json()
+    console.log('[ArenaOpponents] completed:', JSON.stringify({ trade_date: data.trade_date, opponents: data.opponents, calls: data.calls }))
+  } catch (e) {
+    console.error('[ArenaOpponents] error:', e)
+  }
 }
 
 export const config: Config = {

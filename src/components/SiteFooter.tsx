@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 // One consistent, content-rich footer across the marketing site — a major cohesion/trust signal.
 const COLS: [string, [string, string][]][] = [
-  ['Product', [['AI Stock Analyzer', '/ai-stocks'], ['Stock Forecasts', '/stock'], ['Compare Stocks', '/compare'], ['Courses', '/courses'], ['Algorithms', '/algorithms'], ['AI Track Record', '/performance'], ['Intelligence Suite', '/intelligence'], ['Agent Network', '/agents']]],
+  ['Product', [['The Arena', '/arena'], ['AI Stock Analyzer', '/ai-stocks'], ['Stock Forecasts', '/stock'], ['Compare Stocks', '/compare'], ['Courses', '/courses'], ['Algorithms', '/algorithms'], ['AI Track Record', '/performance'], ['Intelligence Suite', '/intelligence'], ['Agent Network', '/agents']]],
   ['Company', [['About', '/company'], ['Affiliate Program', '/affiliates'], ['Careers', '/careers'], ['Press', '/press'], ['Investors', '/investors']]],
   ['Resources', [['How the AI Works', '/methodology'], ['Research', '/research'], ['Embed Widget', '/embed'], ['Developer API', '/developers'], ['Privacy', '/privacy'], ['Terms', '/terms']]],
 ]
