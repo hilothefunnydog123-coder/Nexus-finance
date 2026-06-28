@@ -366,9 +366,13 @@ export default function Landing() {
         @keyframes grid-drift{to{background-position:48px 48px}}
         @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
         @keyframes float-y{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+        @keyframes aurora1{0%,100%{transform:translate(-8%,-4%) scale(1)}50%{transform:translate(16%,12%) scale(1.28)}}
+        @keyframes aurora2{0%,100%{transform:translate(10%,8%) scale(1.1)}50%{transform:translate(-14%,-10%) scale(1.4)}}
+        @keyframes aurora3{0%,100%{transform:translate(0,10%) scale(1)}50%{transform:translate(14%,-12%) scale(1.22)}}
         .lk{position:relative}.lk::after{content:"";position:absolute;left:0;bottom:-3px;height:1.5px;width:0;background:${INK};transition:width .35s cubic-bezier(.16,1,.3,1)}.lk:hover::after{width:100%}
         .disp{font-family:var(--font-display),system-ui,sans-serif;font-weight:700;letter-spacing:-0.045em;line-height:0.92}
         .frame-row:hover .frame-num{color:${ACCENT};transform:translateX(6px)}
+        .aura-blob{position:absolute;border-radius:50%;mix-blend-mode:multiply;will-change:transform}
         @media (prefers-reduced-motion:reduce){*{animation:none!important}}
       `}</style>
 
@@ -415,7 +419,13 @@ export default function Landing() {
 
       {/* ─────────────── HERO ─────────────── */}
       <section style={{ position: 'relative', zIndex: 1, maxWidth: 1280, margin: '0 auto', padding: '0 clamp(18px,4vw,40px)' }}>
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: 90, paddingBottom: 40 }}>
+        {/* living aurora — premium colored light drifting across the paper */}
+        <div aria-hidden style={{ position: 'absolute', inset: '-10% -20% 0', zIndex: 0, overflow: 'hidden', pointerEvents: 'none', maskImage: 'radial-gradient(ellipse 90% 70% at 50% 35%, #000 35%, transparent 78%)', WebkitMaskImage: 'radial-gradient(ellipse 90% 70% at 50% 35%, #000 35%, transparent 78%)' }}>
+          <span className="aura-blob" style={{ width: '52vw', height: '52vw', left: '-10vw', top: '-4vw', background: 'radial-gradient(circle,rgba(31,59,255,.26),transparent 62%)', filter: 'blur(40px)', animation: 'aurora1 19s ease-in-out infinite' }} />
+          <span className="aura-blob" style={{ width: '46vw', height: '46vw', right: '-8vw', top: '0', background: 'radial-gradient(circle,rgba(16,185,129,.24),transparent 62%)', filter: 'blur(44px)', animation: 'aurora2 23s ease-in-out infinite' }} />
+          <span className="aura-blob" style={{ width: '40vw', height: '40vw', left: '32vw', top: '18vw', background: 'radial-gradient(circle,rgba(255,176,90,.22),transparent 62%)', filter: 'blur(46px)', animation: 'aurora3 27s ease-in-out infinite' }} />
+        </div>
+        <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: 90, paddingBottom: 40 }}>
           <Reveal>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.28em', color: ACCENT, marginBottom: 28 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: GREEN, animation: 'blink 1.4s infinite' }} />

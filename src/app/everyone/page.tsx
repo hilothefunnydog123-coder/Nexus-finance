@@ -30,10 +30,13 @@ export default function EveryoneLanding() {
       <style>{`
         @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
         @keyframes pop{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+        @keyframes evA1{0%,100%{transform:translate(-6%,-4%) scale(1)}50%{transform:translate(14%,10%) scale(1.3)}}
+        @keyframes evA2{0%,100%{transform:translate(8%,6%) scale(1.1)}50%{transform:translate(-12%,-8%) scale(1.36)}}
         .ev-rise{animation:pop .7s cubic-bezier(.16,1,.3,1) both}
         .ev-cat{transition:transform .18s ease, box-shadow .18s ease}
         .ev-cat:hover{transform:translateY(-4px)}
         .ev-live:hover{box-shadow:0 18px 40px rgba(24,146,95,.22)}
+        .ev-blob{position:absolute;border-radius:50%;mix-blend-mode:multiply;will-change:transform;pointer-events:none}
         a{color:inherit}
       `}</style>
 
@@ -53,8 +56,12 @@ export default function EveryoneLanding() {
       </header>
 
       {/* hero */}
-      <section style={{ maxWidth: 1140, margin: '0 auto', padding: '64px 22px 30px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.1fr) minmax(0,.9fr)', gap: 44, alignItems: 'center' }} className="ev-herogrid">
+      <section style={{ position: 'relative', maxWidth: 1140, margin: '0 auto', padding: '64px 22px 30px' }}>
+        <div aria-hidden style={{ position: 'absolute', inset: '-6% -12% 0', zIndex: 0, overflow: 'hidden', pointerEvents: 'none', maskImage: 'radial-gradient(ellipse 95% 80% at 50% 30%, #000 38%, transparent 80%)', WebkitMaskImage: 'radial-gradient(ellipse 95% 80% at 50% 30%, #000 38%, transparent 80%)' }}>
+          <span className="ev-blob" style={{ width: '46vw', height: '46vw', left: '-8vw', top: '-6vw', background: 'radial-gradient(circle,rgba(24,146,95,.20),transparent 62%)', filter: 'blur(42px)', animation: 'evA1 20s ease-in-out infinite' }} />
+          <span className="ev-blob" style={{ width: '42vw', height: '42vw', right: '-6vw', top: '-2vw', background: 'radial-gradient(circle,rgba(240,137,47,.22),transparent 62%)', filter: 'blur(46px)', animation: 'evA2 24s ease-in-out infinite' }} />
+        </div>
+        <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'minmax(0,1.1fr) minmax(0,.9fr)', gap: 44, alignItems: 'center' }} className="ev-herogrid">
           <div className="ev-rise">
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 700, color: GREEN, background: 'rgba(24,146,95,.1)', border: '1px solid rgba(24,146,95,.25)', borderRadius: 999, padding: '6px 13px', marginBottom: 22 }}>
               <span style={{ width: 7, height: 7, borderRadius: 99, background: GREEN }} /> An AI that proves it — now for real life

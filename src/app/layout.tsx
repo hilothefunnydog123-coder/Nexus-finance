@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
 import CineFX from '@/components/cinematic/CineFX'
+import ScrollFX from '@/components/cinematic/ScrollFX'
 import AnalyticsBeacon from '@/components/AnalyticsBeacon'
 import SiteBrainProvider from '@/components/brain/SiteBrainProvider'
 import WhatItLearned from '@/components/brain/WhatItLearned'
@@ -84,6 +85,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="h-full">
         <CineFX />
+        <ScrollFX />
         <AnalyticsBeacon />
         <SiteBrainProvider />
         {children}
