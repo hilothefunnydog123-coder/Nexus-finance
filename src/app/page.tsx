@@ -389,6 +389,7 @@ export default function Landing() {
             ))}
           </nav>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }} className="nav-desk">
+            <Link href="/everyone" className="lk" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13.5, fontWeight: 700, color: '#16110c', background: 'linear-gradient(135deg,#ffd9a8,#ffb877)', border: '1px solid rgba(214,120,40,.35)', padding: '8px 15px', borderRadius: 999, textDecoration: 'none', boxShadow: '0 4px 16px rgba(255,150,70,.28)' }} title="The consumer side — time your everyday big-money decisions">🏠 Not a trader? →</Link>
             <AccountMenu tone="light" />
             <Link href="/brainstock" style={{ fontSize: 14, fontWeight: 700, color: PAPER, background: INK, padding: '10px 20px', textDecoration: 'none' }}>Open app</Link>
           </div>
@@ -406,7 +407,8 @@ export default function Landing() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 22, marginTop: 50 }}>
             {NAV.map((l) => <Link key={l.label} href={l.href} onClick={() => setMenu(false)} className="disp" style={{ fontSize: 38, textDecoration: 'none', color: INK }}>{l.label}</Link>)}
-            <Link href="/brainstock" onClick={() => setMenu(false)} style={{ marginTop: 16, fontSize: 16, fontWeight: 700, color: PAPER, background: INK, padding: '14px 22px', textAlign: 'center', textDecoration: 'none' }}>Open app</Link>
+            <Link href="/everyone" onClick={() => setMenu(false)} style={{ marginTop: 16, fontSize: 16, fontWeight: 800, color: '#16110c', background: 'linear-gradient(135deg,#ffd9a8,#ffb877)', padding: '14px 22px', textAlign: 'center', textDecoration: 'none', borderRadius: 12 }}>🏠 Not a trader? → YN for Everyone</Link>
+            <Link href="/brainstock" onClick={() => setMenu(false)} style={{ fontSize: 16, fontWeight: 700, color: PAPER, background: INK, padding: '14px 22px', textAlign: 'center', textDecoration: 'none' }}>Open app</Link>
           </div>
         </div>
       )}

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { Home, Cpu, Search, LineChart, Menu as MenuIcon, X, ArrowRight, Mic } from 'lucide-react'
 
 // Routes that are full-screen immersive experiences — no bottom bar there.
-const HIDE_ON = ['/galaxy', '/storm', '/the-open', '/brain/live', '/the-mind']
+const HIDE_ON = ['/galaxy', '/storm', '/the-open', '/brain/live', '/the-mind', '/everyone']
 
 const SECTIONS: { title: string; items: [string, string, string][] }[] = [
   { title: 'Core', items: [['📈', 'BrainStock', '/brainstock'], ['⚡', 'Algorithms', '/algorithms'], ['🔍', 'AI Analyzer', '/ai-stocks'], ['⚔️', 'War Room', '/war-room'], ['🍴', 'Fork the Brain', '/fork'], ['🎙️', 'Voice copilot', '/copilot'], ['🎓', 'Courses', '/courses']] },
