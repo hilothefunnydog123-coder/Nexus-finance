@@ -16,7 +16,8 @@ const CAT_UI: Record<string, UI> = {
 
 type Result = {
   verdict: string; stance: 'now' | 'wait' | 'neutral'; headline: string; confidence: number
-  backtest: number; direction: string; drivers: string[]; engine: string; proxy: string; asOf: string; error?: string
+  backtest: number; direction: string; drivers: string[]; engine: string; proxy: string; asOf: string
+  sources?: { title: string; uri: string }[]; grounded?: boolean; error?: string
 }
 
 const bold = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -89,7 +90,10 @@ export default function CategoryTool() {
           <style>{`@keyframes cpop{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}`}</style>
           <div style={{ padding: '24px', background: tint, borderBottom: `1px solid ${LINE}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: SUB, marginBottom: 4 }}>The call</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: SUB }}>The call</span>
+                <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.06em', color: res.grounded ? GREEN : SUB, background: res.grounded ? 'rgba(24,146,95,.12)' : '#efe9df', borderRadius: 999, padding: '3px 8px' }}>{(res.engine || 'net').toUpperCase()}</span>
+              </div>
               <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: '-.02em', color, lineHeight: 1 }}>{res.verdict}</div>
               <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8 }}>{res.headline}</div>
             </div>
@@ -103,12 +107,22 @@ export default function CategoryTool() {
             <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 8 }}>
               {res.drivers.map((d, i) => <li key={i} style={{ fontSize: 14.5, lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: bold(d) }} />)}
             </ul>
+            {!!res.sources?.length && (
+              <div style={{ marginTop: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.1em', color: SUB, marginBottom: 9 }}>SOURCES IT CHECKED</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {res.sources.map((s, i) => (
+                    <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, fontWeight: 600, color: BLUE, background: 'rgba(59,107,255,.08)', border: '1px solid rgba(59,107,255,.2)', borderRadius: 999, padding: '5px 11px', textDecoration: 'none' }}>{s.title} ↗</a>
+                  ))}
+                </div>
+              </div>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10, marginTop: 18 }}>
               <Stat label={`Outlook (${ui.name.toLowerCase()})`} value={res.direction} />
               <Stat label="Backtested accuracy" value={res.backtest + '%'} />
             </div>
             <div style={{ marginTop: 16, padding: '13px 15px', background: '#f7f3ec', borderRadius: 12, fontSize: 12.5, color: SUB, lineHeight: 1.55 }}>
-              Read from <b style={{ color: INK }}>{res.proxy}</b> as of {res.asOf}, via the {res.engine === 'neural-net' ? 'trained' : 'baseline'} engine. A forecast, <b style={{ color: INK }}>not financial advice</b>.
+              {res.grounded ? <>Read by the <b style={{ color: INK }}>net + live news</b> — the BrainStock forecast on {res.proxy} fused with this week’s real headlines.</> : <>Read from <b style={{ color: INK }}>{res.proxy}</b> via the {res.engine} as of {res.asOf}.</>} A forecast, <b style={{ color: INK }}>not financial advice</b>.
             </div>
           </div>
         </div>

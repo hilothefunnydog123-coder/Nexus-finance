@@ -159,9 +159,12 @@ export default function EveryoneLanding() {
       {/* LIVE BOARD — the net's current call on every everyday market */}
       <section style={{ maxWidth: 1140, margin: '0 auto', padding: '24px 22px 10px' }}>
         <Reveal>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 99, background: GREEN, animation: 'evPulse 2s infinite' }} />
-            <h2 style={{ fontFamily: DISP, fontSize: 'clamp(22px,3vw,30px)', fontWeight: 800, letterSpacing: '-.02em', margin: 0 }}>What the net is calling right now</h2>
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 99, background: GREEN, animation: 'evPulse 2s infinite' }} />
+              <h2 style={{ fontFamily: DISP, fontSize: 'clamp(22px,3vw,30px)', fontWeight: 800, letterSpacing: '-.02em', margin: 0 }}>What the net is calling right now</h2>
+            </div>
+            <div style={{ fontSize: 13.5, color: SUB, marginTop: 7, marginLeft: 18 }}>Live — the net’s forecast fused with this week’s real news. Updated continuously.</div>
           </div>
         </Reveal>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(248px,1fr))', gap: 16 }}>

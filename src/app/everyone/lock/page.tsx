@@ -4,12 +4,12 @@ import { useState } from 'react'
 import Link from 'next/link'
 
 const INK = '#1c160f', SUB = '#6b6256', CREAM = '#fbf7f0', CARD = '#ffffff'
-const GREEN = '#18925f', RED = '#d4503e', AMBER = '#f0892f', LINE = 'rgba(28,22,15,.08)'
+const GREEN = '#18925f', RED = '#d4503e', AMBER = '#f0892f', BLUE = '#3b6bff', LINE = 'rgba(28,22,15,.08)'
 
 type Result = {
   verdict: 'LOCK' | 'FLOAT' | 'NEUTRAL'; headline: string; confidence: number; direction: string
   drivers: string[]; backtest: number | null; payment: number; saveIfFloat: number; costIfWait: number
-  proxy: string; asOf: string; note?: string
+  proxy: string; asOf: string; note?: string; engine?: string; grounded?: boolean; sources?: { title: string; uri: string }[]
 }
 
 const DAYS = [[14, '~2 weeks'], [30, '~30 days'], [45, '~45 days'], [60, '~60 days']] as const
@@ -95,7 +95,10 @@ export default function LockTool() {
             <div style={{ padding: '24px 24px 20px', background: tint, borderBottom: `1px solid ${LINE}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: SUB, marginBottom: 4 }}>The call</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: SUB }}>The call</span>
+                    <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.06em', color: res.grounded ? GREEN : SUB, background: res.grounded ? 'rgba(24,146,95,.12)' : '#efe9df', borderRadius: 999, padding: '3px 8px' }}>{(res.engine || 'net').toUpperCase()}</span>
+                  </div>
                   <div style={{ fontSize: 46, fontWeight: 900, letterSpacing: '-.02em', color, lineHeight: 1 }}>{res.verdict}</div>
                   <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8 }}>{res.headline}</div>
                 </div>
@@ -118,8 +121,19 @@ export default function LockTool() {
                 <Stat label="Backtested accuracy" value={res.backtest != null ? res.backtest + '%' : '—'} />
               </div>
 
+              {!!res.sources?.length && (
+                <div style={{ marginTop: 18 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.1em', color: SUB, marginBottom: 9 }}>SOURCES IT CHECKED</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                    {res.sources.map((s, i) => (
+                      <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, fontWeight: 600, color: BLUE, background: 'rgba(59,107,255,.08)', border: '1px solid rgba(59,107,255,.2)', borderRadius: 999, padding: '5px 11px', textDecoration: 'none' }}>{s.title} ↗</a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div style={{ marginTop: 18, padding: '13px 15px', background: '#f7f3ec', borderRadius: 12, fontSize: 12.5, color: SUB, lineHeight: 1.55 }}>
-                Read from <b style={{ color: INK }}>{res.proxy}</b> as of {res.asOf}. Rates move opposite to long Treasury bonds — we read that trend, score it, and backtest the rule.{res.note ? ` (${res.note})` : ''} This is a forecast, <b style={{ color: INK }}>not financial advice</b> — talk to your lender before deciding.
+                {res.grounded ? <>The <b style={{ color: INK }}>BrainStock net</b> read {res.proxy} and we fused it with this week’s real rate news.</> : <>Read from <b style={{ color: INK }}>{res.proxy}</b> as of {res.asOf}; rates move opposite to long Treasury bonds.</>} A forecast, <b style={{ color: INK }}>not financial advice</b> — talk to your lender.
               </div>
 
               <a href="https://www.google.com/search?q=compare+mortgage+rates" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 14, textAlign: 'center', fontSize: 14.5, fontWeight: 800, color: CREAM, background: INK, borderRadius: 12, padding: '13px', textDecoration: 'none' }}>
