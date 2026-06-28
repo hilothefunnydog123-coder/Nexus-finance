@@ -11,11 +11,11 @@ const LINE = 'rgba(28,22,15,.08)'
 
 const CATS = [
   { icon: '🏠', name: 'Mortgage rates', q: 'Lock today, or float?', live: true, href: '/everyone/lock', tone: GREEN },
-  { icon: '⛽', name: 'Gas prices', q: 'Fill up now, or wait?', live: false },
+  { icon: '⛽', name: 'Gas prices', q: 'Fill up now, or wait?', live: true, href: '/everyone/gas' },
+  { icon: '✈️', name: 'Flights', q: 'Book now, or watch it?', live: true, href: '/everyone/flights' },
+  { icon: '💡', name: 'Electricity plans', q: 'Lock a fixed rate, or not?', live: true, href: '/everyone/electricity' },
   { icon: '🚗', name: 'Used cars', q: 'Buy this month, or hold?', live: false },
-  { icon: '✈️', name: 'Flights', q: 'Book now, or watch it?', live: false },
   { icon: '🏡', name: 'Rent', q: 'Renew, or shop around?', live: false },
-  { icon: '💡', name: 'Electricity plans', q: 'Lock a fixed rate, or not?', live: false },
 ]
 
 const STEPS = [
@@ -100,7 +100,7 @@ export default function EveryoneLanding() {
       {/* category grid */}
       <section style={{ maxWidth: 1140, margin: '0 auto', padding: '34px 22px' }}>
         <h2 style={{ fontSize: 'clamp(24px,3.4vw,34px)', fontWeight: 900, letterSpacing: '-.02em', marginBottom: 8 }}>The prices it’s learning to call</h2>
-        <p style={{ fontSize: 16, color: SUB, marginBottom: 26, maxWidth: 560 }}>Mortgage timing is live now. The rest are coming online as the net’s record on each builds — in public, like everything we do.</p>
+        <p style={{ fontSize: 16, color: SUB, marginBottom: 26, maxWidth: 560 }}>Mortgage, gas, flights and electricity are live — each powered by the <b style={{ color: INK }}>same neural net</b>, now reading oil, gasoline, natural gas and bonds. Every call you run grades itself and trains it. More coming as its record on each builds.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))', gap: 16 }}>
           {CATS.map((c) => {
             const inner = (

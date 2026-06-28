@@ -26,8 +26,8 @@ export default function LockTool() {
   async function run() {
     setLoading(true); setErr(''); setRes(null)
     try {
-      const q = new URLSearchParams({ loan: String(parseFloat(loan) || 0), rate: String(parseFloat(rate) || 0), days: String(days) })
-      const r = await fetch('/api/everyone/rate?' + q.toString())
+      const q = new URLSearchParams({ category: 'mortgage', loan: String(parseFloat(loan) || 0), rate: String(parseFloat(rate) || 0), days: String(days) })
+      const r = await fetch('/api/everyone/forecast?' + q.toString())
       const j = await r.json()
       setRes(j)
     } catch { setErr('Couldn’t reach the market just now — try again in a moment.') }
