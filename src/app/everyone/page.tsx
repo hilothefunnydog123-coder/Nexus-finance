@@ -28,6 +28,7 @@ type Call = {
   stance: 'now' | 'wait' | 'neutral'; confidence: number; backtest: number
   direction: string; headline: string; drivers: string[]
   sources: { title: string; uri: string }[]; engine: string; grounded: boolean
+  geminiKey?: boolean
   proxy: string; asOf: string; movePct: number; agreement: number; whatChanged: string
 }
 
@@ -178,7 +179,7 @@ export default function TheWire() {
                 <div style={{ display: 'grid', gap: 14 }}>
                   <Pipe n="1" title="Forecast the market" color={NEU} body={<>Two markets that drive {lead.noun} were each run through the net and blended — pointing {lead.direction === 'rising' ? 'up' : lead.direction === 'easing' ? 'down' : 'sideways'} <b style={{ color: INK }}>{Math.abs(lead.movePct).toFixed(1)}%</b>.</>} />
                   <Pipe n="2" title="Score the conviction" color={WAIT} body={<><b style={{ color: INK }}>{lead.backtest}%</b> backtested accuracy · <b style={{ color: INK }}>{Math.round(lead.agreement * 100)}%</b> the two signals agree.</>} />
-                  <Pipe n="3" title="Read this week's news" color={NOW} body={<>{lead.grounded ? <><b style={{ color: INK }}>{lead.sources.length}</b> live articles checked against the forecast.</> : <>Reasoned from the model’s knowledge (live news key not set).</>}</>} />
+                  <Pipe n="3" title="Read this week's news" color={NOW} body={<>{lead.grounded ? <><b style={{ color: INK }}>{lead.sources.length}</b> live articles checked against the forecast.</> : lead.geminiKey === false ? <>Set <b style={{ color: INK }}>GEMINI_API_KEY</b> to switch on live news.</> : <>Reasoned live by the AI from its market knowledge.</>}</>} />
                   <Pipe n="4" title="Fuse into a verdict" color={sc(lead.stance)} last body={<>Net + news → <b style={{ color: sc(lead.stance) }}>{lead.verdict}</b> at <b style={{ color: INK }}>{lead.confidence}%</b>.</>} />
                 </div>
               )}

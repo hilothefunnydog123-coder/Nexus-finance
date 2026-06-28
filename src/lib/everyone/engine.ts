@@ -233,26 +233,31 @@ Return ONLY JSON (no prose, no markdown):
   const reqBody = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     tools: [{ google_search: {} }],
-    generationConfig: { temperature: 0.3, maxOutputTokens: 1000 },
+    generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
   }
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI}`
   async function call(withTools: boolean) {
     const body = withTools ? reqBody : { contents: reqBody.contents, generationConfig: reqBody.generationConfig }
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    return r.ok ? r.json() : null
+    try {
+      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      return r.ok ? await r.json() : null
+    } catch { return null }
   }
-  let j = await call(true).catch(() => null)
-  let grounded = !!j
-  if (!j) {
-    j = await call(false).catch(() => null) // retry ungrounded if search tool unavailable
-    grounded = false
+  const read = (j: { candidates?: { content?: { parts?: { text?: string }[] }; groundingMetadata?: { groundingChunks?: { web?: { uri?: string; title?: string } }[] } }[] } | null) => {
+    const cand = j?.candidates?.[0]
+    const txt = cand?.content?.parts?.map((p) => p.text || '').join('') || ''
+    return { cand, parsed: salvage(txt) as { stance?: string; confidence?: number; outlook?: string; headline?: string; reasons?: string[]; whatChanged?: string } | null }
   }
-  if (!j) return null
-  const cand = j.candidates?.[0]
-  const txt = cand?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || ''
-  const parsed = salvage(txt) as
-    | { stance?: string; confidence?: number; outlook?: string; headline?: string; reasons?: string[]; whatChanged?: string }
-    | null
+  // try grounded first; if the grounded response is missing/unparseable (e.g.
+  // truncated), fall back to a clean ungrounded call so we never lose the verdict.
+  let j = await call(true)
+  let usedGrounding = !!j
+  let { cand, parsed } = read(j)
+  if (!parsed) {
+    const j2 = await call(false)
+    usedGrounding = false
+    ;({ cand, parsed } = read(j2))
+  }
   if (!parsed) return null
   const chunks = cand?.groundingMetadata?.groundingChunks || []
   const sources: { title: string; uri: string }[] = []
@@ -261,7 +266,7 @@ Return ONLY JSON (no prose, no markdown):
     if (w?.uri) sources.push({ title: (w.title || w.uri).slice(0, 60), uri: w.uri })
     if (sources.length >= 4) break
   }
-  return { ...parsed, sources, grounded: grounded && sources.length > 0 }
+  return { ...parsed, sources, grounded: usedGrounding && sources.length > 0 }
 }
 
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -458,6 +463,7 @@ export function toPublic(key: string, cfg: Cat, v: Verdict): Record<string, unkn
     sources: v.sources,
     engine: v.engine,
     grounded: v.grounded,
+    geminiKey: GEMINI.length > 0,
     proxy: v.proxy,
     asOf: v.asOf,
     movePct: v.movePct,
