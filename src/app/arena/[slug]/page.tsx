@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import {
   type Call,
-  type Opponent,
+  type Combatant,
   C,
   fmtPrice,
   fmtPct,
@@ -15,6 +15,7 @@ import {
 } from '@/components/arena/battle/types'
 import { DirChip } from '@/components/arena/battle/BoutCard'
 import { SealLock } from '@/components/arena/battle/SealBadge'
+import ModelPanel from '@/components/arena/battle/ModelPanel'
 
 export default function BoutView() {
   const params = useParams<{ slug: string }>()
@@ -22,7 +23,7 @@ export default function BoutView() {
 
   const [loading, setLoading] = useState(true)
   const [calls, setCalls] = useState<Call[]>([])
-  const [opponents, setOpponents] = useState<Opponent[]>([])
+  const [models, setModels] = useState<Combatant[]>([])
   const [oppLoading, setOppLoading] = useState(true)
   const [mark, setMark] = useState<number | null>(null)
 
@@ -61,13 +62,13 @@ export default function BoutView() {
           `/api/arena/opponents?trade_date=${encodeURIComponent(call.trade_date)}&ticker=${encodeURIComponent(ticker)}`
         )
         if (!r.ok) {
-          if (alive) setOpponents([])
+          if (alive) setModels([])
           return
         }
         const j = await r.json().catch(() => ({}))
-        if (alive) setOpponents(Array.isArray(j?.opponents) ? j.opponents : [])
+        if (alive) setModels(Array.isArray(j?.models) ? j.models : [])
       } catch {
-        if (alive) setOpponents([])
+        if (alive) setModels([])
       } finally {
         if (alive) setOppLoading(false)
       }
@@ -99,9 +100,6 @@ export default function BoutView() {
       alive = false
     }
   }, [ticker])
-
-  const ups = opponents.filter((o) => o.direction === 'up')
-  const downs = opponents.filter((o) => o.direction === 'down')
 
   const verifyHref = call
     ? `/arena/verify?trade_date=${encodeURIComponent(call.trade_date)}&ticker=${encodeURIComponent(ticker)}`
@@ -157,24 +155,24 @@ export default function BoutView() {
         <>
           <NetCall call={call} mark={mark} />
 
-          {/* The field */}
+          {/* The combatants — each model's independent, sealed read, side by side */}
           <section className="mt-8">
             <h2 className="mb-3 text-sm font-semibold tracking-widest" style={{ color: C.amber }}>
-              THE FIELD TAKES SIDES
+              INDEPENDENT READS · SEALED SIDE BY SIDE
             </h2>
             {oppLoading ? (
               <div className="text-sm" style={{ color: C.muted }}>
-                Opponents loading…
+                Combatants loading…
               </div>
-            ) : opponents.length === 0 ? (
+            ) : models.length === 0 ? (
               <div
                 className="rounded-2xl border p-5 text-sm"
                 style={{ borderColor: C.border, color: C.muted, background: 'rgba(255,255,255,.02)' }}
               >
-                No challengers have taken the other side yet. The field assembles at the open.
+                No challengers have weighed in yet. The models assemble at the open.
               </div>
             ) : (
-              <TugOfWar ups={ups} downs={downs} netDirection={call.direction} />
+              <ModelPanel models={models} line={call.start_price} />
             )}
           </section>
 
@@ -289,84 +287,6 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
         {label}
       </div>
       <div className="mt-1.5">{children}</div>
-    </div>
-  )
-}
-
-function TugOfWar({ ups, downs, netDirection }: { ups: Opponent[]; downs: Opponent[]; netDirection: 'up' | 'down' }) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <SideColumn
-        title="LONG THE TAPE"
-        symbol="▲"
-        color={C.green}
-        opponents={ups}
-        netAligned={netDirection === 'up'}
-      />
-      <SideColumn
-        title="SHORT THE TAPE"
-        symbol="▼"
-        color={C.red}
-        opponents={downs}
-        netAligned={netDirection === 'down'}
-      />
-    </div>
-  )
-}
-
-function SideColumn({
-  title,
-  symbol,
-  color,
-  opponents,
-  netAligned,
-}: {
-  title: string
-  symbol: string
-  color: string
-  opponents: Opponent[]
-  netAligned: boolean
-}) {
-  return (
-    <div className="rounded-2xl border p-4" style={{ borderColor: `${color}33`, background: `${color}08` }}>
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-bold" style={{ color }}>
-          <span aria-hidden>{symbol}</span> {title}
-        </div>
-        {netAligned ? (
-          <span className="rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wider" style={{ color: C.violet, border: `1px solid ${C.violet}55` }}>
-            NET SIDE
-          </span>
-        ) : null}
-      </div>
-      {opponents.length === 0 ? (
-        <div className="py-3 text-xs" style={{ color: C.muted }}>
-          No takers on this side.
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {opponents.map((o) => (
-            <div key={o.opponent_id} className="rounded-xl border p-3" style={{ borderColor: C.border, background: 'rgba(255,255,255,.02)' }}>
-              <div className="flex items-center justify-between">
-                <div className="truncate text-sm font-semibold text-white">{o.opponent_name || o.opponent_id}</div>
-                <span className="font-mono text-xs" style={{ color }}>
-                  {Math.round((o.conviction ?? 0) <= 1 ? (o.conviction ?? 0) * 100 : o.conviction)}%
-                </span>
-              </div>
-              {o.kind ? (
-                <div className="text-[10px] uppercase tracking-wider" style={{ color: C.muted }}>
-                  {o.kind}
-                </div>
-              ) : null}
-              {o.rationale ? (
-                <p className="mt-1.5 text-xs leading-relaxed" style={{ color: '#c3cad8' }}>
-                  {o.rationale}
-                </p>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

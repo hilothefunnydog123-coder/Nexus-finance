@@ -49,8 +49,26 @@ export type Opponent = {
   rationale: string
 }
 
+// A single model's independent, sealed call — the unit of the side-by-side panel.
+export type Combatant = {
+  model_id: string
+  model_name: string
+  provider: string
+  kind: string
+  direction: Direction
+  conviction: number
+  reasoning: string
+  target: number | null
+  ticker: string
+  leaf_hash: string | null
+  status: string
+  is_net: boolean
+}
+
 export type OpponentsResponse = {
   available?: boolean
+  trade_date?: string
+  models?: Combatant[]
   opponents?: Opponent[]
 }
 
