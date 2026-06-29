@@ -16,6 +16,7 @@ import {
 import { DirChip } from '@/components/arena/battle/BoutCard'
 import { SealLock } from '@/components/arena/battle/SealBadge'
 import ModelPanel from '@/components/arena/battle/ModelPanel'
+import PickPanel from '@/components/arena/battle/PickPanel'
 
 export default function BoutView() {
   const params = useParams<{ slug: string }>()
@@ -154,6 +155,9 @@ export default function BoutView() {
       ) : (
         <>
           <NetCall call={call} mark={mark} />
+
+          {/* Humans enter — pick a side on this live bout */}
+          <PickPanel ticker={ticker} tradeDate={call.trade_date} netDirection={call.direction} live={call.status === 'sealed'} />
 
           {/* The combatants — each model's independent, sealed read, side by side */}
           <section className="mt-8">

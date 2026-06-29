@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
 
   out.net = await gradeTable('arena_calls')
   out.opponents = await gradeTable('arena_opponent_calls')
+  out.humans = await gradeTable('arena_human_picks')
 
-  return NextResponse.json({ ok: true, resolved: out.net + out.opponents, ...out })
+  return NextResponse.json({ ok: true, resolved: out.net + out.opponents + out.humans, ...out })
 }

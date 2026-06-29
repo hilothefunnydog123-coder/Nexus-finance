@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Radio, Timer, Swords, ChevronDown } from 'lucide-react'
+import { Radio, Timer, Swords, ChevronDown, Trophy } from 'lucide-react'
 import { C } from '@/components/arena/battle/types'
 import { useArenaLive, useCountdown } from '@/components/arena/battle/hooks'
 import TickerTape from '@/components/arena/battle/TickerTape'
@@ -67,6 +67,13 @@ export default function ArenaHub() {
                 </span>
               </span>
             ) : null}
+            <Link
+              href="/arena/me"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-semibold transition hover:scale-[1.03]"
+              style={{ borderColor: `${C.amber}55`, color: C.amber, background: 'rgba(255,149,0,.08)' }}
+            >
+              <Trophy size={12} /> Your record · enter the Arena
+            </Link>
           </div>
         </header>
 
