@@ -15,7 +15,7 @@ function Col({ label, val, color, sub }: { label: string; val: string; color: st
   return (
     <div className="flex flex-1 flex-col items-center">
       <div className="text-[10px] uppercase tracking-widest" style={{ color: C.muted }}>{label}</div>
-      <div className="font-mono text-4xl font-black sm:text-5xl" style={{ color }}>{val}</div>
+      <div className="font-mono text-3xl font-black sm:text-5xl" style={{ color }}>{val}</div>
       <div className="text-[11px]" style={{ color: C.muted }}>{sub}</div>
     </div>
   )
@@ -80,13 +80,13 @@ export default async function CardPage({ params }: { params: Promise<{ token: st
           {p.s >= 3 ? <span style={{ color: C.amber }}> · 🔥 {p.s}-streak</span> : null}
         </div>
 
-        <div className="mt-7 flex items-end gap-4 border-t pt-6" style={{ borderColor: C.border }}>
+        <div className="mt-7 flex items-end gap-2 border-t pt-6 sm:gap-4" style={{ borderColor: C.border }}>
           <Col label="You" val={`${p.wr}%`} color={C.green} sub="the market" />
           <Col label="BrainStock" val={`${p.net}%`} color={C.violet} sub="neural net" />
           <Col label="Gemini" val={`${p.gem}%`} color={C.cyan} sub="Google AI" />
         </div>
 
-        <div className="mt-6 flex items-center justify-between text-[11px]" style={{ color: C.muted }}>
+        <div className="mt-6 flex flex-col gap-1 text-[11px] sm:flex-row sm:items-center sm:justify-between" style={{ color: C.muted }}>
           <span>Sealed before the outcome · graded on real prices</span>
           <span style={{ color: verified ? C.green : C.muted }}>{verified ? '✓ signed & verifiable' : 'unverified'}</span>
         </div>

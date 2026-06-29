@@ -110,7 +110,21 @@ export async function POST(req: NextRequest) {
     status: 'sealed',
   }
   const { error } = await sb.from('arena_human_picks').insert(row)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    // Lost the race on the unique (user_id, trade_date, ticker) — surface the
+    // existing pick as already_picked (what the client handles), not a 500.
+    if ((error as { code?: string }).code === '23505') {
+      const { data: ex } = await sb
+        .from('arena_human_picks')
+        .select('trade_date, ticker, direction, status, dir_correct, leaf_hash, sealed_at')
+        .eq('user_id', user.id)
+        .eq('trade_date', trade_date)
+        .eq('ticker', ticker)
+        .maybeSingle()
+      return NextResponse.json({ error: 'already_picked', pick: ex ?? { trade_date, ticker, direction, status: 'sealed' } }, { status: 409 })
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true, pick: { trade_date, ticker, direction, leaf_hash, sealed_at, status: 'sealed', resolve_date: call.resolve_date } })
 }

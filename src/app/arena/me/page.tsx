@@ -135,7 +135,8 @@ export default function MyRecord() {
             <a
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}&url=${encodeURIComponent(shareUrl)}`}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
+              aria-label="Share on X"
               className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition hover:scale-[1.03]"
               style={{ background: C.amber, color: '#05060a' }}
             >

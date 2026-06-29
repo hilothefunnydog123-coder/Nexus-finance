@@ -55,8 +55,11 @@ export async function POST(req: NextRequest) {
     }
     const hist = priceCache.get(ticker)
     if (!hist || !hist.length) return null
-    const at = hist.find((h) => h.date >= resolve_date) ?? hist[hist.length - 1]
-    return at.price
+    // Require the real resolve-day (or later) bar. If it hasn't printed yet,
+    // skip — never grade against an earlier close, which would lock in a wrong
+    // result (the row flips off 'sealed' and is never re-graded).
+    const at = hist.find((h) => h.date >= resolve_date)
+    return at ? at.price : null
   }
 
   const start = Date.now()

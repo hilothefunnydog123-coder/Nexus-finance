@@ -102,18 +102,26 @@ export function summarize(picks: HumanPick[], net: AIResult[], gem: AIResult[], 
   const weeklyPicks = resolved.filter((p) => Date.parse(p.resolved_at ?? p.resolve_date) >= weekStart)
   const weekly = tally(weeklyPicks)
 
-  const weekKeys = new Set(weeklyPicks.map((p) => key(p.trade_date, p.ticker)))
   const aiMap = (rows: AIResult[]) => {
     const m = new Map<string, AIResult>()
     for (const r of rows) m.set(key(r.trade_date, r.ticker), r)
     return m
   }
+  // Head-to-head only over bouts where BOTH the user and the AI have a decided
+  // result — so an AI with no graded row on a bout isn't scored as a loss.
   const h2h = (id: string, name: string, rows: AIResult[]): HeadToHead => {
     const m = aiMap(rows)
-    let aiWins = 0
-    for (const k of weekKeys) if (m.get(k)?.dir_correct === true) aiWins++
-    const n = weeklyPicks.length
-    return { id, name, wins: aiWins, winRate: n ? Math.round((aiWins / n) * 100) : 0, userBeat: weekly.wins > aiWins }
+    let aiWins = 0,
+      userWins = 0,
+      n = 0
+    for (const p of weeklyPicks) {
+      const ai = m.get(key(p.trade_date, p.ticker))
+      if (!ai || ai.dir_correct == null) continue // AI undecided on this bout — skip
+      n++
+      if (ai.dir_correct) aiWins++
+      if (p.dir_correct) userWins++
+    }
+    return { id, name, wins: aiWins, winRate: n ? Math.round((aiWins / n) * 100) : 0, userBeat: userWins > aiWins }
   }
   const weeklyH2H = [h2h('brainstock', 'BrainStock', net), h2h('gemini', 'Gemini', gem)]
   const beatThisWeek = weeklyH2H.filter((h) => h.userBeat).map((h) => h.name)
@@ -166,13 +174,29 @@ export function verifyShare(token: string): { payload: SharePayload; verified: b
   if (dot < 0) return null
   const body = token.slice(0, dot)
   const sig = token.slice(dot + 1)
-  let payload: SharePayload
+  let raw: Partial<SharePayload> & { v?: number }
   try {
-    payload = JSON.parse(b64urlDecode(body)) as SharePayload
+    raw = JSON.parse(b64urlDecode(body)) as Partial<SharePayload>
   } catch {
     return null
   }
-  if (!payload || payload.v !== 1) return null
+  if (!raw || raw.v !== 1) return null
+  // Coerce every field so a malformed-but-v1 token can never crash a renderer.
+  const num = (x: unknown) => (Number.isFinite(Number(x)) ? Number(x) : 0)
+  const payload: SharePayload = {
+    v: 1,
+    h: typeof raw.h === 'string' ? raw.h.slice(0, 40) : 'A human',
+    w: num(raw.w),
+    l: num(raw.l),
+    wr: num(raw.wr),
+    s: num(raw.s),
+    p: num(raw.p),
+    beat: Array.isArray(raw.beat) ? raw.beat.filter((b) => typeof b === 'string').slice(0, 4) : [],
+    net: num(raw.net),
+    gem: num(raw.gem),
+    wk: typeof raw.wk === 'string' ? raw.wk.slice(0, 40) : '',
+    t: num(raw.t),
+  }
   const secret = process.env.PROVENANCE_SECRET
   let verified = false
   if (secret) {

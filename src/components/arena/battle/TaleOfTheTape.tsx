@@ -106,7 +106,7 @@ export default function TaleOfTheTape({ standings, demo }: { standings: Standing
 
 function Versus() {
   return (
-    <div className="flex items-center justify-center py-1 sm:py-0">
+    <div className="hidden items-center justify-center py-1 sm:flex sm:py-0" aria-hidden>
       <div className="relative flex h-11 w-11 items-center justify-center rounded-full" style={{ border: `1px solid ${C.border}`, background: 'rgba(5,6,10,.6)' }}>
         <span className="av-spark text-sm font-black italic" style={{ color: C.amber }}>VS</span>
       </div>

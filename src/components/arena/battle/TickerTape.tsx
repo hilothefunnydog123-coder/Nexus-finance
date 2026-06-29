@@ -12,6 +12,7 @@ export default function TickerTape({ calls }: { calls: Call[] }) {
 
   return (
     <div
+      aria-hidden
       className="av-ticker relative overflow-hidden border-y"
       style={{ borderColor: C.border, background: 'linear-gradient(90deg, rgba(5,6,10,.9), rgba(10,12,20,.7), rgba(5,6,10,.9))' }}
     >

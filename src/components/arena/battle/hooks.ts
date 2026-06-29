@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Call, Seal, Standing, Combatant } from './types'
 
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+}
+
 /** Smoothly animate a number toward `target` with an ease-out cubic (rAF). */
 export function useCountUp(target: number, durationMs = 1100): number {
   const [val, setVal] = useState(0)
@@ -10,6 +14,12 @@ export function useCountUp(target: number, durationMs = 1100): number {
   const valRef = useRef(0)
   const rafRef = useRef(0)
   useEffect(() => {
+    // Respect reduced-motion: snap to the value, no animation.
+    if (prefersReducedMotion()) {
+      valRef.current = target
+      setVal(target)
+      return
+    }
     fromRef.current = valRef.current
     let start: number | null = null
     const tick = (t: number) => {
@@ -51,7 +61,8 @@ export function useCountdown(targetDate?: string | null): Countdown {
   if (!targetDate) return { d: 0, h: 0, m: 0, s: 0, done: true, valid: false, total: 0 }
   const iso = targetDate.length <= 10 ? `${targetDate}T20:00:00Z` : targetDate
   const target = Date.parse(iso)
-  if (Number.isNaN(target) || now === 0) return { d: 0, h: 0, m: 0, s: 0, done: false, valid: !Number.isNaN(target), total: 0 }
+  // Hold until mounted (now===0) so SSR/first paint doesn't flash 00:00:00.
+  if (Number.isNaN(target) || now === 0) return { d: 0, h: 0, m: 0, s: 0, done: false, valid: false, total: 0 }
   const diff = Math.max(0, target - now)
   const s = Math.floor(diff / 1000)
   return {
@@ -80,9 +91,11 @@ export type ArenaLive = {
 /**
  * One polling data layer for the whole hub: today's sealed calls + signed seal,
  * the standings, and every model's call grouped by ticker (for the matchup
- * sentiment). Refreshes on an interval so the room feels live.
+ * sentiment). Calls + standings refresh on an interval; the model panel is
+ * fixed once a day is sealed, so it's fetched once (a big payload) and reused.
+ * Polling pauses while the tab is hidden and catches up when it returns.
  */
-export function useArenaLive(pollMs = 20000): ArenaLive {
+export function useArenaLive(pollMs = 25000): ArenaLive {
   const [state, setState] = useState<ArenaLive>({
     loading: true,
     available: true,
@@ -97,11 +110,16 @@ export function useArenaLive(pollMs = 20000): ArenaLive {
 
   useEffect(() => {
     let alive = true
+    let haveModels = false
+
     const load = async (first: boolean) => {
+      if (!alive) return
+      if (!first && typeof document !== 'undefined' && document.hidden) return // skip while backgrounded
+      const wantModels = first || !haveModels
       const [callsRes, lbRes, modelsRes] = await Promise.allSettled([
         fetch('/api/arena/calls').then((r) => r.json()),
         fetch('/api/arena/leaderboard').then((r) => r.json()),
-        fetch('/api/arena/opponents').then((r) => r.json()),
+        wantModels ? fetch('/api/arena/opponents').then((r) => r.json()) : Promise.resolve(null),
       ])
       if (!alive) return
 
@@ -123,12 +141,15 @@ export function useArenaLive(pollMs = 20000): ArenaLive {
         patch.demoStandings = !!lbRes.value.demo
       }
 
-      if (modelsRes.status === 'fulfilled' && Array.isArray(modelsRes.value?.models)) {
+      if (modelsRes.status === 'fulfilled' && modelsRes.value && Array.isArray(modelsRes.value.models)) {
         const by: Record<string, Combatant[]> = {}
         for (const m of modelsRes.value.models as Combatant[]) {
           ;(by[m.ticker] ??= []).push(m)
         }
-        patch.modelsByTicker = by
+        if (Object.keys(by).length) {
+          patch.modelsByTicker = by
+          haveModels = true
+        }
       }
 
       setState((s) => ({ ...s, ...patch }))
@@ -136,9 +157,14 @@ export function useArenaLive(pollMs = 20000): ArenaLive {
 
     load(true)
     const id = setInterval(() => load(false), pollMs)
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && !document.hidden) load(false)
+    }
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
       alive = false
       clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [pollMs])
 

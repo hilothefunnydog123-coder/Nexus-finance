@@ -71,6 +71,9 @@ const CSS = `
 .av-ticker-track{display:inline-flex;white-space:nowrap;will-change:transform;animation:avTicker var(--dur,42s) linear infinite}
 .av-ticker:hover .av-ticker-track{animation-play-state:paused}
 
+/* Keyboard focus — a clear, consistent ring on every interactive Arena element. */
+.arena-root a:focus-visible,.arena-root button:focus-visible,.arena-root [role="button"]:focus-visible,.arena-root input:focus-visible,.arena-root [tabindex]:focus-visible{outline:2px solid #4cc9ff;outline-offset:2px;border-radius:10px}
+
 @media (prefers-reduced-motion: reduce){
   .av-aurora,.av-grain,.av-scan,.av-live,.av-glow,.av-blink,.av-float,.av-spark,.av-spin,.av-shimmer,.av-ticker-track{animation:none!important}
   .av-rise,.av-pop{animation:none!important;opacity:1!important;transform:none!important}

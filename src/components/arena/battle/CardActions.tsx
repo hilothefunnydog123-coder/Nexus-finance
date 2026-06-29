@@ -26,7 +26,8 @@ export default function CardActions({ tweet }: { tweet: string }) {
       <a
         href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}&url=${encodeURIComponent(url)}`}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
+        aria-label="Share on X"
         className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition hover:scale-[1.03]"
         style={{ background: C.amber, color: '#05060a' }}
       >

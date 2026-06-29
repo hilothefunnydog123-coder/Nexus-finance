@@ -125,10 +125,13 @@ export async function POST(req: NextRequest) {
   const root = merkleRoot(calls.map((c) => c.leaf_hash))
   const root_sig = signRoot(root)
 
-  // Chain this root to the previous day's, building an append-only seal history.
+  // Chain this root to the chronological PREDECESSOR (trade_date < this day) —
+  // must match the verifier, and avoids a day chaining to itself on ?force=1
+  // re-seal or pointing forward when backfilling a past day.
   const { data: prev } = await admin
     .from('arena_seals')
     .select('merkle_root, chain_hash')
+    .lt('trade_date', trade_date)
     .order('trade_date', { ascending: false })
     .limit(1)
     .maybeSingle()
