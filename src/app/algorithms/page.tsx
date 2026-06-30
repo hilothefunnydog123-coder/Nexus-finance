@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { Check, Copy, Crown, Zap, Bot, Radio, LineChart, Trophy, Medal, Award, ArrowRight } from 'lucide-react'
 import { YNMark } from '@/components/YNLogo'
 import { ALGORITHMS, type Algorithm, type AlgoMode, type Platform } from './data'
 import { MONTE_CARLO, MONTE_CARLO_META } from './montecarlo'
@@ -100,6 +101,7 @@ function CopyButton({ text }: { text: string }) {
         setTimeout(() => setCopied(false), 2000)
       }}
       style={{
+        display: 'inline-flex', alignItems: 'center', gap: 7,
         padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700,
         fontFamily: FONT_MONO, letterSpacing: '.06em', cursor: 'pointer',
         border: `1px solid ${copied ? GREEN : 'rgba(255,255,255,.18)'}`,
@@ -107,7 +109,9 @@ function CopyButton({ text }: { text: string }) {
         color: copied ? '#6ee7b7' : '#e8edf2', transition: 'all .18s', minHeight: 36,
       }}
     >
-      {copied ? '✓ COPIED' : '⧉ COPY CODE'}
+      {copied
+        ? <><Check size={14} aria-hidden /> COPIED</>
+        : <><Copy size={14} aria-hidden /> COPY CODE</>}
     </button>
   )
 }
@@ -212,7 +216,7 @@ function AlgoCard({ algo, selected, onSelect }: { algo: Algorithm; selected: boo
           {algo.init}
         </span>
         {algo.god && (
-          <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '.1em', color: '#fff', background: GREEN, borderRadius: 6, padding: '4px 8px', fontFamily: FONT_MONO }}>⚡ GOD</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 900, letterSpacing: '.1em', color: '#fff', background: GREEN, borderRadius: 6, padding: '4px 8px', fontFamily: FONT_MONO }}><Zap size={11} aria-hidden /> GOD</span>
         )}
         {algo.indicatorOnly && !algo.god && (
           <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.08em', color: SUB, background: 'rgba(10,10,12,.05)', borderRadius: 6, padding: '4px 8px', fontFamily: FONT_MONO }}>SIGNAL</span>
@@ -236,7 +240,11 @@ function AlgoCard({ algo, selected, onSelect }: { algo: Algorithm; selected: boo
 function MonteCarloLab({ onSelect }: { onSelect: (id: string) => void }) {
   const pc = (x: number) => (x * 100).toFixed(1) + '%'
   const f2 = (x: number) => x.toFixed(2)
-  const medal = ['🥇', '🥈', '🥉']
+  const medal = [
+    { Icon: Trophy, color: '#d4af37' },
+    { Icon: Medal, color: '#9aa3ab' },
+    { Icon: Award, color: '#b08d57' },
+  ]
   const top = MONTE_CARLO.slice(0, 3)
 
   return (
@@ -264,7 +272,7 @@ function MonteCarloLab({ onSelect }: { onSelect: (id: string) => void }) {
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 12px 30px ${c}1f` }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 22 }}>{medal[i]}</span>
+                {(() => { const M = medal[i].Icon; return <M size={22} color={medal[i].color} aria-hidden style={{ display: 'inline-flex' }} /> })()}
                 <Pill color={c} bg={`${c}12`} border={`${c}30`}>SCORE {f2(r.score)}</Pill>
               </div>
               <div style={{ fontSize: 15, fontWeight: 700, color: INK, marginBottom: 10, lineHeight: 1.25, fontFamily: FONT_DISPLAY }}>{r.name}</div>
@@ -352,7 +360,7 @@ function DetailPanel({ algo, mode, setMode, platform, setPlatform }: {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
               <span style={{ width: 40, height: 40, borderRadius: 11, background: `linear-gradient(135deg,${c},${c}aa)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff', fontFamily: FONT_MONO }}>{algo.init}</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: c, fontFamily: FONT_MONO, letterSpacing: '.12em' }}>{algo.instructor.toUpperCase()}</span>
-              {algo.god && <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: '.1em', color: '#fff', background: GREEN, borderRadius: 6, padding: '4px 10px', fontFamily: FONT_MONO }}>⚡ GOD MODE</span>}
+              {algo.god && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 900, letterSpacing: '.1em', color: '#fff', background: GREEN, borderRadius: 6, padding: '4px 10px', fontFamily: FONT_MONO }}><Zap size={12} aria-hidden /> GOD MODE</span>}
             </div>
             <h2 style={{ fontSize: 'clamp(22px,3.4vw,34px)', fontWeight: 800, color: INK, letterSpacing: '-.03em', lineHeight: 1.08, marginBottom: 12, fontFamily: FONT_DISPLAY }}>{algo.strategy}</h2>
             <p style={{ fontSize: 15.5, color: SUB, lineHeight: 1.6, maxWidth: 640 }}>{algo.tagline}</p>
@@ -395,11 +403,11 @@ function DetailPanel({ algo, mode, setMode, platform, setPlatform }: {
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: SUB, fontFamily: FONT_MONO, marginBottom: 10 }}>// TYPE</div>
             <div style={{ display: 'flex', border: `1px solid ${LINE}`, borderRadius: 10, overflow: 'hidden' }}>
               {(algo.indicatorOnly
-                ? ([['signals', '📊 Indicator']] as const)
-                : ([['auto', '🤖 Auto-Trade'], ['signals', '📡 Signal Alerts']] as const)
-              ).map(([m, label]) => (
-                <button key={m} onClick={() => setMode(m)} style={{ padding: '11px 20px', minHeight: 44, cursor: 'pointer', border: 'none', outline: 'none', transition: 'all .18s', background: mode === m ? c : 'transparent', color: mode === m ? '#fff' : SUB, fontWeight: mode === m ? 800 : 600, fontSize: 13 }}>
-                  {label}
+                ? ([['signals', LineChart, 'Indicator']] as const)
+                : ([['auto', Bot, 'Auto-Trade'], ['signals', Radio, 'Signal Alerts']] as const)
+              ).map(([m, Icon, label]) => (
+                <button key={m} onClick={() => setMode(m)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '11px 20px', minHeight: 44, cursor: 'pointer', border: 'none', outline: 'none', transition: 'all .18s', background: mode === m ? c : 'transparent', color: mode === m ? '#fff' : SUB, fontWeight: mode === m ? 800 : 600, fontSize: 13 }}>
+                  <Icon size={15} aria-hidden /> {label}
                 </button>
               ))}
             </div>
@@ -539,14 +547,25 @@ export default function AlgorithmsPage() {
       </nav>
 
       {/* HERO — flagship "Holy Grail" */}
-      <header style={{ padding: 'clamp(56px,8vw,96px) 24px clamp(40px,5vw,64px)', maxWidth: 1120, margin: '0 auto' }} className="reveal">
+      <header style={{ position: 'relative', overflow: 'hidden', borderBottom: `1px solid ${LINE}` }} className="reveal">
+        {/* photographic backdrop — tasteful, behind a paper wash */}
+        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          <img
+            src="https://picsum.photos/seed/algos/1600/900"
+            alt=""
+            loading="lazy"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.16, filter: 'grayscale(1) contrast(1.05)' }}
+          />
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(244,242,236,.72) 0%, rgba(244,242,236,.9) 60%, ${BONE} 100%)` }} />
+        </div>
+        <div style={{ position: 'relative', padding: 'clamp(56px,8vw,96px) 24px clamp(40px,5vw,64px)', maxWidth: 1120, margin: '0 auto' }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.16em', color: ACCENT, fontFamily: FONT_MONO, marginBottom: 20 }}>
           // ALGORITHMS · COPY-PASTE · PROP-FIRM READY
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.25fr) minmax(0,1fr)', gap: 'clamp(24px,4vw,56px)', alignItems: 'center' }} className="meta-grid">
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: FONT_MONO, fontSize: 11, fontWeight: 800, letterSpacing: '.14em', color: '#fff', background: GREEN, borderRadius: 999, padding: '6px 14px', marginBottom: 22 }}>
-              👑 THE HOLY GRAIL · GOD MODE
+              <Crown size={14} aria-hidden /> THE HOLY GRAIL · GOD MODE
             </div>
             <h1 style={{ fontSize: 'clamp(38px,6.4vw,72px)', fontWeight: 800, letterSpacing: '-.04em', lineHeight: .98, color: INK, fontFamily: FONT_DISPLAY, marginBottom: 18 }}>
               Adaptive<br />Regime-Switching.
@@ -557,7 +576,7 @@ export default function AlgorithmsPage() {
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <button onClick={() => grail && selectAndScroll(grail.id)}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: INK, color: BONE, fontWeight: 700, fontSize: 15, padding: '14px 28px', borderRadius: 12, border: 'none', cursor: 'pointer', minHeight: 44, fontFamily: FONT_DISPLAY }}>
-                Deploy the Holy Grail →
+                Deploy the Holy Grail <ArrowRight size={17} aria-hidden />
               </button>
               <button onClick={() => scrollToGroup(groups[0]?.id ?? 'god')}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', color: INK, fontWeight: 700, fontSize: 15, padding: '14px 24px', borderRadius: 12, border: `1px solid ${LINE}`, cursor: 'pointer', minHeight: 44, fontFamily: FONT_DISPLAY }}>
@@ -571,7 +590,7 @@ export default function AlgorithmsPage() {
             style={{ position: 'relative', overflow: 'hidden', textAlign: 'left', cursor: 'pointer', borderRadius: 22, padding: 'clamp(24px,3vw,32px)', background: INK, border: `1px solid ${INK}`, boxShadow: '0 30px 70px rgba(10,10,12,.22)', minHeight: 44 }}>
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(110deg, transparent 30%, rgba(10,157,99,.18) 50%, transparent 70%)', backgroundSize: '250% 100%', animation: 'sheen 5.5s linear infinite', pointerEvents: 'none' }} />
             <div style={{ position: 'relative' }}>
-              <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '.2em', color: '#6ee7b7', fontFamily: FONT_MONO, marginBottom: 18 }}>⚡ MNQ 5-MIN · REAL ACCOUNT</div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10.5, fontWeight: 800, letterSpacing: '.2em', color: '#6ee7b7', fontFamily: FONT_MONO, marginBottom: 18 }}><Zap size={13} aria-hidden /> MNQ 5-MIN · REAL ACCOUNT</div>
               <div className="grail-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12 }}>
                 {[['≈80%', 'WIN RATE'], ['≈5.0', 'PROFIT FACTOR'], ['~10', 'TRADES / MO'], ['L/S', 'LONG + SHORT']].map(([v, l]) => (
                   <div key={l} style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 14, padding: '18px 14px' }}>
@@ -585,6 +604,7 @@ export default function AlgorithmsPage() {
               </div>
             </div>
           </button>
+        </div>
         </div>
       </header>
 
@@ -652,10 +672,10 @@ export default function AlgorithmsPage() {
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/courses" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: BONE, color: INK, fontWeight: 700, fontSize: 14.5, padding: '14px 28px', borderRadius: 12, textDecoration: 'none', minHeight: 44, fontFamily: FONT_DISPLAY }}>
-              Browse Courses →
+              Browse Courses <ArrowRight size={16} aria-hidden />
             </Link>
             <Link href="/pricing" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', border: '1px solid rgba(255,255,255,.22)', color: '#fff', fontWeight: 700, fontSize: 14.5, padding: '14px 28px', borderRadius: 12, textDecoration: 'none', minHeight: 44, fontFamily: FONT_DISPLAY }}>
-              See Pricing →
+              See Pricing <ArrowRight size={16} aria-hidden />
             </Link>
           </div>
         </div>

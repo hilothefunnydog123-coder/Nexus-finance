@@ -3,16 +3,21 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Home, Cpu, Search, LineChart, Menu as MenuIcon, X, ArrowRight, Mic } from 'lucide-react'
+import {
+  Home, Cpu, Search, LineChart, Menu as MenuIcon, X, ArrowRight, Mic,
+  BrainCircuit, Zap, Swords, GitFork, GraduationCap, CheckCircle2, BarChart3,
+  Ruler, DollarSign, Rewind, Clapperboard, Sparkles, CloudLightning, Dna,
+  Gem, Newspaper, Satellite, Bot, type LucideIcon,
+} from 'lucide-react'
 
 // Routes that are full-screen immersive experiences — no bottom bar there.
 const HIDE_ON = ['/galaxy', '/storm', '/the-open', '/brain/live', '/the-mind', '/everyone']
 
-const SECTIONS: { title: string; items: [string, string, string][] }[] = [
-  { title: 'Core', items: [['📈', 'BrainStock', '/brainstock'], ['⚡', 'Algorithms', '/algorithms'], ['🔍', 'AI Analyzer', '/ai-stocks'], ['⚔️', 'War Room', '/war-room'], ['🍴', 'Fork the Brain', '/fork'], ['🎙️', 'Voice copilot', '/copilot'], ['🎓', 'Courses', '/courses']] },
-  { title: 'The proof', items: [['✅', 'Proof', '/proof'], ['📊', 'Performance', '/performance'], ['📐', 'Methodology', '/methodology'], ['💰', 'The Fund', '/fund'], ['⏮️', 'Time Machine', '/time-machine']] },
-  { title: 'Spectacle', items: [['🎬', 'The Open', '/the-open'], ['🌌', 'Market Galaxy', '/galaxy'], ['🌩️', 'Conviction Storm', '/storm'], ['🧠', 'Enter the Net', '/brain/live'], ['🧬', 'The Mind', '/the-mind']] },
-  { title: 'More', items: [['💎', 'Pricing', '/pricing'], ['📰', 'Daily Brief', '/daily'], ['🛰️', 'Intelligence', '/intelligence'], ['🤖', 'Copilot for TradingView', '/copilot/desktop']] },
+const SECTIONS: { title: string; items: [LucideIcon, string, string][] }[] = [
+  { title: 'Core', items: [[BrainCircuit, 'BrainStock', '/brainstock'], [Zap, 'Algorithms', '/algorithms'], [Search, 'AI Analyzer', '/ai-stocks'], [Swords, 'War Room', '/war-room'], [GitFork, 'Fork the Brain', '/fork'], [Mic, 'Voice copilot', '/copilot'], [GraduationCap, 'Courses', '/courses']] },
+  { title: 'The proof', items: [[CheckCircle2, 'Proof', '/proof'], [BarChart3, 'Performance', '/performance'], [Ruler, 'Methodology', '/methodology'], [DollarSign, 'The Fund', '/fund'], [Rewind, 'Time Machine', '/time-machine']] },
+  { title: 'Spectacle', items: [[Clapperboard, 'The Open', '/the-open'], [Sparkles, 'Market Galaxy', '/galaxy'], [CloudLightning, 'Conviction Storm', '/storm'], [BrainCircuit, 'Enter the Net', '/brain/live'], [Dna, 'The Mind', '/the-mind']] },
+  { title: 'More', items: [[Gem, 'Pricing', '/pricing'], [Newspaper, 'Daily Brief', '/daily'], [Satellite, 'Intelligence', '/intelligence'], [Bot, 'Copilot for TradingView', '/copilot/desktop']] },
 ]
 const CHIPS = ['NVDA', 'TSLA', 'SPY', 'AAPL', 'QQQ', 'BTC']
 
@@ -86,7 +91,9 @@ export default function MobileNav() {
         .yn-qa{ display:flex; flex-direction:column; gap:6px; align-items:center; text-align:center; text-decoration:none; color:#dfe8ff; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:14px 8px; font-size:11.5px; font-weight:600 }
         .yn-link{ display:flex; align-items:center; gap:12px; text-decoration:none; color:#dfe8ff; padding:13px 12px; border-radius:13px; font-size:15px; font-weight:600 }
         .yn-link:active{ background:rgba(255,255,255,.06) }
-        .yn-link .em{ font-size:19px; width:24px; text-align:center }
+        .yn-link .em{ width:24px; display:inline-flex; align-items:center; justify-content:center; color:#9fb0cf }
+        .yn-link[data-active="true"] .em{ color:#10d693 }
+        .yn-qa svg{ color:#5b8cff }
         .yn-link[data-active="true"]{ background:rgba(16,214,147,.1); color:#10d693 }
         .yn-close{ position:absolute; top:14px; right:16px; background:rgba(255,255,255,.06); border:none; color:#9aa6bd; width:32px; height:32px; border-radius:10px; display:grid; place-items:center }
         @media (prefers-reduced-motion: reduce){ .yn-sheet,.yn-back{ transition:none } }
@@ -121,12 +128,12 @@ export default function MobileNav() {
           <div className="yn-chips">{CHIPS.map((c) => <button key={c} className="yn-chip" onClick={() => go(c)}>{c}</button>)}</div>
           <h3>OR START HERE</h3>
           <div className="yn-quick">
-            <Link href="/brainstock" className="yn-qa"><span style={{ fontSize: 22 }}>📈</span>Today’s calls</Link>
-            <Link href="/ai-stocks" className="yn-qa"><span style={{ fontSize: 22 }}>🔍</span>Analyze a stock</Link>
-            <Link href="/algorithms" className="yn-qa"><span style={{ fontSize: 22 }}>⚡</span>Algorithms</Link>
+            <Link href="/brainstock" className="yn-qa"><BrainCircuit size={20} />Today’s calls</Link>
+            <Link href="/ai-stocks" className="yn-qa"><Search size={20} />Analyze a stock</Link>
+            <Link href="/algorithms" className="yn-qa"><Zap size={20} />Algorithms</Link>
             <Link href="/copilot" className="yn-qa"><Mic size={20} />Talk to it</Link>
-            <Link href="/proof" className="yn-qa"><span style={{ fontSize: 22 }}>✅</span>The proof</Link>
-            <Link href="/pricing" className="yn-qa"><span style={{ fontSize: 22 }}>💎</span>Go Pro</Link>
+            <Link href="/proof" className="yn-qa"><CheckCircle2 size={20} />The proof</Link>
+            <Link href="/pricing" className="yn-qa"><Gem size={20} />Go Pro</Link>
           </div>
         </div>
 
@@ -137,9 +144,9 @@ export default function MobileNav() {
           {SECTIONS.map((sec) => (
             <div key={sec.title}>
               <h3>{sec.title.toUpperCase()}</h3>
-              {sec.items.map(([em, label, href]) => (
+              {sec.items.map(([Icon, label, href]) => (
                 <Link key={href} href={href} className="yn-link" data-active={active(href)}>
-                  <span className="em">{em}</span>{label}
+                  <span className="em"><Icon size={19} /></span>{label}
                 </Link>
               ))}
             </div>

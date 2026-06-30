@@ -13,8 +13,12 @@ import {
 } from 'recharts'
 import Link from 'next/link'
 import {
+  ArrowLeft, Trophy, Target, Activity, BarChart3, CheckCircle2, XCircle,
+  TrendingUp, TrendingDown, DollarSign, ChevronRight,
+} from 'lucide-react'
+import {
   VOID, PANEL, BORDER, CYAN, VIOLET, GREEN, RED, AMBER, TXT, MUTE, FAINT, MONO,
-  Tag, Stat, WorthBadge, PathRail, pct, fmtNum, catColor, useReducedMotion,
+  Tag, Stat, WorthBadge, PathRail, TextureBg, pct, fmtNum, catColor, useReducedMotion,
 } from '@/components/edge/shared'
 
 // ── data shape (mirrors GET /api/edge/track-record) ──────────────────────────
@@ -61,8 +65,8 @@ export default function TrackRecordClient() {
     <Shell>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 'clamp(28px,4vw,40px)', paddingBottom: 16, borderBottom: `1px solid ${BORDER}` }}>
         <PathRail active="record" />
-        <Link href="/edge" style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: MUTE, textDecoration: 'none' }}>
-          ← Back to board
+        <Link href="/edge" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: MUTE, textDecoration: 'none' }}>
+          <ArrowLeft size={13} style={{ flexShrink: 0 }} /> Back to board
         </Link>
       </div>
       <Hero stats={stats} />
@@ -89,48 +93,54 @@ function Hero({ stats }: { stats: TrackStats }) {
   const skillPos = (stats.brierSkill ?? 0) > 0
   const roiPos = (stats.worthItRoi ?? 0) >= 0
   return (
-    <header>
-      <div style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.28em', textTransform: 'uppercase', color: GREEN, marginBottom: 18 }}>
-        // un-cherry-picked report card
-      </div>
-      <h1 style={{ fontFamily: 'var(--font-display),system-ui,sans-serif', fontWeight: 700, letterSpacing: '-0.045em', fontSize: 'clamp(2.2rem,6vw,4.4rem)', lineHeight: 0.99, margin: 0 }}>
-        We grade ourselves <span style={{ color: GREEN }}>in public.</span>
-      </h1>
-      <p style={{ marginTop: 18, fontSize: 'clamp(1rem,1.6vw,1.18rem)', color: MUTE, lineHeight: 1.6, maxWidth: 660 }}>
-        We log our probability for every market the moment we price it. When Kalshi resolves it, we score the call —
-        Brier, hit rate, and the realized ROI of the picks we flagged worth it. No deleting the losers.
-      </p>
+    <header style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', border: `1px solid ${BORDER}`, background: `linear-gradient(160deg, ${GREEN}0c, transparent 55%)`, padding: 'clamp(24px,4vw,44px)' }}>
+      <TextureBg seed="ynedge-record" opacity={0.14} overlay={`linear-gradient(125deg, ${VOID}f2 40%, ${VOID}d8)`} />
+      <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${GREEN}, transparent)` }} />
+      <div style={{ position: 'relative' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: MONO, fontSize: 11, letterSpacing: '0.28em', textTransform: 'uppercase', color: GREEN, marginBottom: 18, border: `1px solid ${GREEN}40`, background: `${GREEN}12`, padding: '5px 11px', borderRadius: 100 }}>
+          <Trophy size={14} style={{ flexShrink: 0 }} /> un-cherry-picked report card
+        </div>
+        <h1 style={{ fontFamily: 'var(--font-display),system-ui,sans-serif', fontWeight: 700, letterSpacing: '-0.045em', fontSize: 'clamp(2.2rem,6vw,4.4rem)', lineHeight: 0.99, margin: 0 }}>
+          We grade ourselves <span style={{ color: GREEN }}>in public.</span>
+        </h1>
+        <p style={{ marginTop: 18, fontSize: 'clamp(1rem,1.6vw,1.18rem)', color: MUTE, lineHeight: 1.6, maxWidth: 660 }}>
+          We log our probability for every market the moment we price it. When Kalshi resolves it, we score the call —
+          Brier, hit rate, and the realized ROI of the picks we flagged worth it. No deleting the losers.
+        </p>
 
-      <div style={{ marginTop: 'clamp(30px,5vw,52px)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 'clamp(18px,3vw,34px)', alignItems: 'start' }}>
-        <Stat label="markets graded" value={stats.ready ? fmtNum(stats.graded) : '—'} color={CYAN} />
-        <Stat
-          label="brier score"
-          value={stats.brier != null ? stats.brier.toFixed(3) : '—'}
-          color={TXT}
-          sub="lower is better · 0.25 = coin flip"
-        />
-        <Stat
-          label="brier skill"
-          value={stats.brierSkill != null ? `${skillPos ? '+' : ''}${(stats.brierSkill * 100).toFixed(1)}%` : '—'}
-          color={stats.brierSkill == null ? MUTE : skillPos ? GREEN : RED}
-          sub=">0 beats a coin flip"
-        />
-        <Stat
-          label="hit rate"
-          value={stats.hitRate != null ? `${stats.hitRate.toFixed(1)}%` : '—'}
-          color={TXT}
-          sub="our chosen side won"
-        />
-        <Stat
-          label="worth-it roi"
-          value={stats.worthItRoi != null ? `${roiPos ? '+' : ''}${stats.worthItRoi.toFixed(1)}%` : '—'}
-          color={stats.worthItRoi == null ? MUTE : roiPos ? GREEN : RED}
-          sub="realized P&L per $1"
-        />
+        <div style={{ marginTop: 'clamp(30px,5vw,52px)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 'clamp(18px,3vw,34px)', alignItems: 'start' }}>
+          <Stat label="markets graded" value={stats.ready ? fmtNum(stats.graded) : '—'} color={CYAN} sub={<span style={subRow}><Activity size={11} style={{ flexShrink: 0 }} /> settled calls</span>} />
+          <Stat
+            label="brier score"
+            value={stats.brier != null ? stats.brier.toFixed(3) : '—'}
+            color={TXT}
+            sub={<span style={subRow}><BarChart3 size={11} style={{ flexShrink: 0 }} /> lower is better · 0.25 = coin flip</span>}
+          />
+          <Stat
+            label="brier skill"
+            value={stats.brierSkill != null ? `${skillPos ? '+' : ''}${(stats.brierSkill * 100).toFixed(1)}%` : '—'}
+            color={stats.brierSkill == null ? MUTE : skillPos ? GREEN : RED}
+            sub={<span style={subRow}>{skillPos ? <TrendingUp size={11} style={{ flexShrink: 0 }} /> : <TrendingDown size={11} style={{ flexShrink: 0 }} />} &gt;0 beats a coin flip</span>}
+          />
+          <Stat
+            label="hit rate"
+            value={stats.hitRate != null ? `${stats.hitRate.toFixed(1)}%` : '—'}
+            color={TXT}
+            sub={<span style={subRow}><Target size={11} style={{ flexShrink: 0 }} /> our chosen side won</span>}
+          />
+          <Stat
+            label="worth-it roi"
+            value={stats.worthItRoi != null ? `${roiPos ? '+' : ''}${stats.worthItRoi.toFixed(1)}%` : '—'}
+            color={stats.worthItRoi == null ? MUTE : roiPos ? GREEN : RED}
+            sub={<span style={subRow}><DollarSign size={11} style={{ flexShrink: 0 }} /> realized P&L per $1</span>}
+          />
+        </div>
       </div>
     </header>
   )
 }
+
+const subRow: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5 }
 
 // ── CALIBRATION (centerpiece) ────────────────────────────────────────────────
 function Calibration({ data, reduced }: { data: CalibPoint[]; reduced: boolean }) {
@@ -141,6 +151,7 @@ function Calibration({ data, reduced }: { data: CalibPoint[]; reduced: boolean }
   return (
     <section style={{ marginTop: 'clamp(44px,6vw,72px)' }}>
       <SectionHead
+        icon={<BarChart3 size={14} />}
         kicker="// the calibration curve"
         title="Do our 70% calls happen 70% of the time?"
         blurb="X is the probability we assigned. Y is how often it actually resolved YES. A point sitting ON the diagonal means we were perfectly calibrated — when we say 70%, it happens 70% of the time. Below the line = overconfident; above = underconfident. Bigger dots = more calls in that bucket."
@@ -239,6 +250,7 @@ function WorthItScoreboard({ stats }: { stats: TrackStats }) {
   return (
     <section style={{ marginTop: 'clamp(44px,6vw,72px)' }}>
       <SectionHead
+        icon={<Target size={14} />}
         kicker="// the real-money claim"
         title="The picks we flagged worth it"
         blurb="A market is only WORTH IT when our edge over the market price clears our bar. This is the bet we'd actually place — so it's the number that matters. Graded honestly, winners and losers."
@@ -278,7 +290,7 @@ function WorthItScoreboard({ stats }: { stats: TrackStats }) {
 function RecentList({ rows }: { rows: RecentRow[] }) {
   return (
     <section style={{ marginTop: 'clamp(44px,6vw,72px)' }}>
-      <SectionHead kicker="// the receipts" title="Recently graded" blurb="The last calls to settle — our probability vs the market's, the result, and what it paid. Click into /edge to see how each was priced." />
+      <SectionHead icon={<Activity size={14} />} kicker="// the receipts" title="Recently graded" blurb="The last calls to settle — our probability vs the market's, the result, and what it paid. Click into /edge to see how each was priced." />
       {rows.length === 0 ? (
         <Panel glow={CYAN} style={{ padding: 28, textAlign: 'center', color: MUTE, fontSize: 14 }}>Nothing graded yet.</Panel>
       ) : (
@@ -320,7 +332,12 @@ const TDC: React.CSSProperties = { padding: '11px 12px', borderBottom: `1px soli
 function ResultPill({ result }: { result: string }) {
   const yes = result === 'yes'
   const c = yes ? GREEN : RED
-  return <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, color: c, letterSpacing: '0.08em' }}>{yes ? 'YES' : 'NO'}</span>
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: MONO, fontSize: 11, fontWeight: 700, color: c, letterSpacing: '0.08em' }}>
+      {yes ? <CheckCircle2 size={12} style={{ flexShrink: 0 }} /> : <XCircle size={12} style={{ flexShrink: 0 }} />}
+      {yes ? 'YES' : 'NO'}
+    </span>
+  )
 }
 
 function pnlColor(pnl: number) { return pnl >= 0 ? GREEN : RED }
@@ -431,10 +448,13 @@ function Panel({ children, glow = GREEN, style }: { children: ReactNode; glow?: 
   )
 }
 
-function SectionHead({ kicker, title, blurb }: { kicker: string; title: string; blurb: string }) {
+function SectionHead({ kicker, title, blurb, icon }: { kicker: string; title: string; blurb: string; icon?: ReactNode }) {
   return (
     <div style={{ marginBottom: 'clamp(16px,2.5vw,24px)', maxWidth: 720 }}>
-      <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.2em', textTransform: 'uppercase', color: GREEN, marginBottom: 10 }}>{kicker}</div>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.2em', textTransform: 'uppercase', color: GREEN, marginBottom: 10 }}>
+        {icon && <span style={{ display: 'inline-flex', flexShrink: 0 }}>{icon}</span>}
+        {kicker}
+      </div>
       <h2 style={{ fontFamily: 'var(--font-display),system-ui,sans-serif', fontWeight: 700, letterSpacing: '-0.03em', fontSize: 'clamp(1.4rem,3.4vw,2.1rem)', lineHeight: 1.06, margin: 0 }}>{title}</h2>
       <p style={{ marginTop: 10, fontSize: 14, color: MUTE, lineHeight: 1.6 }}>{blurb}</p>
     </div>

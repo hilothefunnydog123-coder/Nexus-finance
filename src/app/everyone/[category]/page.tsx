@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { Fuel, Plane, Zap, Wrench, Check, Share2, type LucideIcon } from 'lucide-react'
 
 // ── new cobalt/ink/paper brand (matches /everyone landing) ──
 const INK = '#0a0a0c', BONE = '#f4f2ec', PAPER = '#fcfbf8', ACCENT = '#1f3bff'
@@ -12,11 +13,11 @@ const DISPLAY = 'var(--font-display), system-ui, sans-serif'
 const MONO = 'var(--font-mono), ui-monospace, monospace'
 
 type Stance = 'now' | 'wait' | 'neutral'
-type UI = { emoji: string; name: string; question: string; blurb: string; outlookLabel: string; windows: [number, string][] }
+type UI = { Icon: LucideIcon; photo: string; seed: string; name: string; question: string; blurb: string; outlookLabel: string; windows: [number, string][] }
 const CAT_UI: Record<string, UI> = {
-  gas:         { emoji: '⛽', name: 'Gas prices',        question: 'Fill up now, or wait?',                 blurb: 'the oil & wholesale fuel market that drives the price at the pump', outlookLabel: 'Price outlook', windows: [[7, 'this week'], [14, 'next 2 weeks'], [30, 'this month']] },
-  flights:     { emoji: '✈️', name: 'Airfares',          question: 'Book now, or keep watching?',           blurb: 'fuel costs and travel-demand signals that move airfares',          outlookLabel: 'Fare outlook',  windows: [[14, 'in ~2 weeks'], [30, 'in ~1 month'], [60, 'in ~2 months']] },
-  electricity: { emoji: '💡', name: 'Electricity plans', question: 'Lock a fixed plan, or stay variable?', blurb: 'the natural-gas and power market that sets electricity rates',      outlookLabel: 'Rate outlook',  windows: [[30, '1 month'], [60, '2 months'], [90, '3 months']] },
+  gas:         { Icon: Fuel,  photo: 'https://images.unsplash.com/photo-1545262810-77515befe149?auto=format&fit=crop&w=900&q=80', seed: 'yngas',   name: 'Gas prices',        question: 'Fill up now, or wait?',                 blurb: 'the oil & wholesale fuel market that drives the price at the pump', outlookLabel: 'Price outlook', windows: [[7, 'this week'], [14, 'next 2 weeks'], [30, 'this month']] },
+  flights:     { Icon: Plane, photo: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=900&q=80', seed: 'ynplane', name: 'Airfares',          question: 'Book now, or keep watching?',           blurb: 'fuel costs and travel-demand signals that move airfares',          outlookLabel: 'Fare outlook',  windows: [[14, 'in ~2 weeks'], [30, 'in ~1 month'], [60, 'in ~2 months']] },
+  electricity: { Icon: Zap,   photo: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=900&q=80', seed: 'ynpower', name: 'Electricity plans', question: 'Lock a fixed plan, or stay variable?', blurb: 'the natural-gas and power market that sets electricity rates',      outlookLabel: 'Rate outlook',  windows: [[30, '1 month'], [60, '2 months'], [90, '3 months']] },
 }
 
 type Forecast = {
@@ -145,7 +146,9 @@ export default function CategoryTool() {
     return (
       <Shell toast={toast}>
         <div className="ev-rise" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 18, padding: '40px 30px', textAlign: 'center', boxShadow: '0 1px 2px rgba(10,10,12,.04)' }}>
-          <div style={{ fontSize: 46, marginBottom: 12 }}>🛠️</div>
+          <div style={{ display: 'grid', placeItems: 'center', marginBottom: 16 }}>
+            <span style={{ width: 64, height: 64, borderRadius: 16, background: 'rgba(31,59,255,.08)', border: `1px solid ${LINE}`, display: 'grid', placeItems: 'center' }}><Wrench size={30} color={ACCENT} aria-hidden /></span>
+          </div>
           <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, letterSpacing: '-.03em', marginBottom: 10 }}>This one’s coming soon</div>
           <div style={{ fontSize: 15, color: SUB, marginBottom: 24, lineHeight: 1.6, maxWidth: 400, marginLeft: 'auto', marginRight: 'auto' }}>
             The net needs a clean market to read for <b style={{ color: INK }}>“{cat}”</b> before it’ll make a call. It’s on the list — every live timer is graded in public.
@@ -161,9 +164,19 @@ export default function CategoryTool() {
 
   return (
     <Shell toast={toast}>
+      {/* ── hero photo ── */}
+      <div className="ev-rise" style={{ position: 'relative', height: 'clamp(150px,26vw,210px)', borderRadius: 18, overflow: 'hidden', marginBottom: 26, background: `linear-gradient(135deg, ${ACCENT}, ${INK})` }}>
+        <img src={`https://picsum.photos/seed/${ui.seed}/1200/800`} alt="" loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />
+        <img src={ui.photo} alt={ui.name} loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,10,12,.2), rgba(10,10,12,.62))' }} />
+        <div style={{ position: 'absolute', left: 18, bottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(252,251,248,.94)', display: 'grid', placeItems: 'center' }}><ui.Icon size={22} color={ACCENT} aria-hidden /></span>
+          <span style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: PAPER, letterSpacing: '-.02em' }}>{ui.name}</span>
+        </div>
+      </div>
       {/* ── hero: what this decides ── */}
       <div className="ev-rise" style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: MONO, fontSize: 12, letterSpacing: '.14em', color: ACCENT, marginBottom: 18 }}>
-        <span style={{ width: 7, height: 7, borderRadius: 99, background: WAIT, animation: 'evblink 1.5s infinite' }} /> {ui.emoji} {ui.name.toUpperCase()} TIMER
+        <span style={{ width: 7, height: 7, borderRadius: 99, background: WAIT, animation: 'evblink 1.5s infinite' }} /> {ui.name.toUpperCase()} TIMER
       </div>
       <h1 className="ev-rise" style={{ fontFamily: DISPLAY, fontSize: 'clamp(31px,5.4vw,46px)', fontWeight: 700, letterSpacing: '-.03em', lineHeight: 1.04, margin: '0 0 16px' }}>{ui.question}</h1>
       <p className="ev-rise" style={{ fontSize: 16.5, color: SUB, lineHeight: 1.6, maxWidth: 560, marginBottom: 32 }}>
@@ -252,7 +265,7 @@ export default function CategoryTool() {
                 More decisions →
               </Link>
               <button onClick={share} className="ev-cta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 50, minWidth: 50, fontSize: 14.5, fontWeight: 700, color: INK, background: 'transparent', border: `1px solid ${LINE}`, borderRadius: 10, padding: '13px 18px', cursor: 'pointer' }} aria-label="Share this call">
-                <ShareIcon /> Share
+                <Share2 size={16} aria-hidden /> Share
               </button>
             </div>
           </div>
@@ -304,20 +317,11 @@ function Shell({ children, toast }: { children: React.ReactNode; toast?: string 
       </header>
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '48px 22px 90px' }}>{children}</main>
       {toast && (
-        <div className="ev-anim" style={{ position: 'fixed', bottom: 26, left: '50%', transform: 'translateX(-50%)', background: INK, color: PAPER, fontSize: 13.5, fontWeight: 700, padding: '12px 20px', borderRadius: 999, boxShadow: '0 14px 34px rgba(10,10,12,.28)', zIndex: 60, animation: 'evtoast .35s cubic-bezier(.16,1,.3,1) both' }}>
-          ✓ {toast}
+        <div className="ev-anim" style={{ position: 'fixed', bottom: 26, left: '50%', transform: 'translateX(-50%)', background: INK, color: PAPER, fontSize: 13.5, fontWeight: 700, padding: '12px 20px', borderRadius: 999, boxShadow: '0 14px 34px rgba(10,10,12,.28)', zIndex: 60, display: 'inline-flex', alignItems: 'center', gap: 7, animation: 'evtoast .35s cubic-bezier(.16,1,.3,1) both' }}>
+          <Check size={16} color={WAIT} aria-hidden /> {toast}
         </div>
       )}
     </div>
-  )
-}
-
-function ShareIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-      <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /><line x1="15.4" y1="6.5" x2="8.6" y2="10.5" />
-    </svg>
   )
 }
 

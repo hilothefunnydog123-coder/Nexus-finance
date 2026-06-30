@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { Home, Fuel, Plane, Zap, TrendingUp, Hourglass, type LucideIcon } from 'lucide-react'
 
 // ── new cobalt/ink/paper brand (matches /everyone landing) ──
 const INK = '#0a0a0c', BONE = '#f4f2ec', PAPER = '#fcfbf8', ACCENT = '#1f3bff'
@@ -26,11 +27,11 @@ type TrackResponse = {
 }
 
 // category presentation map
-const META: Record<string, { icon: string; name: string; sub: string; href: string }> = {
-  mortgage: { icon: '🏠', name: 'Mortgage rates', sub: 'Lock or float?', href: '/everyone/lock' },
-  gas: { icon: '⛽', name: 'Gas prices', sub: 'Fill up or wait?', href: '/everyone/gas' },
-  flights: { icon: '✈️', name: 'Airfares', sub: 'Book or hold?', href: '/everyone/flights' },
-  electricity: { icon: '💡', name: 'Electricity', sub: 'Fix or float?', href: '/everyone/electricity' },
+const META: Record<string, { Icon: LucideIcon; name: string; sub: string; href: string }> = {
+  mortgage: { Icon: Home, name: 'Mortgage rates', sub: 'Lock or float?', href: '/everyone/lock' },
+  gas: { Icon: Fuel, name: 'Gas prices', sub: 'Fill up or wait?', href: '/everyone/gas' },
+  flights: { Icon: Plane, name: 'Airfares', sub: 'Book or hold?', href: '/everyone/flights' },
+  electricity: { Icon: Zap, name: 'Electricity', sub: 'Fix or float?', href: '/everyone/electricity' },
 }
 const ORDER = ['mortgage', 'gas', 'flights', 'electricity']
 
@@ -171,7 +172,7 @@ export default function EveryoneProof() {
         <section style={{ maxWidth: 1080, margin: '0 auto', padding: '6px 22px 8px' }}>
           <Reveal>
             <div style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 14, padding: '22px 24px', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 28 }}>⏳</span>
+              <span style={{ width: 44, height: 44, borderRadius: 11, background: 'rgba(224,132,31,.1)', display: 'grid', placeItems: 'center', flexShrink: 0 }}><Hourglass size={22} color={NOW} aria-hidden /></span>
               <div style={{ flex: 1, minWidth: 240 }}>
                 <div style={{ fontSize: 16.5, fontWeight: 800 }}>The record is still building.</div>
                 <div style={{ fontSize: 14, color: SUB, lineHeight: 1.55, marginTop: 4 }}>
@@ -194,15 +195,16 @@ export default function EveryoneProof() {
         </Reveal>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(248px,1fr))', gap: 16 }}>
           {categories.map((c, idx) => {
-            const m = META[c.category] ?? { icon: '📈', name: c.category, sub: '', href: '/everyone' }
+            const m = META[c.category] ?? { Icon: TrendingUp, name: c.category, sub: '', href: '/everyone' }
             const p = pct(c.accuracy)
             const col = accColor(c.accuracy)
+            const CatIcon = m.Icon
             return (
               <Reveal key={c.category} delay={idx * 70}>
                 <Link href={m.href} style={{ textDecoration: 'none' }}>
                   <div className="pf-cat" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18, height: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                      <span style={{ fontSize: 26 }}>{m.icon}</span>
+                      <span style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(31,59,255,.07)', border: `1px solid ${LINE}`, display: 'grid', placeItems: 'center' }}><CatIcon size={20} color={col} aria-hidden /></span>
                       <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '.08em', color: SUB, border: `1px solid ${LINE}`, borderRadius: 999, padding: '4px 10px' }}>
                         {c.resolved} graded
                       </span>

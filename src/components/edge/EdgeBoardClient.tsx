@@ -10,8 +10,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
+  Target, DollarSign, Activity, Flame, BrainCircuit, Trophy, ArrowRight,
+  TrendingUp, Clock, Scale, AlertTriangle,
+} from 'lucide-react'
+import {
   VOID, PANEL, BORDER, CYAN, VIOLET, GREEN, RED, AMBER, TXT, MUTE, FAINT, MONO,
-  HeadToHead, WorthBadge, EngineBadge, Tag, Stat, PathRail,
+  HeadToHead, WorthBadge, EngineBadge, Tag, Stat, PathRail, TextureBg,
   pct, signedPct, fmtNum, timeToClose, catColor, edgeAccent, useReducedMotion,
 } from '@/components/edge/shared'
 import { Filters, DEFAULT_FILTERS, applyFilters, type EdgeFilterState } from '@/components/edge/Filters'
@@ -116,7 +120,7 @@ export default function EdgeBoardClient() {
       <div style={{ marginTop: 'clamp(20px,3vw,30px)', paddingTop: 16, borderTop: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <PathRail active="board" />
         <Link href="/edge/track-record" style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: GREEN, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-          See how we score →
+          See how we score <ArrowRight size={13} style={{ flexShrink: 0 }} />
         </Link>
       </div>
 
@@ -151,8 +155,8 @@ export default function EdgeBoardClient() {
           )}
           {gridRows.length > 0 && (
             <div style={{ marginTop: 'clamp(28px,4vw,44px)', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <h2 style={{ margin: 0, fontWeight: 800, letterSpacing: '-0.02em', fontSize: 'clamp(1.05rem,2.4vw,1.4rem)', color: TXT }}>
-                Every market, ranked by edge
+              <h2 style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: 10, fontWeight: 800, letterSpacing: '-0.02em', fontSize: 'clamp(1.05rem,2.4vw,1.4rem)', color: TXT }}>
+                <Activity size={20} style={{ color: CYAN, flexShrink: 0 }} /> Every market, ranked by edge
               </h2>
               <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: FAINT }}>
                 tap any market for the full breakdown
@@ -182,79 +186,109 @@ function Hero({
   reduced: boolean
 }) {
   return (
-    <section style={{ position: 'relative', paddingTop: 'clamp(8px,2vw,20px)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <ScanDot reduced={reduced} />
-        <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.24em', textTransform: 'uppercase', color: CYAN }}>
-          YN EDGE · LIVE PRICING
-        </span>
-        {!liveData && (
-          <span
-            title="Live Kalshi credentials aren't connected — showing our offline seed market set so the engine is still demonstrable."
-            style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: AMBER, border: `1px solid ${AMBER}40`, background: `${AMBER}12`, padding: '3px 9px', borderRadius: 100 }}
-          >
-            ◇ offline seed set
-          </span>
-        )}
-        {pricedAt && (
-          <span style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: 10.5, color: FAINT, letterSpacing: '0.08em' }}>
-            last priced {relTime(pricedAt)}
-          </span>
-        )}
-      </div>
+    <section
+      style={{
+        position: 'relative',
+        marginTop: 'clamp(4px,1.5vw,12px)',
+        borderRadius: 16,
+        overflow: 'hidden',
+        border: `1px solid ${BORDER}`,
+        background: `linear-gradient(160deg, ${CYAN}0a, ${VIOLET}08 40%, transparent)`,
+        padding: 'clamp(22px,4vw,46px) clamp(18px,3.5vw,44px)',
+      }}
+    >
+      <TextureBg seed="ynedge" opacity={0.18} overlay={`linear-gradient(120deg, ${VOID}f0 30%, ${VOID}cc 70%, ${VOID}f0)`} />
+      <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${CYAN}, ${VIOLET}, transparent)` }} />
 
-      <h1
-        style={{
-          margin: '18px 0 0',
-          fontWeight: 900,
-          letterSpacing: '-0.035em',
-          lineHeight: 0.98,
-          fontSize: 'clamp(2.4rem, 7vw, 5rem)',
-        }}
-      >
-        <span style={{ color: TXT }}>AI</span>{' '}
-        <span style={{ color: FAINT, fontWeight: 600 }}>vs</span>{' '}
-        <span
+      <div style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <ScanDot reduced={reduced} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: MONO, fontSize: 11, letterSpacing: '0.24em', textTransform: 'uppercase', color: CYAN }}>
+            <BrainCircuit size={15} style={{ flexShrink: 0 }} /> YN EDGE · LIVE PRICING
+          </span>
+          {!liveData && (
+            <span
+              title="Live Kalshi credentials aren't connected — showing our offline seed market set so the engine is still demonstrable."
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: AMBER, border: `1px solid ${AMBER}40`, background: `${AMBER}12`, padding: '3px 9px', borderRadius: 100 }}
+            >
+              <AlertTriangle size={11} style={{ flexShrink: 0 }} /> offline seed set
+            </span>
+          )}
+          {pricedAt && (
+            <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 10.5, color: FAINT, letterSpacing: '0.08em' }}>
+              <Clock size={12} style={{ flexShrink: 0 }} /> last priced {relTime(pricedAt)}
+            </span>
+          )}
+        </div>
+
+        <h1
           style={{
-            background: `linear-gradient(100deg, ${CYAN}, ${VIOLET})`,
-            WebkitBackgroundClip: 'text',
-            backgroundClip: 'text',
-            color: 'transparent',
+            margin: '18px 0 0',
+            fontWeight: 900,
+            letterSpacing: '-0.035em',
+            lineHeight: 0.98,
+            fontSize: 'clamp(2.4rem, 7vw, 5rem)',
           }}
         >
-          THE MARKET
-        </span>
-      </h1>
-      <p style={{ margin: '14px 0 0', maxWidth: 640, color: MUTE, fontSize: 'clamp(.95rem,1.6vw,1.1rem)', lineHeight: 1.55 }}>
-        Our neural net and grounded AI price every prediction market, then we measure the gap
-        against the live price — the <span style={{ color: CYAN }}>edge</span>. Only the bets actually
-        worth taking make the board. Ranked. Graded in public.
-      </p>
-      {note && (
-        <p style={{ margin: '8px 0 0', fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.04em' }}>{note}</p>
-      )}
+          <span style={{ color: TXT }}>AI</span>{' '}
+          <span style={{ color: FAINT, fontWeight: 600 }}>vs</span>{' '}
+          <span
+            style={{
+              background: `linear-gradient(100deg, ${CYAN}, ${VIOLET})`,
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              color: 'transparent',
+            }}
+          >
+            THE MARKET
+          </span>
+        </h1>
 
-      {/* stat strip */}
-      <div
-        style={{
-          marginTop: 'clamp(22px,3.5vw,36px)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-          gap: 1,
-          background: BORDER,
-          border: `1px solid ${BORDER}`,
-          borderRadius: 10,
-          overflow: 'hidden',
-        }}
-      >
-        <StatCell><Stat label="Markets priced" value={fmtNum(hero.priced)} color={TXT} /></StatCell>
-        <StatCell><Stat label="Worth it now" value={fmtNum(hero.worthIt)} color={GREEN} /></StatCell>
-        <StatCell><Stat label="Biggest edge" value={`${(hero.biggestEdge * 100).toFixed(1)}pt`} color={hero.biggestEdge > 0 ? CYAN : MUTE} /></StatCell>
-        <StatCell><Stat label="Avg confidence" value={pct(hero.avgConf, 0)} color={VIOLET} /></StatCell>
+        <p style={{ margin: '16px 0 0', maxWidth: 660, color: TXT, fontSize: 'clamp(1.05rem,1.9vw,1.35rem)', fontWeight: 600, lineHeight: 1.4, letterSpacing: '-0.01em' }}>
+          The net prices every market. We show the ones worth betting.
+        </p>
+        <p style={{ margin: '10px 0 0', maxWidth: 640, color: MUTE, fontSize: 'clamp(.95rem,1.6vw,1.05rem)', lineHeight: 1.55 }}>
+          Our neural net and grounded AI price every prediction market, then we measure the gap
+          against the live price — the <span style={{ color: CYAN, fontWeight: 600 }}>edge</span>. Only the bets actually
+          worth taking make the board. Ranked. Graded in public.
+        </p>
+        {note && (
+          <p style={{ margin: '8px 0 0', fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.04em' }}>{note}</p>
+        )}
+
+        {/* headline stat — markets with an edge */}
+        <div style={{ marginTop: 'clamp(18px,3vw,28px)', display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontFamily: MONO, fontWeight: 800, fontSize: 'clamp(1rem,2vw,1.25rem)', color: GREEN, border: `1px solid ${GREEN}40`, background: `${GREEN}12`, padding: '8px 14px', borderRadius: 8, boxShadow: `0 0 26px ${GREEN}1f` }}>
+            <Flame size={18} style={{ flexShrink: 0 }} />
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtNum(hero.worthIt)}</span>
+            <span style={{ fontWeight: 600, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: TXT }}>markets worth betting right now</span>
+          </span>
+        </div>
+
+        {/* stat strip */}
+        <div
+          style={{
+            marginTop: 'clamp(20px,3vw,30px)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+            gap: 1,
+            background: BORDER,
+            border: `1px solid ${BORDER}`,
+            borderRadius: 10,
+            overflow: 'hidden',
+          }}
+        >
+          <StatCell><Stat label="Markets priced" value={fmtNum(hero.priced)} color={TXT} sub={<span style={statSub}><Activity size={11} style={{ flexShrink: 0 }} /> priced by the net</span>} /></StatCell>
+          <StatCell><Stat label="Worth it now" value={fmtNum(hero.worthIt)} color={GREEN} sub={<span style={statSub}><Target size={11} style={{ flexShrink: 0 }} /> clear the bar</span>} /></StatCell>
+          <StatCell><Stat label="Biggest edge" value={`${(hero.biggestEdge * 100).toFixed(1)}pt`} color={hero.biggestEdge > 0 ? CYAN : MUTE} sub={<span style={statSub}><TrendingUp size={11} style={{ flexShrink: 0 }} /> best gap</span>} /></StatCell>
+          <StatCell><Stat label="Avg confidence" value={pct(hero.avgConf, 0)} color={VIOLET} sub={<span style={statSub}><BrainCircuit size={11} style={{ flexShrink: 0 }} /> across the board</span>} /></StatCell>
+        </div>
       </div>
     </section>
   )
 }
+
+const statSub: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5 }
 
 function StatCell({ children }: { children: React.ReactNode }) {
   return <div style={{ background: VOID, padding: 'clamp(14px,2vw,20px)' }}>{children}</div>
@@ -291,15 +325,19 @@ function Spotlight({ row, reduced }: { row: EdgeRow; reduced: boolean }) {
         overflow: 'hidden',
       }}
     >
+      <TextureBg seed={`ynedge-spot-${market.ticker}`} opacity={0.1} overlay={`linear-gradient(135deg, ${VOID}f4 40%, ${VOID}e0)`} />
       <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${glow}, transparent)` }} />
 
+      <div style={{ position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: glow, fontWeight: 700 }}>
-          ★ #1 · TOP PICK
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: MONO, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: glow, fontWeight: 700 }}>
+          <Trophy size={16} style={{ flexShrink: 0 }} /> #1 · TOP PICK
         </span>
         <Tag color={catColor(market.category)}>{market.category}</Tag>
         <EngineBadge engine={pricing.engine} />
-        <span style={{ fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.08em' }}>closes {timeToClose(market.closeTime)}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.08em' }}>
+          <Clock size={12} style={{ flexShrink: 0 }} /> closes {timeToClose(market.closeTime)}
+        </span>
         <span style={{ marginLeft: 'auto' }}><WorthBadge worthIt={verdict.worthIt} /></span>
       </div>
 
@@ -342,10 +380,10 @@ function Spotlight({ row, reduced }: { row: EdgeRow; reduced: boolean }) {
             overflow: 'hidden',
           }}
         >
-          <TrophyStat label="Edge" value={`${signedPct(verdict.edge)}pt`} color={accent} glow={!reduced && verdict.worthIt} />
-          <TrophyStat label="EV / $1" value={`${signedPct(verdict.evPerDollar)}¢`} color={verdict.evPerDollar >= 0 ? GREEN : RED} glow={!reduced && verdict.worthIt} />
-          <TrophyStat label="Half-Kelly" value={pct(verdict.halfKelly, 1)} color={CYAN} />
-          <TrophyStat label="Confidence" value={pct(verdict.confidence, 0)} color={VIOLET} />
+          <TrophyStat label="Edge" value={`${signedPct(verdict.edge)}pt`} color={accent} glow={!reduced && verdict.worthIt} icon={<Target size={13} />} />
+          <TrophyStat label="EV / $1" value={`${signedPct(verdict.evPerDollar)}¢`} color={verdict.evPerDollar >= 0 ? GREEN : RED} glow={!reduced && verdict.worthIt} icon={<DollarSign size={13} />} />
+          <TrophyStat label="Half-Kelly" value={pct(verdict.halfKelly, 1)} color={CYAN} icon={<Scale size={13} />} />
+          <TrophyStat label="Confidence" value={pct(verdict.confidence, 0)} color={VIOLET} icon={<BrainCircuit size={13} />} />
         </div>
       </div>
 
@@ -354,23 +392,27 @@ function Spotlight({ row, reduced }: { row: EdgeRow; reduced: boolean }) {
           href={`/edge/${encodeURIComponent(market.ticker)}`}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: MONO, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, color: VOID, background: glow, border: `1px solid ${glow}`, padding: '11px 20px', borderRadius: 7, textDecoration: 'none', boxShadow: verdict.worthIt && !reduced ? `0 0 24px ${glow}55` : 'none' }}
         >
-          Open the breakdown →
+          Open the breakdown <ArrowRight size={15} style={{ flexShrink: 0 }} />
         </Link>
         <span style={{ fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.06em' }}>
           {fmtNum(market.volume)} contracts · {market.source === 'kalshi' ? 'live market' : 'seed'}
         </span>
       </div>
+      </div>
     </section>
   )
 }
 
-function TrophyStat({ label, value, color, glow }: { label: string; value: string; color: string; glow?: boolean }) {
+function TrophyStat({ label, value, color, glow, icon }: { label: string; value: string; color: string; glow?: boolean; icon?: React.ReactNode }) {
   return (
     <div style={{ background: VOID, padding: 'clamp(12px,1.6vw,18px)' }}>
       <div style={{ fontSize: 'clamp(1.2rem,2.4vw,1.7rem)', fontWeight: 800, letterSpacing: '-0.02em', color, fontVariantNumeric: 'tabular-nums', textShadow: glow ? `0 0 18px ${color}66` : 'none' }}>
         {value}
       </div>
-      <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: FAINT, marginTop: 5 }}>{label}</div>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: FAINT, marginTop: 5 }}>
+        {icon && <span style={{ display: 'inline-flex', color: `${color}cc` }}>{icon}</span>}
+        {label}
+      </div>
     </div>
   )
 }
@@ -426,9 +468,11 @@ function Card({ row, reduced, index, rank }: { row: EdgeRow; reduced: boolean; i
 
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: good ? accent : FAINT, fontVariantNumeric: 'tabular-nums', minWidth: 22 }}>#{rank}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: MONO, fontSize: 12, fontWeight: 800, letterSpacing: '0.02em', color: good ? VOID : MUTE, background: good ? accent : 'transparent', border: `1px solid ${good ? accent : BORDER}`, borderRadius: 5, fontVariantNumeric: 'tabular-nums', minWidth: 28, height: 22, padding: '0 5px' }}>{rank}</span>
         <Tag color={catColor(market.category)}>{market.category}</Tag>
-        <span style={{ fontFamily: MONO, fontSize: 10.5, color: FAINT, letterSpacing: '0.06em' }}>{timeToClose(market.closeTime)}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: MONO, fontSize: 10.5, color: FAINT, letterSpacing: '0.06em' }}>
+          <Clock size={11} style={{ flexShrink: 0 }} />{timeToClose(market.closeTime)}
+        </span>
         <span style={{ marginLeft: 'auto' }}><EngineBadge engine={pricing.engine} /></span>
       </div>
 
@@ -440,9 +484,9 @@ function Card({ row, reduced, index, rank }: { row: EdgeRow; reduced: boolean; i
 
       {/* mini stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 2 }}>
-        <MiniStat label="Edge" value={`${signedPct(verdict.edge)}pt`} color={accent} />
-        <MiniStat label="EV/$1" value={`${signedPct(verdict.evPerDollar)}¢`} color={verdict.evPerDollar >= 0 ? GREEN : RED} />
-        <MiniStat label="½ Kelly" value={pct(verdict.halfKelly, 1)} color={CYAN} />
+        <MiniStat label="Edge" value={`${signedPct(verdict.edge)}pt`} color={accent} icon={<Target size={11} />} />
+        <MiniStat label="EV/$1" value={`${signedPct(verdict.evPerDollar)}¢`} color={verdict.evPerDollar >= 0 ? GREEN : RED} icon={<DollarSign size={11} />} />
+        <MiniStat label="½ Kelly" value={pct(verdict.halfKelly, 1)} color={CYAN} icon={<Scale size={11} />} />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 2 }}>
@@ -453,11 +497,14 @@ function Card({ row, reduced, index, rank }: { row: EdgeRow; reduced: boolean; i
   )
 }
 
-function MiniStat({ label, value, color }: { label: string; value: string; color: string }) {
+function MiniStat({ label, value, color, icon }: { label: string; value: string; color: string; icon?: React.ReactNode }) {
   return (
     <div style={{ background: VOID, border: `1px solid ${BORDER}`, borderRadius: 7, padding: '8px 9px' }}>
       <div style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: FAINT, marginTop: 3 }}>{label}</div>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: FAINT, marginTop: 3 }}>
+        {icon && <span style={{ display: 'inline-flex', color: `${color}aa` }}>{icon}</span>}
+        {label}
+      </div>
     </div>
   )
 }
@@ -511,7 +558,9 @@ function Notice({ tone, title, body }: { tone: string; title: string; body: stri
         padding: 'clamp(32px,6vw,64px) clamp(20px,4vw,40px)',
       }}
     >
-      <div style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: tone }}>—</div>
+      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 10, color: tone, background: `${tone}14`, border: `1px solid ${tone}40` }}>
+        <AlertTriangle size={22} style={{ flexShrink: 0 }} />
+      </div>
       <h3 style={{ margin: '12px 0 0', fontSize: 'clamp(1.1rem,2.4vw,1.5rem)', fontWeight: 800, color: TXT }}>{title}</h3>
       <p style={{ margin: '10px auto 0', maxWidth: 460, color: MUTE, fontSize: 14, lineHeight: 1.55 }}>{body}</p>
     </div>

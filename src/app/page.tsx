@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Menu, X } from 'lucide-react'
+import { ArrowRight, Menu, X, BrainCircuit, LineChart, Target, ScrollText, Bot, Home as HomeIcon } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import SiteFooter from '@/components/SiteFooter'
 import AccountMenu from '@/components/auth/AccountMenu'
 
@@ -27,14 +28,14 @@ const NAV = [
   { label: 'For Everyone', href: '/everyone' },
 ]
 
-const PRODUCTS = [
-  { t: 'BrainStock', d: 'A neural network forecasts hundreds of stocks every morning — then grades every call against real prices, in public.', href: '/brainstock', tag: 'The forecaster' },
-  { t: 'Algorithms', d: 'Research-grade, real-money-proven trading algorithms you paste straight into TradingView and run.', href: '/algorithms', tag: 'Real-money proven' },
-  { t: 'YN Edge', d: 'The net prices every Kalshi prediction market against the market itself — and surfaces the bets actually worth taking.', href: '/edge', tag: 'Find the edge' },
-  { t: 'AI Analyzer', d: 'A 15-second institutional read on any ticker — verdict, conviction, and the payoff math, in plain English.', href: '/ai-stocks', tag: 'The read' },
-  { t: 'Proof', d: 'The live track record: win rate, calibration, and every graded call — un-cherry-picked.', href: '/proof', tag: 'The receipts' },
-  { t: 'Copilot', d: 'A real AI agent that runs your TradingView chart with you — draws levels, writes and tests indicators.', href: '/copilot/desktop', tag: 'The agent' },
-  { t: 'For Everyone', d: 'The same AI, pointed at the prices normal people sweat — mortgage rates, gas, flights, power.', href: '/everyone', tag: 'Beyond trading' },
+const PRODUCTS: { t: string; d: string; href: string; tag: string; Icon: LucideIcon }[] = [
+  { t: 'BrainStock', d: 'A neural network forecasts hundreds of stocks every morning — then grades every call against real prices, in public.', href: '/brainstock', tag: 'The forecaster', Icon: BrainCircuit },
+  { t: 'Algorithms', d: 'Research-grade, real-money-proven trading algorithms you paste straight into TradingView and run.', href: '/algorithms', tag: 'Real-money proven', Icon: LineChart },
+  { t: 'YN Edge', d: 'The net prices every Kalshi prediction market against the market itself — and surfaces the bets actually worth taking.', href: '/edge', tag: 'Find the edge', Icon: Target },
+  { t: 'AI Analyzer', d: 'A 15-second institutional read on any ticker — verdict, conviction, and the payoff math, in plain English.', href: '/ai-stocks', tag: 'The read', Icon: ScrollText },
+  { t: 'Proof', d: 'The live track record: win rate, calibration, and every graded call — un-cherry-picked.', href: '/proof', tag: 'The receipts', Icon: ScrollText },
+  { t: 'Copilot', d: 'A real AI agent that runs your TradingView chart with you — draws levels, writes and tests indicators.', href: '/copilot/desktop', tag: 'The agent', Icon: Bot },
+  { t: 'For Everyone', d: 'The same AI, pointed at the prices normal people sweat — mortgage rates, gas, flights, power.', href: '/everyone', tag: 'Beyond trading', Icon: HomeIcon },
 ]
 
 const PILLARS = [
@@ -110,8 +111,19 @@ export default function Landing() {
       )}
 
       {/* ── hero ── */}
-      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '0 clamp(18px,4vw,34px)' }}>
-        <div style={{ minHeight: '92vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: 110, paddingBottom: 56 }}>
+      <section style={{ position: 'relative', maxWidth: 1120, margin: '0 auto', padding: '0 clamp(18px,4vw,34px)' }}>
+        {/* photographic backdrop on brand gradient, masked + overlaid for legibility */}
+        <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(120deg, ${BONE} 0%, rgba(31,59,255,.08) 100%)` }} />
+          <img
+            src="https://picsum.photos/seed/ynfinance-hero-market/1600/900"
+            alt=""
+            loading="lazy"
+            style={{ position: 'absolute', top: 0, right: 0, width: 'min(58%, 720px)', height: '100%', objectFit: 'cover', opacity: 0.16, maskImage: 'linear-gradient(90deg, transparent, #000 55%)', WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 55%)' }}
+          />
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(90deg, ${BONE} 30%, transparent 90%)` }} />
+        </div>
+        <div style={{ position: 'relative', zIndex: 1, minHeight: '92vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: 110, paddingBottom: 56 }}>
           <Reveal>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11, fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 12, letterSpacing: '.24em', color: ACCENT, marginBottom: 26 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: GREEN, animation: 'ynblink 1.5s infinite' }} /> AI MARKET INTELLIGENCE
@@ -162,7 +174,10 @@ export default function Landing() {
               <Reveal key={p.t} delay={(i % 3) * 70}>
                 <Link href={p.href} style={{ textDecoration: 'none', color: INK, display: 'block', height: '100%' }}>
                   <div className="yn-card" style={{ height: '100%', background: BONE, border: `1px solid ${LINE}`, borderRadius: 14, padding: 22, display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 10.5, letterSpacing: '.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 12 }}>{p.tag}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <div style={{ fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 10.5, letterSpacing: '.14em', textTransform: 'uppercase', color: ACCENT }}>{p.tag}</div>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 9, background: 'rgba(31,59,255,.08)', color: ACCENT, flexShrink: 0 }}><p.Icon size={18} /></span>
+                    </div>
                     <div className="yn-disp" style={{ fontSize: '1.5rem', marginBottom: 9 }}>{p.t}</div>
                     <div style={{ fontSize: 14.5, color: SUB, lineHeight: 1.55, flex: 1 }}>{p.d}</div>
                     <div style={{ marginTop: 16, fontSize: 13, fontWeight: 700, color: INK, display: 'inline-flex', alignItems: 'center', gap: 6 }}>Open <ArrowRight size={14} /></div>
@@ -193,8 +208,17 @@ export default function Landing() {
       </section>
 
       {/* ── CTA ── */}
-      <section style={{ background: INK, color: PAPER }}>
-        <div style={{ maxWidth: 1120, margin: '0 auto', padding: 'clamp(60px,8vw,96px) clamp(18px,4vw,34px)', textAlign: 'center' }}>
+      <section style={{ position: 'relative', background: INK, color: PAPER, overflow: 'hidden' }}>
+        <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+          <img
+            src="https://picsum.photos/seed/ynfinance-cta-trading/1600/900"
+            alt=""
+            loading="lazy"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.22 }}
+          />
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${INK} 0%, rgba(10,10,12,.78) 50%, ${INK} 100%)` }} />
+        </div>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1120, margin: '0 auto', padding: 'clamp(60px,8vw,96px) clamp(18px,4vw,34px)', textAlign: 'center' }}>
           <Reveal>
             <h2 className="yn-disp" style={{ fontSize: 'clamp(2rem,5vw,3.6rem)', margin: '0 auto 18px', maxWidth: 680 }}>See what the net is calling today.</h2>
             <p style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,.62)', maxWidth: 480, margin: '0 auto 30px' }}>Free to start. Every forecast graded in public.</p>

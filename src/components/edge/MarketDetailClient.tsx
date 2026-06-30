@@ -13,8 +13,12 @@ import {
   ResponsiveContainer, AreaChart, Area, Line, XAxis, YAxis, Tooltip, ReferenceLine, CartesianGrid,
 } from 'recharts'
 import {
+  ArrowLeft, ArrowRight, Scale, LineChart, BrainCircuit, Newspaper,
+  CheckCircle2, XCircle, DollarSign, Target, BarChart3, ExternalLink,
+} from 'lucide-react'
+import {
   VOID, PANEL, BORDER, CYAN, VIOLET, GREEN, RED, AMBER, TXT, MUTE, FAINT, MONO,
-  HeadToHead, WorthBadge, EngineBadge, Tag, Stat, PathRail,
+  HeadToHead, WorthBadge, EngineBadge, Tag, Stat, PathRail, TextureBg,
   pct, signedPct, fmtNum, timeToClose, catColor, edgeAccent, useReducedMotion,
   type EdgeRow,
 } from '@/components/edge/shared'
@@ -29,8 +33,13 @@ function Panel({ children, glow = CYAN, style }: { children: ReactNode; glow?: s
   )
 }
 
-function SectionLabel({ children, color = FAINT }: { children: ReactNode; color?: string }) {
-  return <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.16em', textTransform: 'uppercase', color, marginBottom: 12 }}>{children}</div>
+function SectionLabel({ children, color = FAINT, icon }: { children: ReactNode; color?: string; icon?: ReactNode }) {
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.16em', textTransform: 'uppercase', color, marginBottom: 12 }}>
+      {icon && <span style={{ display: 'inline-flex', flexShrink: 0 }}>{icon}</span>}
+      {children}
+    </div>
+  )
 }
 
 const WRAP: CSSProperties = { maxWidth: 1100, margin: '0 auto', padding: 'clamp(20px,4vw,40px) clamp(16px,3vw,28px) 80px' }
@@ -54,7 +63,7 @@ function NotFound({ msg }: { msg?: string }) {
     <div style={{ ...WRAP, textAlign: 'center', paddingTop: 'clamp(60px,12vw,120px)' }}>
       <div style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', fontWeight: 800, letterSpacing: '-0.02em', color: TXT }}>Market not found or no longer active</div>
       <div style={{ color: MUTE, marginTop: 12, fontSize: 14 }}>{msg || 'We couldn’t price this market right now.'}</div>
-      <Link href="/edge" style={{ display: 'inline-block', marginTop: 24, fontFamily: MONO, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: CYAN, border: `1px solid ${CYAN}55`, padding: '10px 18px', textDecoration: 'none' }}>← Back to YN Edge</Link>
+      <Link href="/edge" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 24, fontFamily: MONO, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: CYAN, border: `1px solid ${CYAN}55`, padding: '10px 18px', textDecoration: 'none', borderRadius: 6 }}><ArrowLeft size={14} style={{ flexShrink: 0 }} /> Back to YN Edge</Link>
     </div>
   )
 }
@@ -80,7 +89,7 @@ function ForecastChart({ u, reduced }: { u: NonNullable<EdgeRow['pricing']['unde
   const dirColor = u.direction === 'above' ? GREEN : RED
   return (
     <Panel glow={CYAN}>
-      <SectionLabel color={CYAN}>FORECAST · the net’s path to close</SectionLabel>
+      <SectionLabel color={CYAN} icon={<LineChart size={14} />}>FORECAST · the net’s path to close</SectionLabel>
       <div style={{ width: '100%', height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
@@ -120,11 +129,14 @@ function ForecastChart({ u, reduced }: { u: NonNullable<EdgeRow['pricing']['unde
 }
 
 // ── math row ─────────────────────────────────────────────────────────────────
-function MathRow({ label, value, formula, color = TXT, strong }: { label: string; value: ReactNode; formula?: string; color?: string; strong?: boolean }) {
+function MathRow({ label, value, formula, color = TXT, strong, icon }: { label: string; value: ReactNode; formula?: string; color?: string; strong?: boolean; icon?: ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '11px 0', borderBottom: `1px solid ${BORDER}` }}>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: strong ? 13.5 : 13, fontWeight: strong ? 700 : 500, color: strong ? TXT : MUTE }}>{label}</div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: strong ? 13.5 : 13, fontWeight: strong ? 700 : 500, color: strong ? TXT : MUTE }}>
+          {icon && <span style={{ display: 'inline-flex', flexShrink: 0, color: `${color}cc` }}>{icon}</span>}
+          {label}
+        </div>
         {formula && <div style={{ fontFamily: MONO, fontSize: 10.5, color: FAINT, marginTop: 3 }}>{formula}</div>}
       </div>
       <div style={{ fontFamily: MONO, fontSize: strong ? 17 : 15, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{value}</div>
@@ -186,43 +198,53 @@ export default function MarketDetailClient({ ticker }: { ticker: string }) {
       {/* ── PATH / BREADCRUMB ───────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 'clamp(16px,2.5vw,24px)', paddingBottom: 14, borderBottom: `1px solid ${BORDER}` }}>
         <PathRail active="detail" />
-        <Link href="/edge" style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: MUTE, textDecoration: 'none' }}>
-          ← Back to board
+        <Link href="/edge" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: MUTE, textDecoration: 'none' }}>
+          <ArrowLeft size={13} style={{ flexShrink: 0 }} /> Back to board
         </Link>
       </div>
 
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <Tag color={cat}>{market.category}</Tag>
-        <EngineBadge engine={pricing.engine} />
-        <Tag color={FAINT}>{market.source === 'kalshi' ? 'KALSHI · LIVE' : 'SEED'}</Tag>
-        <span style={{ fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.06em' }}>{decodeURIComponent(market.ticker)}</span>
-      </div>
+      <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', border: `1px solid ${BORDER}`, background: `linear-gradient(160deg, ${accent}10, transparent 60%)`, padding: 'clamp(18px,3vw,30px)' }}>
+        <TextureBg seed={`ynedge-mkt-${market.ticker}`} opacity={0.12} overlay={`linear-gradient(130deg, ${VOID}f2 40%, ${VOID}d8)`} />
+        <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
+        <div style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <Tag color={cat}>{market.category}</Tag>
+            <EngineBadge engine={pricing.engine} />
+            <Tag color={FAINT}>{market.source === 'kalshi' ? 'KALSHI · LIVE' : 'SEED'}</Tag>
+            <span style={{ fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.06em' }}>{decodeURIComponent(market.ticker)}</span>
+            <span style={{ marginLeft: 'auto' }}><WorthBadge worthIt={verdict.worthIt} /></span>
+          </div>
 
-      <h1 style={{ fontSize: 'clamp(1.5rem,4.2vw,2.6rem)', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.12, color: TXT, margin: 0 }}>{market.title}</h1>
-      {market.subtitle && <div style={{ color: MUTE, marginTop: 8, fontSize: 'clamp(0.95rem,2vw,1.05rem)' }}>{market.subtitle}</div>}
+          <h1 style={{ fontSize: 'clamp(1.5rem,4.2vw,2.6rem)', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.12, color: TXT, margin: 0 }}>{market.title}</h1>
+          {market.subtitle && <div style={{ color: MUTE, marginTop: 8, fontSize: 'clamp(0.95rem,2vw,1.05rem)' }}>{market.subtitle}</div>}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(16px,4vw,40px)', marginTop: 20, alignItems: 'flex-end' }}>
-        <Stat label="Closes" value={timeToClose(market.closeTime)} color={CYAN} sub={closeAbs} />
-        <Stat label="Volume" value={fmtNum(market.volume)} sub="contracts" />
-        {market.openInterest != null && <Stat label="Open interest" value={fmtNum(market.openInterest)} />}
-        <Stat label="Priced" value={<span style={{ fontSize: '1rem', color: MUTE }}>{pricedAbs}</span>} />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(16px,4vw,40px)', marginTop: 20, alignItems: 'flex-end' }}>
+            <Stat label="Closes" value={timeToClose(market.closeTime)} color={CYAN} sub={closeAbs} />
+            <Stat label="Volume" value={fmtNum(market.volume)} sub="contracts" />
+            {market.openInterest != null && <Stat label="Open interest" value={fmtNum(market.openInterest)} />}
+            <Stat label="Priced" value={<span style={{ fontSize: '1rem', color: MUTE }}>{pricedAbs}</span>} />
+          </div>
+        </div>
       </div>
 
       {/* ── HEAD-TO-HEAD ─────────────────────────────────────────────────── */}
       <Panel glow={CYAN} style={{ marginTop: 24 }}>
-        <SectionLabel>AI vs MARKET · P(YES)</SectionLabel>
+        <SectionLabel icon={<Scale size={14} />}>AI vs MARKET · P(YES)</SectionLabel>
         <HeadToHead ynProb={pricing.ynProb} marketProb={market.yesPrice} animate={!reduced} height={34} />
       </Panel>
 
       {/* ── VERDICT + MATH ───────────────────────────────────────────────── */}
       <Panel glow={accent} style={{ marginTop: 18, borderColor: `${accent}40` }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginBottom: 8 }}>
-          <SectionLabel color={accent}>VERDICT · is it worth it</SectionLabel>
+          <SectionLabel color={accent} icon={<Target size={14} />}>VERDICT · is it worth it</SectionLabel>
           <WorthBadge worthIt={verdict.worthIt} />
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
-          <span style={{ fontFamily: 'var(--font-display), system-ui, sans-serif', fontSize: 'clamp(1.3rem,3vw,1.9rem)', fontWeight: 800, letterSpacing: '-0.02em', color: accent }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontFamily: 'var(--font-display), system-ui, sans-serif', fontSize: 'clamp(1.3rem,3vw,1.9rem)', fontWeight: 800, letterSpacing: '-0.02em', color: accent }}>
+            {verdict.worthIt
+              ? <CheckCircle2 size={26} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              : <XCircle size={26} strokeWidth={2.2} style={{ flexShrink: 0 }} />}
             {verdict.worthIt ? 'Worth a bet' : 'Pass for now'}
           </span>
           <span style={{ fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.1em' }}>· OUR SIDE</span>
@@ -233,16 +255,17 @@ export default function MarketDetailClient({ ticker }: { ticker: string }) {
         <div style={{ background: 'rgba(0,0,0,.25)', border: `1px solid ${BORDER}`, padding: 'clamp(12px,2.5vw,18px)' }}>
           <MathRow label={`Our P(${verdict.side})`} value={pct(verdict.ynProb, 1)} formula="BrainStock / grounded estimate" color={CYAN} />
           <MathRow label="Market price" value={pct(verdict.marketProb, 1)} formula={`what you pay per $1 on ${verdict.side}`} color={MUTE} />
-          <MathRow label="Edge" value={`${signedPct(verdict.edge, 1)}pt`} formula="edge = ours − market" color={verdict.edge >= 0 ? GREEN : RED} strong />
+          <MathRow label="Edge" value={`${signedPct(verdict.edge, 1)}pt`} formula="edge = ours − market" color={verdict.edge >= 0 ? GREEN : RED} strong icon={<Target size={15} />} />
           <MathRow
             label="EV per $1"
             value={`${verdict.evPerDollar >= 0 ? '+' : ''}$${verdict.evPerDollar.toFixed(3)}`}
             formula={`EV/$ = p/price − 1 · win → +$${winPerDollar.toFixed(2)}, lose → −$1`}
             color={verdict.evPerDollar >= 0 ? GREEN : RED}
             strong
+            icon={<DollarSign size={15} />}
           />
           <MathRow label="Full Kelly" value={pct(verdict.kelly, 1)} formula="f* = edge / odds" color={TXT} />
-          <MathRow label="Half-Kelly · suggested stake" value={pct(verdict.halfKelly, 1)} formula="we never stake full Kelly" color={AMBER} strong />
+          <MathRow label="Half-Kelly · suggested stake" value={pct(verdict.halfKelly, 1)} formula="we never stake full Kelly" color={AMBER} strong icon={<Scale size={15} />} />
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, paddingTop: 11 }}>
             <div style={{ fontSize: 13, color: MUTE }}>Confidence</div>
             <div style={{ fontFamily: MONO, fontSize: 15, fontWeight: 700, color: TXT, fontVariantNumeric: 'tabular-nums' }}>{pct(verdict.confidence, 0)}</div>
@@ -260,26 +283,29 @@ export default function MarketDetailClient({ ticker }: { ticker: string }) {
       {/* ── REASONING + (SOURCES | UNDERLYING) ───────────────────────────── */}
       <div className="edge-grid2" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 18, marginTop: 18 }}>
         <Panel glow={VIOLET}>
-          <SectionLabel color={VIOLET}>WHY · the AI’s read</SectionLabel>
+          <SectionLabel color={VIOLET} icon={<BrainCircuit size={14} />}>WHY · the AI’s read</SectionLabel>
           <div style={{ fontSize: 'clamp(0.95rem,2vw,1.05rem)', color: TXT, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{pricing.reasoning}</div>
         </Panel>
 
         {pricing.sources && pricing.sources.length > 0 ? (
           <Panel glow={VIOLET}>
-            <SectionLabel color={VIOLET}>SOURCES · live search grounding</SectionLabel>
+            <SectionLabel color={VIOLET} icon={<Newspaper size={14} />}>SOURCES · live search grounding</SectionLabel>
             <div style={{ display: 'grid', gap: 10 }}>
               {pricing.sources.map((s, i) => (
                 <a key={i} href={s.url} target="_blank" rel="noreferrer noopener"
-                  style={{ display: 'block', fontSize: 13, color: CYAN, textDecoration: 'none', lineHeight: 1.5, borderLeft: `2px solid ${VIOLET}55`, paddingLeft: 10 }}>
-                  {s.title || s.url}
-                  <span style={{ display: 'block', fontFamily: MONO, fontSize: 10, color: FAINT, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.url}</span>
+                  style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: CYAN, textDecoration: 'none', lineHeight: 1.5, borderLeft: `2px solid ${VIOLET}55`, paddingLeft: 10 }}>
+                  <ExternalLink size={13} style={{ flexShrink: 0, marginTop: 3, color: VIOLET }} />
+                  <span style={{ minWidth: 0 }}>
+                    {s.title || s.url}
+                    <span style={{ display: 'block', fontFamily: MONO, fontSize: 10, color: FAINT, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.url}</span>
+                  </span>
                 </a>
               ))}
             </div>
           </Panel>
         ) : u ? (
           <Panel glow={CYAN}>
-            <SectionLabel color={CYAN}>UNDERLYING · what the net priced</SectionLabel>
+            <SectionLabel color={CYAN} icon={<BarChart3 size={14} />}>UNDERLYING · what the net priced</SectionLabel>
             <div style={{ display: 'grid', gap: 13 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontFamily: MONO, fontSize: 16, fontWeight: 800, color: TXT }}>{u.symbol}</span>
@@ -300,8 +326,8 @@ export default function MarketDetailClient({ ticker }: { ticker: string }) {
 
       {/* ── PATH FOOTER ──────────────────────────────────────────────────── */}
       <div style={{ marginTop: 'clamp(28px,4vw,40px)', paddingTop: 18, borderTop: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <Link href="/edge" style={{ fontFamily: MONO, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTE, textDecoration: 'none' }}>← All markets</Link>
-        <Link href="/edge/track-record" style={{ fontFamily: MONO, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: GREEN, textDecoration: 'none' }}>How we grade ourselves →</Link>
+        <Link href="/edge" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: MONO, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTE, textDecoration: 'none' }}><ArrowLeft size={14} style={{ flexShrink: 0 }} /> All markets</Link>
+        <Link href="/edge/track-record" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: MONO, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: GREEN, textDecoration: 'none' }}>How we grade ourselves <ArrowRight size={14} style={{ flexShrink: 0 }} /></Link>
       </div>
     </div>
   )

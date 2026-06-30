@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { Ruler, Zap, Mic, Compass, Repeat, Lock, ArrowLeft, Download, ArrowRight, type LucideIcon } from 'lucide-react'
 
 const C = { bg: '#04060c', ink: '#eaf2ff', dim: '#6b7a93', blue: '#5b8cff', green: '#10d693', amber: '#f5b14b', line: 'rgba(255,255,255,.08)', card: 'rgba(255,255,255,.025)' }
 
@@ -41,9 +42,9 @@ function ChartMock() {
 }
 
 const SCRIPT = [
-  { you: 'draw support at 20,100', bot: 'Done — native line at 20,100. Watching for the bounce. 📏' },
-  { you: 'write a 200 EMA indicator', bot: 'Opened Pine, pasted it, hit Add to chart. Compiled clean ✓ ⚡' },
-  { you: "what's the trend here?", bot: 'Above the 200 EMA and holding — bias stays long while 20,100 holds. 🧭' },
+  { you: 'draw support at 20,100', bot: 'Done — native line at 20,100. Watching for the bounce.' },
+  { you: 'write a 200 EMA indicator', bot: 'Opened Pine, pasted it, hit Add to chart. Compiled clean.' },
+  { you: "what's the trend here?", bot: 'Above the 200 EMA and holding — bias stays long while 20,100 holds.' },
 ]
 function ChatMock() {
   const [i, setI] = useState(0)
@@ -71,13 +72,13 @@ function ChatMock() {
   )
 }
 
-const DOES = [
-  ['📏', 'Draws native lines', 'Real clicks place TradingView’s own horizontal lines at the exact price. Zero calibration.', C.green],
-  ['⚡', 'Writes + tests indicators', 'Opens the Pine editor, pastes, hits Add to chart, reads compiler errors and auto-fixes them.', C.amber],
-  ['🎙️', 'Talk or type', 'Speak to it or type. It can read the chart back to you out loud.', C.blue],
-  ['🧭', 'Reads structure', 'Trend, key zones, what to watch — using the REAL price off your chart, not a proxy.', '#a855f7'],
-  ['🔁', 'Runs routines', 'Save a per-symbol macro like “Morning levels” and fire it on open.', '#ec4899'],
-  ['🔒', 'Only on TradingView', 'Dormant everywhere else. Lives in your browser, nothing in the cloud watching you.', '#06b6d4'],
+const DOES: [LucideIcon, string, string, string][] = [
+  [Ruler, 'Draws native lines', 'Real clicks place TradingView’s own horizontal lines at the exact price. Zero calibration.', C.green],
+  [Zap, 'Writes + tests indicators', 'Opens the Pine editor, pastes, hits Add to chart, reads compiler errors and auto-fixes them.', C.amber],
+  [Mic, 'Talk or type', 'Speak to it or type. It can read the chart back to you out loud.', C.blue],
+  [Compass, 'Reads structure', 'Trend, key zones, what to watch — using the REAL price off your chart, not a proxy.', '#a855f7'],
+  [Repeat, 'Runs routines', 'Save a per-symbol macro like “Morning levels” and fire it on open.', '#ec4899'],
+  [Lock, 'Only on TradingView', 'Dormant everywhere else. Lives in your browser, nothing in the cloud watching you.', '#06b6d4'],
 ]
 const STEPS = [
   ['Download', 'Grab the .zip and unzip it.'],
@@ -112,7 +113,7 @@ export default function CopilotDesktop() {
       <div aria-hidden style={{ position: 'fixed', bottom: -160, right: -100, width: 480, height: 480, borderRadius: '50%', background: 'radial-gradient(circle,#10d69333,transparent 65%)', filter: 'blur(20px)', animation: 'orb 16s ease-in-out infinite reverse' }} />
 
       <div style={{ position: 'relative', maxWidth: 1100, margin: '0 auto', padding: '24px clamp(18px,5vw,40px) 90px' }}>
-        <Link href="/" className="mono" style={{ color: C.dim, fontSize: 12, textDecoration: 'none' }}>← yn finance</Link>
+        <Link href="/" className="mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: C.dim, fontSize: 12, textDecoration: 'none' }}><ArrowLeft size={14} /> yn finance</Link>
 
         {/* HERO */}
         <div className="heroGrid" style={{ display: 'grid', gridTemplateColumns: '1.05fr .95fr', gap: 'clamp(24px,5vw,56px)', alignItems: 'center', marginTop: 'clamp(30px,7vw,70px)' }}>
@@ -127,21 +128,31 @@ export default function CopilotDesktop() {
               It wakes up inside TradingView and <b style={{ color: C.ink }}>sees your chart</b> — then reasons step by step and does it itself: draws exact levels, switches timeframe, adds indicators, clicks the Pine editor open, pastes code, tests &amp; refines it. You watch its plan tick off and the screenshots it’s looking at, live.
             </p>
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-              <a href="/downloads/yn-copilot-tradingview.zip" download style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 16, fontWeight: 800, color: '#04140c', background: 'linear-gradient(135deg,#10d693,#5b8cff)', borderRadius: 13, padding: '15px 30px', textDecoration: 'none', boxShadow: '0 0 44px rgba(16,214,147,.4)' }}>↓ Download for Chrome / Edge</a>
+              <a href="/downloads/yn-copilot-tradingview.zip" download style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 16, fontWeight: 800, color: '#04140c', background: 'linear-gradient(135deg,#10d693,#5b8cff)', borderRadius: 13, padding: '15px 30px', textDecoration: 'none', boxShadow: '0 0 44px rgba(16,214,147,.4)' }}><Download size={18} /> Download for Chrome / Edge</a>
               <span className="mono" style={{ fontSize: 11.5, color: C.dim }}>Free · v5 agent · Chromium</span>
             </div>
           </div>
 
           {/* collage: chart + floating chat */}
           <div className="rise" style={{ position: 'relative', minHeight: 320, animationDelay: '.12s' }}>
-            <div className="card" style={{ background: 'linear-gradient(180deg,#070d18,#05080f)', border: `1px solid ${C.line}`, borderRadius: 18, padding: 14, boxShadow: '0 30px 80px rgba(0,0,0,.5)' }}>
+            {/* photographic glow behind the terminal mock, on brand gradient */}
+            <div aria-hidden style={{ position: 'absolute', inset: '-18px -18px 30px', zIndex: 0, borderRadius: 26, overflow: 'hidden', background: 'linear-gradient(135deg,#1f3bff33,#10d69322)' }}>
+              <img
+                src="https://picsum.photos/seed/yn-copilot-desk/1200/900"
+                alt=""
+                loading="lazy"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.28 }}
+              />
+              <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 60% 40%, transparent, rgba(4,6,12,.85) 75%)' }} />
+            </div>
+            <div className="card" style={{ position: 'relative', zIndex: 1, background: 'linear-gradient(180deg,#070d18,#05080f)', border: `1px solid ${C.line}`, borderRadius: 18, padding: 14, boxShadow: '0 30px 80px rgba(0,0,0,.5)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }} className="mono">
                 <span style={{ width: 9, height: 9, borderRadius: 99, background: '#ef5a6a' }} /><span style={{ width: 9, height: 9, borderRadius: 99, background: '#f5b14b' }} /><span style={{ width: 9, height: 9, borderRadius: 99, background: '#10d693' }} />
                 <span style={{ marginLeft: 8, fontSize: 11, color: C.dim }}>NQ1! · 5m · TradingView</span>
               </div>
               <div style={{ height: 200 }}><ChartMock /></div>
             </div>
-            <div style={{ position: 'absolute', right: -10, bottom: -26, animation: 'floaty 5s ease-in-out infinite' }}><ChatMock /></div>
+            <div style={{ position: 'absolute', zIndex: 2, right: -10, bottom: -26, animation: 'floaty 5s ease-in-out infinite' }}><ChatMock /></div>
           </div>
         </div>
 
@@ -154,13 +165,13 @@ export default function CopilotDesktop() {
 
         {/* features */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(255px,1fr))', gap: 16, marginTop: 40 }}>
-          {DOES.map(([e, t, d, col]) => (
-            <div key={t as string} className="card" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 18, padding: 22 }}
-              onMouseEnter={(ev) => { (ev.currentTarget as HTMLDivElement).style.borderColor = (col as string) + '66'; (ev.currentTarget as HTMLDivElement).style.boxShadow = `0 20px 50px -30px ${col}` }}
+          {DOES.map(([Icon, t, d, col]) => (
+            <div key={t} className="card" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 18, padding: 22 }}
+              onMouseEnter={(ev) => { (ev.currentTarget as HTMLDivElement).style.borderColor = col + '66'; (ev.currentTarget as HTMLDivElement).style.boxShadow = `0 20px 50px -30px ${col}` }}
               onMouseLeave={(ev) => { (ev.currentTarget as HTMLDivElement).style.borderColor = C.line; (ev.currentTarget as HTMLDivElement).style.boxShadow = 'none' }}>
-              <div style={{ fontSize: 28, marginBottom: 12, filter: `drop-shadow(0 0 12px ${col}66)` }}>{e as string}</div>
-              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 7 }}>{t as string}</div>
-              <div style={{ fontSize: 13.5, color: '#8295b0', lineHeight: 1.6 }}>{d as string}</div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 46, height: 46, borderRadius: 12, marginBottom: 12, color: col, background: col + '14', border: `1px solid ${col}33`, filter: `drop-shadow(0 0 12px ${col}33)` }}><Icon size={22} /></div>
+              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 7 }}>{t}</div>
+              <div style={{ fontSize: 13.5, color: '#8295b0', lineHeight: 1.6 }}>{d}</div>
             </div>
           ))}
         </div>
@@ -184,7 +195,7 @@ export default function CopilotDesktop() {
 
         {/* final CTA */}
         <div style={{ textAlign: 'center', marginTop: 60 }}>
-          <a href="/downloads/yn-copilot-tradingview.zip" download style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 17, fontWeight: 800, color: '#04140c', background: 'linear-gradient(135deg,#10d693,#5b8cff)', borderRadius: 14, padding: '16px 38px', textDecoration: 'none', boxShadow: '0 0 50px rgba(16,214,147,.4)' }}>Put a quant in your browser →</a>
+          <a href="/downloads/yn-copilot-tradingview.zip" download style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 17, fontWeight: 800, color: '#04140c', background: 'linear-gradient(135deg,#10d693,#5b8cff)', borderRadius: 14, padding: '16px 38px', textDecoration: 'none', boxShadow: '0 0 50px rgba(16,214,147,.4)' }}>Put a quant in your browser <ArrowRight size={18} /></a>
         </div>
       </div>
     </div>

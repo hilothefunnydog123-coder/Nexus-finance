@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Home, Fuel, Plane, Zap, type LucideIcon } from 'lucide-react'
 
 /* YN for Everyone — clean, professional landing. The same accountable AI,
    pointed at everyday prices. One live element: the net's current calls. */
@@ -11,11 +11,11 @@ const INK = '#0a0a0c', BONE = '#f4f2ec', PAPER = '#fcfbf8', ACCENT = '#1f3bff'
 const SUB = 'rgba(10,10,12,.62)', LINE = 'rgba(10,10,12,.1)'
 const NOW = '#e0841f', WAIT = '#0a9d63', NEU = '#1f3bff'
 
-const MARKETS: Record<string, { name: string; href: string; icon: string }> = {
-  mortgage: { name: 'Mortgage rates', href: '/everyone/lock', icon: '🏠' },
-  gas: { name: 'Gas prices', href: '/everyone/gas', icon: '⛽' },
-  flights: { name: 'Airfares', href: '/everyone/flights', icon: '✈️' },
-  electricity: { name: 'Electricity', href: '/everyone/electricity', icon: '💡' },
+const MARKETS: Record<string, { name: string; href: string; Icon: LucideIcon; photo: string; seed: string }> = {
+  mortgage: { name: 'Mortgage rates', href: '/everyone/lock', Icon: Home, photo: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=900&q=80', seed: 'ynhouse' },
+  gas: { name: 'Gas prices', href: '/everyone/gas', Icon: Fuel, photo: 'https://images.unsplash.com/photo-1545262810-77515befe149?auto=format&fit=crop&w=900&q=80', seed: 'yngas' },
+  flights: { name: 'Airfares', href: '/everyone/flights', Icon: Plane, photo: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=900&q=80', seed: 'ynplane' },
+  electricity: { name: 'Electricity', href: '/everyone/electricity', Icon: Zap, photo: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=900&q=80', seed: 'ynpower' },
 }
 
 type Call = { category: string; verdict: string; stance: 'now' | 'wait' | 'neutral'; confidence: number; headline: string; grounded: boolean }
@@ -95,19 +95,41 @@ export default function EveryoneLanding() {
           {Object.keys(MARKETS).map((key, i) => {
             const c = board?.find((b) => b.category === key)
             const col = sc(c?.stance)
+            const { Icon, photo, seed } = MARKETS[key]
             return (
               <Reveal key={key} delay={i * 60}>
                 <Link href={MARKETS[key].href} style={{ textDecoration: 'none', color: INK, display: 'block', height: '100%' }}>
-                  <div className="ev-card" style={{ height: '100%', background: PAPER, border: `1px solid ${LINE}`, borderRadius: 14, padding: 18 }}>
-                    <div style={{ fontSize: 22, marginBottom: 10 }}>{MARKETS[key].icon}</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>{MARKETS[key].name}</div>
-                    {!board ? <div style={{ height: 26, width: '60%', borderRadius: 6, background: 'rgba(10,10,12,.06)' }} /> : (
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                        <span className="ev-disp" style={{ fontSize: 22, color: col }}>{c?.verdict || '—'}</span>
-                        {c && <span style={{ fontSize: 12, fontWeight: 700, color: col }}>{c.confidence}%</span>}
+                  <div className="ev-card" style={{ height: '100%', background: PAPER, border: `1px solid ${LINE}`, borderRadius: 14, overflow: 'hidden' }}>
+                    {/* photo header */}
+                    <div style={{ position: 'relative', height: 92, background: `linear-gradient(135deg, ${ACCENT}, ${INK})`, overflow: 'hidden' }}>
+                      <img
+                        src={`https://picsum.photos/seed/${seed}/600/300`}
+                        alt=""
+                        loading="lazy"
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }}
+                      />
+                      <img
+                        src={photo}
+                        alt=""
+                        loading="lazy"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,10,12,.15), rgba(10,10,12,.55))' }} />
+                      <div style={{ position: 'absolute', left: 12, bottom: 10, width: 32, height: 32, borderRadius: 8, background: 'rgba(252,251,248,.92)', display: 'grid', placeItems: 'center' }}>
+                        <Icon size={18} color={col} aria-hidden />
                       </div>
-                    )}
-                    <div style={{ marginTop: 12, fontSize: 12.5, fontWeight: 700, color: col }}>see why →</div>
+                    </div>
+                    <div style={{ padding: 18 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>{MARKETS[key].name}</div>
+                      {!board ? <div style={{ height: 26, width: '60%', borderRadius: 6, background: 'rgba(10,10,12,.06)' }} /> : (
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                          <span className="ev-disp" style={{ fontSize: 22, color: col }}>{c?.verdict || '—'}</span>
+                          {c && <span style={{ fontSize: 12, fontWeight: 700, color: col }}>{c.confidence}%</span>}
+                        </div>
+                      )}
+                      <div style={{ marginTop: 12, fontSize: 12.5, fontWeight: 700, color: col, display: 'inline-flex', alignItems: 'center', gap: 4 }}>see why <ArrowRight size={13} /></div>
+                    </div>
                   </div>
                 </Link>
               </Reveal>

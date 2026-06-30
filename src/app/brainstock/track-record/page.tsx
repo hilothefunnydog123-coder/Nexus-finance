@@ -52,7 +52,7 @@ export default function TrackRecord() {
   }, [])
 
   return (
-    <div style={{ minHeight: '100vh', background: BONE, color: INK, fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
+    <div style={{ position: 'relative', minHeight: '100vh', background: BONE, color: INK, fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
       <style>{`
         @keyframes tr-blink{0%,100%{opacity:1}50%{opacity:.25}}
         .tr-disp{font-family:var(--font-display),system-ui,sans-serif;font-weight:700;letter-spacing:-.03em;line-height:1}
@@ -73,7 +73,18 @@ export default function TrackRecord() {
         </div>
       </header>
 
-      <main style={{ maxWidth: 920, margin: '0 auto', padding: 'clamp(48px,8vw,80px) clamp(18px,4vw,28px) 80px' }}>
+      {/* photographic backdrop behind the hero — tasteful, washed into paper */}
+      <div aria-hidden style={{ position: 'absolute', top: 62, left: 0, right: 0, height: 520, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+        <img
+          src="https://picsum.photos/seed/markets/1600/900"
+          alt=""
+          loading="lazy"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.12, filter: 'grayscale(1) contrast(1.05)' }}
+        />
+        <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(244,242,236,.7) 0%, rgba(244,242,236,.93) 70%, ${BONE} 100%)` }} />
+      </div>
+
+      <main style={{ position: 'relative', zIndex: 1, maxWidth: 920, margin: '0 auto', padding: 'clamp(48px,8vw,80px) clamp(18px,4vw,28px) 80px' }}>
         {/* ── hero ── */}
         <Reveal>
           <div style={{ fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 12, letterSpacing: '.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 16 }}>// THE RECEIPTS</div>

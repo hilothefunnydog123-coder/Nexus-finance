@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { Home, Check, Share2 } from 'lucide-react'
 
 // ── new cobalt/ink/paper brand (matches /everyone landing) ──
 const INK = '#0a0a0c', BONE = '#f4f2ec', PAPER = '#fcfbf8', ACCENT = '#1f3bff'
@@ -185,7 +186,17 @@ export default function LockTool() {
         </div>
       </header>
 
-      <main style={{ maxWidth: 760, margin: '0 auto', padding: '48px 22px 90px' }}>
+      <main style={{ maxWidth: 760, margin: '0 auto', padding: '32px 22px 90px' }}>
+        {/* ── hero photo ── */}
+        <div className="lk-rise" style={{ position: 'relative', height: 'clamp(150px,26vw,210px)', borderRadius: 18, overflow: 'hidden', marginBottom: 26, background: `linear-gradient(135deg, ${ACCENT}, ${INK})` }}>
+          <img src="https://picsum.photos/seed/ynhouse/1200/800" alt="" loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />
+          <img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=900&q=80" alt="A house" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,10,12,.2), rgba(10,10,12,.62))' }} />
+          <div style={{ position: 'absolute', left: 18, bottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(252,251,248,.94)', display: 'grid', placeItems: 'center' }}><Home size={22} color={ACCENT} aria-hidden /></span>
+            <span style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: PAPER, letterSpacing: '-.02em' }}>Mortgage rates</span>
+          </div>
+        </div>
         {/* ── hero: what this decides ── */}
         <div className="lk-rise" style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: MONO, fontSize: 12, letterSpacing: '.14em', color: ACCENT, marginBottom: 18 }}>
           <span style={{ width: 7, height: 7, borderRadius: 99, background: WAIT, animation: 'lkblink 1.5s infinite' }} /> MORTGAGE RATE TIMER
@@ -301,7 +312,7 @@ export default function LockTool() {
                   Compare lender quotes →
                 </a>
                 <button onClick={share} className="lk-cta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 50, minWidth: 50, fontSize: 14.5, fontWeight: 700, color: INK, background: 'transparent', border: `1px solid ${LINE}`, borderRadius: 10, padding: '13px 18px', cursor: 'pointer' }} aria-label="Share this call">
-                  <ShareIcon /> Share
+                  <Share2 size={16} aria-hidden /> Share
                 </button>
               </div>
             </div>
@@ -317,8 +328,8 @@ export default function LockTool() {
 
       {/* toast */}
       {toast && (
-        <div className="lk-anim" style={{ position: 'fixed', bottom: 26, left: '50%', transform: 'translateX(-50%)', background: INK, color: PAPER, fontSize: 13.5, fontWeight: 700, padding: '12px 20px', borderRadius: 999, boxShadow: '0 14px 34px rgba(10,10,12,.28)', zIndex: 60, animation: 'lktoast .35s cubic-bezier(.16,1,.3,1) both' }}>
-          ✓ {toast}
+        <div className="lk-anim" style={{ position: 'fixed', bottom: 26, left: '50%', transform: 'translateX(-50%)', background: INK, color: PAPER, fontSize: 13.5, fontWeight: 700, padding: '12px 20px', borderRadius: 999, boxShadow: '0 14px 34px rgba(10,10,12,.28)', zIndex: 60, display: 'inline-flex', alignItems: 'center', gap: 7, animation: 'lktoast .35s cubic-bezier(.16,1,.3,1) both' }}>
+          <Check size={16} color={WAIT} aria-hidden /> {toast}
         </div>
       )}
     </div>
@@ -326,15 +337,6 @@ export default function LockTool() {
 }
 
 const inp: React.CSSProperties = { width: '100%', background: BONE, border: `1px solid ${LINE}`, borderRadius: 10, padding: '12px 13px', fontSize: 18, fontWeight: 700, color: INK, outline: 'none', fontFamily: 'inherit', transition: 'border-color .2s ease, box-shadow .2s ease' }
-
-function ShareIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-      <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /><line x1="15.4" y1="6.5" x2="8.6" y2="10.5" />
-    </svg>
-  )
-}
 
 function Field({ label, prefix, suffix, children }: { label: string; prefix?: string; suffix?: string; children: React.ReactNode }) {
   return (

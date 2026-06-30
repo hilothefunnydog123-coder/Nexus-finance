@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { ArrowLeft, ArrowRight, ArrowUpRight, Loader2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, Loader2, TrendingUp, TrendingDown, BrainCircuit, Sigma } from 'lucide-react'
 import { saveToHistory } from '@/lib/history'
 import BrainMemory from '@/components/brain/BrainMemory'
 import NeuralXray from '@/components/cinematic/NeuralXray'
@@ -94,7 +94,7 @@ export default function BrainStock() {
           kind: 'forecast',
           ticker: fc.ticker,
           title: `${fc.ticker} ${h}-day forecast`,
-          summary: `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}% to $${target.toFixed(2)} over ${h} day${h === 1 ? '' : 's'}${fc.engine ? ` · ${fc.engine === 'neural-net' ? 'neural net' : 'baseline'}` : ''}`,
+          summary: `${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(2)}% to $${target.toFixed(2)} over ${h} day${h === 1 ? '' : 's'}${fc.engine ? ` · ${fc.engine === 'neural-net' ? 'neural net' : 'baseline'}` : ''}`,
           rating: pct >= 0 ? 'BULL' : 'BEAR',
           confidence: fc.metrics?.directional_accuracy != null ? Math.round(fc.metrics.directional_accuracy * 100) : null,
           price: px,
@@ -161,7 +161,18 @@ export default function BrainStock() {
 
       <main style={{ position: 'relative', zIndex: 1 }}>
         {/* ════════ HERO — orient the visitor ════════ */}
-        <section style={{ maxWidth: 1120, margin: '0 auto', padding: '0 clamp(18px,4vw,34px)' }}>
+        <section style={{ position: 'relative', overflow: 'hidden' }}>
+          {/* photographic backdrop — tasteful, washed behind paper */}
+          <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            <img
+              src="https://picsum.photos/seed/brainstock/1600/900"
+              alt=""
+              loading="lazy"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.14, filter: 'grayscale(1) contrast(1.05)' }}
+            />
+            <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(244,242,236,.74) 0%, rgba(244,242,236,.92) 64%, ${BONE} 100%)` }} />
+          </div>
+          <div style={{ position: 'relative', maxWidth: 1120, margin: '0 auto', padding: '0 clamp(18px,4vw,34px)' }}>
           <div style={{ paddingTop: 'clamp(56px,9vw,104px)', paddingBottom: 'clamp(36px,6vw,68px)' }}>
             <Reveal><Kicker style={{ marginBottom: 24 }}>// THE FORECASTER</Kicker></Reveal>
             <Reveal delay={70}>
@@ -190,6 +201,7 @@ export default function BrainStock() {
                 <Vital label="Status" value={vitals?.ready ? 'LEARNING' : 'BOOTSTRAPPING'} mono color={vitals?.ready ? GREEN : ACCENT} />
               </div>
             </Reveal>
+          </div>
           </div>
         </section>
 
@@ -239,12 +251,12 @@ export default function BrainStock() {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span className="bs-disp" style={{ fontSize: 26 }}>{data.ticker}</span>
-                        <span style={{ fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 10, letterSpacing: '.1em', color: isNN ? ACCENT : SUB, border: `1px solid ${isNN ? ACCENT : LINE}`, background: isNN ? 'rgba(31,59,255,.07)' : 'transparent', borderRadius: 6, padding: '3px 9px' }}>{isNN ? '◈ NEURAL NET' : '◇ BASELINE'}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 10, letterSpacing: '.1em', color: isNN ? ACCENT : SUB, border: `1px solid ${isNN ? ACCENT : LINE}`, background: isNN ? 'rgba(31,59,255,.07)' : 'transparent', borderRadius: 6, padding: '3px 9px' }}>{isNN ? <><BrainCircuit size={11} aria-hidden /> NEURAL NET</> : <><Sigma size={11} aria-hidden /> BASELINE</>}</span>
                       </div>
                       <div style={{ fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 12, color: SUB, marginTop: 5 }}>${lastPrice.toFixed(2)} → ${tgt.toFixed(2)} · {horizon}d</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 30, fontWeight: 800, color: move >= 0 ? GREEN : RED, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>{move >= 0 ? '▲ +' : '▼ '}{Math.abs(move).toFixed(2)}%</div>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 7, fontSize: 30, fontWeight: 800, color: move >= 0 ? GREEN : RED, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>{move >= 0 ? <TrendingUp size={24} aria-hidden /> : <TrendingDown size={24} aria-hidden />}{move >= 0 ? '+' : '−'}{Math.abs(move).toFixed(2)}%</div>
                       <div style={{ fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 10, color: SUB, letterSpacing: '.1em' }}>PREDICTED MOVE</div>
                     </div>
                   </div>
@@ -319,7 +331,7 @@ export default function BrainStock() {
                             ))}
                           </div>
                         ) })()}
-                        <div style={{ marginTop: 11, fontSize: 11.5, color: m.rmse_model < m.rmse_naive ? GREEN : SUB }}>{m.rmse_model < m.rmse_naive ? '◈ Net beats the baseline on error.' : '◇ Baseline still ahead on raw error here.'}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 11, fontSize: 11.5, color: m.rmse_model < m.rmse_naive ? GREEN : SUB }}>{m.rmse_model < m.rmse_naive ? <><BrainCircuit size={12} aria-hidden /> Net beats the baseline on error.</> : <><Sigma size={12} aria-hidden /> Baseline still ahead on raw error here.</>}</div>
                       </div>
 
                       {/* per-day trajectory bars */}
@@ -415,7 +427,7 @@ export default function BrainStock() {
                 <div style={{ ...card, background: BONE, padding: 'clamp(18px,2.4vw,26px)' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 6 }}>
                     <div style={{ fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 11.5, letterSpacing: '.14em', textTransform: 'uppercase', color: ACCENT }}>// NEURAL X-RAY — THE REAL FORWARD PASS</div>
-                    <div style={{ fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 10.5, color: data.trace ? GREEN : SUB }}>{data.trace ? '◈ LIVE ACTIVATIONS' : '◇ INPUTS ONLY · NET STILL TRAINING'}</div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 10.5, color: data.trace ? GREEN : SUB }}>{data.trace ? <><BrainCircuit size={12} aria-hidden /> LIVE ACTIVATIONS</> : <><Sigma size={12} aria-hidden /> INPUTS ONLY · NET STILL TRAINING</>}</div>
                   </div>
                   <p style={{ fontSize: 13.5, color: SUB, lineHeight: 1.55, maxWidth: 640, marginBottom: 14 }}>
                     Not a graphic — the actual computation. Your {data.ticker} bars become the eleven features on the left; watch them fire through the real {vitals?.arch ?? '11→16→12→1'} network to the prediction. Hover any neuron.
@@ -448,7 +460,7 @@ export default function BrainStock() {
             ].map((c, i) => (
               <Reveal key={c.href} delay={i * 70}>
                 <Link href={c.href} className="bs-card" style={{ ...card, background: PAPER, padding: 20, display: 'flex', flexDirection: 'column', textDecoration: 'none', color: INK, height: '100%', position: 'relative' }}>
-                  <div style={{ fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 10.5, letterSpacing: '.14em', textTransform: 'uppercase', color: c.live ? GREEN : ACCENT, marginBottom: 12 }}>{c.live ? '● ' : ''}{c.tag}</div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 10.5, letterSpacing: '.14em', textTransform: 'uppercase', color: c.live ? GREEN : ACCENT, marginBottom: 12 }}>{c.live ? <span style={{ width: 6, height: 6, borderRadius: 99, background: GREEN, animation: 'bs-blink 1.4s infinite', display: 'inline-block' }} /> : null}{c.tag}</div>
                   <div className="bs-disp" style={{ fontSize: '1.35rem', marginBottom: 8 }}>{c.t}</div>
                   <div style={{ fontSize: 13.5, color: SUB, lineHeight: 1.5, flex: 1 }}>{c.d}</div>
                   <div style={{ marginTop: 14, fontSize: 13, fontWeight: 700, color: INK, display: 'inline-flex', alignItems: 'center', gap: 6 }}>Open <ArrowRight size={14} /></div>

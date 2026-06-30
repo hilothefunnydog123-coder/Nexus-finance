@@ -6,6 +6,7 @@
  * unified and nothing collides. Aesthetic = the OBSIDIAN DESK terminal.
  */
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { BrainCircuit, Scale, ArrowRight, CheckCircle2 } from 'lucide-react'
 import type { EdgeEngine, EdgeRow } from '@/lib/edge/types'
 
 // Desk palette (kept local so components are self-contained).
@@ -89,7 +90,9 @@ export function WorthBadge({ worthIt }: { worthIt: boolean }) {
   const color = worthIt ? GREEN : FAINT
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: worthIt ? VOID : MUTE, background: worthIt ? GREEN : 'transparent', border: `1px solid ${color}${worthIt ? '' : '55'}`, padding: '4px 10px', borderRadius: 4, textTransform: 'uppercase', boxShadow: worthIt ? `0 0 22px ${GREEN}55` : 'none' }}>
-      {worthIt ? '◆ WORTH IT' : 'PASS'}
+      {worthIt
+        ? <><CheckCircle2 size={13} strokeWidth={2.5} style={{ flexShrink: 0 }} /> WORTH IT</>
+        : 'PASS'}
     </span>
   )
 }
@@ -127,7 +130,7 @@ export function PathRail({ active }: { active: EdgeStep }) {
             {interactive ? (
               <a href={s.href} style={{ textDecoration: 'none' }}>{content}</a>
             ) : content}
-            {i < PATH_STEPS.length - 1 && <span aria-hidden style={{ color: FAINT, opacity: 0.6 }}>→</span>}
+            {i < PATH_STEPS.length - 1 && <ArrowRight aria-hidden size={12} style={{ color: FAINT, opacity: 0.6, flexShrink: 0 }} />}
           </span>
         )
       })}
@@ -146,12 +149,15 @@ export function HeadToHead({ ynProb, marketProb, side, animate = true, height = 
   const edgeColor = edge >= 0 ? GREEN : RED
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-      <Bar label="YN AI" value={ynProb} color={CYAN} animate={on} height={height} emphasis />
+      <Bar label="OUR AI" value={ynProb} color={CYAN} animate={on} height={height} emphasis />
       <Bar label="MARKET" value={marketProb} color={MUTE} animate={on} height={height} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: MONO, fontSize: 10.5, color: FAINT, letterSpacing: '0.08em' }}>
-        <span>{side ? `OUR SIDE · ${side}` : 'AI vs MARKET'}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Scale size={12} style={{ flexShrink: 0 }} />
+          {side ? `OUR SIDE · ${side}` : 'AI vs MARKET'}
+        </span>
         <span
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: edgeColor, fontWeight: 700, border: `1px solid ${edgeColor}40`, background: `${edgeColor}14`, padding: '2px 8px', borderRadius: 4 }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: edgeColor, fontWeight: 700, border: `1px solid ${edgeColor}40`, background: `${edgeColor}14`, padding: '2px 8px', borderRadius: 4 }}
         >
           {edge >= 0 ? '+' : ''}{(edge * 100).toFixed(1)}pt EDGE
         </span>
@@ -171,6 +177,28 @@ function Bar({ label, value, color, animate, height, emphasis }: { label: string
     </div>
   )
 }
+
+/**
+ * Tasteful dark, overlaid background image for hero/detail textures. Plain <img>
+ * with lazy loading + onError hide. Picsum seed for reliability. Sits BEHIND a
+ * dark gradient so foreground text always reads.
+ */
+export function TextureBg({ seed, opacity = 0.22, overlay = `linear-gradient(180deg, ${VOID}cc, ${VOID}f2)` }: { seed: string; opacity?: number; overlay?: string }) {
+  return (
+    <span aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+      <img
+        src={`https://picsum.photos/seed/${seed}/1600/900`}
+        alt=""
+        loading="lazy"
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity, filter: 'grayscale(0.4) contrast(1.05)' }}
+      />
+      <span style={{ position: 'absolute', inset: 0, background: overlay }} />
+    </span>
+  )
+}
+
+export { BrainCircuit }
 
 /** Mini stat block. */
 export function Stat({ label, value, color = TXT, sub }: { label: string; value: ReactNode; color?: string; sub?: ReactNode }) {
