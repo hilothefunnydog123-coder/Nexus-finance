@@ -91,7 +91,7 @@ export default function Landing() {
           </nav>
           <div className="yn-desknav" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <AccountMenu tone="light" />
-            <Link href="/brainstock" style={{ fontSize: 14, fontWeight: 700, color: PAPER, background: INK, padding: '10px 18px', borderRadius: 8, textDecoration: 'none' }}>Open app</Link>
+            <Link href="/copilot/desktop" style={{ fontSize: 14, fontWeight: 700, color: PAPER, background: INK, padding: '10px 18px', borderRadius: 8, textDecoration: 'none' }}>Open app</Link>
           </div>
           <button className="yn-mobtn" onClick={() => setMenu(true)} aria-label="Menu" style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer' }}><Menu /></button>
         </div>
