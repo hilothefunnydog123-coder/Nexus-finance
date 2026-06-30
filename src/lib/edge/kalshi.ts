@@ -72,7 +72,8 @@ export async function kalshiProbe() {
   try {
     const ts = Date.now().toString()
     const sig = signRequest(creds, 'GET', '/trade-api/v2/markets', ts)
-    const res = await fetch(`${BASE}/markets?limit=1`, {
+    // Mirror the board's EXACT query so this probe catches query-specific failures.
+    const res = await fetch(`${BASE}/markets?status=open&limit=100`, {
       headers: { 'KALSHI-ACCESS-KEY': creds.keyId, 'KALSHI-ACCESS-TIMESTAMP': ts, 'KALSHI-ACCESS-SIGNATURE': sig, Accept: 'application/json' },
       cache: 'no-store',
     })
@@ -237,11 +238,18 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
     const collected: KalshiMarket[] = []
     let cursor = ''
     // Pull the FULL open-market universe (every Kalshi pick, all categories incl.
-    // Sports) — paginate hard, bounded so a serverless invocation can't run away.
-    for (let page = 0; page < 60 && collected.length < 6000; page++) {
-      const q = new URLSearchParams({ status: 'open', limit: '1000' })
+    // Sports) — paginate with the API-safe page size of 100. A single failed page
+    // mid-stream keeps what we already have instead of nuking everything to seed.
+    for (let page = 0; page < 120 && collected.length < 5000; page++) {
+      const q = new URLSearchParams({ status: 'open', limit: '100' })
       if (cursor) q.set('cursor', cursor)
-      const data = await kalshiGet<{ markets: RawMarket[]; cursor?: string }>(creds, `/markets?${q.toString()}`, opts.signal)
+      let data: { markets: RawMarket[]; cursor?: string }
+      try {
+        data = await kalshiGet<{ markets: RawMarket[]; cursor?: string }>(creds, `/markets?${q.toString()}`, opts.signal)
+      } catch (e) {
+        if (page === 0) throw e // first page failed → a real problem → fall to seed
+        break // a later page failed → keep the live markets we already collected
+      }
       for (const r of data.markets || []) {
         const n = normalize(r)
         if (n) collected.push(n)
