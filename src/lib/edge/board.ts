@@ -30,7 +30,7 @@ export interface BuildOptions extends FetchOptions {
 }
 
 export async function buildBoard(opts: BuildOptions = {}): Promise<EdgeBoard> {
-  const { markets, live } = await fetchActiveMarkets(opts)
+  const { markets, live, reason } = await fetchActiveMarkets(opts)
   const model = opts.model ?? (await loadModelFor(opts.admin ?? null))
 
   // Board mode: price the whole universe cheaply (net for tradables + a fast prior
@@ -57,7 +57,7 @@ export async function buildBoard(opts: BuildOptions = {}): Promise<EdgeBoard> {
       categories,
       note: live
         ? undefined
-        : 'Showing the offline seed market set — add KALSHI_KEY_ID + KALSHI_PRIVATE_KEY for live Kalshi data.',
+        : `Showing the offline seed market set — ${reason || 'live Kalshi data unavailable'}. See /api/edge/diag for details.`,
     },
   }
 }

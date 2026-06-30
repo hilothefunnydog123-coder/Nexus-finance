@@ -23,17 +23,70 @@ export interface KalshiCreds {
   privateKeyPem: string
 }
 
+/** Normalize a PEM pasted into an env var (quotes, escaped/CRLF newlines, and
+ *  the common case where the whole key arrives on one line without newlines). */
+export function normalizePem(raw: string): string {
+  let pk = raw.trim()
+  if ((pk.startsWith('"') && pk.endsWith('"')) || (pk.startsWith("'") && pk.endsWith("'"))) pk = pk.slice(1, -1)
+  pk = pk.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim()
+  // If the header/footer are present but the body has no line breaks (pasted as
+  // one line), rebuild a valid PEM by wrapping the base64 body at 64 chars.
+  const m = pk.match(/^-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----$/)
+  if (m && !m[2].includes('\n')) {
+    const body = m[2].replace(/\s+/g, '')
+    const wrapped = body.match(/.{1,64}/g)?.join('\n') ?? body
+    pk = `-----BEGIN ${m[1]}-----\n${wrapped}\n-----END ${m[1]}-----`
+  }
+  return pk
+}
+
 export function getKalshiCreds(): KalshiCreds | null {
   const keyId = process.env.KALSHI_KEY_ID?.trim()
-  let pk = process.env.KALSHI_PRIVATE_KEY
-  if (!keyId || !pk) return null
-  // Env vars often carry the PEM with escaped newlines — restore them.
-  pk = pk.replace(/\\n/g, '\n').trim()
+  const raw = process.env.KALSHI_PRIVATE_KEY
+  if (!keyId || !raw) return null
+  const pk = normalizePem(raw)
   if (!pk.includes('BEGIN') || !pk.includes('PRIVATE KEY')) return null
   return { keyId, privateKeyPem: pk }
 }
 
 export const KALSHI_ENABLED = !!getKalshiCreds()
+
+/** Live diagnostic: does the function see the keys, do they parse, and does a
+ *  signed Kalshi request actually succeed? Never returns the key itself. */
+export async function kalshiProbe() {
+  const keyId = process.env.KALSHI_KEY_ID?.trim() || ''
+  const pkRaw = process.env.KALSHI_PRIVATE_KEY || ''
+  const norm = pkRaw ? normalizePem(pkRaw) : ''
+  const creds = getKalshiCreds()
+  const out: {
+    hasKeyId: boolean; keyIdLength: number; hasPrivateKey: boolean; privateKeyLength: number
+    pemHasBegin: boolean; pemHasPrivateKeyMarker: boolean; credsParsed: boolean; base: string
+    api?: { ok: boolean; status: number; error?: string; markets?: number }
+  } = {
+    hasKeyId: !!keyId, keyIdLength: keyId.length,
+    hasPrivateKey: !!pkRaw, privateKeyLength: pkRaw.length,
+    pemHasBegin: norm.includes('BEGIN'), pemHasPrivateKeyMarker: norm.includes('PRIVATE KEY'),
+    credsParsed: !!creds, base: BASE,
+  }
+  if (!creds) return out
+  try {
+    const ts = Date.now().toString()
+    const sig = signRequest(creds, 'GET', '/trade-api/v2/markets', ts)
+    const res = await fetch(`${BASE}/markets?limit=1`, {
+      headers: { 'KALSHI-ACCESS-KEY': creds.keyId, 'KALSHI-ACCESS-TIMESTAMP': ts, 'KALSHI-ACCESS-SIGNATURE': sig, Accept: 'application/json' },
+      cache: 'no-store',
+    })
+    if (res.ok) {
+      const j = await res.json().catch(() => null)
+      out.api = { ok: true, status: res.status, markets: j?.markets?.length }
+    } else {
+      out.api = { ok: false, status: res.status, error: (await res.text().catch(() => '')).slice(0, 220) }
+    }
+  } catch (e) {
+    out.api = { ok: false, status: 0, error: e instanceof Error ? e.message : 'request failed' }
+  }
+  return out
+}
 
 /** Sign one request the way Kalshi expects (RSA-PSS over timestamp+method+path). */
 function signRequest(creds: KalshiCreds, method: string, path: string, timestamp: string): string {
@@ -149,7 +202,7 @@ function normalize(m: RawMarket): KalshiMarket | null {
 }
 
 // ── in-memory cache (per server instance) ───────────────────────────────────
-type CacheEntry = { at: number; markets: KalshiMarket[]; live: boolean }
+type CacheEntry = { at: number; markets: KalshiMarket[]; live: boolean; reason?: string }
 let cache: CacheEntry | null = null
 const TTL_MS = 60_000
 
@@ -165,18 +218,19 @@ export interface FetchOptions {
  * cache. Falls back to the seed dataset when creds are missing or the API errors,
  * so callers always receive a usable board.
  */
-export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ markets: KalshiMarket[]; live: boolean }> {
+export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ markets: KalshiMarket[]; live: boolean; reason?: string }> {
   const limit = opts.limit ?? 500
   const minVolume = opts.minVolume ?? 0
   if (!opts.force && cache && Date.now() - cache.at < TTL_MS) {
-    return { markets: applyFilter(cache.markets, limit, minVolume), live: cache.live }
+    return { markets: applyFilter(cache.markets, limit, minVolume), live: cache.live, reason: cache.reason }
   }
 
   const creds = getKalshiCreds()
   if (!creds) {
+    const reason = (process.env.KALSHI_KEY_ID && process.env.KALSHI_PRIVATE_KEY) ? 'keys set but private key did not parse as a PEM' : 'KALSHI_KEY_ID / KALSHI_PRIVATE_KEY not set'
     const seed = seedBoard()
-    cache = { at: Date.now(), markets: seed, live: false }
-    return { markets: applyFilter(seed, limit, minVolume), live: false }
+    cache = { at: Date.now(), markets: seed, live: false, reason }
+    return { markets: applyFilter(seed, limit, minVolume), live: false, reason }
   }
 
   try {
@@ -199,11 +253,12 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
     collected.sort((a, b) => b.volume - a.volume)
     cache = { at: Date.now(), markets: collected, live: true }
     return { markets: applyFilter(collected, limit, minVolume), live: true }
-  } catch {
+  } catch (e) {
     // Network / auth / parse failure — degrade to seed, never throw.
+    const reason = `Kalshi API call failed: ${e instanceof Error ? e.message : 'unknown'}`
     const seed = seedBoard()
-    if (!cache) cache = { at: Date.now(), markets: seed, live: false }
-    return { markets: applyFilter(cache.markets, limit, minVolume), live: cache.live }
+    cache = { at: Date.now(), markets: seed, live: false, reason }
+    return { markets: applyFilter(seed, limit, minVolume), live: false, reason }
   }
 }
 
