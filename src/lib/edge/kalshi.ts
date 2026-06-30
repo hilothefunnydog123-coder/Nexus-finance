@@ -106,13 +106,16 @@ export async function kalshiBoardSelfTest() {
     live: boolean
     reason?: string
     categories: Record<string, number>
+    withVolume: number
+    topByVolume: string[]
+    otherTickers: string[]
     sampleTitles: string[]
     elapsedMs: number
     error?: string
   } = {
     credsParsed: !!creds,
     rawCount: 0, normalizedCount: 0, droppedNoTickerOrClose: 0, droppedNoPrice: 0,
-    pagesFetched: 0, live: false, categories: {}, sampleTitles: [], elapsedMs: 0,
+    pagesFetched: 0, live: false, categories: {}, withVolume: 0, topByVolume: [], otherTickers: [], sampleTitles: [], elapsedMs: 0,
   }
   const started = Date.now()
   if (!creds) {
@@ -121,9 +124,9 @@ export async function kalshiBoardSelfTest() {
     return out
   }
   try {
-    const collected: KalshiMarket[] = []
+    const collected: { m: KalshiMarket; ticker: string }[] = []
     let cursor = ''
-    for (let page = 0; page < 5 && Date.now() - started < 12_000; page++) {
+    for (let page = 0; page < 20 && Date.now() - started < 12_000; page++) {
       const q = new URLSearchParams({ status: 'open', limit: '100' })
       if (cursor) q.set('cursor', cursor)
       const data = await kalshiGet<{ markets: RawMarket[]; cursor?: string }>(creds, `/markets?${q.toString()}`)
@@ -133,16 +136,19 @@ export async function kalshiBoardSelfTest() {
         if (!r.ticker || !r.close_time) { out.droppedNoTickerOrClose++; continue }
         const n = normalize(r)
         if (!n) { out.droppedNoPrice++; continue }
-        collected.push(n)
+        collected.push({ m: n, ticker: r.ticker })
       }
       cursor = data.cursor || ''
       if (!cursor) break
     }
-    collected.sort((a, b) => b.volume - a.volume)
+    collected.sort((a, b) => b.m.volume - a.m.volume)
     out.normalizedCount = collected.length
     out.live = collected.length > 0
-    for (const m of collected) out.categories[m.category] = (out.categories[m.category] || 0) + 1
-    out.sampleTitles = collected.slice(0, 12).map((m) => `[${m.category}] ${m.title} — ${(m.yesPrice * 100).toFixed(0)}% · vol ${m.volume}`)
+    out.withVolume = collected.filter((c) => c.m.volume > 0).length
+    for (const c of collected) out.categories[c.m.category] = (out.categories[c.m.category] || 0) + 1
+    out.topByVolume = collected.slice(0, 12).map((c) => `[${c.m.category}] ${c.ticker} · ${c.m.title.slice(0, 60)} — ${(c.m.yesPrice * 100).toFixed(0)}% · vol ${c.m.volume}`)
+    out.otherTickers = collected.filter((c) => c.m.category === 'Other').slice(0, 20).map((c) => c.ticker)
+    out.sampleTitles = collected.slice(0, 12).map((c) => `[${c.m.category}] ${c.m.title}`)
     if (!collected.length) out.reason = `API returned ${out.rawCount} raw markets but normalize dropped all of them (noTickerOrClose=${out.droppedNoTickerOrClose}, noPrice=${out.droppedNoPrice})`
   } catch (e) {
     out.error = e instanceof Error ? e.message : 'request failed'
@@ -206,9 +212,25 @@ interface RawMarket {
   status?: string
 }
 
+// Kalshi series-ticker prefixes are the most reliable signal (the elections API
+// returns no per-market category field). Tickers look like KX<SERIES>-<...>.
+const TICKER_CAT: [RegExp, EdgeCategory][] = [
+  [/^KX(NFL|NBA|MLB|NHL|NCAA|CFB|CBB|UFC|MMA|BOX|PGA|GOLF|MASTERS|TENNIS|ATP|WTA|WIMB|USOPEN|F1|NASCAR|INDY|SOCCER|EPL|UCL|UEFA|FIFA|WC|MLS|LALIGA|BUNDES|SERIEA|LIGUE|CRICKET|RUGBY|OLYMP|FIGHT|WNBA|GAME|MATCH|WORLDCUP|CONCACAF|COPA|EURO|FRIENDLY|CL|EL|SCORE|GOAL|CORNER)/i, 'Sports'],
+  [/^KX(BTC|ETH|CRYPTO|SOL|DOGE|XRP|BITCOIN|ETHER)/i, 'Crypto'],
+  [/^KX(SPX|SP500|NDX|NASDAQ|DJIA|DOW|TNX|YIELD|GOLD|OIL|WTI|BRENT|STOCK|NVDA|TSLA|AAPL|EQUIT)/i, 'Financials'],
+  [/^KX(CPI|INFLATION|FED|FOMC|RATE|GDP|PAYROLL|JOBS|UNEMP|RECESSION|JOBLESS)/i, 'Economics'],
+  [/^KX(PRES|ELECTION|CONGRESS|SENATE|HOUSE|SCOTUS|GOV|POLL|DEM|GOP|TRUMP|BIDEN)/i, 'Politics'],
+  [/^KX(TEMP|WEATHER|HURRICANE|SNOW|RAIN|STORM|CLIMATE|HIGH|LOW)/i, 'Weather'],
+  [/^KX(OPENAI|GPT|AI|CHIP|TECH|LAUNCH|RELEASE|APP)/i, 'Tech'],
+  [/^KX(MOVIE|BOX|OSCAR|GRAMMY|ALBUM|ROTTEN|EMMY|TIME)/i, 'Culture'],
+]
+
 const CAT_KEYWORDS: [RegExp, EdgeCategory][] = [
-  [/\bnfl\b|\bnba\b|\bmlb\b|\bnhl\b|\bncaa\b|college (foot|basket)ball|super bowl|world series|stanley cup|premier league|la ?liga|champions league|bundesliga|serie a|\bmls\b|\bufc\b|\bmma\b|boxing|\bpga\b|\bgolf\b|wimbledon|\batp\b|\bwta\b|tennis|formula ?1|\bf1\b|nascar|grand prix|playoff|\bvs\.?\b| beat | defeat|to win the|olympic|fifa|world cup|heisman/i, 'Sports'],
-  [/bitcoin|btc|ethereum|eth\b|crypto|solana|dogecoin/i, 'Crypto'],
+  // Sports — leagues, events, soccer/match terms, and player-prop patterns. The
+  // live Kalshi board is heavy on soccer (World Cup) + MLB, whose titles are
+  // concatenated legs like "yes France advances, yes Reg Time: ...".
+  [/\bnfl\b|\bnba\b|\bwnba\b|\bmlb\b|\bnhl\b|\bncaa\b|college (foot|basket)ball|super bowl|world series|stanley cup|premier league|la ?liga|champions league|bundesliga|serie a|ligue 1|\bmls\b|\bufc\b|\bmma\b|boxing|\bpga\b|\bgolf\b|the masters|wimbledon|\batp\b|\bwta\b|\btennis\b|formula ?1|\bf1\b|nascar|indycar|grand prix|playoff|\bvs\.?\b| beat | defeat|to win the|olympic|fifa|world cup|copa|euro \d|concacaf|heisman|cricket|rugby|advances?\b|reg(ulation)? time|both teams to score|goals? scored|\bcorners?\b|1st half|first half|2nd half|halftime|penalt|own goal|clean sheet|hat.?trick|to score|assists?\b|home run|strikeout|touchdown|field goal|three.pointer|rebounds?\b|: \d+\+/i, 'Sports'],
+  [/bitcoin|btc|ethereum|eth\b|crypto|solana|dogecoin|\bxrp\b/i, 'Crypto'],
   [/s&p|s and p|nasdaq|dow|treasury|yield|gold|oil|crude|stock|nvidia|tesla|apple|equit/i, 'Financials'],
   [/cpi|inflation|fed|fomc|rate|gdp|payroll|jobs|unemploy|recession/i, 'Economics'],
   [/president|election|congress|senate|house|scotus|supreme court|governor|poll/i, 'Politics'],
@@ -218,7 +240,8 @@ const CAT_KEYWORDS: [RegExp, EdgeCategory][] = [
   [/opec|oil cut|war|treaty|un\b|nato|world/i, 'World'],
 ]
 
-export function categorize(title: string, raw?: string): EdgeCategory {
+export function categorize(title: string, raw?: string, ticker?: string): EdgeCategory {
+  // 1) Explicit category field, when Kalshi provides one.
   if (raw) {
     const r = raw.toLowerCase()
     if (r.includes('sport')) return 'Sports'
@@ -231,6 +254,12 @@ export function categorize(title: string, raw?: string): EdgeCategory {
     if (r.includes('entertain') || r.includes('culture')) return 'Culture'
     if (r.includes('world')) return 'World'
   }
+  // 2) Series-ticker prefix (most reliable on the elections API, which omits
+  //    the category field). Check the market ticker AND its event ticker.
+  if (ticker) {
+    for (const [re, cat] of TICKER_CAT) if (re.test(ticker)) return cat
+  }
+  // 3) Title keywords.
   for (const [re, cat] of CAT_KEYWORDS) if (re.test(title)) return cat
   return 'Other'
 }
@@ -260,7 +289,7 @@ function normalize(m: RawMarket): KalshiMarket | null {
     eventTicker: m.event_ticker,
     title,
     subtitle: m.yes_sub_title || m.subtitle,
-    category: categorize(title, m.category),
+    category: categorize(title, m.category, `${m.ticker} ${m.event_ticker || ''}`),
     yesPrice,
     noPrice: +(1 - yesPrice).toFixed(4),
     volume: m.volume ?? 0,
@@ -312,7 +341,10 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
     // limit, so cap pages + elapsed time. Sorted by volume after — the most active
     // markets surface first. A failed page mid-stream keeps what we already have.
     const started = Date.now()
-    for (let page = 0; page < 10 && collected.length < 1000; page++) {
+    // Kalshi paginates fast (~40ms/page), so pull a wide universe to make sure the
+    // liquid + tradable markets (which carry the real edge) are in the set, then
+    // sort by volume below. Still time-bounded well under the function limit.
+    for (let page = 0; page < 25 && collected.length < 2500; page++) {
       const q = new URLSearchParams({ status: 'open', limit: '100' })
       if (cursor) q.set('cursor', cursor)
       let data: { markets: RawMarket[]; cursor?: string }
@@ -327,7 +359,7 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
         if (n) collected.push(n)
       }
       cursor = data.cursor || ''
-      if (!cursor || Date.now() - started > 8_000) break
+      if (!cursor || Date.now() - started > 9_000) break
     }
     if (!collected.length) throw new Error('no markets returned')
     collected.sort((a, b) => b.volume - a.volume)
