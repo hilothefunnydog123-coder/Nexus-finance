@@ -429,8 +429,8 @@ function NotReady({ note }: { note?: string }) {
         </div>
 
         {note && (
-          <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 10, alignItems: 'flex-start', fontFamily: MONO, fontSize: 12.5, color: FAINT, lineHeight: 1.6 }}>
-            <span style={{ color: GREEN }}>›</span><span>{note}</span>
+          <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 8, alignItems: 'flex-start', fontFamily: MONO, fontSize: 12.5, color: FAINT, lineHeight: 1.6 }}>
+            <ChevronRight size={14} style={{ color: GREEN, flexShrink: 0, marginTop: 2 }} /><span>{note}</span>
           </div>
         )}
       </Panel>

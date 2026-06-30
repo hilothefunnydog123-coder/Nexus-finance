@@ -6,7 +6,7 @@
  * unified and nothing collides. Aesthetic = the OBSIDIAN DESK terminal.
  */
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
-import { BrainCircuit, Scale, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { Scale, ArrowRight, CheckCircle2 } from 'lucide-react'
 import type { EdgeEngine, EdgeRow } from '@/lib/edge/types'
 
 // Desk palette (kept local so components are self-contained).
@@ -197,8 +197,6 @@ export function TextureBg({ seed, opacity = 0.22, overlay = `linear-gradient(180
     </span>
   )
 }
-
-export { BrainCircuit }
 
 /** Mini stat block. */
 export function Stat({ label, value, color = TXT, sub }: { label: string; value: ReactNode; color?: string; sub?: ReactNode }) {
