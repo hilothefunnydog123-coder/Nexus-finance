@@ -12,5 +12,5 @@ export const metadata: Metadata = {
 }
 
 export default function EveryoneLayout({ children }: { children: React.ReactNode }) {
-  return <div style={{ background: '#08090c', minHeight: '100vh' }}>{children}</div>
+  return <div style={{ background: '#f4f2ec', minHeight: '100vh' }}>{children}</div>
 }
