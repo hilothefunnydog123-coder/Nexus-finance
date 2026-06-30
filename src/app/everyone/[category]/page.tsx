@@ -4,9 +4,12 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
-const INK = '#1c160f', SUB = '#6b6256', CREAM = '#fbf7f0', CARD = '#ffffff'
-const GREEN = '#18925f', RED = '#d4503e', AMBER = '#f0892f', BLUE = '#3b6bff', LINE = 'rgba(28,22,15,.08)'
-const DISPLAY = 'var(--font-display), Inter, system-ui, sans-serif'
+// ── new cobalt/ink/paper brand (matches /everyone landing) ──
+const INK = '#0a0a0c', BONE = '#f4f2ec', PAPER = '#fcfbf8', ACCENT = '#1f3bff'
+const SUB = 'rgba(10,10,12,.62)', LINE = 'rgba(10,10,12,.1)'
+const NOW = '#e0841f', WAIT = '#0a9d63', NEU = '#1f3bff', RED = '#d4503e'
+const DISPLAY = 'var(--font-display), system-ui, sans-serif'
+const MONO = 'var(--font-mono), ui-monospace, monospace'
 
 type Stance = 'now' | 'wait' | 'neutral'
 type UI = { emoji: string; name: string; question: string; blurb: string; outlookLabel: string; windows: [number, string][] }
@@ -27,10 +30,10 @@ const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 const renderBold = (s: string) => escapeHtml(s).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
 
 function stanceColor(s?: Stance) {
-  return s === 'now' ? AMBER : s === 'wait' ? GREEN : s === 'neutral' ? BLUE : INK
+  return s === 'now' ? NOW : s === 'wait' ? WAIT : s === 'neutral' ? NEU : INK
 }
 function stanceTint(s?: Stance) {
-  return s === 'now' ? 'rgba(240,137,47,.10)' : s === 'wait' ? 'rgba(24,146,95,.10)' : 'rgba(59,107,255,.08)'
+  return s === 'now' ? 'rgba(224,132,31,.09)' : s === 'wait' ? 'rgba(10,157,99,.09)' : 'rgba(31,59,255,.07)'
 }
 
 function usePrefersReducedMotion() {
@@ -76,16 +79,16 @@ function ConfidenceGauge({ value, color, reduced }: { value: number; color: stri
   return (
     <div style={{ position: 'relative', width: size, height: size }}>
       <svg width={size} height={size} style={{ transform: 'rotate(135deg)' }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(28,22,15,.07)" strokeWidth={stroke}
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(10,10,12,.07)" strokeWidth={stroke}
           strokeLinecap="round" strokeDasharray={`${dash} ${circ}`} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
           strokeLinecap="round" strokeDasharray={`${dash} ${circ}`} strokeDashoffset={offset}
-          style={{ transition: reduced ? 'none' : 'stroke-dashoffset .1s linear', filter: `drop-shadow(0 2px 6px ${color}55)` }} />
+          style={{ transition: reduced ? 'none' : 'stroke-dashoffset .1s linear' }} />
       </svg>
       <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
         <div>
-          <div style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 900, color, letterSpacing: '-.03em', lineHeight: 1 }}>{Math.round(animated)}<span style={{ fontSize: 17 }}>%</span></div>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.1em', color: SUB, marginTop: 3 }}>CONFIDENCE</div>
+          <div style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 700, color, letterSpacing: '-.03em', lineHeight: 1 }}>{Math.round(animated)}<span style={{ fontSize: 17 }}>%</span></div>
+          <div style={{ fontFamily: MONO, fontSize: 9.5, fontWeight: 700, letterSpacing: '.14em', color: SUB, marginTop: 4 }}>CONFIDENCE</div>
         </div>
       </div>
     </div>
@@ -141,13 +144,13 @@ export default function CategoryTool() {
   if (!ui) {
     return (
       <Shell toast={toast}>
-        <div className="ev-rise" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, padding: '40px 30px', textAlign: 'center', boxShadow: '0 18px 44px rgba(28,22,15,.08)' }}>
+        <div className="ev-rise" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 18, padding: '40px 30px', textAlign: 'center', boxShadow: '0 1px 2px rgba(10,10,12,.04)' }}>
           <div style={{ fontSize: 46, marginBottom: 12 }}>🛠️</div>
-          <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 900, letterSpacing: '-.02em', marginBottom: 10 }}>This one’s coming soon</div>
+          <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, letterSpacing: '-.03em', marginBottom: 10 }}>This one’s coming soon</div>
           <div style={{ fontSize: 15, color: SUB, marginBottom: 24, lineHeight: 1.6, maxWidth: 400, marginLeft: 'auto', marginRight: 'auto' }}>
             The net needs a clean market to read for <b style={{ color: INK }}>“{cat}”</b> before it’ll make a call. It’s on the list — every live timer is graded in public.
           </div>
-          <Link href="/everyone" className="ev-cta" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 50, fontSize: 14.5, fontWeight: 800, color: CREAM, background: GREEN, borderRadius: 14, padding: '13px 24px', textDecoration: 'none', boxShadow: '0 12px 28px rgba(24,146,95,.3)' }}>← See what’s live</Link>
+          <Link href="/everyone" className="ev-cta" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 50, fontSize: 14.5, fontWeight: 700, color: PAPER, background: INK, borderRadius: 10, padding: '13px 24px', textDecoration: 'none' }}>← See what’s live</Link>
         </div>
       </Shell>
     )
@@ -158,27 +161,30 @@ export default function CategoryTool() {
 
   return (
     <Shell toast={toast}>
-      <div className="ev-rise" style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '.12em', color: GREEN, marginBottom: 12 }}>{ui.emoji} {ui.name.toUpperCase()} TIMER</div>
-      <h1 className="ev-rise" style={{ fontFamily: DISPLAY, fontSize: 'clamp(31px,5.4vw,46px)', fontWeight: 900, letterSpacing: '-.03em', lineHeight: 1.04, margin: '0 0 14px' }}>{ui.question}</h1>
-      <p className="ev-rise" style={{ fontSize: 16.5, color: SUB, lineHeight: 1.6, maxWidth: 560, marginBottom: 30 }}>
+      {/* ── hero: what this decides ── */}
+      <div className="ev-rise" style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: MONO, fontSize: 12, letterSpacing: '.14em', color: ACCENT, marginBottom: 18 }}>
+        <span style={{ width: 7, height: 7, borderRadius: 99, background: WAIT, animation: 'evblink 1.5s infinite' }} /> {ui.emoji} {ui.name.toUpperCase()} TIMER
+      </div>
+      <h1 className="ev-rise" style={{ fontFamily: DISPLAY, fontSize: 'clamp(31px,5.4vw,46px)', fontWeight: 700, letterSpacing: '-.03em', lineHeight: 1.04, margin: '0 0 16px' }}>{ui.question}</h1>
+      <p className="ev-rise" style={{ fontSize: 16.5, color: SUB, lineHeight: 1.6, maxWidth: 560, marginBottom: 32 }}>
         The same BrainStock net that grades its stock calls in public reads {ui.blurb} — and tells you whether to act now or wait. A forecast you can check, not advice.
       </p>
 
-      <div className="ev-rise" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 22, padding: 22, boxShadow: '0 18px 44px rgba(28,22,15,.08)' }}>
-        <div style={{ fontSize: 12.5, fontWeight: 700, color: SUB, marginBottom: 11 }}>When are you deciding?</div>
+      {/* ── step 1: the question ── */}
+      <div className="ev-rise" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 16, padding: 22, boxShadow: '0 1px 2px rgba(10,10,12,.04)' }}>
+        <div style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '.14em', color: ACCENT, marginBottom: 14 }}>// WHEN ARE YOU DECIDING?</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {ui.windows.map(([d, l]) => (
             <button key={d} onClick={() => setDays(d)} className="ev-chip" style={{
               fontSize: 13.5, fontWeight: 700, padding: '11px 17px', minHeight: 44, borderRadius: 999, cursor: 'pointer',
-              border: `1px solid ${days === d ? GREEN : LINE}`, color: days === d ? '#fff' : INK,
-              background: days === d ? GREEN : '#f7f3ec', boxShadow: days === d ? '0 6px 16px rgba(24,146,95,.25)' : 'none',
+              border: `1px solid ${days === d ? INK : LINE}`, color: days === d ? PAPER : INK,
+              background: days === d ? INK : 'transparent',
             }}>{l}</button>
           ))}
         </div>
-        <button onClick={run} disabled={loading} className="ev-btn-grad" style={{
-          marginTop: 20, width: '100%', fontSize: 16.5, fontWeight: 800, minHeight: 52, color: CREAM, cursor: loading ? 'default' : 'pointer',
-          background: loading ? '#9bb0a5' : `linear-gradient(135deg,${GREEN},#0f7a4d)`, border: 'none', borderRadius: 14, padding: '15px',
-          boxShadow: loading ? 'none' : '0 12px 28px rgba(24,146,95,.3)', transition: 'filter .2s ease',
+        <button onClick={run} disabled={loading} className="ev-btn" style={{
+          marginTop: 20, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, minHeight: 52, color: PAPER, cursor: loading ? 'default' : 'pointer',
+          background: loading ? 'rgba(10,10,12,.45)' : INK, border: 'none', borderRadius: 10, padding: '15px', transition: 'filter .2s ease',
         }}>
           {loading ? <span className="ev-anim" style={{ animation: 'evpulse 1.1s ease-in-out infinite' }}>Reading the market…</span> : 'Get the call →'}
         </button>
@@ -186,20 +192,21 @@ export default function CategoryTool() {
 
       {err && <div className="ev-rise" style={{ marginTop: 18, color: RED, fontSize: 14, background: 'rgba(212,80,62,.07)', border: '1px solid rgba(212,80,62,.2)', borderRadius: 12, padding: '13px 15px' }}>{err}</div>}
 
+      {/* ── step 2: the verdict ── */}
       {res && (
-        <div ref={resultRef} className="ev-anim" style={{ marginTop: 24, background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, overflow: 'hidden', boxShadow: '0 26px 60px rgba(28,22,15,.12)', animation: 'evpop .6s cubic-bezier(.16,1,.3,1) both' }}>
+        <div ref={resultRef} className="ev-anim" style={{ marginTop: 26, background: PAPER, border: `1px solid ${LINE}`, borderRadius: 18, overflow: 'hidden', boxShadow: '0 18px 40px rgba(10,10,12,.08)', animation: 'evpop .6s cubic-bezier(.16,1,.3,1) both' }}>
           <div style={{ padding: '26px 24px 22px', background: tint, borderBottom: `1px solid ${LINE}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
               <div style={{ minWidth: 200, flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 700, color: SUB }}>The call</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 9.5, fontWeight: 800, letterSpacing: '.05em', color: res.grounded ? GREEN : SUB, background: res.grounded ? 'rgba(24,146,95,.14)' : '#efe9df', borderRadius: 999, padding: '3px 9px' }}>
-                    {res.grounded && <span style={{ width: 6, height: 6, borderRadius: 999, background: GREEN, display: 'inline-block' }} />}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '.14em', color: SUB }}>THE CALL</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 9.5, fontWeight: 800, letterSpacing: '.06em', color: res.grounded ? WAIT : SUB, background: res.grounded ? 'rgba(10,157,99,.12)' : 'rgba(10,10,12,.05)', border: `1px solid ${res.grounded ? 'rgba(10,157,99,.25)' : LINE}`, borderRadius: 999, padding: '3px 9px' }}>
+                    {res.grounded && <span style={{ width: 6, height: 6, borderRadius: 999, background: WAIT, display: 'inline-block' }} />}
                     {res.grounded ? 'NET + LIVE NEWS' : (res.engine || 'NET').toUpperCase()}
                   </span>
                 </div>
-                <div style={{ fontFamily: DISPLAY, fontSize: 'clamp(40px,9vw,52px)', fontWeight: 900, letterSpacing: '-.03em', color, lineHeight: .98 }}>{res.verdict}</div>
-                <div style={{ fontSize: 16.5, fontWeight: 700, marginTop: 10, lineHeight: 1.4, maxWidth: 360 }}>{res.headline}</div>
+                <div style={{ fontFamily: DISPLAY, fontSize: 'clamp(40px,9vw,52px)', fontWeight: 700, letterSpacing: '-.04em', color, lineHeight: .98 }}>{res.verdict}</div>
+                <div style={{ fontSize: 16.5, fontWeight: 600, marginTop: 10, lineHeight: 1.4, maxWidth: 360 }}>{res.headline}</div>
               </div>
               <div style={{ display: 'grid', placeItems: 'center', margin: '0 auto' }}>
                 <ConfidenceGauge value={res.confidence} color={color} reduced={reduced} />
@@ -208,7 +215,7 @@ export default function CategoryTool() {
           </div>
 
           <div style={{ padding: '22px 24px' }}>
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.1em', color: SUB, marginBottom: 11 }}>WHY</div>
+            <div style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '.14em', color: ACCENT, marginBottom: 13 }}>// WHY</div>
             <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 9 }}>
               {res.drivers.map((d, i) => (
                 <li key={i} className="ev-anim" style={{ fontSize: 14.5, lineHeight: 1.55, color: INK, display: 'flex', gap: 10, animation: `evrise .5s cubic-bezier(.16,1,.3,1) both`, animationDelay: `${0.15 + i * 0.08}s` }}>
@@ -220,31 +227,31 @@ export default function CategoryTool() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10, marginTop: 22 }}>
               <Stat label={ui.outlookLabel} value={res.direction} color={color} />
-              <Stat label="Backtested accuracy" value={res.backtest + '%'} color={BLUE} />
+              <Stat label="Backtested accuracy" value={res.backtest + '%'} color={ACCENT} />
             </div>
 
             {!!res.sources?.length && (
               <div style={{ marginTop: 20 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.1em', color: SUB, marginBottom: 10 }}>SOURCES IT CHECKED</div>
+                <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '.14em', color: SUB, marginBottom: 10 }}>SOURCES IT CHECKED</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                   {res.sources.map((s, i) => (
-                    <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" className="ev-src" style={{ fontSize: 11.5, fontWeight: 600, color: BLUE, background: 'rgba(59,107,255,.08)', border: '1px solid rgba(59,107,255,.2)', borderRadius: 999, padding: '7px 12px', textDecoration: 'none', transition: 'background .2s ease' }}>{s.title} ↗</a>
+                    <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" className="ev-src" style={{ fontSize: 11.5, fontWeight: 600, color: ACCENT, background: 'rgba(31,59,255,.07)', border: '1px solid rgba(31,59,255,.2)', borderRadius: 999, padding: '7px 12px', textDecoration: 'none', transition: 'background .2s ease' }}>{s.title} ↗</a>
                   ))}
                 </div>
               </div>
             )}
 
-            <div style={{ marginTop: 20, padding: '14px 16px', background: '#f7f3ec', borderRadius: 14, fontSize: 12.5, color: SUB, lineHeight: 1.55 }}>
+            <div style={{ marginTop: 20, padding: '14px 16px', background: BONE, border: `1px solid ${LINE}`, borderRadius: 12, fontSize: 12.5, color: SUB, lineHeight: 1.55 }}>
               {res.grounded
                 ? <>Read by the <b style={{ color: INK }}>net + live news</b> — the BrainStock forecast on {res.proxy} fused with this week’s real headlines.</>
                 : <>Read from <b style={{ color: INK }}>{res.proxy}</b> via the {res.engine} as of {res.asOf}.</>} A forecast, <b style={{ color: INK }}>not financial advice</b>.
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, marginTop: 16 }}>
-              <Link href="/everyone" className="ev-cta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 50, fontSize: 14.5, fontWeight: 800, color: CREAM, background: INK, borderRadius: 14, padding: '13px', textDecoration: 'none', boxShadow: '0 10px 24px rgba(28,22,15,.18)' }}>
+              <Link href="/everyone" className="ev-cta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 50, fontSize: 14.5, fontWeight: 700, color: PAPER, background: INK, borderRadius: 10, padding: '13px', textDecoration: 'none' }}>
                 More decisions →
               </Link>
-              <button onClick={share} className="ev-cta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 50, minWidth: 50, fontSize: 14.5, fontWeight: 800, color: INK, background: '#f2ece2', border: `1px solid ${LINE}`, borderRadius: 14, padding: '13px 18px', cursor: 'pointer' }} aria-label="Share this call">
+              <button onClick={share} className="ev-cta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 50, minWidth: 50, fontSize: 14.5, fontWeight: 700, color: INK, background: 'transparent', border: `1px solid ${LINE}`, borderRadius: 10, padding: '13px 18px', cursor: 'pointer' }} aria-label="Share this call">
                 <ShareIcon /> Share
               </button>
             </div>
@@ -252,8 +259,10 @@ export default function CategoryTool() {
         </div>
       )}
 
-      <div style={{ marginTop: 32, fontSize: 13, color: SUB, textAlign: 'center' }}>
-        <Link href="/everyone" style={{ color: GREEN, fontWeight: 700, textDecoration: 'none' }}>← all decisions</Link>
+      {/* ── next step: the path onward ── */}
+      <div style={{ marginTop: 36, paddingTop: 30, borderTop: `1px solid ${LINE}`, display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
+        <Link href="/everyone" style={{ fontSize: 14, fontWeight: 700, color: INK, textDecoration: 'none' }}>Try another market →</Link>
+        <Link href="/everyone/proof" style={{ fontSize: 14, fontWeight: 600, color: ACCENT, textDecoration: 'none' }}>See the track record →</Link>
       </div>
     </Shell>
   )
@@ -261,36 +270,41 @@ export default function CategoryTool() {
 
 function Shell({ children, toast }: { children: React.ReactNode; toast?: string }) {
   return (
-    <div style={{ background: CREAM, color: INK, minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ background: BONE, color: INK, minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <style>{`
         @keyframes evpop{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
         @keyframes evrise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
         @keyframes evtoast{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%)}}
         @keyframes evpulse{0%,100%{opacity:.55}50%{opacity:1}}
+        @keyframes evblink{0%,100%{opacity:1}50%{opacity:.25}}
         @media (prefers-reduced-motion: reduce){
           .ev-anim{animation:none !important}
           *{scroll-behavior:auto !important}
         }
         .ev-rise{animation:evrise .55s cubic-bezier(.16,1,.3,1) both}
-        .ev-btn-grad:hover{filter:brightness(1.06)}
-        .ev-chip{transition:transform .15s ease, background .2s ease, border-color .2s ease}
+        .ev-btn:hover{filter:brightness(1.08)}
+        .ev-chip{transition:transform .15s ease, background .2s ease, border-color .2s ease, color .2s ease}
         .ev-chip:active{transform:scale(.96)}
-        .ev-src:hover{background:rgba(59,107,255,.14) !important}
-        .ev-cta{transition:transform .18s ease}
-        .ev-cta:hover{transform:translateY(-1px)}
+        .ev-src:hover{background:rgba(31,59,255,.12) !important}
+        .ev-cta{transition:transform .15s ease}
+        .ev-cta:hover{transform:translateY(-2px)}
       `}</style>
-      <header style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(251,247,240,.86)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: `1px solid ${LINE}` }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(244,242,236,.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: `1px solid ${LINE}` }}>
         <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 22px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/everyone" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <span style={{ width: 30, height: 30, background: INK, color: CREAM, display: 'grid', placeItems: 'center', fontFamily: DISPLAY, fontWeight: 900, fontSize: 12.5, borderRadius: 9 }}>YN</span>
-            <span style={{ fontWeight: 800, fontSize: 16, color: INK }}>for everyone</span>
+          <Link href="/everyone" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: INK }}>
+            <span style={{ width: 29, height: 29, background: INK, color: PAPER, display: 'grid', placeItems: 'center', fontWeight: 900, fontSize: 12.5, borderRadius: 7 }}>YN</span>
+            <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 16, letterSpacing: '-.03em' }}>Finance</span>
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.12em', color: SUB, border: `1px solid ${LINE}`, borderRadius: 999, padding: '3px 9px' }}>FOR EVERYONE</span>
           </Link>
-          <Link href="/everyone" style={{ fontSize: 13.5, fontWeight: 600, color: SUB, textDecoration: 'none', minHeight: 44, display: 'flex', alignItems: 'center' }}>← all decisions</Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <Link href="/everyone/proof" style={{ fontSize: 13.5, fontWeight: 600, color: INK, textDecoration: 'none' }}>Track record</Link>
+            <Link href="/" style={{ fontSize: 13.5, fontWeight: 600, color: SUB, textDecoration: 'none' }}>For traders →</Link>
+          </div>
         </div>
       </header>
-      <main style={{ maxWidth: 760, margin: '0 auto', padding: '40px 22px 90px' }}>{children}</main>
+      <main style={{ maxWidth: 760, margin: '0 auto', padding: '48px 22px 90px' }}>{children}</main>
       {toast && (
-        <div className="ev-anim" style={{ position: 'fixed', bottom: 26, left: '50%', transform: 'translateX(-50%)', background: INK, color: CREAM, fontSize: 13.5, fontWeight: 700, padding: '12px 20px', borderRadius: 999, boxShadow: '0 14px 34px rgba(28,22,15,.3)', zIndex: 60, animation: 'evtoast .35s cubic-bezier(.16,1,.3,1) both' }}>
+        <div className="ev-anim" style={{ position: 'fixed', bottom: 26, left: '50%', transform: 'translateX(-50%)', background: INK, color: PAPER, fontSize: 13.5, fontWeight: 700, padding: '12px 20px', borderRadius: 999, boxShadow: '0 14px 34px rgba(10,10,12,.28)', zIndex: 60, animation: 'evtoast .35s cubic-bezier(.16,1,.3,1) both' }}>
           ✓ {toast}
         </div>
       )}
@@ -309,8 +323,8 @@ function ShareIcon() {
 
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div style={{ background: '#f7f3ec', borderRadius: 14, padding: '13px 10px', textAlign: 'center' }}>
-      <div style={{ fontFamily: DISPLAY, fontSize: 17, fontWeight: 900, color: color || INK, textTransform: 'capitalize', letterSpacing: '-.01em' }}>{value}</div>
+    <div style={{ background: BONE, border: `1px solid ${LINE}`, borderRadius: 12, padding: '13px 10px', textAlign: 'center' }}>
+      <div style={{ fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: color || INK, textTransform: 'capitalize', letterSpacing: '-.02em' }}>{value}</div>
       <div style={{ fontSize: 10.5, fontWeight: 700, color: SUB, marginTop: 5, lineHeight: 1.3 }}>{label}</div>
     </div>
   )

@@ -3,9 +3,12 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 
-const INK = '#1c160f', SUB = '#6b6256', CREAM = '#fbf7f0', CARD = '#ffffff'
-const GREEN = '#18925f', RED = '#d4503e', AMBER = '#f0892f', BLUE = '#3b6bff', LINE = 'rgba(28,22,15,.08)'
-const DISPLAY = 'var(--font-display), Inter, system-ui, sans-serif'
+// ── new cobalt/ink/paper brand (matches /everyone landing) ──
+const INK = '#0a0a0c', BONE = '#f4f2ec', PAPER = '#fcfbf8', ACCENT = '#1f3bff'
+const SUB = 'rgba(10,10,12,.62)', LINE = 'rgba(10,10,12,.1)'
+const NOW = '#e0841f', WAIT = '#0a9d63', NEU = '#1f3bff', RED = '#d4503e'
+const DISPLAY = 'var(--font-display), system-ui, sans-serif'
+const MONO = 'var(--font-mono), ui-monospace, monospace'
 
 type Stance = 'now' | 'wait' | 'neutral'
 type Forecast = {
@@ -21,10 +24,10 @@ const usd = (n: number) => '$' + Math.round(n).toLocaleString()
 
 // stance → palette
 function stanceColor(s?: Stance) {
-  return s === 'now' ? AMBER : s === 'wait' ? GREEN : s === 'neutral' ? BLUE : INK
+  return s === 'now' ? NOW : s === 'wait' ? WAIT : s === 'neutral' ? NEU : INK
 }
 function stanceTint(s?: Stance) {
-  return s === 'now' ? 'rgba(240,137,47,.10)' : s === 'wait' ? 'rgba(24,146,95,.10)' : 'rgba(59,107,255,.08)'
+  return s === 'now' ? 'rgba(224,132,31,.09)' : s === 'wait' ? 'rgba(10,157,99,.09)' : 'rgba(31,59,255,.07)'
 }
 
 function usePrefersReducedMotion() {
@@ -74,16 +77,16 @@ function ConfidenceGauge({ value, color, reduced }: { value: number; color: stri
   return (
     <div style={{ position: 'relative', width: size, height: size }}>
       <svg width={size} height={size} style={{ transform: 'rotate(135deg)' }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(28,22,15,.07)" strokeWidth={stroke}
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(10,10,12,.07)" strokeWidth={stroke}
           strokeLinecap="round" strokeDasharray={`${dash} ${circ}`} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
           strokeLinecap="round" strokeDasharray={`${dash} ${circ}`} strokeDashoffset={offset}
-          style={{ transition: reduced ? 'none' : 'stroke-dashoffset .1s linear', filter: `drop-shadow(0 2px 6px ${color}55)` }} />
+          style={{ transition: reduced ? 'none' : 'stroke-dashoffset .1s linear' }} />
       </svg>
       <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
         <div>
-          <div style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 900, color, letterSpacing: '-.03em', lineHeight: 1 }}>{Math.round(animated)}<span style={{ fontSize: 17 }}>%</span></div>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.1em', color: SUB, marginTop: 3 }}>CONFIDENCE</div>
+          <div style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 700, color, letterSpacing: '-.03em', lineHeight: 1 }}>{Math.round(animated)}<span style={{ fontSize: 17 }}>%</span></div>
+          <div style={{ fontFamily: MONO, fontSize: 9.5, fontWeight: 700, letterSpacing: '.14em', color: SUB, marginTop: 4 }}>CONFIDENCE</div>
         </div>
       </div>
     </div>
@@ -144,49 +147,59 @@ export default function LockTool() {
   const payAnim = useCountUp(res?.payment ?? 0, !!res, reduced, 850)
 
   return (
-    <div style={{ background: CREAM, color: INK, minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ background: BONE, color: INK, minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <style>{`
         @keyframes lkpop{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
         @keyframes lkrise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
         @keyframes lkfade{from{opacity:0}to{opacity:1}}
         @keyframes lktoast{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%)}}
         @keyframes lkpulse{0%,100%{opacity:.55}50%{opacity:1}}
+        @keyframes lkblink{0%,100%{opacity:1}50%{opacity:.25}}
         @media (prefers-reduced-motion: reduce){
           .lk-anim{animation:none !important}
           *{scroll-behavior:auto !important}
         }
         .lk-rise{animation:lkrise .55s cubic-bezier(.16,1,.3,1) both}
-        .lk-btn-grad:hover{filter:brightness(1.06)}
-        .lk-chip{transition:transform .15s ease, background .2s ease, border-color .2s ease}
+        .lk-btn:hover{filter:brightness(1.08)}
+        .lk-chip{transition:transform .15s ease, background .2s ease, border-color .2s ease, color .2s ease}
         .lk-chip:active{transform:scale(.96)}
-        .lk-src:hover{background:rgba(59,107,255,.14) !important}
-        .lk-cta:hover{transform:translateY(-1px)}
-        .lk-cta{transition:transform .18s ease, box-shadow .18s ease}
-        .lk-input:focus{border-color:${GREEN} !important; box-shadow:0 0 0 3px rgba(24,146,95,.12)}
+        .lk-src:hover{background:rgba(31,59,255,.12) !important}
+        .lk-cta:hover{transform:translateY(-2px)}
+        .lk-cta{transition:transform .15s ease}
+        .lk-input:focus{border-color:${ACCENT} !important; box-shadow:0 0 0 3px rgba(31,59,255,.12)}
+        .lk-step{transition:opacity .2s ease}
       `}</style>
 
-      {/* header */}
-      <header style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(251,247,240,.86)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: `1px solid ${LINE}` }}>
+      {/* header — matches /everyone landing */}
+      <header style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(244,242,236,.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: `1px solid ${LINE}` }}>
         <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 22px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/everyone" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <span style={{ width: 30, height: 30, background: INK, color: CREAM, display: 'grid', placeItems: 'center', fontFamily: DISPLAY, fontWeight: 900, fontSize: 12.5, borderRadius: 9 }}>YN</span>
-            <span style={{ fontWeight: 800, fontSize: 16, color: INK }}>for everyone</span>
+          <Link href="/everyone" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: INK }}>
+            <span style={{ width: 29, height: 29, background: INK, color: PAPER, display: 'grid', placeItems: 'center', fontWeight: 900, fontSize: 12.5, borderRadius: 7 }}>YN</span>
+            <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 16, letterSpacing: '-.03em' }}>Finance</span>
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.12em', color: SUB, border: `1px solid ${LINE}`, borderRadius: 999, padding: '3px 9px' }}>FOR EVERYONE</span>
           </Link>
-          <Link href="/everyone" style={{ fontSize: 13.5, fontWeight: 600, color: SUB, textDecoration: 'none', minHeight: 44, display: 'flex', alignItems: 'center' }}>← all decisions</Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <Link href="/everyone/proof" style={{ fontSize: 13.5, fontWeight: 600, color: INK, textDecoration: 'none' }}>Track record</Link>
+            <Link href="/" style={{ fontSize: 13.5, fontWeight: 600, color: SUB, textDecoration: 'none' }}>For traders →</Link>
+          </div>
         </div>
       </header>
 
-      <main style={{ maxWidth: 760, margin: '0 auto', padding: '40px 22px 90px' }}>
-        <div className="lk-rise" style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '.12em', color: GREEN, marginBottom: 12 }}>🏠 MORTGAGE RATE TIMER</div>
-        <h1 className="lk-rise" style={{ fontFamily: DISPLAY, fontSize: 'clamp(31px,5.4vw,46px)', fontWeight: 900, letterSpacing: '-.03em', lineHeight: 1.04, margin: '0 0 14px' }}>
-          Should you lock your rate — or float?
+      <main style={{ maxWidth: 760, margin: '0 auto', padding: '48px 22px 90px' }}>
+        {/* ── hero: what this decides ── */}
+        <div className="lk-rise" style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: MONO, fontSize: 12, letterSpacing: '.14em', color: ACCENT, marginBottom: 18 }}>
+          <span style={{ width: 7, height: 7, borderRadius: 99, background: WAIT, animation: 'lkblink 1.5s infinite' }} /> MORTGAGE RATE TIMER
+        </div>
+        <h1 className="lk-rise" style={{ fontFamily: DISPLAY, fontSize: 'clamp(31px,5.4vw,46px)', fontWeight: 700, letterSpacing: '-.03em', lineHeight: 1.04, margin: '0 0 16px' }}>
+          Should you lock your rate — <span style={{ color: ACCENT }}>or float?</span>
         </h1>
-        <p className="lk-rise" style={{ fontSize: 16.5, color: SUB, lineHeight: 1.6, maxWidth: 560, marginBottom: 30 }}>
+        <p className="lk-rise" style={{ fontSize: 16.5, color: SUB, lineHeight: 1.6, maxWidth: 560, marginBottom: 32 }}>
           The same net that grades its stock calls in public reads the bond market that drives mortgage rates — and calls it, with a confidence and a backtested accuracy. A forecast you can check, not advice.
         </p>
 
-        {/* input card */}
-        <div className="lk-rise" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 22, padding: 22, boxShadow: '0 18px 44px rgba(28,22,15,.08)' }}>
+        {/* ── step 1: the question / input card ── */}
+        <div className="lk-rise" style={{ background: PAPER, border: `1px solid ${LINE}`, borderRadius: 16, padding: 22, boxShadow: '0 1px 2px rgba(10,10,12,.04)' }}>
+          <div style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '.14em', color: ACCENT, marginBottom: 16 }}>// YOUR LOAN</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }} className="lk-grid">
             <Field label="Loan amount" prefix="$">
               <input className="lk-input" value={Number(loan || 0).toLocaleString()} onChange={(e) => setLoan(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" style={inp} aria-label="Loan amount" />
@@ -201,16 +214,15 @@ export default function LockTool() {
               {DAYS.map(([d, l]) => (
                 <button key={d} onClick={() => setDays(d)} className="lk-chip" style={{
                   fontSize: 13.5, fontWeight: 700, padding: '11px 17px', minHeight: 44, borderRadius: 999, cursor: 'pointer',
-                  border: `1px solid ${days === d ? GREEN : LINE}`, color: days === d ? '#fff' : INK,
-                  background: days === d ? GREEN : '#f7f3ec', boxShadow: days === d ? '0 6px 16px rgba(24,146,95,.25)' : 'none',
+                  border: `1px solid ${days === d ? INK : LINE}`, color: days === d ? PAPER : INK,
+                  background: days === d ? INK : 'transparent',
                 }}>{l}</button>
               ))}
             </div>
           </div>
-          <button onClick={run} disabled={loading} className="lk-btn-grad" style={{
-            marginTop: 22, width: '100%', fontSize: 16.5, fontWeight: 800, minHeight: 52, color: CREAM, cursor: loading ? 'default' : 'pointer',
-            background: loading ? '#9bb0a5' : `linear-gradient(135deg,${GREEN},#0f7a4d)`, border: 'none', borderRadius: 14, padding: '15px',
-            boxShadow: loading ? 'none' : '0 12px 28px rgba(24,146,95,.3)', transition: 'filter .2s ease',
+          <button onClick={run} disabled={loading} className="lk-btn" style={{
+            marginTop: 22, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, minHeight: 52, color: PAPER, cursor: loading ? 'default' : 'pointer',
+            background: loading ? 'rgba(10,10,12,.45)' : INK, border: 'none', borderRadius: 10, padding: '15px', transition: 'filter .2s ease',
           }}>
             {loading ? <span className="lk-anim" style={{ animation: 'lkpulse 1.1s ease-in-out infinite' }}>Reading the market…</span> : 'Get the call →'}
           </button>
@@ -218,22 +230,22 @@ export default function LockTool() {
 
         {err && <div className="lk-rise" style={{ marginTop: 18, color: RED, fontSize: 14, background: 'rgba(212,80,62,.07)', border: '1px solid rgba(212,80,62,.2)', borderRadius: 12, padding: '13px 15px' }}>{err}</div>}
 
-        {/* result */}
+        {/* ── step 2: the verdict ── */}
         {res && (
-          <div ref={resultRef} className="lk-anim" style={{ marginTop: 24, background: CARD, border: `1px solid ${LINE}`, borderRadius: 24, overflow: 'hidden', boxShadow: '0 26px 60px rgba(28,22,15,.12)', animation: 'lkpop .6s cubic-bezier(.16,1,.3,1) both' }}>
+          <div ref={resultRef} className="lk-anim" style={{ marginTop: 26, background: PAPER, border: `1px solid ${LINE}`, borderRadius: 18, overflow: 'hidden', boxShadow: '0 18px 40px rgba(10,10,12,.08)', animation: 'lkpop .6s cubic-bezier(.16,1,.3,1) both' }}>
             {/* verdict header w/ gauge */}
             <div style={{ padding: '26px 24px 22px', background: tint, borderBottom: `1px solid ${LINE}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
                 <div style={{ minWidth: 200, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: SUB }}>The call</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 9.5, fontWeight: 800, letterSpacing: '.05em', color: res.grounded ? GREEN : SUB, background: res.grounded ? 'rgba(24,146,95,.14)' : '#efe9df', borderRadius: 999, padding: '3px 9px' }}>
-                      {res.grounded && <span style={{ width: 6, height: 6, borderRadius: 999, background: GREEN, display: 'inline-block' }} />}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '.14em', color: SUB }}>THE CALL</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 9.5, fontWeight: 800, letterSpacing: '.06em', color: res.grounded ? WAIT : SUB, background: res.grounded ? 'rgba(10,157,99,.12)' : 'rgba(10,10,12,.05)', border: `1px solid ${res.grounded ? 'rgba(10,157,99,.25)' : LINE}`, borderRadius: 999, padding: '3px 9px' }}>
+                      {res.grounded && <span style={{ width: 6, height: 6, borderRadius: 999, background: WAIT, display: 'inline-block' }} />}
                       {res.grounded ? 'NET + LIVE NEWS' : (res.engine || 'NET').toUpperCase()}
                     </span>
                   </div>
-                  <div style={{ fontFamily: DISPLAY, fontSize: 'clamp(44px,11vw,56px)', fontWeight: 900, letterSpacing: '-.03em', color, lineHeight: .95 }}>{res.verdict}</div>
-                  <div style={{ fontSize: 16.5, fontWeight: 700, marginTop: 10, lineHeight: 1.4, maxWidth: 360 }}>{res.headline}</div>
+                  <div style={{ fontFamily: DISPLAY, fontSize: 'clamp(44px,11vw,56px)', fontWeight: 700, letterSpacing: '-.04em', color, lineHeight: .95 }}>{res.verdict}</div>
+                  <div style={{ fontSize: 16.5, fontWeight: 600, marginTop: 10, lineHeight: 1.4, maxWidth: 360 }}>{res.headline}</div>
                 </div>
                 <div style={{ display: 'grid', placeItems: 'center', margin: '0 auto' }}>
                   <ConfidenceGauge value={res.confidence} color={color} reduced={reduced} />
@@ -243,7 +255,7 @@ export default function LockTool() {
 
             <div style={{ padding: '22px 24px' }}>
               {/* WHY */}
-              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.1em', color: SUB, marginBottom: 11 }}>WHY</div>
+              <div style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '.14em', color: ACCENT, marginBottom: 13 }}>// WHY</div>
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 9 }}>
                 {res.drivers.map((d, i) => (
                   <li key={i} className="lk-anim" style={{ fontSize: 14.5, lineHeight: 1.55, color: INK, display: 'flex', gap: 10, animation: `lkrise .5s cubic-bezier(.16,1,.3,1) both`, animationDelay: `${0.15 + i * 0.08}s` }}>
@@ -259,25 +271,25 @@ export default function LockTool() {
                 <Stat
                   label={res.stance === 'wait' ? 'If rates fall 0.25%' : 'If rates rise 0.25%'}
                   value={(res.stance === 'wait' ? '−' + usd(res.saveIfFloat) : '+' + usd(res.costIfWait)) + '/mo'}
-                  color={res.stance === 'wait' ? GREEN : AMBER}
+                  color={res.stance === 'wait' ? WAIT : NOW}
                 />
-                <Stat label="Backtested accuracy" value={res.backtest != null ? res.backtest + '%' : '—'} color={BLUE} />
+                <Stat label="Backtested accuracy" value={res.backtest != null ? res.backtest + '%' : '—'} color={ACCENT} />
               </div>
 
               {/* sources */}
               {!!res.sources?.length && (
                 <div style={{ marginTop: 20 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.1em', color: SUB, marginBottom: 10 }}>SOURCES IT CHECKED</div>
+                  <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '.14em', color: SUB, marginBottom: 10 }}>SOURCES IT CHECKED</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                     {res.sources.map((s, i) => (
-                      <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" className="lk-src" style={{ fontSize: 11.5, fontWeight: 600, color: BLUE, background: 'rgba(59,107,255,.08)', border: '1px solid rgba(59,107,255,.2)', borderRadius: 999, padding: '7px 12px', textDecoration: 'none', transition: 'background .2s ease' }}>{s.title} ↗</a>
+                      <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" className="lk-src" style={{ fontSize: 11.5, fontWeight: 600, color: ACCENT, background: 'rgba(31,59,255,.07)', border: '1px solid rgba(31,59,255,.2)', borderRadius: 999, padding: '7px 12px', textDecoration: 'none', transition: 'background .2s ease' }}>{s.title} ↗</a>
                     ))}
                   </div>
                 </div>
               )}
 
               {/* provenance note */}
-              <div style={{ marginTop: 20, padding: '14px 16px', background: '#f7f3ec', borderRadius: 14, fontSize: 12.5, color: SUB, lineHeight: 1.55 }}>
+              <div style={{ marginTop: 20, padding: '14px 16px', background: BONE, border: `1px solid ${LINE}`, borderRadius: 12, fontSize: 12.5, color: SUB, lineHeight: 1.55 }}>
                 {res.grounded
                   ? <>The <b style={{ color: INK }}>BrainStock net</b> read {res.proxy} and fused it with this week’s real rate news.</>
                   : <>Read from <b style={{ color: INK }}>{res.proxy}</b> as of {res.asOf}; rates move opposite to long Treasury bonds.</>} A forecast, <b style={{ color: INK }}>not financial advice</b> — talk to your lender.
@@ -285,10 +297,10 @@ export default function LockTool() {
 
               {/* CTAs */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, marginTop: 16 }} className="lk-cta-row">
-                <a href="https://www.google.com/search?q=compare+mortgage+rates" target="_blank" rel="noopener noreferrer" className="lk-cta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 50, fontSize: 14.5, fontWeight: 800, color: CREAM, background: INK, borderRadius: 14, padding: '13px', textDecoration: 'none', boxShadow: '0 10px 24px rgba(28,22,15,.18)' }}>
+                <a href="https://www.google.com/search?q=compare+mortgage+rates" target="_blank" rel="noopener noreferrer" className="lk-cta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 50, fontSize: 14.5, fontWeight: 700, color: PAPER, background: INK, borderRadius: 10, padding: '13px', textDecoration: 'none' }}>
                   Compare lender quotes →
                 </a>
-                <button onClick={share} className="lk-cta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 50, minWidth: 50, fontSize: 14.5, fontWeight: 800, color: INK, background: '#f2ece2', border: `1px solid ${LINE}`, borderRadius: 14, padding: '13px 18px', cursor: 'pointer' }} aria-label="Share this call">
+                <button onClick={share} className="lk-cta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 50, minWidth: 50, fontSize: 14.5, fontWeight: 700, color: INK, background: 'transparent', border: `1px solid ${LINE}`, borderRadius: 10, padding: '13px 18px', cursor: 'pointer' }} aria-label="Share this call">
                   <ShareIcon /> Share
                 </button>
               </div>
@@ -296,14 +308,16 @@ export default function LockTool() {
           </div>
         )}
 
-        <div style={{ marginTop: 32, fontSize: 13, color: SUB, textAlign: 'center' }}>
-          Want this for gas, flights or electricity? <Link href="/everyone" style={{ color: GREEN, fontWeight: 700, textDecoration: 'none' }}>See what’s live →</Link>
+        {/* ── next step: the path onward ── */}
+        <div style={{ marginTop: 36, paddingTop: 30, borderTop: `1px solid ${LINE}`, display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
+          <Link href="/everyone" style={{ fontSize: 14, fontWeight: 700, color: INK, textDecoration: 'none' }}>Try another market →</Link>
+          <Link href="/everyone/proof" style={{ fontSize: 14, fontWeight: 600, color: ACCENT, textDecoration: 'none' }}>See the track record →</Link>
         </div>
       </main>
 
       {/* toast */}
       {toast && (
-        <div className="lk-anim" style={{ position: 'fixed', bottom: 26, left: '50%', transform: 'translateX(-50%)', background: INK, color: CREAM, fontSize: 13.5, fontWeight: 700, padding: '12px 20px', borderRadius: 999, boxShadow: '0 14px 34px rgba(28,22,15,.3)', zIndex: 60, animation: 'lktoast .35s cubic-bezier(.16,1,.3,1) both' }}>
+        <div className="lk-anim" style={{ position: 'fixed', bottom: 26, left: '50%', transform: 'translateX(-50%)', background: INK, color: PAPER, fontSize: 13.5, fontWeight: 700, padding: '12px 20px', borderRadius: 999, boxShadow: '0 14px 34px rgba(10,10,12,.28)', zIndex: 60, animation: 'lktoast .35s cubic-bezier(.16,1,.3,1) both' }}>
           ✓ {toast}
         </div>
       )}
@@ -311,7 +325,7 @@ export default function LockTool() {
   )
 }
 
-const inp: React.CSSProperties = { width: '100%', background: '#f7f3ec', border: `1px solid ${LINE}`, borderRadius: 12, padding: '12px 13px', fontSize: 18, fontWeight: 700, color: INK, outline: 'none', fontFamily: 'inherit', transition: 'border-color .2s ease, box-shadow .2s ease' }
+const inp: React.CSSProperties = { width: '100%', background: BONE, border: `1px solid ${LINE}`, borderRadius: 10, padding: '12px 13px', fontSize: 18, fontWeight: 700, color: INK, outline: 'none', fontFamily: 'inherit', transition: 'border-color .2s ease, box-shadow .2s ease' }
 
 function ShareIcon() {
   return (
@@ -337,8 +351,8 @@ function Field({ label, prefix, suffix, children }: { label: string; prefix?: st
 
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div style={{ background: '#f7f3ec', borderRadius: 14, padding: '13px 10px', textAlign: 'center' }}>
-      <div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 900, color: color || INK, letterSpacing: '-.01em' }}>{value}</div>
+    <div style={{ background: BONE, border: `1px solid ${LINE}`, borderRadius: 12, padding: '13px 10px', textAlign: 'center' }}>
+      <div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: color || INK, letterSpacing: '-.02em' }}>{value}</div>
       <div style={{ fontSize: 10.5, fontWeight: 700, color: SUB, marginTop: 5, lineHeight: 1.3 }}>{label}</div>
     </div>
   )

@@ -39,9 +39,31 @@ export function Filters({
 }) {
   const set = (patch: Partial<EdgeFilterState>) => onChange({ ...state, ...patch })
   const cats = CATEGORIES.filter((c) => c === 'All' || !categoriesPresent || categoriesPresent.includes(c))
+  const dirty =
+    state.category !== DEFAULT_FILTERS.category ||
+    state.minEdge !== DEFAULT_FILTERS.minEdge ||
+    state.minVolume !== DEFAULT_FILTERS.minVolume ||
+    state.worthOnly !== DEFAULT_FILTERS.worthOnly ||
+    state.search.trim() !== ''
 
   return (
     <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 8, padding: 'clamp(12px,2vw,18px)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* header row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: FAINT }}>
+          Filter the board
+        </span>
+        {dirty && (
+          <button
+            type="button"
+            onClick={() => onChange({ ...DEFAULT_FILTERS })}
+            style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTE, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            ✕ Reset
+          </button>
+        )}
+      </div>
+
       {/* search */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <input
@@ -98,8 +120,8 @@ export function Filters({
           }
         />
         {resultCount != null && (
-          <span style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.1em' }}>
-            {resultCount} MARKET{resultCount === 1 ? '' : 'S'}
+          <span style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: 11, letterSpacing: '0.1em', color: MUTE }}>
+            <span style={{ color: CYAN, fontWeight: 700 }}>{resultCount}</span> MARKET{resultCount === 1 ? '' : 'S'} SHOWN
           </span>
         )}
       </div>

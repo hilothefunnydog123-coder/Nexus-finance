@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   VOID, PANEL, BORDER, CYAN, VIOLET, GREEN, RED, AMBER, TXT, MUTE, FAINT, MONO,
-  HeadToHead, WorthBadge, EngineBadge, Tag, Stat,
+  HeadToHead, WorthBadge, EngineBadge, Tag, Stat, PathRail,
   pct, signedPct, fmtNum, timeToClose, catColor, edgeAccent, useReducedMotion,
 } from '@/components/edge/shared'
 import { Filters, DEFAULT_FILTERS, applyFilters, type EdgeFilterState } from '@/components/edge/Filters'
@@ -113,7 +113,14 @@ export default function EdgeBoardClient() {
         reduced={reduced}
       />
 
-      <div style={{ marginTop: 'clamp(20px,3vw,32px)' }}>
+      <div style={{ marginTop: 'clamp(20px,3vw,30px)', paddingTop: 16, borderTop: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <PathRail active="board" />
+        <Link href="/edge/track-record" style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: GREEN, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+          See how we score →
+        </Link>
+      </div>
+
+      <div style={{ marginTop: 'clamp(16px,2.5vw,24px)' }}>
         <Filters
           state={filters}
           onChange={setFilters}
@@ -142,7 +149,17 @@ export default function EdgeBoardClient() {
           {spotlight && (
             <Spotlight row={spotlight} reduced={reduced} />
           )}
-          <Grid rows={gridRows} reduced={reduced} />
+          {gridRows.length > 0 && (
+            <div style={{ marginTop: 'clamp(28px,4vw,44px)', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <h2 style={{ margin: 0, fontWeight: 800, letterSpacing: '-0.02em', fontSize: 'clamp(1.05rem,2.4vw,1.4rem)', color: TXT }}>
+                Every market, ranked by edge
+              </h2>
+              <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: FAINT }}>
+                tap any market for the full breakdown
+              </span>
+            </div>
+          )}
+          <Grid rows={gridRows} reduced={reduced} startRank={spotlight ? 2 : 1} />
         </>
       )}
     </div>
@@ -278,7 +295,7 @@ function Spotlight({ row, reduced }: { row: EdgeRow; reduced: boolean }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: glow, fontWeight: 700 }}>
-          ★ TOP PICK
+          ★ #1 · TOP PICK
         </span>
         <Tag color={catColor(market.category)}>{market.category}</Tag>
         <EngineBadge engine={pricing.engine} />
@@ -360,25 +377,25 @@ function TrophyStat({ label, value, color, glow }: { label: string; value: strin
 
 /* ── GRID ───────────────────────────────────────────────────────────────────── */
 
-function Grid({ rows, reduced }: { rows: EdgeRow[]; reduced: boolean }) {
+function Grid({ rows, reduced, startRank }: { rows: EdgeRow[]; reduced: boolean; startRank: number }) {
   if (rows.length === 0) return null
   return (
     <div
       style={{
-        marginTop: 'clamp(18px,3vw,28px)',
+        marginTop: 'clamp(16px,2.5vw,22px)',
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
         gap: 'clamp(12px,1.6vw,18px)',
       }}
     >
       {rows.map((row, i) => (
-        <Card key={row.market.ticker} row={row} reduced={reduced} index={i} />
+        <Card key={row.market.ticker} row={row} reduced={reduced} index={i} rank={startRank + i} />
       ))}
     </div>
   )
 }
 
-function Card({ row, reduced, index }: { row: EdgeRow; reduced: boolean; index: number }) {
+function Card({ row, reduced, index, rank }: { row: EdgeRow; reduced: boolean; index: number; rank: number }) {
   const { market, pricing, verdict } = row
   const accent = edgeAccent(verdict.edge)
   const good = verdict.worthIt || verdict.evPerDollar > 0
@@ -409,6 +426,7 @@ function Card({ row, reduced, index }: { row: EdgeRow; reduced: boolean; index: 
 
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: good ? accent : FAINT, fontVariantNumeric: 'tabular-nums', minWidth: 22 }}>#{rank}</span>
         <Tag color={catColor(market.category)}>{market.category}</Tag>
         <span style={{ fontFamily: MONO, fontSize: 10.5, color: FAINT, letterSpacing: '0.06em' }}>{timeToClose(market.closeTime)}</span>
         <span style={{ marginLeft: 'auto' }}><EngineBadge engine={pricing.engine} /></span>

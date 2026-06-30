@@ -14,7 +14,7 @@ import {
 } from 'recharts'
 import {
   VOID, PANEL, BORDER, CYAN, VIOLET, GREEN, RED, AMBER, TXT, MUTE, FAINT, MONO,
-  HeadToHead, WorthBadge, EngineBadge, Tag, Stat,
+  HeadToHead, WorthBadge, EngineBadge, Tag, Stat, PathRail,
   pct, signedPct, fmtNum, timeToClose, catColor, edgeAccent, useReducedMotion,
   type EdgeRow,
 } from '@/components/edge/shared'
@@ -183,6 +183,14 @@ export default function MarketDetailClient({ ticker }: { ticker: string }) {
     <div style={WRAP}>
       <style>{`@media (max-width:760px){.edge-grid2{grid-template-columns:1fr !important}}`}</style>
 
+      {/* ── PATH / BREADCRUMB ───────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 'clamp(16px,2.5vw,24px)', paddingBottom: 14, borderBottom: `1px solid ${BORDER}` }}>
+        <PathRail active="detail" />
+        <Link href="/edge" style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: MUTE, textDecoration: 'none' }}>
+          ← Back to board
+        </Link>
+      </div>
+
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <Tag color={cat}>{market.category}</Tag>
@@ -213,9 +221,12 @@ export default function MarketDetailClient({ ticker }: { ticker: string }) {
           <SectionLabel color={accent}>VERDICT · is it worth it</SectionLabel>
           <WorthBadge worthIt={verdict.worthIt} />
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
-          <span style={{ fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.1em' }}>OUR SIDE</span>
-          <span style={{ fontFamily: MONO, fontSize: 22, fontWeight: 800, color: verdict.side === 'YES' ? GREEN : RED }}>{verdict.side}</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
+          <span style={{ fontFamily: 'var(--font-display), system-ui, sans-serif', fontSize: 'clamp(1.3rem,3vw,1.9rem)', fontWeight: 800, letterSpacing: '-0.02em', color: accent }}>
+            {verdict.worthIt ? 'Worth a bet' : 'Pass for now'}
+          </span>
+          <span style={{ fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.1em' }}>· OUR SIDE</span>
+          <span style={{ fontFamily: MONO, fontSize: 20, fontWeight: 800, color: verdict.side === 'YES' ? GREEN : RED }}>{verdict.side}</span>
         </div>
         <div style={{ fontSize: 14, color: TXT, lineHeight: 1.6, marginBottom: 18 }}>{verdict.reason}</div>
 
@@ -287,9 +298,10 @@ export default function MarketDetailClient({ ticker }: { ticker: string }) {
         ) : null}
       </div>
 
-      {/* ── BACK ─────────────────────────────────────────────────────────── */}
-      <div style={{ marginTop: 28 }}>
+      {/* ── PATH FOOTER ──────────────────────────────────────────────────── */}
+      <div style={{ marginTop: 'clamp(28px,4vw,40px)', paddingTop: 18, borderTop: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <Link href="/edge" style={{ fontFamily: MONO, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTE, textDecoration: 'none' }}>← All markets</Link>
+        <Link href="/edge/track-record" style={{ fontFamily: MONO, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: GREEN, textDecoration: 'none' }}>How we grade ourselves →</Link>
       </div>
     </div>
   )

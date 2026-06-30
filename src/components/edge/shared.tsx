@@ -95,6 +95,47 @@ export function WorthBadge({ worthIt }: { worthIt: boolean }) {
 }
 
 /**
+ * The guided "path" rail — board → market → proof. Shown on every Edge surface so
+ * the four steps read as one flow. The current step is highlighted; the others are
+ * quiet links you can jump to.
+ */
+export type EdgeStep = 'board' | 'detail' | 'record'
+const PATH_STEPS: { key: EdgeStep; n: string; label: string; href: string }[] = [
+  { key: 'board', n: '01', label: 'The board', href: '/edge' },
+  { key: 'detail', n: '02', label: 'The breakdown', href: '/edge' },
+  { key: 'record', n: '03', label: 'The proof', href: '/edge/track-record' },
+]
+
+export function PathRail({ active }: { active: EdgeStep }) {
+  return (
+    <nav
+      aria-label="YN Edge steps"
+      style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase' }}
+    >
+      {PATH_STEPS.map((s, i) => {
+        const isActive = s.key === active
+        // step 02 (the breakdown) has no list page — it's reached by clicking a market
+        const interactive = !isActive && s.key !== 'detail'
+        const content = (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: isActive ? CYAN : s.key === 'detail' ? FAINT : MUTE, fontWeight: isActive ? 700 : 500 }}>
+            <span style={{ color: isActive ? CYAN : FAINT }}>{s.n}</span>
+            {s.label}
+          </span>
+        )
+        return (
+          <span key={s.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            {interactive ? (
+              <a href={s.href} style={{ textDecoration: 'none' }}>{content}</a>
+            ) : content}
+            {i < PATH_STEPS.length - 1 && <span aria-hidden style={{ color: FAINT, opacity: 0.6 }}>→</span>}
+          </span>
+        )
+      })}
+    </nav>
+  )
+}
+
+/**
  * The signature visual: our probability vs the market's, as opposing bars on a
  * shared 0–100% track. The gap between them IS the edge.
  */
@@ -109,7 +150,11 @@ export function HeadToHead({ ynProb, marketProb, side, animate = true, height = 
       <Bar label="MARKET" value={marketProb} color={MUTE} animate={on} height={height} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: MONO, fontSize: 10.5, color: FAINT, letterSpacing: '0.08em' }}>
         <span>{side ? `OUR SIDE · ${side}` : 'AI vs MARKET'}</span>
-        <span style={{ color: edgeColor, fontWeight: 700 }}>{edge >= 0 ? '+' : ''}{(edge * 100).toFixed(1)}pt EDGE</span>
+        <span
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: edgeColor, fontWeight: 700, border: `1px solid ${edgeColor}40`, background: `${edgeColor}14`, padding: '2px 8px', borderRadius: 4 }}
+        >
+          {edge >= 0 ? '+' : ''}{(edge * 100).toFixed(1)}pt EDGE
+        </span>
       </div>
     </div>
   )

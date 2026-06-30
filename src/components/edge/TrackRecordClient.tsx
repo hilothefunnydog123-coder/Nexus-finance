@@ -11,9 +11,10 @@ import {
   ResponsiveContainer, ComposedChart, Scatter, XAxis, YAxis, ZAxis,
   ReferenceLine, Tooltip, CartesianGrid, Line,
 } from 'recharts'
+import Link from 'next/link'
 import {
   VOID, PANEL, BORDER, CYAN, VIOLET, GREEN, RED, AMBER, TXT, MUTE, FAINT, MONO,
-  Tag, Stat, WorthBadge, pct, fmtNum, catColor, useReducedMotion,
+  Tag, Stat, WorthBadge, PathRail, pct, fmtNum, catColor, useReducedMotion,
 } from '@/components/edge/shared'
 
 // ── data shape (mirrors GET /api/edge/track-record) ──────────────────────────
@@ -58,6 +59,12 @@ export default function TrackRecordClient() {
 
   return (
     <Shell>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 'clamp(28px,4vw,40px)', paddingBottom: 16, borderBottom: `1px solid ${BORDER}` }}>
+        <PathRail active="record" />
+        <Link href="/edge" style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: MUTE, textDecoration: 'none' }}>
+          ← Back to board
+        </Link>
+      </div>
       <Hero stats={stats} />
       {!stats.ready
         ? <NotReady note={stats.note} />
