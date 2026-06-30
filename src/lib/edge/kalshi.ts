@@ -89,6 +89,69 @@ export async function kalshiProbe() {
   return out
 }
 
+/** End-to-end board self-test: runs the REAL pagination + normalize that the
+ *  board uses, and reports how many raw markets came back vs how many survived
+ *  normalization, the live flag, the reason, and a few sample titles. This is the
+ *  decisive diagnostic — it shows whether the board falls to seed because the API
+ *  failed, or because normalize dropped every market. Never leaks the key. */
+export async function kalshiBoardSelfTest() {
+  const creds = getKalshiCreds()
+  const out: {
+    credsParsed: boolean
+    rawCount: number
+    normalizedCount: number
+    droppedNoTickerOrClose: number
+    droppedNoPrice: number
+    pagesFetched: number
+    live: boolean
+    reason?: string
+    categories: Record<string, number>
+    sampleTitles: string[]
+    elapsedMs: number
+    error?: string
+  } = {
+    credsParsed: !!creds,
+    rawCount: 0, normalizedCount: 0, droppedNoTickerOrClose: 0, droppedNoPrice: 0,
+    pagesFetched: 0, live: false, categories: {}, sampleTitles: [], elapsedMs: 0,
+  }
+  const started = Date.now()
+  if (!creds) {
+    out.reason = 'creds did not parse'
+    out.elapsedMs = Date.now() - started
+    return out
+  }
+  try {
+    const collected: KalshiMarket[] = []
+    let cursor = ''
+    for (let page = 0; page < 5 && Date.now() - started < 12_000; page++) {
+      const q = new URLSearchParams({ status: 'open', limit: '100' })
+      if (cursor) q.set('cursor', cursor)
+      const data = await kalshiGet<{ markets: RawMarket[]; cursor?: string }>(creds, `/markets?${q.toString()}`)
+      out.pagesFetched++
+      for (const r of data.markets || []) {
+        out.rawCount++
+        if (!r.ticker || !r.close_time) { out.droppedNoTickerOrClose++; continue }
+        const n = normalize(r)
+        if (!n) { out.droppedNoPrice++; continue }
+        collected.push(n)
+      }
+      cursor = data.cursor || ''
+      if (!cursor) break
+    }
+    collected.sort((a, b) => b.volume - a.volume)
+    out.normalizedCount = collected.length
+    out.live = collected.length > 0
+    for (const m of collected) out.categories[m.category] = (out.categories[m.category] || 0) + 1
+    out.sampleTitles = collected.slice(0, 12).map((m) => `[${m.category}] ${m.title} — ${(m.yesPrice * 100).toFixed(0)}% · vol ${m.volume}`)
+    if (!collected.length) out.reason = `API returned ${out.rawCount} raw markets but normalize dropped all of them (noTickerOrClose=${out.droppedNoTickerOrClose}, noPrice=${out.droppedNoPrice})`
+  } catch (e) {
+    out.error = e instanceof Error ? e.message : 'request failed'
+    out.reason = `Kalshi pagination threw: ${out.error}`
+  }
+  out.elapsedMs = Date.now() - started
+  return out
+}
+
 /** Sign one request the way Kalshi expects (RSA-PSS over timestamp+method+path). */
 function signRequest(creds: KalshiCreds, method: string, path: string, timestamp: string): string {
   const msg = `${timestamp}${method.toUpperCase()}${path}`
@@ -186,7 +249,10 @@ function normalize(m: RawMarket): KalshiMarket | null {
   else if (m.last_price != null && m.last_price > 0) yes = m.last_price / 100
   else if (ask != null && ask > 0) yes = ask / 100
   else if (bid != null && bid > 0) yes = bid / 100
-  if (yes == null || !Number.isFinite(yes)) return null
+  // An open market with an empty book still belongs on the board — anchor it at a
+  // 50/50 prior rather than dropping it, so a run of illiquid markets can never
+  // collapse the whole board to the offline seed.
+  if (yes == null || !Number.isFinite(yes)) yes = 0.5
   const yesPrice = clamp01(yes)
   const title = m.title || m.subtitle || m.ticker
   return {
