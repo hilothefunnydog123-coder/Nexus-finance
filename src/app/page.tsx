@@ -114,6 +114,7 @@ const NAV = [
   { label: 'Fork', href: '/fork' },
   { label: 'Analyzer', href: '/ai-stocks' },
   { label: 'Algorithms', href: '/algorithms' },
+  { label: 'YN Edge', href: '/edge' },
   { label: 'Proof', href: '/proof' },
   { label: 'Labs', href: '/labs' },
   { label: 'Voice', href: '/copilot' },
@@ -491,6 +492,94 @@ export default function Landing() {
             We do — every single day. BrainStock posts its calls, timestamps them, and grades itself against real closing prices. The track record builds itself, in the open. That’s the whole company: <b style={{ color: INK }}>an AI you can actually trust because it can’t hide.</b>
           </p>
         </Reveal>
+      </section>
+
+      {/* ─────────────── YN EDGE · POWERED BY KALSHI ─────────────── */}
+      <section style={{ position: 'relative', zIndex: 1, background: '#06070c', borderBlock: '1px solid rgba(255,255,255,.08)', overflow: 'hidden' }}>
+        <style>{`
+          @keyframes ynedge-pulse{0%,100%{opacity:1}50%{opacity:.3}}
+          @keyframes ynedge-scan{0%{transform:translateX(-130%)}100%{transform:translateX(360%)}}
+          .ynedge-dot,.ynedge-scan{animation:none}
+          @media (prefers-reduced-motion: no-preference){
+            .ynedge-dot{animation:ynedge-pulse 1.4s infinite}
+            .ynedge-scan{animation:ynedge-scan 3.4s ease-in-out infinite}
+          }
+          @media(max-width:840px){.ynedge-grid{grid-template-columns:1fr!important}}
+          .ynedge-cta:hover{box-shadow:0 0 40px rgba(52,211,153,.5)!important;transform:translateY(-2px)}
+        `}</style>
+        {/* obsidian atmosphere */}
+        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(900px 460px at 12% -10%, rgba(34,211,238,.16), transparent 55%), radial-gradient(820px 440px at 92% 110%, rgba(52,211,153,.14), transparent 55%)' }} />
+        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px)', backgroundSize: '46px 46px', maskImage: 'radial-gradient(ellipse 80% 70% at 50% 50%,#000,transparent 82%)', WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at 50% 50%,#000,transparent 82%)' }} />
+
+        <div className="ynedge-grid" style={{ position: 'relative', maxWidth: 1240, margin: '0 auto', padding: 'clamp(58px,9vw,112px) clamp(18px,4vw,40px)', display: 'grid', gridTemplateColumns: '1.08fr .92fr', gap: 'clamp(30px,5vw,68px)', alignItems: 'center' }}>
+          {/* LEFT — the pitch */}
+          <Reveal>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#34d399' }}>
+              <span className="ynedge-dot" style={{ width: 7, height: 7, borderRadius: 999, background: '#34d399', boxShadow: '0 0 10px #34d399' }} /> New · YN Edge
+            </div>
+            <h2 className="disp" style={{ marginTop: 18, fontSize: 'clamp(2.1rem,5.4vw,4.1rem)', lineHeight: 1.0, letterSpacing: '-0.04em', color: '#e7ecf5', fontWeight: 800 }}>
+              Our AI prices every market.<br />Then bets the <span style={{ color: '#22d3ee', textShadow: '0 0 30px rgba(34,211,238,.45)' }}>edge</span>.
+            </h2>
+            <p style={{ marginTop: 22, fontSize: 'clamp(1.02rem,1.5vw,1.22rem)', lineHeight: 1.6, color: '#8a93a8', maxWidth: 520 }}>
+              The BrainStock neural net prices every <b style={{ color: '#cdd6e6' }}>Kalshi</b> prediction market — S&amp;P, Bitcoin, the Fed, elections — computes our probability against the market’s price, and surfaces the bets actually worth taking. Edge, expected value, Kelly stake, all shown. Then graded in public.
+            </p>
+
+            {/* powered by Kalshi lockup */}
+            <div style={{ marginTop: 26, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#4a5e7a' }}>Powered by</span>
+              <svg width="118" height="32" viewBox="0 0 132 36" fill="none" aria-label="Kalshi" role="img">
+                <rect x="0" y="2" width="32" height="32" rx="8" fill="#00C9A7" />
+                <path d="M10 9h4v6.6l5.4-6.6H24l-6 7.2 6.2 10.8h-4.8l-4.2-7.6L14 22.4V27h-4z" fill="#06231d" />
+                <text x="42" y="26" fontFamily="Inter, ui-sans-serif, system-ui, sans-serif" fontSize="22" fontWeight="700" letterSpacing="-0.5" fill="#e7ecf5">Kalshi</text>
+              </svg>
+            </div>
+
+            <div style={{ marginTop: 30, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+              <Link href="/edge" className="ynedge-cta" data-brain="edge" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 15, fontWeight: 700, color: '#06070c', background: 'linear-gradient(135deg,#22d3ee,#34d399)', padding: '15px 28px', borderRadius: 10, textDecoration: 'none', boxShadow: '0 0 28px rgba(52,211,153,.32)', transition: 'box-shadow .3s, transform .3s' }}>
+                Open YN Edge →
+              </Link>
+              <Link href="/edge/track-record" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 600, color: '#cdd6e6', border: '1px solid rgba(255,255,255,.14)', padding: '15px 24px', borderRadius: 10, textDecoration: 'none' }}>
+                See the track record
+              </Link>
+            </div>
+          </Reveal>
+
+          {/* RIGHT — live AI-vs-market mock card */}
+          <Reveal delay={140}>
+            <div style={{ position: 'relative', background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, padding: 'clamp(20px,3vw,30px)', backdropFilter: 'blur(10px)', boxShadow: '0 30px 80px -40px rgba(0,0,0,.9), 0 0 0 1px rgba(34,211,238,.08)', overflow: 'hidden' }}>
+              <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg,transparent,rgba(34,211,238,.6),transparent)' }} />
+              <span aria-hidden className="ynedge-scan" style={{ position: 'absolute', top: 0, bottom: 0, width: '30%', background: 'linear-gradient(90deg,transparent,rgba(34,211,238,.06),transparent)', pointerEvents: 'none' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.12em', color: '#22d3ee', border: '1px solid rgba(34,211,238,.32)', background: 'rgba(34,211,238,.1)', padding: '3px 8px', borderRadius: 4 }}>NEURAL NET</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#4a5e7a' }}>closes 30d</span>
+              </div>
+              <div style={{ marginTop: 14, fontSize: 17, fontWeight: 700, color: '#e7ecf5', lineHeight: 1.25 }}>Will Bitcoin close above $120,000?</div>
+
+              {/* bars */}
+              <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[['YN AI', 61, '#22d3ee', true], ['MARKET', 44, '#8a93a8', false]].map(([lab, val, col, emph]) => (
+                  <div key={lab as string} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ width: 54, textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 9.5, letterSpacing: '0.1em', color: emph ? (col as string) : '#4a5e7a' }}>{lab}</span>
+                    <div style={{ position: 'relative', flex: 1, height: 30, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 5, overflow: 'hidden' }}>
+                      <div style={{ position: 'absolute', inset: 0, width: `${val}%`, background: emph ? `linear-gradient(90deg,${col}cc,${col})` : `${col}55`, boxShadow: emph ? `0 0 16px ${col}66` : 'none' }} />
+                      <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: '#e7ecf5' }}>{val as number}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,.08)', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                {[['+17pt', 'EDGE', '#34d399'], ['+39%', 'EV / $1', '#22d3ee'], ['8.5%', '½-KELLY', '#a78bfa']].map(([v, l, c]) => (
+                  <div key={l}>
+                    <div style={{ fontSize: 19, fontWeight: 800, color: c, fontVariantNumeric: 'tabular-nums' }}>{v}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.12em', color: '#4a5e7a', marginTop: 3 }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: '#06070c', background: '#34d399', padding: '5px 11px', borderRadius: 5, boxShadow: '0 0 22px rgba(52,211,153,.45)' }}>◆ WORTH IT</div>
+            </div>
+          </Reveal>
+        </div>
       </section>
 
       {/* ─────────────── PRODUCT STORYBOARD ─────────────── */}

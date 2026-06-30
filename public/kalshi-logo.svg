@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 36" fill="none" role="img" aria-label="Kalshi">
+  <rect x="0" y="2" width="32" height="32" rx="8" fill="#00C9A7"/>
+  <path d="M10 9h4v6.6l5.4-6.6H24l-6 7.2 6.2 10.8h-4.8l-4.2-7.6L14 22.4V27h-4z" fill="#06231d"/>
+  <text x="42" y="26" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="22" font-weight="700" letter-spacing="-0.5" fill="currentColor">Kalshi</text>
+</svg>
