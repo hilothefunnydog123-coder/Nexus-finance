@@ -178,10 +178,14 @@ function clamp01(x: number): number {
 
 function normalize(m: RawMarket): KalshiMarket | null {
   if (!m.ticker || !m.close_time) return null
-  // Prefer the bid/ask midpoint; fall back to last trade. Kalshi quotes in cents.
+  // Derive a YES probability from whatever quote exists (cents). Be permissive so
+  // live markets with a one-sided book aren't dropped (an empty board → seed).
   let yes: number | null = null
-  if (m.yes_bid != null && m.yes_ask != null && m.yes_ask > 0) yes = (m.yes_bid + m.yes_ask) / 200
+  const bid = m.yes_bid, ask = m.yes_ask
+  if (bid != null && ask != null && (bid > 0 || ask > 0)) yes = (bid + ask) / 200
   else if (m.last_price != null && m.last_price > 0) yes = m.last_price / 100
+  else if (ask != null && ask > 0) yes = ask / 100
+  else if (bid != null && bid > 0) yes = bid / 100
   if (yes == null || !Number.isFinite(yes)) return null
   const yesPrice = clamp01(yes)
   const title = m.title || m.subtitle || m.ticker
@@ -242,7 +246,7 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
     // limit, so cap pages + elapsed time. Sorted by volume after — the most active
     // markets surface first. A failed page mid-stream keeps what we already have.
     const started = Date.now()
-    for (let page = 0; page < 16 && collected.length < 1600; page++) {
+    for (let page = 0; page < 10 && collected.length < 1000; page++) {
       const q = new URLSearchParams({ status: 'open', limit: '100' })
       if (cursor) q.set('cursor', cursor)
       let data: { markets: RawMarket[]; cursor?: string }
@@ -257,7 +261,7 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
         if (n) collected.push(n)
       }
       cursor = data.cursor || ''
-      if (!cursor || Date.now() - started > 12_000) break
+      if (!cursor || Date.now() - started > 8_000) break
     }
     if (!collected.length) throw new Error('no markets returned')
     collected.sort((a, b) => b.volume - a.volume)

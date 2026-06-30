@@ -21,7 +21,7 @@ import {
 import { Filters, DEFAULT_FILTERS, applyFilters, type EdgeFilterState } from '@/components/edge/Filters'
 import type { EdgeBoard, EdgeRow } from '@/lib/edge/types'
 
-const ENDPOINT = '/api/edge/markets?limit=300'
+const ENDPOINT = '/api/edge/markets?limit=150'
 const POLL_MS = 30_000
 
 function relTime(iso: string): string {

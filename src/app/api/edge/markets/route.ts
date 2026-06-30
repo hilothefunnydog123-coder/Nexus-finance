@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(
       { ...board, rows: rows.map(slimRow) },
-      { headers: { 'Cache-Control': 's-maxage=45, stale-while-revalidate=120' } }
+      { headers: { 'Cache-Control': 'no-store' } }
     )
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
