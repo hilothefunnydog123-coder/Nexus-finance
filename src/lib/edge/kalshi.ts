@@ -237,10 +237,12 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
   try {
     const collected: KalshiMarket[] = []
     let cursor = ''
-    // Pull the FULL open-market universe (every Kalshi pick, all categories incl.
-    // Sports) — paginate with the API-safe page size of 100. A single failed page
-    // mid-stream keeps what we already have instead of nuking everything to seed.
-    for (let page = 0; page < 120 && collected.length < 5000; page++) {
+    // Pull active markets across ALL categories (incl. Sports), API-safe page size
+    // 100, but TIME-BOUNDED: each board build must finish well under the function
+    // limit, so cap pages + elapsed time. Sorted by volume after — the most active
+    // markets surface first. A failed page mid-stream keeps what we already have.
+    const started = Date.now()
+    for (let page = 0; page < 16 && collected.length < 1600; page++) {
       const q = new URLSearchParams({ status: 'open', limit: '100' })
       if (cursor) q.set('cursor', cursor)
       let data: { markets: RawMarket[]; cursor?: string }
@@ -255,7 +257,7 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
         if (n) collected.push(n)
       }
       cursor = data.cursor || ''
-      if (!cursor) break
+      if (!cursor || Date.now() - started > 12_000) break
     }
     if (!collected.length) throw new Error('no markets returned')
     collected.sort((a, b) => b.volume - a.volume)
