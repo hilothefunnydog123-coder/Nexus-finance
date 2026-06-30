@@ -112,17 +112,6 @@ export default function Landing() {
 
       {/* ── hero ── */}
       <section style={{ position: 'relative', maxWidth: 1120, margin: '0 auto', padding: '0 clamp(18px,4vw,34px)' }}>
-        {/* photographic backdrop on brand gradient, masked + overlaid for legibility */}
-        <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(120deg, ${BONE} 0%, rgba(31,59,255,.08) 100%)` }} />
-          <img
-            src="https://picsum.photos/seed/ynfinance-hero-market/1600/900"
-            alt=""
-            loading="lazy"
-            style={{ position: 'absolute', top: 0, right: 0, width: 'min(58%, 720px)', height: '100%', objectFit: 'cover', opacity: 0.16, maskImage: 'linear-gradient(90deg, transparent, #000 55%)', WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 55%)' }}
-          />
-          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(90deg, ${BONE} 30%, transparent 90%)` }} />
-        </div>
         <div style={{ position: 'relative', zIndex: 1, minHeight: '92vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: 110, paddingBottom: 56 }}>
           <Reveal>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11, fontFamily: 'var(--font-mono),ui-monospace,monospace', fontSize: 12, letterSpacing: '.24em', color: ACCENT, marginBottom: 26 }}>
@@ -209,15 +198,6 @@ export default function Landing() {
 
       {/* ── CTA ── */}
       <section style={{ position: 'relative', background: INK, color: PAPER, overflow: 'hidden' }}>
-        <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-          <img
-            src="https://picsum.photos/seed/ynfinance-cta-trading/1600/900"
-            alt=""
-            loading="lazy"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.22 }}
-          />
-          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${INK} 0%, rgba(10,10,12,.78) 50%, ${INK} 100%)` }} />
-        </div>
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 1120, margin: '0 auto', padding: 'clamp(60px,8vw,96px) clamp(18px,4vw,34px)', textAlign: 'center' }}>
           <Reveal>
             <h2 className="yn-disp" style={{ fontSize: 'clamp(2rem,5vw,3.6rem)', margin: '0 auto 18px', maxWidth: 680 }}>See what the net is calling today.</h2>
