@@ -26,6 +26,18 @@ import type { EdgePricing, ForecastChartPoint, KalshiMarket } from './types'
 import { parseMarketTitle, matchUnderlying, businessDaysUntil } from './underlying'
 import { normCdf, clamp01, clamp } from './stats'
 
+// Many markets resolve to the SAME underlying (dozens of S&P / BTC strikes), so
+// cache the bar series per symbol for the whole board build — one Yahoo hit each.
+type Bars = Awaited<ReturnType<typeof fetchBars>>
+const _barsCache = new Map<string, { at: number; bars: Bars }>()
+async function cachedBars(symbol: string, signal?: AbortSignal): Promise<Bars> {
+  const hit = _barsCache.get(symbol)
+  if (hit && Date.now() - hit.at < 120_000) return hit.bars
+  const bars = await fetchBars(symbol, signal)
+  _barsCache.set(symbol, { at: Date.now(), bars })
+  return bars
+}
+
 // The net's output represents roughly a one-week (5 trading-day) log return; its
 // short-horizon signal decays, so we saturate the drift contribution over longer
 // windows while volatility keeps growing with √time. Defensible and conservative.
@@ -78,7 +90,7 @@ export async function priceWithNet(
 
   let bars
   try {
-    bars = await fetchBars(underlying.symbol, signal)
+    bars = await cachedBars(underlying.symbol, signal)
   } catch {
     return null
   }
@@ -250,30 +262,41 @@ function extractJson(text: string): { probability?: number; confidence?: number;
   }
 }
 
+export interface PriceOptions {
+  /** Board mode: skip the per-market Gemini call so we can price the WHOLE Kalshi
+   *  universe cheaply. Non-tradable markets get a fast market-anchored prior; the
+   *  detail page runs the full Gemini-grounded analysis on demand. */
+  skipGemini?: boolean
+}
+
 /** The single estimator entry point used by the whole app. */
-export async function priceMarket(market: KalshiMarket, model: NNModel | null, signal?: AbortSignal): Promise<EdgePricing> {
+export async function priceMarket(market: KalshiMarket, model: NNModel | null, signal?: AbortSignal, opts: PriceOptions = {}): Promise<EdgePricing> {
   // 1) Tradable underlying → neural net.
   const net = await priceWithNet(market, model, signal)
   if (net) return net
 
-  // 2) Everything else → Gemini grounded.
-  const g = await callGeminiGrounded(market, signal)
-  if (g) {
-    return { ynProb: g.ynProb, engine: 'gemini-grounded', confidence: g.confidence, reasoning: g.reasoning, sources: g.sources }
+  // 2) Everything else → Gemini grounded (skipped in board mode for scale).
+  if (!opts.skipGemini) {
+    const g = await callGeminiGrounded(market, signal)
+    if (g) {
+      return { ynProb: g.ynProb, engine: 'gemini-grounded', confidence: g.confidence, reasoning: g.reasoning, sources: g.sources }
+    }
   }
 
-  // 3) Fallback → market-anchored prior, low confidence, with an HONEST reason
-  //    that distinguishes "tradable but data temporarily unavailable" from
-  //    "non-tradable and no live-search key".
-  const shrunk = clamp01(0.5 + (market.yesPrice - 0.5) * 0.85)
+  // 3) Fallback → market-anchored prior, low confidence, with an HONEST reason.
+  //    In board mode we DON'T invent an edge (ynProb = the market's own price), so
+  //    real net-priced edges rank above the rest; the detail page forms the view.
   const tradable = matchUnderlying(market.title)
-  const reasoning = tradable
-    ? `${tradable.name} price history was temporarily unavailable, so this is a transparent prior anchored to the ` +
-      `market's own ${(market.yesPrice * 100).toFixed(0)}% (mildly shrunk toward 50%). The neural net re-prices it ` +
-      `automatically once data is reachable.`
-    : `No tradable underlying and no live-search key available, so this is a transparent prior anchored to the ` +
-      `market's own ${(market.yesPrice * 100).toFixed(0)}% (mildly shrunk toward 50%). Add GEMINI_API_KEY for a researched, cited probability.`
-  return { ynProb: shrunk, engine: 'baseline', confidence: 0.3, reasoning }
+  const ynProb = opts.skipGemini ? market.yesPrice : clamp01(0.5 + (market.yesPrice - 0.5) * 0.85)
+  const reasoning = opts.skipGemini
+    ? `Listed at the market's own ${(market.yesPrice * 100).toFixed(0)}%. Open this market for a full AI-researched, cited probability and our edge.`
+    : tradable
+      ? `${tradable.name} price history was temporarily unavailable, so this is a transparent prior anchored to the ` +
+        `market's own ${(market.yesPrice * 100).toFixed(0)}% (mildly shrunk toward 50%). The neural net re-prices it ` +
+        `automatically once data is reachable.`
+      : `No tradable underlying and no live-search key available, so this is a transparent prior anchored to the ` +
+        `market's own ${(market.yesPrice * 100).toFixed(0)}% (mildly shrunk toward 50%). Add GEMINI_API_KEY for a researched, cited probability.`
+  return { ynProb, engine: 'baseline', confidence: opts.skipGemini ? 0.15 : 0.3, reasoning }
 }
 
 /** Convenience for routes/cron that need the trained model first. */

@@ -25,7 +25,7 @@ export const DEFAULT_FILTERS: EdgeFilterState = {
   search: '',
 }
 
-const CATEGORIES: (EdgeCategory | 'All')[] = ['All', 'Financials', 'Crypto', 'Economics', 'Politics', 'Weather', 'Tech', 'Culture', 'World', 'Other']
+const CATEGORIES: (EdgeCategory | 'All')[] = ['All', 'Sports', 'Financials', 'Crypto', 'Economics', 'Politics', 'Weather', 'Tech', 'Culture', 'World', 'Other']
 
 export function Filters({
   state,

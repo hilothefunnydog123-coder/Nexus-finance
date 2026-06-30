@@ -90,26 +90,28 @@ interface RawMarket {
 }
 
 const CAT_KEYWORDS: [RegExp, EdgeCategory][] = [
+  [/\bnfl\b|\bnba\b|\bmlb\b|\bnhl\b|\bncaa\b|college (foot|basket)ball|super bowl|world series|stanley cup|premier league|la ?liga|champions league|bundesliga|serie a|\bmls\b|\bufc\b|\bmma\b|boxing|\bpga\b|\bgolf\b|wimbledon|\batp\b|\bwta\b|tennis|formula ?1|\bf1\b|nascar|grand prix|playoff|\bvs\.?\b| beat | defeat|to win the|olympic|fifa|world cup|heisman/i, 'Sports'],
   [/bitcoin|btc|ethereum|eth\b|crypto|solana|dogecoin/i, 'Crypto'],
   [/s&p|s and p|nasdaq|dow|treasury|yield|gold|oil|crude|stock|nvidia|tesla|apple|equit/i, 'Financials'],
   [/cpi|inflation|fed|fomc|rate|gdp|payroll|jobs|unemploy|recession/i, 'Economics'],
   [/president|election|congress|senate|house|scotus|supreme court|governor|poll/i, 'Politics'],
   [/temperature|°f|hurricane|weather|snow|rain|storm|climate/i, 'Weather'],
   [/openai|gpt|model|ai\b|tech|chip|launch|release/i, 'Tech'],
-  [/movie|box.office|oscar|grammy|album|celebrit|culture|sport|game/i, 'Culture'],
+  [/movie|box.office|oscar|grammy|album|celebrit|culture/i, 'Culture'],
   [/opec|oil cut|war|treaty|un\b|nato|world/i, 'World'],
 ]
 
 export function categorize(title: string, raw?: string): EdgeCategory {
   if (raw) {
     const r = raw.toLowerCase()
+    if (r.includes('sport')) return 'Sports'
     if (r.includes('financ')) return 'Financials'
     if (r.includes('crypto')) return 'Crypto'
     if (r.includes('econ')) return 'Economics'
     if (r.includes('politic')) return 'Politics'
     if (r.includes('climate') || r.includes('weather')) return 'Weather'
     if (r.includes('science') || r.includes('tech')) return 'Tech'
-    if (r.includes('entertain') || r.includes('culture') || r.includes('sport')) return 'Culture'
+    if (r.includes('entertain') || r.includes('culture')) return 'Culture'
     if (r.includes('world')) return 'World'
   }
   for (const [re, cat] of CAT_KEYWORDS) if (re.test(title)) return cat
@@ -164,7 +166,7 @@ export interface FetchOptions {
  * so callers always receive a usable board.
  */
 export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ markets: KalshiMarket[]; live: boolean }> {
-  const limit = opts.limit ?? 60
+  const limit = opts.limit ?? 500
   const minVolume = opts.minVolume ?? 0
   if (!opts.force && cache && Date.now() - cache.at < TTL_MS) {
     return { markets: applyFilter(cache.markets, limit, minVolume), live: cache.live }
@@ -180,9 +182,10 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
   try {
     const collected: KalshiMarket[] = []
     let cursor = ''
-    // A few pages of the most liquid open markets is plenty for the board.
-    for (let page = 0; page < 4 && collected.length < 300; page++) {
-      const q = new URLSearchParams({ status: 'open', limit: '100' })
+    // Pull the FULL open-market universe (every Kalshi pick, all categories incl.
+    // Sports) — paginate hard, bounded so a serverless invocation can't run away.
+    for (let page = 0; page < 60 && collected.length < 6000; page++) {
+      const q = new URLSearchParams({ status: 'open', limit: '1000' })
       if (cursor) q.set('cursor', cursor)
       const data = await kalshiGet<{ markets: RawMarket[]; cursor?: string }>(creds, `/markets?${q.toString()}`, opts.signal)
       for (const r of data.markets || []) {

@@ -66,6 +66,7 @@ export function catColor(cat: string): string {
     case 'Financials': return CYAN
     case 'Economics': return GREEN
     case 'Politics': return VIOLET
+    case 'Sports': return '#fb7185'
     case 'Weather': return '#60a5fa'
     case 'Tech': return '#f472b6'
     default: return MUTE

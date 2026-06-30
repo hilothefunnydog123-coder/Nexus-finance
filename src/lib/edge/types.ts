@@ -14,6 +14,7 @@ export type EdgeCategory =
   | 'Economics'
   | 'Politics'
   | 'Weather'
+  | 'Sports'
   | 'Culture'
   | 'Tech'
   | 'World'

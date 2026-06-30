@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const minEdge = Number(sp.get('minEdge') ?? '0')
   const minVolume = Number(sp.get('minVolume') ?? '0')
   const worthOnly = sp.get('worthOnly') === '1'
-  const limit = Math.min(120, Math.max(1, Number(sp.get('limit') ?? '60')))
+  const limit = Math.min(1000, Math.max(1, Number(sp.get('limit') ?? '400')))
 
   try {
     const admin = getAdmin()

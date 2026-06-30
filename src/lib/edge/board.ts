@@ -33,8 +33,10 @@ export async function buildBoard(opts: BuildOptions = {}): Promise<EdgeBoard> {
   const { markets, live } = await fetchActiveMarkets(opts)
   const model = opts.model ?? (await loadModelFor(opts.admin ?? null))
 
-  const rows = await mapLimit<KalshiMarket, EdgeRow>(markets, opts.concurrency ?? 6, async (market) => {
-    const pricing = await priceMarket(market, model, opts.signal)
+  // Board mode: price the whole universe cheaply (net for tradables + a fast prior
+  // for the rest). The detail page runs the full Gemini grounding on demand.
+  const rows = await mapLimit<KalshiMarket, EdgeRow>(markets, opts.concurrency ?? 8, async (market) => {
+    const pricing = await priceMarket(market, model, opts.signal, { skipGemini: true })
     const verdict = computeVerdict(market, pricing)
     return { market, pricing, verdict, pricedAt: new Date().toISOString() }
   })
