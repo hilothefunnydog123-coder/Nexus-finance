@@ -38,6 +38,30 @@ export default async function handler() {
     console.error('[NeuralNet] error:', e)
   }
 
+  // Grade the Arena — net + rival AI sealed calls whose window has closed.
+  try {
+    const res = await fetch(`${SITE_URL}/api/arena/grade`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SECRET}` },
+    })
+    const data = await res.json()
+    console.log('[ArenaGrade] graded:', JSON.stringify({ resolved: data.resolved, net: data.net, opponents: data.opponents }))
+  } catch (e) {
+    console.error('[ArenaGrade] error:', e)
+  }
+
+  // Recompute the Arena leaderboard (Elo) from the freshly graded bouts.
+  try {
+    const res = await fetch(`${SITE_URL}/api/arena/leaderboard`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SECRET}` },
+    })
+    const data = await res.json()
+    console.log('[ArenaLeaderboard] recomputed:', JSON.stringify({ participants: data.participants, bouts: data.bouts }))
+  } catch (e) {
+    console.error('[ArenaLeaderboard] error:', e)
+  }
+
   // Step the Colosseum — five AI strategies rebalance their paper portfolios.
   try {
     const res = await fetch(`${SITE_URL}/api/colosseum`, { method: 'POST', headers: { Authorization: `Bearer ${SECRET}` } })
