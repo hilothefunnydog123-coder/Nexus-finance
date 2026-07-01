@@ -143,7 +143,10 @@ export async function placeOrder(conn: KalshiConn, ticker: string, side: 'yes' |
   const wantBid = (side === 'yes' && action === 'buy') || (side === 'no' && action === 'sell')
   const bookSide = wantBid ? 'bid' : 'ask'
   const yp = typeof yesPrice === 'number' && Number.isFinite(yesPrice) ? Math.max(0.02, Math.min(0.98, yesPrice)) : 0.5
-  const px = wantBid ? Math.min(0.99, yp + 0.05) : Math.max(0.01, yp - 0.05) // generous cross → IOC fills at the real market price, not the limit
+  const raw = wantBid ? yp + 0.05 : yp - 0.05 // generous cross → IOC fills at the real market price, not the limit
+  // Kalshi only accepts whole-cent ticks — a mid like 0.435 (or a model prob
+  // fallback) would land between ticks and reject with invalid_price.
+  const px = Math.max(0.01, Math.min(0.99, Math.round(raw * 100) / 100))
   // V2 wants FIXED-POINT strings: count "1.00", price "0.5500" — and
   // self_trade_prevention_type is required. reduce_only on closes stops an
   // over-sized exit from flipping into a fresh position on the other side.
