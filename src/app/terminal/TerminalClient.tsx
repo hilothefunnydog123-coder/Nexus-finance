@@ -752,7 +752,7 @@ function ConnectModal({ onClose, onConnect }: { onClose: () => void; onConnect: 
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: C.mono, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: KAL_GREEN }}><Link2 size={14} /> Connect your Kalshi account</span>
         <h3 style={{ margin: '12px 0 6px', fontSize: 'clamp(1.3rem,3vw,1.6rem)', fontWeight: 800, letterSpacing: '-0.02em', color: C.ink }}>Your keys, your device.</h3>
         <p style={{ margin: '0 0 14px', color: C.dim, fontSize: 13.5, lineHeight: 1.6 }}>
-          Create an API key at <b style={{ color: C.ink }}>kalshi.com → Account → API</b>, then paste the <b style={{ color: C.ink }}>Key ID</b> and the <b style={{ color: C.ink }}>private key (PKCS#8 PEM)</b> below. The private key is imported as a non-extractable key and stored only in your browser — it&apos;s never sent to our servers.
+          Create an API key at <b style={{ color: C.ink }}>kalshi.com → Account → API</b>, then paste the <b style={{ color: C.ink }}>Key ID</b> and the <b style={{ color: C.ink }}>private key</b> (the whole .pem/.key file — either RSA format works, no conversion needed) below. The private key is imported as a non-extractable key and stored only in your browser — it&apos;s never sent to our servers.
         </p>
         <label style={{ fontFamily: C.mono, fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.faint }}>API Key ID</label>
         <input value={keyId} onChange={(e) => { setKeyId(e.target.value); setErr('') }} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" spellCheck={false}

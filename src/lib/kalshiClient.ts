@@ -11,24 +11,44 @@ const IDB_NAME = 'matrix-kalshi'
 const IDB_STORE = 'keys'
 const KEY_ID_LS = 'matrix_kalshi_keyid'
 
-// ── PEM → ArrayBuffer (PKCS#8) ────────────────────────────────────────────────
-function pemToDer(pem: string): ArrayBuffer {
-  const clean = pem.replace(/-----BEGIN [A-Z ]+-----/g, '').replace(/-----END [A-Z ]+-----/g, '').replace(/\s+/g, '')
-  const bin = atob(clean)
-  const buf = new Uint8Array(bin.length)
-  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i)
-  return buf.buffer
+// ── PEM parsing + PKCS#1 → PKCS#8 (done in-browser, no openssl needed) ─────────
+function pemBody(pem: string): string {
+  return pem.replace(/-----BEGIN [A-Z0-9 ]+-----/g, '').replace(/-----END [A-Z0-9 ]+-----/g, '').replace(/\s+/g, '')
+}
+function b64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64); const u = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i)
+  return u
+}
+function derLen(n: number): number[] {
+  if (n < 0x80) return [n]
+  const b: number[] = []; let x = n; while (x > 0) { b.unshift(x & 0xff); x >>= 8 }
+  return [0x80 | b.length, ...b]
+}
+/** Wrap a raw PKCS#1 RSAPrivateKey (DER) into a PKCS#8 PrivateKeyInfo (DER). */
+function pkcs1ToPkcs8(pkcs1: Uint8Array): Uint8Array {
+  // AlgorithmIdentifier for rsaEncryption (1.2.840.113549.1.1.1) + NULL params
+  const algId = [0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00]
+  const version = [0x02, 0x01, 0x00]
+  const octet = [0x04, ...derLen(pkcs1.length), ...Array.from(pkcs1)]
+  const inner = [...version, ...algId, ...octet]
+  const outer = [0x30, ...derLen(inner.length), ...inner]
+  return new Uint8Array(outer)
 }
 
-/** Import a PKCS#8 PEM private key as a non-extractable RSA-PSS signing key. */
+/** Import any Kalshi RSA private key (PKCS#8 *or* PKCS#1) as a non-extractable
+ *  RSA-PSS signing key. Converts PKCS#1 in the browser — no openssl needed. */
 export async function importKalshiKey(pem: string): Promise<CryptoKey> {
   const p = pem.trim()
-  if (p.includes('BEGIN RSA PRIVATE KEY')) {
-    throw new Error('That is a PKCS#1 key. Convert it to PKCS#8:  openssl pkcs8 -topk8 -nocrypt -in key.pem -out key_pkcs8.pem')
+  if (!/BEGIN [A-Z ]*PRIVATE KEY/.test(p)) throw new Error('That doesn\'t look like a private key. Paste the whole block, including the -----BEGIN…----- and -----END…----- lines.')
+  let der: Uint8Array
+  try { der = b64ToBytes(pemBody(p)) } catch { throw new Error('Could not read the key — the text between BEGIN/END isn\'t valid. Re-copy the full key file.') }
+  const keyData = p.includes('BEGIN RSA PRIVATE KEY') ? pkcs1ToPkcs8(der) : der
+  try {
+    return await crypto.subtle.importKey('pkcs8', keyData as BufferSource, { name: 'RSA-PSS', hash: 'SHA-256' }, false, ['sign'])
+  } catch {
+    throw new Error('This browser couldn\'t import that key. Make sure it\'s your Kalshi RSA private key (the .pem/.key file you downloaded when you made the API key).')
   }
-  if (!p.includes('BEGIN') || !p.includes('PRIVATE KEY')) throw new Error('Not a valid PEM private key.')
-  const der = pemToDer(p)
-  return crypto.subtle.importKey('pkcs8', der, { name: 'RSA-PSS', hash: 'SHA-256' }, false, ['sign'])
 }
 
 function toB64(buf: ArrayBuffer): string {
