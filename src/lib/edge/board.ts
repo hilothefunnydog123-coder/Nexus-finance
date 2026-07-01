@@ -29,8 +29,42 @@ export interface BuildOptions extends FetchOptions {
   concurrency?: number
 }
 
+/**
+ * Round-robin a volume-sorted market list across categories so EVERY category
+ * that has markets is represented on the board — even ones whose markets are all
+ * low-volume right now (e.g. Sports). Without this, a purely volume-ranked slice
+ * silently drops whole categories, so their filter chip never appears. Within a
+ * category the input order (volume desc) is preserved.
+ */
+function pickBalanced(markets: KalshiMarket[], limit: number): KalshiMarket[] {
+  if (markets.length <= limit) return markets
+  const byCat = new Map<string, KalshiMarket[]>()
+  for (const m of markets) {
+    const arr = byCat.get(m.category)
+    if (arr) arr.push(m)
+    else byCat.set(m.category, [m])
+  }
+  const queues = [...byCat.values()]
+  const out: KalshiMarket[] = []
+  let progressed = true
+  while (out.length < limit && progressed) {
+    progressed = false
+    for (const q of queues) {
+      if (!q.length) continue
+      out.push(q.shift()!)
+      progressed = true
+      if (out.length >= limit) break
+    }
+  }
+  return out
+}
+
 export async function buildBoard(opts: BuildOptions = {}): Promise<EdgeBoard> {
-  const { markets, live, reason } = await fetchActiveMarkets(opts)
+  // Fetch a WIDE universe (so every category is available), then select a
+  // category-balanced display set down to the requested limit.
+  const displayLimit = opts.limit ?? 150
+  const { markets: universe, live, reason } = await fetchActiveMarkets({ ...opts, limit: Math.max(displayLimit, 1500) })
+  const markets = pickBalanced(universe, displayLimit)
   const model = opts.model ?? (await loadModelFor(opts.admin ?? null))
 
   // Board mode: price the whole universe cheaply (net for tradables + a fast prior
