@@ -18,6 +18,8 @@ import { seedBoard } from './seed'
 
 const BASE = 'https://api.elections.kalshi.com/trade-api/v2'
 
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
 export interface KalshiCreds {
   keyId: string
   privateKeyPem: string
@@ -111,12 +113,13 @@ export async function kalshiBoardSelfTest() {
     withBook: number
     topBookByVolume: string[]
     sportsSample: string[]
+    rawSample: unknown[]
     elapsedMs: number
     error?: string
   } = {
     credsParsed: !!creds,
     rawCount: 0, normalizedCount: 0, droppedNoTickerOrClose: 0, droppedNoPrice: 0,
-    pagesFetched: 0, live: false, categories: {}, bookCategories: {}, withVolume: 0, withBook: 0, topBookByVolume: [], sportsSample: [], elapsedMs: 0,
+    pagesFetched: 0, live: false, categories: {}, bookCategories: {}, withVolume: 0, withBook: 0, topBookByVolume: [], sportsSample: [], rawSample: [], elapsedMs: 0,
   }
   const started = Date.now()
   if (!creds) {
@@ -127,11 +130,22 @@ export async function kalshiBoardSelfTest() {
   try {
     const collected: { m: KalshiMarket; ticker: string }[] = []
     let cursor = ''
-    for (let page = 0; page < 150 && Date.now() - started < 11_000; page++) {
-      const q = new URLSearchParams({ status: 'open', limit: '100' })
+    let retries = 0
+    for (let page = 0; page < 30 && Date.now() - started < 11_000; page++) {
+      const q = new URLSearchParams({ status: 'open', limit: '1000' })
       if (cursor) q.set('cursor', cursor)
-      const data = await kalshiGet<{ markets: RawMarket[]; cursor?: string }>(creds, `/markets?${q.toString()}`)
+      let data: { markets: RawMarket[]; cursor?: string }
+      try {
+        data = await kalshiGet<{ markets: RawMarket[]; cursor?: string }>(creds, `/markets?${q.toString()}`)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : ''
+        if (msg.includes('429') && retries < 4) { retries++; await sleep(500 * retries); page--; continue }
+        throw e
+      }
       out.pagesFetched++
+      // Capture the first few RAW market objects verbatim so we can see Kalshi's
+      // true field structure (title vs yes_sub_title vs book/volume).
+      if (!out.rawSample.length) out.rawSample = (data.markets || []).slice(0, 4)
       for (const r of data.markets || []) {
         out.rawCount++
         if (!r.ticker || !r.close_time) { out.droppedNoTickerOrClose++; continue }
@@ -141,6 +155,7 @@ export async function kalshiBoardSelfTest() {
       }
       cursor = data.cursor || ''
       if (!cursor) break
+      await sleep(220)
     }
     collected.sort((a, b) => b.m.volume - a.m.volume)
     out.normalizedCount = collected.length
@@ -274,23 +289,26 @@ function clamp01(x: number): number {
 }
 
 /** A concatenated multi-leg / combo title ("yes Belgium advances,yes England
- *  advances,…") — not a single binary question, so useless on an edge board. */
+ *  advances,…") — not a single binary question. */
 function isCombinedTitle(t: string): boolean {
   const commas = (t.match(/,/g) || []).length
   const legs = (t.match(/\b(yes|no)\b/gi) || []).length
   return commas >= 2 || legs >= 2 || t.length > 130
 }
 
-/** Turn a raw Kalshi title into a clean single-question title, or null to drop
- *  it (combo/parlay markets that can't be priced as one binary outcome). */
-function cleanTitle(m: RawMarket): string | null {
+/** Best-effort clean single-question title. Prefers the per-outcome subtitle when
+ *  the market title is a combo concatenation; always returns a usable string (we
+ *  no longer drop markets on title — the has-book gate decides what's boardworthy). */
+function cleanTitle(m: RawMarket): string {
+  const sub = (m.yes_sub_title || m.subtitle || '').trim()
   let t = (m.title || '').trim()
-  if (!t || isCombinedTitle(t)) {
-    const sub = (m.yes_sub_title || m.subtitle || '').trim()
-    if (sub && !isCombinedTitle(sub)) t = sub
-    else return null // genuinely a combo market — not boardworthy
+  if ((!t || isCombinedTitle(t)) && sub && !isCombinedTitle(sub)) {
+    // Combine the event title (if clean-ish) with the specific outcome.
+    t = t && !isCombinedTitle(t) ? `${t} — ${sub}` : sub
   }
-  return t.replace(/^\s*(yes|no)\s+/i, '').trim() || null
+  if (!t) t = sub || m.ticker
+  t = t.replace(/^\s*(yes|no)\s+/i, '').trim()
+  return (t.length > 120 ? `${t.slice(0, 117)}…` : t) || m.ticker
 }
 
 function normalize(m: RawMarket): KalshiMarket | null {
@@ -310,7 +328,6 @@ function normalize(m: RawMarket): KalshiMarket | null {
   if (yes == null || !Number.isFinite(yes)) yes = 0.5
   const yesPrice = clamp01(yes)
   const title = cleanTitle(m)
-  if (!title) return null // drop concatenated combo/parlay markets
   return {
     ticker: m.ticker,
     eventTicker: m.event_ticker,
@@ -369,19 +386,27 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
     // limit, so cap pages + elapsed time. Sorted by volume after — the most active
     // markets surface first. A failed page mid-stream keeps what we already have.
     const started = Date.now()
-    // Pull the FULL open universe. Kalshi paginates fast (~40ms/page), and the
-    // liquid, actually-traded markets (the ones with a real book and a real price)
-    // are scattered through it — a small slice of the default order is mostly
-    // illiquid combo legs. Time-bounded so the build stays under the function limit.
-    for (let page = 0; page < 150; page++) {
-      const q = new URLSearchParams({ status: 'open', limit: '100' })
+    // Pull the open universe with BIG pages (limit=1000, Kalshi's max) so we cover
+    // it in far fewer requests — Kalshi rate-limits (HTTP 429) if we fire many
+    // small pages back-to-back. Throttle between pages and retry a 429 with
+    // backoff rather than bailing. Time-bounded to stay under the function limit.
+    let retries = 0
+    for (let page = 0; page < 30; page++) {
+      const q = new URLSearchParams({ status: 'open', limit: '1000' })
       if (cursor) q.set('cursor', cursor)
       let data: { markets: RawMarket[]; cursor?: string }
       try {
         data = await kalshiGet<{ markets: RawMarket[]; cursor?: string }>(creds, `/markets?${q.toString()}`, opts.signal)
       } catch (e) {
-        if (page === 0) throw e // first page failed → a real problem → fall to seed
-        break // a later page failed → keep the live markets we already collected
+        const msg = e instanceof Error ? e.message : ''
+        if (msg.includes('429') && retries < 4 && Date.now() - started < 10_000) {
+          retries++
+          await sleep(500 * retries) // back off, then retry the SAME page
+          page--
+          continue
+        }
+        if (page === 0 && !collected.length) throw e // first page truly failed → seed
+        break // keep what we have
       }
       for (const r of data.markets || []) {
         const n = normalize(r)
@@ -389,6 +414,7 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
       }
       cursor = data.cursor || ''
       if (!cursor || Date.now() - started > 11_000) break
+      await sleep(220) // stay under Kalshi's read rate limit
     }
     if (!collected.length) throw new Error('no markets returned')
     collected.sort((a, b) => b.volume - a.volume)
