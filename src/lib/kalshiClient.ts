@@ -127,21 +127,32 @@ export async function getPositions(conn: KalshiConn): Promise<KPosition[]> {
   const d = r.data as { market_positions?: KPosition[] } | null
   return (d?.market_positions || []).filter((p) => p.position !== 0)
 }
-/** Place a REAL order via the V2 endpoint. Kalshi deprecated bare market orders,
- *  so we send a MARKETABLE LIMIT: priced to cross the book (fill now) but bounded
- *  a few cents from the live price so it can never fill wildly. `priceProb` is the
- *  current 0..1 price of OUR side; omit to cross fully. action 'sell' closes. */
-export async function placeOrder(conn: KalshiConn, ticker: string, side: 'yes' | 'no', count: number, action: 'buy' | 'sell' = 'buy', priceProb?: number): Promise<KResp> {
-  const field = side === 'yes' ? 'yes_price' : 'no_price'
-  let price: number
-  if (typeof priceProb === 'number' && Number.isFinite(priceProb)) {
-    const c = Math.round(Math.max(0.02, Math.min(0.98, priceProb)) * 100)
-    price = action === 'buy' ? Math.min(99, c + 2) : Math.max(1, c - 2) // cross by ~2¢
-  } else {
-    price = action === 'buy' ? 99 : 1 // fully marketable
-  }
-  return kalshi(conn, 'POST', '/trade-api/v2/portfolio/orders', {
-    payload: { ticker, action, side, count, type: 'limit', [field]: price, client_order_id: 'mx-' + Date.now() + '-' + Math.round(Math.random() * 1e6) },
+/**
+ * Place a REAL order on the V2 single-book endpoint (/portfolio/events/orders).
+ * That book is denominated in the YES price: side "bid" = buy YES, "ask" = sell
+ * YES. Selling YES ≡ buying NO at (1−price), so we map our (side, action) to a
+ * bid/ask + a YES-book price, and cross the spread with an immediate-or-cancel
+ * order so it fills at market without ever resting.
+ *
+ *   buy YES  / close NO  → bid  (price crossed UP)
+ *   sell YES / buy NO    → ask  (price crossed DOWN)
+ *
+ * `yesPrice` is the current YES price (0..1). action 'sell' closes a position.
+ */
+export async function placeOrder(conn: KalshiConn, ticker: string, side: 'yes' | 'no', count: number, action: 'buy' | 'sell' = 'buy', yesPrice?: number): Promise<KResp> {
+  const wantBid = (side === 'yes' && action === 'buy') || (side === 'no' && action === 'sell')
+  const bookSide = wantBid ? 'bid' : 'ask'
+  const yp = typeof yesPrice === 'number' && Number.isFinite(yesPrice) ? Math.max(0.02, Math.min(0.98, yesPrice)) : 0.5
+  const px = wantBid ? Math.min(0.99, yp + 0.05) : Math.max(0.01, yp - 0.05) // generous cross → IOC fills at the real market price, not the limit
+  return kalshi(conn, 'POST', '/trade-api/v2/portfolio/events/orders', {
+    payload: {
+      ticker,
+      client_order_id: 'mx-' + Date.now() + '-' + Math.round(Math.random() * 1e6),
+      side: bookSide,
+      count: String(count),
+      price: px.toFixed(4),
+      time_in_force: 'immediate_or_cancel',
+    },
   })
 }
 export function errMsg(r: KResp): string {
