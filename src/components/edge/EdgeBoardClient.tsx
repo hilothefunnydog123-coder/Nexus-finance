@@ -248,27 +248,31 @@ function Hero({
           </span>
         </h1>
 
-        <p style={{ margin: '16px 0 0', maxWidth: 660, color: TXT, fontSize: 'clamp(1.05rem,1.9vw,1.35rem)', fontWeight: 600, lineHeight: 1.4, letterSpacing: '-0.01em' }}>
-          We price every Kalshi market, find the edge, and size the bet.
+        <p style={{ margin: '16px 0 0', maxWidth: 680, color: TXT, fontSize: 'clamp(1.05rem,1.9vw,1.35rem)', fontWeight: 600, lineHeight: 1.4, letterSpacing: '-0.01em' }}>
+          A systematic, profitable edge on <span style={{ color: KALSHI_GREEN }}>Kalshi</span> — priced, sized, and proven in public.
         </p>
-        <p style={{ margin: '10px 0 0', maxWidth: 640, color: MUTE, fontSize: 'clamp(.95rem,1.6vw,1.05rem)', lineHeight: 1.55 }}>
-          The BrainStock neural net, grounded AI, and our statistical model price every live
-          <span style={{ color: KALSHI_GREEN, fontWeight: 600 }}> Kalshi</span> market, measure the gap
-          against the live price — the <span style={{ color: CYAN, fontWeight: 600 }}>edge</span> — then tell you
-          which side, how strong our conviction is, and <span style={{ color: GREEN, fontWeight: 600 }}>how much to risk</span> (½-Kelly).
-          Ranked. Graded in public.
+        <p style={{ margin: '10px 0 0', maxWidth: 660, color: MUTE, fontSize: 'clamp(.95rem,1.6vw,1.05rem)', lineHeight: 1.55 }}>
+          The BrainStock neural net (tradables), grounded AI (news events), and a statistical
+          favorite-longshot model price every live market, measure the gap vs the live price — the
+          <span style={{ color: CYAN, fontWeight: 600 }}> edge</span> — and tell you which side, how
+          strong the conviction is, and <span style={{ color: GREEN, fontWeight: 600 }}>exactly how much to stake</span> (½-Kelly).
+          No single bet is the play — the <span style={{ color: TXT, fontWeight: 600 }}>edge compounds across many disciplined bets</span>,
+          and every call is graded on a public P&amp;L curve.
         </p>
         {note && (
           <p style={{ margin: '8px 0 0', fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.04em' }}>{note}</p>
         )}
 
-        {/* headline stat — markets with an edge */}
+        {/* headline stat — markets with an edge + proof CTA */}
         <div style={{ marginTop: 'clamp(18px,3vw,28px)', display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontFamily: MONO, fontWeight: 800, fontSize: 'clamp(1rem,2vw,1.25rem)', color: GREEN, border: `1px solid ${GREEN}40`, background: `${GREEN}12`, padding: '8px 14px', borderRadius: 8, boxShadow: `0 0 26px ${GREEN}1f` }}>
             <Flame size={18} style={{ flexShrink: 0 }} />
             <span style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtNum(hero.worthIt)}</span>
-            <span style={{ fontWeight: 600, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: TXT }}>markets worth betting right now</span>
+            <span style={{ fontWeight: 600, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: TXT }}>plays worth betting right now</span>
           </span>
+          <Link href="/edge/track-record" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: VOID, background: GREEN, padding: '9px 15px', borderRadius: 8, textDecoration: 'none', boxShadow: `0 0 24px ${GREEN}44` }}>
+            <TrendingUp size={15} style={{ flexShrink: 0 }} /> See the live P&amp;L
+          </Link>
         </div>
 
         {/* stat strip */}
@@ -361,7 +365,7 @@ function Spotlight({ row, reduced }: { row: EdgeRow; reduced: boolean }) {
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <HeadToHead ynProb={verdict.ynProb} marketProb={verdict.marketProb} side={verdict.side} animate={!reduced} height={42} />
+          <HeadToHead aiYes={pricing.ynProb} marketYes={market.yesPrice} side={verdict.side} edge={verdict.edge} animate={!reduced} height={42} />
           <p style={{ margin: '16px 0 0', color: glow, fontSize: 14, fontWeight: 600, lineHeight: 1.45 }}>
             {verdict.reason}
           </p>
@@ -486,7 +490,7 @@ function Card({ row, reduced, index, rank }: { row: EdgeRow; reduced: boolean; i
         {market.title}
       </div>
 
-      <HeadToHead ynProb={verdict.ynProb} marketProb={verdict.marketProb} side={verdict.side} animate={!reduced} height={22} />
+      <HeadToHead aiYes={pricing.ynProb} marketYes={market.yesPrice} side={verdict.side} edge={verdict.edge} animate={!reduced} height={22} />
 
       {/* mini stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 2 }}>

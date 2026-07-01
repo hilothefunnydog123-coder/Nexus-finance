@@ -104,11 +104,14 @@ export interface EdgeBoard {
   }
 }
 
-/** Tunables for the worth-it brain (kept in one place so the math is auditable). */
+/** Tunables for the worth-it brain (kept in one place so the math is auditable).
+ *  This is a SYSTEMATIC small-edge book: we take every positive-EV edge and let
+ *  disciplined ½-Kelly sizing (not a huge per-bet edge) do the risk control, so
+ *  the edge compounds across many bets. Hence a modest edge/EV floor. */
 export const EDGE_CONFIG = {
-  minEdge: 0.07,                 // need ≥ 7pts of edge to even consider a pick
-  minConfidence: 0.45,           // and at least this much trust in our number
-  minEvPerDollar: 0.05,          // and a positive EV with margin
+  minEdge: 0.03,                 // ≥ 3pts of edge — a real, systematically-bettable gap
+  minConfidence: 0.4,            // and at least this much trust in our number
+  minEvPerDollar: 0.03,          // and a positive EV with margin
   kellyFraction: 0.5,            // we suggest half-Kelly, never full
   maxKelly: 0.25,                // hard cap on suggested stake (risk control)
   feePerContract: 0.0,           // Kalshi maker/taker fee approximation per $1

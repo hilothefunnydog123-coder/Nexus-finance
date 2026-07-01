@@ -161,24 +161,33 @@ export function PathRail({ active }: { active: EdgeStep }) {
  * The signature visual: our probability vs the market's, as opposing bars on a
  * shared 0–100% track. The gap between them IS the edge.
  */
-export function HeadToHead({ ynProb, marketProb, side, animate = true, height = 30 }: { ynProb: number; marketProb: number; side?: 'YES' | 'NO'; animate?: boolean; height?: number }) {
+/**
+ * The head-to-head. Both bars are the P(YES) — the same question the market title
+ * asks — so it always reads consistently: if OUR AI's YES sits BELOW the market's,
+ * we think it's less likely and bet NO; above, we bet YES. The badge states the
+ * call + the edge on the side we'd actually take (always ≥ 0). `aiYes`/`marketYes`
+ * are probabilities of YES; `side`/`edge` come from the worth-it verdict.
+ */
+export function HeadToHead({ aiYes, marketYes, side, edge, animate = true, height = 30 }: { aiYes: number; marketYes: number; side?: 'YES' | 'NO'; edge?: number; animate?: boolean; height?: number }) {
   const reduced = useReducedMotion()
   const on = animate && !reduced
-  const edge = ynProb - marketProb
-  const edgeColor = edge >= 0 ? GREEN : RED
+  const call: 'YES' | 'NO' = side ?? (aiYes >= marketYes ? 'YES' : 'NO')
+  const shown = edge != null ? edge : Math.abs(aiYes - marketYes)
+  const callColor = shown > 0.0001 ? GREEN : MUTE
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-      <Bar label="OUR AI" value={ynProb} color={CYAN} animate={on} height={height} emphasis />
-      <Bar label="MARKET" value={marketProb} color={MUTE} animate={on} height={height} />
+      <Bar label="OUR AI" value={aiYes} color={CYAN} animate={on} height={height} emphasis />
+      <Bar label="MARKET" value={marketYes} color={MUTE} animate={on} height={height} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: MONO, fontSize: 10.5, color: FAINT, letterSpacing: '0.08em' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <Scale size={12} style={{ flexShrink: 0 }} />
-          {side ? `OUR SIDE · ${side}` : 'AI vs MARKET'}
+          both = chance of <b style={{ color: MUTE, fontWeight: 700 }}>YES</b>
         </span>
-        <span
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: edgeColor, fontWeight: 700, border: `1px solid ${edgeColor}40`, background: `${edgeColor}14`, padding: '2px 8px', borderRadius: 4 }}
-        >
-          {edge >= 0 ? '+' : ''}{(edge * 100).toFixed(1)}pt EDGE
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: TXT, fontWeight: 700 }}>WE BET {call}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: callColor, fontWeight: 700, border: `1px solid ${callColor}40`, background: `${callColor}14`, padding: '2px 8px', borderRadius: 4 }}>
+            +{(shown * 100).toFixed(1)}pt EDGE
+          </span>
         </span>
       </div>
     </div>

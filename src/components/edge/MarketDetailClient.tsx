@@ -231,7 +231,7 @@ export default function MarketDetailClient({ ticker }: { ticker: string }) {
       {/* ── HEAD-TO-HEAD ─────────────────────────────────────────────────── */}
       <Panel glow={CYAN} style={{ marginTop: 24 }}>
         <SectionLabel icon={<Scale size={14} />}>AI vs MARKET · P(YES)</SectionLabel>
-        <HeadToHead ynProb={pricing.ynProb} marketProb={market.yesPrice} animate={!reduced} height={34} />
+        <HeadToHead aiYes={pricing.ynProb} marketYes={market.yesPrice} side={verdict.side} edge={verdict.edge} animate={!reduced} height={34} />
       </Panel>
 
       {/* ── VERDICT + MATH ───────────────────────────────────────────────── */}
