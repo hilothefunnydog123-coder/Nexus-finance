@@ -343,13 +343,13 @@ export default function TerminalClient() {
   function resetPF() { setPf({ cash: START_BANK, positions: [], realized: 0 }); setSess({ trades: 0, wins: 0, pnl: 0 }); setEq([]) }
 
   // ── real Kalshi account actions ────────────────────────────────────────────
-  const doConnect = useCallback(async (keyId: string, pem: string): Promise<string | null> => {
+  const doConnect = useCallback(async (keyId: string, pem: string, demo: boolean): Promise<string | null> => {
     try {
       const key = await importKalshiKey(pem)
-      const c: KalshiConn = { keyId: keyId.trim(), key }
+      const c: KalshiConn = { keyId: keyId.trim(), key, demo }
       const b = await getBalance(c) // end-to-end validation of the signature
-      await saveConn(c.keyId, key); setConn(c); setBal(b); setConnect(false)
-      addLog('SYS', `🔗 Kalshi connected · balance ${money(b ?? 0)}`)
+      await saveConn(c.keyId, key, demo); setConn(c); setBal(b); setConnect(false)
+      addLog('SYS', `🔗 Kalshi connected (${demo ? 'demo' : 'live'}) · balance ${money(b ?? 0)}`)
       return null
     } catch (e) { return e instanceof Error ? e.message : 'Connection failed.' }
   }, [addLog])
@@ -737,13 +737,13 @@ function Mini({ v, k, c }: { v: string; k: string; c: string }) {
 }
 
 // ── CONNECT KALSHI (real account) ───────────────────────────────────────────────
-function ConnectModal({ onClose, onConnect }: { onClose: () => void; onConnect: (keyId: string, pem: string) => Promise<string | null> }) {
-  const [keyId, setKeyId] = useState(''); const [pem, setPem] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
+function ConnectModal({ onClose, onConnect }: { onClose: () => void; onConnect: (keyId: string, pem: string, demo: boolean) => Promise<string | null> }) {
+  const [keyId, setKeyId] = useState(''); const [pem, setPem] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [demo, setDemo] = useState(false)
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); addEventListener('keydown', k); return () => removeEventListener('keydown', k) }, [onClose])
   async function go() {
     if (!keyId.trim() || !pem.trim()) { setErr('Paste both your Key ID and private key.'); return }
     setBusy(true); setErr('')
-    const e = await onConnect(keyId, pem); setBusy(false)
+    const e = await onConnect(keyId, pem, demo); setBusy(false)
     if (e) setErr(e)
   }
   return (
@@ -760,7 +760,16 @@ function ConnectModal({ onClose, onConnect }: { onClose: () => void; onConnect: 
         <label style={{ fontFamily: C.mono, fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.faint }}>Private key (PEM)</label>
         <textarea value={pem} onChange={(e) => { setPem(e.target.value); setErr('') }} placeholder={'-----BEGIN PRIVATE KEY-----\n…\n-----END PRIVATE KEY-----'} spellCheck={false} rows={6}
           style={{ width: '100%', boxSizing: 'border-box', margin: '5px 0 6px', background: C.deep, border: `1px solid ${err ? C.red : C.line}`, borderRadius: 9, color: C.ink, fontFamily: C.mono, fontSize: 11.5, padding: '11px 13px', outline: 'none', resize: 'vertical' }} />
-        {err && <div style={{ color: C.red, fontFamily: C.mono, fontSize: 11.5, margin: '2px 0 8px', lineHeight: 1.5 }}>{err}</div>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0 10px' }}>
+          <span style={{ fontFamily: C.mono, fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.faint }}>Environment</span>
+          <span style={{ display: 'inline-flex', border: `1px solid ${C.line}`, borderRadius: 8, overflow: 'hidden' }}>
+            {([['Production', false], ['Demo', true]] as const).map(([lab, d]) => (
+              <button key={lab} type="button" onClick={() => setDemo(d)} style={{ fontFamily: C.mono, fontSize: 10.5, fontWeight: 800, padding: '6px 12px', border: 'none', cursor: 'pointer', color: demo === d ? C.bg : C.dim, background: demo === d ? KAL_GREEN : 'transparent' }}>{lab}</button>
+            ))}
+          </span>
+          <span style={{ fontFamily: C.mono, fontSize: 9.5, color: C.faint }}>match where you made the key</span>
+        </div>
+        {err && <div style={{ color: C.red, fontFamily: C.mono, fontSize: 11.5, margin: '2px 0 8px', lineHeight: 1.5 }}>{err}{/authentication/i.test(err) ? ' — check: Key ID matches this exact private key, and the Environment above matches where you created the key.' : ''}</div>}
         <button onClick={go} disabled={busy} className="mx-btn" style={{ width: '100%', marginTop: 6, padding: '13px', fontWeight: 800, fontSize: 14.5, color: '#04140c', background: KAL_GREEN, border: 'none', opacity: busy ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <ShieldCheck size={17} /> {busy ? 'Verifying with Kalshi…' : 'Connect securely'}
         </button>

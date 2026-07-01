@@ -75,18 +75,21 @@ async function idbPut(k: string, v: unknown) { const db = await idb(); return ne
 async function idbGet<T>(k: string): Promise<T | null> { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction(IDB_STORE, 'readonly'); const g = tx.objectStore(IDB_STORE).get(k); g.onsuccess = () => res((g.result as T) ?? null); g.onerror = () => rej(g.error) }) }
 async function idbDel(k: string) { const db = await idb(); return new Promise<void>((res) => { const tx = db.transaction(IDB_STORE, 'readwrite'); tx.objectStore(IDB_STORE).delete(k); tx.oncomplete = () => res() }) }
 
-export type KalshiConn = { keyId: string; key: CryptoKey }
+export type KalshiConn = { keyId: string; key: CryptoKey; demo?: boolean }
 
-/** Persist the connection (CryptoKey in IDB — non-extractable; keyId in LS). */
-export async function saveConn(keyId: string, key: CryptoKey) {
+/** Persist the connection (CryptoKey in IDB — non-extractable; keyId + env in LS). */
+export async function saveConn(keyId: string, key: CryptoKey, demo = false) {
   await idbPut('privkey', key)
-  localStorage.setItem(KEY_ID_LS, keyId)
+  localStorage.setItem(KEY_ID_LS, JSON.stringify({ keyId, demo }))
 }
 export async function loadConn(): Promise<KalshiConn | null> {
   try {
-    const keyId = localStorage.getItem(KEY_ID_LS)
+    const raw = localStorage.getItem(KEY_ID_LS)
     const key = await idbGet<CryptoKey>('privkey')
-    if (keyId && key) return { keyId, key }
+    if (!raw || !key) return null
+    let keyId = raw, demo = false
+    try { const o = JSON.parse(raw); if (o.keyId) { keyId = o.keyId; demo = !!o.demo } } catch { /* legacy plain keyId */ }
+    return { keyId, key, demo }
   } catch { }
   return null
 }
@@ -99,9 +102,10 @@ export type KResp = { status: number; ok: boolean; data: unknown; error?: string
 export async function kalshi(conn: KalshiConn, method: 'GET' | 'POST' | 'DELETE', path: string, opts: { query?: string; payload?: unknown } = {}): Promise<KResp> {
   const ts = Date.now().toString()
   const sig = await sign(conn.key, ts + method + path)
+  const base = conn.demo ? 'https://demo-api.kalshi.co' : 'https://api.elections.kalshi.com'
   const res = await fetch('/api/kalshi/proxy', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ method, path, query: opts.query, ts, keyId: conn.keyId, sig, payload: opts.payload }),
+    body: JSON.stringify({ method, path, query: opts.query, ts, keyId: conn.keyId, sig, payload: opts.payload, base }),
   })
   const j = await res.json().catch(() => ({}))
   return { status: j.status ?? 0, ok: !!j.ok, data: j.data, error: j.error }
@@ -131,7 +135,9 @@ export async function placeOrder(conn: KalshiConn, ticker: string, side: 'yes' |
 }
 export function errMsg(r: KResp): string {
   if (r.error) return r.error
-  const d = r.data as { error?: { message?: string } | string } | null
-  const m = typeof d?.error === 'string' ? d.error : d?.error?.message
-  return m || `Kalshi HTTP ${r.status}`
+  const d = r.data as { error?: { message?: string; code?: string } | string; message?: string } | null
+  const e = d?.error
+  const code = typeof e === 'object' ? e?.code : undefined
+  const m = typeof e === 'string' ? e : e?.message || d?.message
+  return [code, m].filter(Boolean).join(' · ') || `Kalshi HTTP ${r.status}`
 }

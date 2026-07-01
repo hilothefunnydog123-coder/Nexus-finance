@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 20
 
-const BASE = 'https://api.elections.kalshi.com'
+const ALLOWED_BASES = ['https://api.elections.kalshi.com', 'https://demo-api.kalshi.co']
 
 /**
  * Thin, stateless relay for the user's OWN Kalshi requests. The BROWSER signs
@@ -14,16 +14,17 @@ const BASE = 'https://api.elections.kalshi.com'
  * signature the browser computed. Restricted to Kalshi's trade API.
  */
 export async function POST(req: NextRequest) {
-  let body: { method?: string; path?: string; query?: string; ts?: string; keyId?: string; sig?: string; payload?: unknown }
+  let body: { method?: string; path?: string; query?: string; ts?: string; keyId?: string; sig?: string; payload?: unknown; base?: string }
   try { body = await req.json() } catch { return NextResponse.json({ error: 'bad body' }, { status: 400 }) }
 
   const method = String(body.method || 'GET').toUpperCase()
   const path = String(body.path || '')
+  const base = ALLOWED_BASES.includes(body.base || '') ? body.base! : ALLOWED_BASES[0]
   if (!['GET', 'POST', 'DELETE'].includes(method)) return NextResponse.json({ error: 'method not allowed' }, { status: 400 })
   if (!path.startsWith('/trade-api/v2/')) return NextResponse.json({ error: 'path not allowed' }, { status: 400 })
   if (!body.keyId || !body.ts || !body.sig) return NextResponse.json({ error: 'missing auth headers' }, { status: 400 })
 
-  const url = BASE + path + (body.query ? `?${body.query}` : '')
+  const url = base + path + (body.query ? `?${body.query}` : '')
   const headers: Record<string, string> = {
     'KALSHI-ACCESS-KEY': body.keyId,
     'KALSHI-ACCESS-TIMESTAMP': body.ts,
