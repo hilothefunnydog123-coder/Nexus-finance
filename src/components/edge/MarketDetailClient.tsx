@@ -63,7 +63,7 @@ function NotFound({ msg }: { msg?: string }) {
     <div style={{ ...WRAP, textAlign: 'center', paddingTop: 'clamp(60px,12vw,120px)' }}>
       <div style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', fontWeight: 800, letterSpacing: '-0.02em', color: TXT }}>Market not found or no longer active</div>
       <div style={{ color: MUTE, marginTop: 12, fontSize: 14 }}>{msg || 'We couldn’t price this market right now.'}</div>
-      <Link href="/edge" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 24, fontFamily: MONO, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: CYAN, border: `1px solid ${CYAN}55`, padding: '10px 18px', textDecoration: 'none', borderRadius: 6 }}><ArrowLeft size={14} style={{ flexShrink: 0 }} /> Back to YN Edge</Link>
+      <Link href="/edge" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 24, fontFamily: MONO, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: CYAN, border: `1px solid ${CYAN}55`, padding: '10px 18px', textDecoration: 'none', borderRadius: 6 }}><ArrowLeft size={14} style={{ flexShrink: 0 }} /> Back to YnKalshi</Link>
     </div>
   )
 }

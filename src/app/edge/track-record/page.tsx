@@ -4,14 +4,14 @@ import { GREEN } from '@/components/edge/shared'
 import TrackRecordClient from '@/components/edge/TrackRecordClient'
 
 export const metadata: Metadata = {
-  title: 'YN Edge — Track Record',
+  title: 'YnKalshi — Portfolio & Track Record',
   description:
-    'We log our probability for every prediction market the moment we price it, then grade ourselves on settlement — public Brier score, calibration curve, and realized ROI of the picks we flagged worth it. Un-cherry-picked.',
+    "The BrainStock net's live Kalshi portfolio: an equity curve of every pick we flagged worth it, plus the public report card — Brier score, calibration curve, hit rate, and realized ROI. Un-cherry-picked.",
 }
 
 export default function EdgeTrackRecordPage() {
   return (
-    <DeskShell title="YN Edge · track record" accent={GREEN} back="/edge">
+    <DeskShell title="YnKalshi · portfolio & track record" accent={GREEN} back="/edge">
       <TrackRecordClient />
     </DeskShell>
   )

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import {
   VOID, PANEL, BORDER, CYAN, VIOLET, GREEN, RED, AMBER, TXT, MUTE, FAINT, MONO,
-  HeadToHead, WorthBadge, EngineBadge, Tag, Stat, PathRail, TextureBg,
+  HeadToHead, WorthBadge, EngineBadge, Tag, Stat, PathRail, TextureBg, KalshiLogo, KALSHI_GREEN,
   pct, signedPct, fmtNum, timeToClose, catColor, edgeAccent, useReducedMotion,
 } from '@/components/edge/shared'
 import { Filters, DEFAULT_FILTERS, applyFilters, type EdgeFilterState } from '@/components/edge/Filters'
@@ -120,7 +120,7 @@ export default function EdgeBoardClient() {
       <div style={{ marginTop: 'clamp(20px,3vw,30px)', paddingTop: 16, borderTop: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <PathRail active="board" />
         <Link href="/edge/track-record" style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: GREEN, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-          See how we score <ArrowRight size={13} style={{ flexShrink: 0 }} />
+          The net&apos;s portfolio &amp; track record <ArrowRight size={13} style={{ flexShrink: 0 }} />
         </Link>
       </div>
 
@@ -204,7 +204,11 @@ function Hero({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <ScanDot reduced={reduced} />
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: MONO, fontSize: 11, letterSpacing: '0.24em', textTransform: 'uppercase', color: CYAN }}>
-            <BrainCircuit size={15} style={{ flexShrink: 0 }} /> YN EDGE · LIVE PRICING
+            <BrainCircuit size={15} style={{ flexShrink: 0 }} /> YnKalshi · LIVE PRICING
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: KALSHI_GREEN, opacity: 0.9 }} title="Live markets from Kalshi">
+            <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: FAINT }}>data</span>
+            <KalshiLogo height={16} />
           </span>
           {!liveData && (
             <span
@@ -245,12 +249,14 @@ function Hero({
         </h1>
 
         <p style={{ margin: '16px 0 0', maxWidth: 660, color: TXT, fontSize: 'clamp(1.05rem,1.9vw,1.35rem)', fontWeight: 600, lineHeight: 1.4, letterSpacing: '-0.01em' }}>
-          The net prices every market. We show the ones worth betting.
+          We price every Kalshi market, find the edge, and size the bet.
         </p>
         <p style={{ margin: '10px 0 0', maxWidth: 640, color: MUTE, fontSize: 'clamp(.95rem,1.6vw,1.05rem)', lineHeight: 1.55 }}>
-          Our neural net and grounded AI price every prediction market, then we measure the gap
-          against the live price — the <span style={{ color: CYAN, fontWeight: 600 }}>edge</span>. Only the bets actually
-          worth taking make the board. Ranked. Graded in public.
+          The BrainStock neural net, grounded AI, and our statistical model price every live
+          <span style={{ color: KALSHI_GREEN, fontWeight: 600 }}> Kalshi</span> market, measure the gap
+          against the live price — the <span style={{ color: CYAN, fontWeight: 600 }}>edge</span> — then tell you
+          which side, how strong our conviction is, and <span style={{ color: GREEN, fontWeight: 600 }}>how much to risk</span> (½-Kelly).
+          Ranked. Graded in public.
         </p>
         {note && (
           <p style={{ margin: '8px 0 0', fontFamily: MONO, fontSize: 11, color: FAINT, letterSpacing: '0.04em' }}>{note}</p>

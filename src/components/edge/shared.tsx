@@ -57,7 +57,7 @@ export function timeToClose(closeISO: string): string {
 export function engineLabel(e: EdgeEngine): { label: string; color: string } {
   if (e === 'brainstock-nn') return { label: 'NEURAL NET', color: CYAN }
   if (e === 'gemini-grounded') return { label: 'GROUNDED AI', color: VIOLET }
-  return { label: 'BASELINE', color: FAINT }
+  return { label: 'STAT MODEL', color: GREEN }
 }
 
 export function catColor(cat: string): string {
@@ -71,6 +71,24 @@ export function catColor(cat: string): string {
     case 'Tech': return '#f472b6'
     default: return MUTE
   }
+}
+
+/** Kalshi wordmark — their mint-green brand. Rendered inline (no external asset)
+ *  so it always loads. Used to signal the live data source. */
+export const KALSHI_GREEN = '#00d29f'
+export function KalshiLogo({ height = 18 }: { height?: number }) {
+  return (
+    <svg viewBox="0 0 132 34" height={height} role="img" aria-label="Kalshi" style={{ display: 'block' }}>
+      {/* mark: a rounded square with an ascending bar motif */}
+      <rect x="1" y="1" width="32" height="32" rx="8" fill={KALSHI_GREEN} />
+      <g fill={VOID}>
+        <rect x="9" y="19" width="4" height="7" rx="1.5" />
+        <rect x="15" y="14" width="4" height="12" rx="1.5" />
+        <rect x="21" y="8" width="4" height="18" rx="1.5" />
+      </g>
+      <text x="42" y="25" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="24" fontWeight="800" letterSpacing="-0.5" fill="currentColor">Kalshi</text>
+    </svg>
+  )
 }
 
 // ── primitives ───────────────────────────────────────────────────────────────

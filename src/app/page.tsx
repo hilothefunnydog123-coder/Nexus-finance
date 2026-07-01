@@ -23,7 +23,7 @@ const LINE = 'rgba(10,10,12,.1)'
 const NAV = [
   { label: 'BrainStock', href: '/brainstock' },
   { label: 'Algorithms', href: '/algorithms' },
-  { label: 'YN Edge', href: '/edge' },
+  { label: 'YnKalshi', href: '/edge' },
   { label: 'Proof', href: '/proof' },
   { label: 'For Everyone', href: '/everyone' },
 ]
@@ -31,7 +31,7 @@ const NAV = [
 const PRODUCTS: { t: string; d: string; href: string; tag: string; Icon: LucideIcon }[] = [
   { t: 'BrainStock', d: 'A neural network forecasts hundreds of stocks every morning — then grades every call against real prices, in public.', href: '/brainstock', tag: 'The forecaster', Icon: BrainCircuit },
   { t: 'Algorithms', d: 'Research-grade, real-money-proven trading algorithms you paste straight into TradingView and run.', href: '/algorithms', tag: 'Real-money proven', Icon: LineChart },
-  { t: 'YN Edge', d: 'The net prices every Kalshi prediction market against the market itself — and surfaces the bets actually worth taking.', href: '/edge', tag: 'Find the edge', Icon: Target },
+  { t: 'YnKalshi', d: 'The net, grounded AI, and a statistical model price every Kalshi market, find the edge, and size the bet — ranked and graded in public.', href: '/edge', tag: 'Find the edge', Icon: Target },
   { t: 'AI Analyzer', d: 'A 15-second institutional read on any ticker — verdict, conviction, and the payoff math, in plain English.', href: '/ai-stocks', tag: 'The read', Icon: ScrollText },
   { t: 'Proof', d: 'The live track record: win rate, calibration, and every graded call — un-cherry-picked.', href: '/proof', tag: 'The receipts', Icon: ScrollText },
   { t: 'Copilot', d: 'A real AI agent that runs your TradingView chart with you — draws levels, writes and tests indicators.', href: '/copilot/desktop', tag: 'The agent', Icon: Bot },

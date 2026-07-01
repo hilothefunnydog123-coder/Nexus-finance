@@ -23,7 +23,7 @@ import { fetchBars, predictNext } from '@/lib/forecast'
 import { featurize, predict, type NNModel } from '@/lib/nn'
 import { loadTrainedModel } from '@/lib/nnStore'
 import type { EdgePricing, ForecastChartPoint, KalshiMarket } from './types'
-import { parseMarketTitle, matchUnderlying, businessDaysUntil } from './underlying'
+import { parseMarketTitle, businessDaysUntil } from './underlying'
 import { normCdf, clamp01, clamp } from './stats'
 
 // Many markets resolve to the SAME underlying (dozens of S&P / BTC strikes), so
@@ -286,20 +286,40 @@ export async function priceMarket(market: KalshiMarket, model: NNModel | null, s
     }
   }
 
-  // 3) Fallback → market-anchored prior, low confidence, with an HONEST reason.
-  //    In board mode we DON'T invent an edge (ynProb = the market's own price), so
-  //    real net-priced edges rank above the rest; the detail page forms the view.
-  const tradable = matchUnderlying(market.title)
-  const ynProb = opts.skipGemini ? market.yesPrice : clamp01(0.5 + (market.yesPrice - 0.5) * 0.85)
-  const reasoning = opts.skipGemini
-    ? `Listed at the market's own ${(market.yesPrice * 100).toFixed(0)}%. Open this market for a full AI-researched, cited probability and our edge.`
-    : tradable
-      ? `${tradable.name} price history was temporarily unavailable, so this is a transparent prior anchored to the ` +
-        `market's own ${(market.yesPrice * 100).toFixed(0)}% (mildly shrunk toward 50%). The neural net re-prices it ` +
-        `automatically once data is reachable.`
-      : `No tradable underlying and no live-search key available, so this is a transparent prior anchored to the ` +
-        `market's own ${(market.yesPrice * 100).toFixed(0)}% (mildly shrunk toward 50%). Add GEMINI_API_KEY for a researched, cited probability.`
-  return { ynProb, engine: 'baseline', confidence: opts.skipGemini ? 0.15 : 0.3, reasoning }
+  // 3) Statistical model — the board's default view for every non-tradable market
+  //    so EVERY row carries a real, explainable edge (not an echo of the market).
+  //    Prediction markets show a persistent favorite-longshot bias: the crowd
+  //    overpays for longshots and underpays clear favorites. We correct the market
+  //    price toward its calibrated value and let the worth-it math size the bet.
+  const model2 = statModelPrice(market)
+  return model2
+}
+
+/** Favorite-longshot-bias correction in logit space (β>1 steepens toward the
+ *  calibrated extremes). Documented inefficiency; transparent and deterministic. */
+function flbAdjust(marketProb: number, beta = 1.18): number {
+  const p = clamp(marketProb, 0.02, 0.98)
+  const logit = Math.log(p / (1 - p))
+  return clamp01(1 / (1 + Math.exp(-(beta * logit))))
+}
+
+/** Transparent statistical estimate + a plain-English strategy. Used for every
+ *  market the net/Gemini didn't price, so the board always shows a real edge. */
+function statModelPrice(market: KalshiMarket): EdgePricing {
+  const mkt = market.yesPrice
+  const ynProb = flbAdjust(mkt)
+  const diff = ynProb - mkt
+  const lean = diff >= 0 ? 'YES' : 'NO'
+  // Confidence: modest for a pure statistical prior, a touch higher when the
+  // market is liquid (a real, tradable price to lean against).
+  const liq = (market.volume ?? 0) + (market.openInterest ?? 0)
+  const confidence = clamp(0.34 + (liq > 5000 ? 0.1 : liq > 500 ? 0.05 : 0) + Math.min(0.12, Math.abs(diff) * 1.5), 0.3, 0.6)
+  const strat = Math.abs(diff) < 0.015
+    ? `The crowd's ${(mkt * 100).toFixed(0)}% looks fairly priced here — no statistical edge. Open for the full AI-researched read.`
+    : `Favorite-longshot model: the market's ${(mkt * 100).toFixed(0)}% is ${diff >= 0 ? 'under' : 'over'}-pricing this. We mark it to ` +
+      `${(ynProb * 100).toFixed(0)}%, a lean to ${lean}. Strategy: ${diff >= 0 ? 'back the favorite the crowd is sleeping on' : 'fade the longshot the crowd overpays for'}; ` +
+      `size it by the ½-Kelly stake below and cap risk per the prop rules. Open for the full AI-researched, cited read.`
+  return { ynProb, engine: 'baseline', confidence, reasoning: strat }
 }
 
 /** Convenience for routes/cron that need the trained model first. */

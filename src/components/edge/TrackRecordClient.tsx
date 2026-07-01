@@ -74,6 +74,7 @@ export default function TrackRecordClient() {
         ? <NotReady note={stats.note} />
         : (
           <>
+            <EquityCurve rows={stats.recent} reduced={reduced} />
             <Calibration data={stats.calibration} reduced={reduced} />
             <WorthItScoreboard stats={stats} />
             <RecentList rows={stats.recent} />
@@ -141,6 +142,74 @@ function Hero({ stats }: { stats: TrackStats }) {
 }
 
 const subRow: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5 }
+
+// ── EQUITY CURVE (the portfolio) ─────────────────────────────────────────────
+// Cumulative realized P&L per $1 staked on each WORTH-IT pick, in resolve order.
+// This is the net's Kalshi portfolio growth — up and to the right if the edge is real.
+function EquityCurve({ rows, reduced }: { rows: RecentRow[]; reduced: boolean }) {
+  const picks = rows
+    .filter((r) => r.worthIt && r.resolvedAt && Number.isFinite(r.pnl))
+    .sort((a, b) => new Date(a.resolvedAt!).getTime() - new Date(b.resolvedAt!).getTime())
+  if (picks.length < 2) return null
+  let cum = 0
+  const series = picks.map((r, i) => { cum += r.pnl; return { n: i + 1, equity: +cum.toFixed(3), title: r.title, pnl: r.pnl } })
+  const last = series[series.length - 1].equity
+  const peak = Math.max(...series.map((s) => s.equity))
+  const trough = Math.min(0, ...series.map((s) => s.equity))
+  const pos = last >= 0
+  const color = pos ? GREEN : RED
+  return (
+    <section style={{ marginTop: 'clamp(30px,5vw,52px)' }}>
+      <SectionHead
+        icon={<TrendingUp size={14} />}
+        kicker="// the portfolio"
+        title="The net's Kalshi equity curve"
+        blurb="Stake $1 on every pick we flag WORTH IT, in the order they settle. This is the cumulative realized P&L — the net's actual bankroll growth on Kalshi. Un-cherry-picked: every graded worth-it pick is in here, winners and losers."
+      />
+      <Panel glow={color} style={{ padding: 'clamp(16px,3vw,26px) clamp(8px,2vw,18px) clamp(12px,2vw,18px)' }}>
+        <div style={{ display: 'flex', gap: 'clamp(18px,4vw,44px)', flexWrap: 'wrap', marginBottom: 14, padding: '0 clamp(8px,1.5vw,12px)' }}>
+          <Stat label="net P&L / $1" value={`${pos ? '+' : ''}$${last.toFixed(2)}`} color={color} sub={<span style={subRow}><DollarSign size={11} /> across {picks.length} picks</span>} />
+          <Stat label="peak" value={`+$${peak.toFixed(2)}`} color={GREEN} sub={<span style={subRow}><TrendingUp size={11} /> best cumulative</span>} />
+          <Stat label="max drawdown" value={`$${trough.toFixed(2)}`} color={trough < 0 ? RED : MUTE} sub={<span style={subRow}><TrendingDown size={11} /> worst dip</span>} />
+        </div>
+        <div style={{ width: '100%', height: 300 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={series} margin={{ top: 12, right: 18, bottom: 24, left: 4 }}>
+              <defs>
+                <linearGradient id="ynk-eq" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke={BORDER} strokeDasharray="2 4" />
+              <XAxis dataKey="n" stroke={FAINT} tick={{ fill: MUTE, fontSize: 11, fontFamily: MONO }}
+                label={{ value: 'SETTLED PICKS →', position: 'insideBottom', offset: -12, fill: FAINT, fontSize: 10, fontFamily: MONO, letterSpacing: '0.12em' }} />
+              <YAxis stroke={FAINT} tick={{ fill: MUTE, fontSize: 11, fontFamily: MONO }} tickFormatter={(v: number) => `$${v.toFixed(0)}`} />
+              <ReferenceLine y={0} stroke={MUTE} strokeDasharray="5 5" />
+              <Tooltip cursor={{ stroke: color, strokeOpacity: 0.3 }} content={<EquityTip />} />
+              <Line type="monotone" dataKey="equity" stroke={color} strokeWidth={2.5} dot={false} isAnimationActive={!reduced} fill="url(#ynk-eq)" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </Panel>
+    </section>
+  )
+}
+
+function EquityTip({ active, payload }: { active?: boolean; payload?: { payload: { n: number; equity: number; title: string; pnl: number } }[] }) {
+  if (!active || !payload?.length) return null
+  const d = payload[0].payload
+  return (
+    <div style={{ background: VOID, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '10px 12px', maxWidth: 260 }}>
+      <div style={{ fontFamily: MONO, fontSize: 10, color: FAINT, letterSpacing: '0.1em' }}>PICK #{d.n}</div>
+      <div style={{ color: TXT, fontSize: 12.5, fontWeight: 600, margin: '4px 0', lineHeight: 1.3 }}>{d.title}</div>
+      <div style={{ fontFamily: MONO, fontSize: 12 }}>
+        <span style={{ color: d.pnl >= 0 ? GREEN : RED }}>{d.pnl >= 0 ? '+' : ''}${d.pnl.toFixed(2)}</span>
+        <span style={{ color: MUTE }}> · equity ${d.equity.toFixed(2)}</span>
+      </div>
+    </div>
+  )
+}
 
 // ── CALIBRATION (centerpiece) ────────────────────────────────────────────────
 function Calibration({ data, reduced }: { data: CalibPoint[]; reduced: boolean }) {
