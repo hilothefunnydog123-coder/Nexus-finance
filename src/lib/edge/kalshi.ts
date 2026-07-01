@@ -123,13 +123,16 @@ export async function kalshiBoardSelfTest() {
     withBook: number
     topBookByVolume: string[]
     sportsSample: string[]
-    rawSample: unknown[]
+    otherSample: string[]
+    rawSample: RawMarket[]
+    eventSample?: Record<string, unknown>[]
+    eventError?: string
     elapsedMs: number
     error?: string
   } = {
     credsParsed: !!creds,
     rawCount: 0, normalizedCount: 0, droppedNoTickerOrClose: 0, droppedCombo: 0, droppedNoPrice: 0,
-    pagesFetched: 0, live: false, categories: {}, bookCategories: {}, withVolume: 0, withBook: 0, topBookByVolume: [], sportsSample: [], rawSample: [], elapsedMs: 0,
+    pagesFetched: 0, live: false, categories: {}, bookCategories: {}, withVolume: 0, withBook: 0, topBookByVolume: [], sportsSample: [], otherSample: [], rawSample: [], elapsedMs: 0,
   }
   const started = Date.now()
   if (!creds) {
@@ -154,13 +157,13 @@ export async function kalshiBoardSelfTest() {
         throw e
       }
       out.pagesFetched++
-      // Capture the first few RAW market objects verbatim so we can see Kalshi's
-      // true field structure (title vs yes_sub_title vs book/volume).
-      if (!out.rawSample.length) out.rawSample = (data.markets || []).slice(0, 4)
       for (const r of data.markets || []) {
         out.rawCount++
         if (!r.ticker || !r.close_time) { out.droppedNoTickerOrClose++; continue }
         if (r.ticker.startsWith('KXMVE') || r.strike_type === 'custom' || r.is_provisional) { out.droppedCombo++; continue }
+        // Capture the first few REAL (non-combo) raw markets verbatim — this is the
+        // field structure the board actually works with (title/subtitle/event/book).
+        if (out.rawSample.length < 5) out.rawSample.push(r)
         const n = normalize(r)
         if (!n) { out.droppedNoPrice++; continue }
         collected.push({ m: n, ticker: r.ticker })
@@ -181,6 +184,19 @@ export async function kalshiBoardSelfTest() {
     for (const c of book) out.bookCategories[c.m.category] = (out.bookCategories[c.m.category] || 0) + 1
     out.topBookByVolume = book.slice(0, 12).map((c) => `[${c.m.category}] ${c.m.title.slice(0, 56)} — ${(c.m.yesPrice * 100).toFixed(0)}% · vol ${c.m.volume}`)
     out.sportsSample = book.filter((c) => c.m.category === 'Sports').slice(0, 10).map((c) => `${c.m.title.slice(0, 56)} — ${(c.m.yesPrice * 100).toFixed(0)}% · vol ${c.m.volume}`)
+    // Top "Other" markets with tickers — so miscategorizations can be mapped by prefix.
+    out.otherSample = book.filter((c) => c.m.category === 'Other').slice(0, 20).map((c) => `${c.ticker} | ev:${c.m.eventTicker || '?'} | ${c.m.title.slice(0, 50)}`)
+    // Probe the /events endpoint — it carries category + a clean event title,
+    // which would fix titles + categorization. Capture a couple non-MVE events
+    // (with nested markets) so we can see the schema before switching to it.
+    try {
+      const evq = new URLSearchParams({ status: 'open', limit: '40', with_nested_markets: 'true', ...windowParams })
+      const ev = await kalshiGet<{ events?: Record<string, unknown>[] }>(creds, `/events?${evq.toString()}`)
+      const real = (ev.events || []).filter((e) => !String(e.event_ticker || '').startsWith('KXMVE'))
+      out.eventSample = real.slice(0, 3)
+    } catch (e) {
+      out.eventError = e instanceof Error ? e.message : 'events probe failed'
+    }
     if (!collected.length) out.reason = `API returned ${out.rawCount} raw markets but normalize dropped all of them (noTickerOrClose=${out.droppedNoTickerOrClose}, noPrice=${out.droppedNoPrice})`
   } catch (e) {
     out.error = e instanceof Error ? e.message : 'request failed'
