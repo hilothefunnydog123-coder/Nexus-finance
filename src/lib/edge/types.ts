@@ -34,6 +34,7 @@ export interface KalshiMarket {
   closeTime: string              // ISO — when the market resolves
   status: 'active' | 'closed' | 'settled'
   liquidity?: number
+  hasBook?: boolean              // true if a real two-sided quote existed (a live price to beat)
   source: 'kalshi' | 'seed'      // where this row came from (seed = offline fallback)
 }
 

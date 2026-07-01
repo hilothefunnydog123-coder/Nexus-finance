@@ -27,5 +27,9 @@ export async function GET() {
     const cats = Object.entries(board.categories).map(([k, v]) => `${k}:${v}`).join(', ')
     diagnosis = `All good — the board pipeline produced ${board.normalizedCount} LIVE markets from ${board.rawCount} raw across ${board.pagesFetched} page(s) in ${board.elapsedMs}ms. Categories: ${cats}. If /edge still shows seed, it's a stale CDN/browser cache — hard-refresh (Cmd+Shift+R).`
   }
-  return NextResponse.json({ ...p, board, diagnosis }, { headers: { 'Cache-Control': 'no-store' } })
+  const geminiKey = !!process.env.GEMINI_API_KEY
+  return NextResponse.json(
+    { ...p, geminiKey, geminiNote: geminiKey ? 'GEMINI_API_KEY present — non-tradable markets get a real grounded edge.' : 'GEMINI_API_KEY MISSING — sports/politics/econ markets can only echo the market price (no edge). Add it in Netlify env.', board, diagnosis },
+    { headers: { 'Cache-Control': 'no-store' } }
+  )
 }

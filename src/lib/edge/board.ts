@@ -7,8 +7,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { NNModel } from '@/lib/nn'
 import { fetchActiveMarkets, type FetchOptions } from './kalshi'
 import { priceMarket, loadModelFor } from './pricing'
+import { matchUnderlying } from './underlying'
 import { computeVerdict, edgeScore } from './worth'
 import type { EdgeBoard, EdgeCategory, EdgeRow, KalshiMarket } from './types'
+
+// How many non-tradable markets get the (slower) Gemini-grounded edge per build.
+// Tradables are always net-priced; the rest are market-anchored. Bounded so the
+// board build stays comfortably under the serverless time limit.
+const GEMINI_BUDGET = 26
 
 async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length)
@@ -60,17 +66,33 @@ function pickBalanced(markets: KalshiMarket[], limit: number): KalshiMarket[] {
 }
 
 export async function buildBoard(opts: BuildOptions = {}): Promise<EdgeBoard> {
-  // Fetch a WIDE universe (so every category is available), then select a
-  // category-balanced display set down to the requested limit.
+  // Fetch a WIDE universe (so every category is available), then keep only
+  // boardworthy markets: a real price to beat (a live book, trades, or open
+  // interest). Anchored 0.5 no-book markets have no meaningful edge, so they'd
+  // just clutter the board at "50% · +0.0pt".
   const displayLimit = opts.limit ?? 150
   const { markets: universe, live, reason } = await fetchActiveMarkets({ ...opts, limit: Math.max(displayLimit, 1500) })
-  const markets = pickBalanced(universe, displayLimit)
+  let quality = universe.filter((m) => m.hasBook || m.volume > 0 || (m.openInterest ?? 0) > 0)
+  if (quality.length < 24) quality = universe // relax if the gate is too aggressive right now
+  const markets = pickBalanced(quality, displayLimit)
   const model = opts.model ?? (await loadModelFor(opts.admin ?? null))
 
-  // Board mode: price the whole universe cheaply (net for tradables + a fast prior
-  // for the rest). The detail page runs the full Gemini grounding on demand.
-  const rows = await mapLimit<KalshiMarket, EdgeRow>(markets, opts.concurrency ?? 8, async (market) => {
-    const pricing = await priceMarket(market, model, opts.signal, { skipGemini: true })
+  // Give the board a REAL edge: net-price every tradable underlying, and spend a
+  // bounded Gemini-grounding budget on the most liquid non-tradable markets so
+  // sports/politics/econ get a researched probability instead of echoing the
+  // market. Everything else is market-anchored (and sinks in the edge ranking).
+  const geminiSet = new Set(
+    markets
+      .filter((m) => m.hasBook && !matchUnderlying(m.title))
+      .sort((a, b) => b.volume - a.volume || (b.liquidity ?? 0) - (a.liquidity ?? 0))
+      .slice(0, GEMINI_BUDGET)
+      .map((m) => m.ticker)
+  )
+  // Cap total build time so a slow Gemini call can never hang the function.
+  const signal = opts.signal ?? (typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(40_000) : undefined)
+
+  const rows = await mapLimit<KalshiMarket, EdgeRow>(markets, opts.concurrency ?? 10, async (market) => {
+    const pricing = await priceMarket(market, model, signal, { skipGemini: !geminiSet.has(market.ticker) })
     const verdict = computeVerdict(market, pricing)
     return { market, pricing, verdict, pricedAt: new Date().toISOString() }
   })

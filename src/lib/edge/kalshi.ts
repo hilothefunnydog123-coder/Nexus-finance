@@ -268,13 +268,34 @@ function clamp01(x: number): number {
   return Math.max(0.01, Math.min(0.99, x))
 }
 
+/** A concatenated multi-leg / combo title ("yes Belgium advances,yes England
+ *  advances,…") — not a single binary question, so useless on an edge board. */
+function isCombinedTitle(t: string): boolean {
+  const commas = (t.match(/,/g) || []).length
+  const legs = (t.match(/\b(yes|no)\b/gi) || []).length
+  return commas >= 2 || legs >= 2 || t.length > 130
+}
+
+/** Turn a raw Kalshi title into a clean single-question title, or null to drop
+ *  it (combo/parlay markets that can't be priced as one binary outcome). */
+function cleanTitle(m: RawMarket): string | null {
+  let t = (m.title || '').trim()
+  if (!t || isCombinedTitle(t)) {
+    const sub = (m.yes_sub_title || m.subtitle || '').trim()
+    if (sub && !isCombinedTitle(sub)) t = sub
+    else return null // genuinely a combo market — not boardworthy
+  }
+  return t.replace(/^\s*(yes|no)\s+/i, '').trim() || null
+}
+
 function normalize(m: RawMarket): KalshiMarket | null {
   if (!m.ticker || !m.close_time) return null
-  // Derive a YES probability from whatever quote exists (cents). Be permissive so
-  // live markets with a one-sided book aren't dropped (an empty board → seed).
+  // Derive a YES probability from whatever quote exists (cents). Track whether a
+  // real two-sided book existed — an anchored 0.5 has no price to actually beat.
   let yes: number | null = null
   const bid = m.yes_bid, ask = m.yes_ask
-  if (bid != null && ask != null && (bid > 0 || ask > 0)) yes = (bid + ask) / 200
+  const hasBook = bid != null && ask != null && (bid > 0 || ask > 0)
+  if (hasBook) yes = (bid! + ask!) / 200
   else if (m.last_price != null && m.last_price > 0) yes = m.last_price / 100
   else if (ask != null && ask > 0) yes = ask / 100
   else if (bid != null && bid > 0) yes = bid / 100
@@ -283,7 +304,8 @@ function normalize(m: RawMarket): KalshiMarket | null {
   // collapse the whole board to the offline seed.
   if (yes == null || !Number.isFinite(yes)) yes = 0.5
   const yesPrice = clamp01(yes)
-  const title = m.title || m.subtitle || m.ticker
+  const title = cleanTitle(m)
+  if (!title) return null // drop concatenated combo/parlay markets
   return {
     ticker: m.ticker,
     eventTicker: m.event_ticker,
@@ -297,6 +319,7 @@ function normalize(m: RawMarket): KalshiMarket | null {
     closeTime: m.close_time,
     status: (m.status as KalshiMarket['status']) || 'active',
     liquidity: m.liquidity,
+    hasBook: hasBook || (m.last_price ?? 0) > 0,
     source: 'kalshi',
   }
 }
