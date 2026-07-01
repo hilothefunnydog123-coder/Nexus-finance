@@ -284,7 +284,7 @@ export default function TerminalClient() {
         if (ls.spent + cost > cfg.budget) { addLog('SYS', `budget ${money(cfg.budget)} reached — disarming`); setAuto(false); return }
         setFiring(true); setTimeout(() => setFiring(false), 600)
         addLog('FIRE', `LIVE FIRE ${side.toUpperCase()} ${cand.market.title.slice(0, 24)} @ ${(price * 100).toFixed(0)}¢`)
-        const r = await placeOrder(conn, cand.market.ticker, side, REAL_COUNT)
+        const r = await placeOrder(conn, cand.market.ticker, side, REAL_COUNT, 'buy', price)
         if (!r.ok) { addLog('SYS', `❌ rejected: ${errMsg(r)} — disarming`); setAuto(false); return }
         addLog('FILL', `LIVE FILLED ${side.toUpperCase()} ×${REAL_COUNT} — real order sent`)
         setLiveState((s) => ({ spent: +(s.spent + cost).toFixed(2), trades: s.trades + 1, positions: [{ id: cand.market.ticker + '-' + Date.now(), ticker: cand.market.ticker, title: cand.market.title, side, count: REAL_COUNT, entry: price, ts: Date.now() }, ...s.positions] }))
@@ -315,7 +315,7 @@ export default function TerminalClient() {
         const pnl = cur / clamp01(p.entry) - 1
         if (pnl >= TP || pnl <= -SL || Date.now() - p.ts > MAX_AGE) {
           setLiveState((s) => ({ ...s, positions: s.positions.filter((x) => x.id !== p.id) })) // optimistic — avoid double-close
-          const r = await placeOrder(conn, p.ticker, p.side, p.count, 'sell')
+          const r = await placeOrder(conn, p.ticker, p.side, p.count, 'sell', cur)
           addLog(pnl >= 0 ? 'TP' : 'SL', `LIVE CLOSE ${p.side.toUpperCase()} ${p.title.slice(0, 20)} · ${r.ok ? 'sold' : 'sell FAILED: ' + errMsg(r)}`)
           try { const [b, pp] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(pp) } catch { }
         }
@@ -334,11 +334,11 @@ export default function TerminalClient() {
   const killLive = useCallback(async () => {
     setAuto(false)
     const ps = liveRef.current.positions
-    if (conn && ps.length) { for (const p of ps) { try { await placeOrder(conn, p.ticker, p.side, p.count, 'sell') } catch { } } }
+    if (conn && ps.length) { for (const p of ps) { try { await placeOrder(conn, p.ticker, p.side, p.count, 'sell', priceOf(p.ticker, p.side === 'yes' ? 'YES' : 'NO') ?? undefined) } catch { } } }
     setLiveState((s) => ({ ...s, positions: [] }))
     addLog('SYS', '🛑 KILL — live auto disarmed' + (ps.length ? ' & flattened' : ''))
     try { if (conn) { const [b, p] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(p) } } catch { }
-  }, [conn, addLog])
+  }, [conn, addLog, priceOf])
 
   function resetPF() { setPf({ cash: START_BANK, positions: [], realized: 0 }); setSess({ trades: 0, wins: 0, pnl: 0 }); setEq([]) }
 
@@ -356,12 +356,13 @@ export default function TerminalClient() {
   const doDisconnect = useCallback(() => { clearConn(); setConn(null); setBal(null); setKpos([]); addLog('SYS', 'Kalshi disconnected') }, [addLog])
   const doPlaceReal = useCallback(async (row: Row, side: 'yes' | 'no', count: number): Promise<string | null> => {
     if (!conn) return 'Not connected.'
-    const r = await placeOrder(conn, row.market.ticker, side, count)
+    const price = priceOf(row.market.ticker, side === 'yes' ? 'YES' : 'NO') ?? undefined
+    const r = await placeOrder(conn, row.market.ticker, side, count, 'buy', price)
     if (!r.ok) { addLog('SYS', `❌ order rejected: ${errMsg(r)}`); return errMsg(r) }
     addLog('FILL', `REAL ${side.toUpperCase()} ×${count} ${row.market.title.slice(0, 24)} — sent to Kalshi`)
     try { const [b, p] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(p) } catch { }
     setOrderReq(null); return null
-  }, [conn, addLog])
+  }, [conn, addLog, priceOf])
 
   const selRow = rows.find((r) => r.market.ticker === sel) || rows[0]
   const sorted = useMemo(() => {

@@ -127,10 +127,21 @@ export async function getPositions(conn: KalshiConn): Promise<KPosition[]> {
   const d = r.data as { market_positions?: KPosition[] } | null
   return (d?.market_positions || []).filter((p) => p.position !== 0)
 }
-/** Place a REAL market order. side = 'yes'|'no', action = 'buy'|'sell' (sell closes). */
-export async function placeOrder(conn: KalshiConn, ticker: string, side: 'yes' | 'no', count: number, action: 'buy' | 'sell' = 'buy'): Promise<KResp> {
+/** Place a REAL order via the V2 endpoint. Kalshi deprecated bare market orders,
+ *  so we send a MARKETABLE LIMIT: priced to cross the book (fill now) but bounded
+ *  a few cents from the live price so it can never fill wildly. `priceProb` is the
+ *  current 0..1 price of OUR side; omit to cross fully. action 'sell' closes. */
+export async function placeOrder(conn: KalshiConn, ticker: string, side: 'yes' | 'no', count: number, action: 'buy' | 'sell' = 'buy', priceProb?: number): Promise<KResp> {
+  const field = side === 'yes' ? 'yes_price' : 'no_price'
+  let price: number
+  if (typeof priceProb === 'number' && Number.isFinite(priceProb)) {
+    const c = Math.round(Math.max(0.02, Math.min(0.98, priceProb)) * 100)
+    price = action === 'buy' ? Math.min(99, c + 2) : Math.max(1, c - 2) // cross by ~2¢
+  } else {
+    price = action === 'buy' ? 99 : 1 // fully marketable
+  }
   return kalshi(conn, 'POST', '/trade-api/v2/portfolio/orders', {
-    payload: { ticker, action, side, count, type: 'market', client_order_id: 'mx-' + Date.now() + '-' + Math.round(Math.random() * 1e6) },
+    payload: { ticker, action, side, count, type: 'limit', [field]: price, client_order_id: 'mx-' + Date.now() + '-' + Math.round(Math.random() * 1e6) },
   })
 }
 export function errMsg(r: KResp): string {
