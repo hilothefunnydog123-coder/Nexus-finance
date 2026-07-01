@@ -274,6 +274,9 @@ function Hero({
           <Link href="/edge/track-record" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: VOID, background: GREEN, padding: '9px 15px', borderRadius: 8, textDecoration: 'none', boxShadow: `0 0 24px ${GREEN}44` }}>
             <TrendingUp size={15} style={{ flexShrink: 0 }} /> See the live P&amp;L
           </Link>
+          <Link href="/terminal" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: TXT, background: 'transparent', padding: '9px 15px', borderRadius: 8, textDecoration: 'none', border: `1px solid ${BORDER}` }}>
+            <BrainCircuit size={15} style={{ flexShrink: 0 }} /> Get the desktop terminal
+          </Link>
         </div>
 
         {/* stat strip */}
