@@ -20,6 +20,15 @@ const BASE = 'https://api.elections.kalshi.com/trade-api/v2'
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
+// Focus the board on near-term markets. This also skips Kalshi's bulk of
+// far-dated multivariate "MVE" combo markets (they close weeks out), so we reach
+// the real, liquid single-game / daily markets within the time + rate-limit budget.
+const CLOSE_WINDOW_DAYS = 10
+function closeWindowParams(): Record<string, string> {
+  const nowSec = Math.floor(Date.now() / 1000)
+  return { min_close_ts: String(nowSec), max_close_ts: String(nowSec + CLOSE_WINDOW_DAYS * 86_400) }
+}
+
 export interface KalshiCreds {
   keyId: string
   privateKeyPem: string
@@ -103,6 +112,7 @@ export async function kalshiBoardSelfTest() {
     rawCount: number
     normalizedCount: number
     droppedNoTickerOrClose: number
+    droppedCombo: number
     droppedNoPrice: number
     pagesFetched: number
     live: boolean
@@ -118,7 +128,7 @@ export async function kalshiBoardSelfTest() {
     error?: string
   } = {
     credsParsed: !!creds,
-    rawCount: 0, normalizedCount: 0, droppedNoTickerOrClose: 0, droppedNoPrice: 0,
+    rawCount: 0, normalizedCount: 0, droppedNoTickerOrClose: 0, droppedCombo: 0, droppedNoPrice: 0,
     pagesFetched: 0, live: false, categories: {}, bookCategories: {}, withVolume: 0, withBook: 0, topBookByVolume: [], sportsSample: [], rawSample: [], elapsedMs: 0,
   }
   const started = Date.now()
@@ -131,8 +141,9 @@ export async function kalshiBoardSelfTest() {
     const collected: { m: KalshiMarket; ticker: string }[] = []
     let cursor = ''
     let retries = 0
+    const windowParams = closeWindowParams()
     for (let page = 0; page < 30 && Date.now() - started < 11_000; page++) {
-      const q = new URLSearchParams({ status: 'open', limit: '1000' })
+      const q = new URLSearchParams({ status: 'open', limit: '1000', ...windowParams })
       if (cursor) q.set('cursor', cursor)
       let data: { markets: RawMarket[]; cursor?: string }
       try {
@@ -149,6 +160,7 @@ export async function kalshiBoardSelfTest() {
       for (const r of data.markets || []) {
         out.rawCount++
         if (!r.ticker || !r.close_time) { out.droppedNoTickerOrClose++; continue }
+        if (r.ticker.startsWith('KXMVE') || r.strike_type === 'custom' || r.is_provisional) { out.droppedCombo++; continue }
         const n = normalize(r)
         if (!n) { out.droppedNoPrice++; continue }
         collected.push({ m: n, ticker: r.ticker })
@@ -220,7 +232,10 @@ interface RawMarket {
   subtitle?: string
   yes_sub_title?: string
   category?: string
-  last_price?: number       // cents (0..100)
+  close_time?: string
+  status?: string
+  // Legacy schema (integer cents / numbers).
+  last_price?: number
   yes_bid?: number
   yes_ask?: number
   no_bid?: number
@@ -228,8 +243,20 @@ interface RawMarket {
   volume?: number
   open_interest?: number
   liquidity?: number
-  close_time?: string
-  status?: string
+  // Current elections-API schema: decimal-dollar / fixed-point STRINGS (0..1 range).
+  last_price_dollars?: string
+  yes_bid_dollars?: string
+  yes_ask_dollars?: string
+  no_bid_dollars?: string
+  no_ask_dollars?: string
+  volume_fp?: string
+  volume_24h_fp?: string
+  open_interest_fp?: string
+  liquidity_dollars?: string
+  // Combo / parlay markers — these are multivariate "MVE" markets we exclude.
+  strike_type?: string
+  is_provisional?: boolean
+  mve_selected_legs?: unknown[]
 }
 
 // Kalshi series-ticker prefixes are the most reliable signal (the elections API
@@ -311,20 +338,49 @@ function cleanTitle(m: RawMarket): string {
   return (t.length > 120 ? `${t.slice(0, 117)}…` : t) || m.ticker
 }
 
+/** Parse a Kalshi numeric field that may be a number (legacy cents) or a decimal
+ *  string in dollars ("0.5410"). `scale` converts legacy cents → 0..1. */
+function pnum(dollarStr?: string, legacy?: number, scale = 1): number | undefined {
+  if (dollarStr != null && dollarStr !== '') {
+    const n = parseFloat(dollarStr)
+    if (Number.isFinite(n)) return n
+  }
+  if (legacy != null && Number.isFinite(legacy)) return legacy * scale
+  return undefined
+}
+
+/** A multivariate/parlay ("MVE") combo market — a bundle of legs, not a single
+ *  binary question. Kalshi bulk-creates tens of thousands; they're not boardworthy. */
+function isComboMarket(m: RawMarket): boolean {
+  return (
+    m.strike_type === 'custom' ||
+    m.is_provisional === true ||
+    m.ticker.startsWith('KXMVE') ||
+    (m.event_ticker || '').startsWith('KXMVE') ||
+    (Array.isArray(m.mve_selected_legs) && m.mve_selected_legs.length > 0)
+  )
+}
+
 function normalize(m: RawMarket): KalshiMarket | null {
   if (!m.ticker || !m.close_time) return null
-  // Derive a YES probability from whatever quote exists (cents). Track whether a
-  // real two-sided book existed — an anchored 0.5 has no price to actually beat.
+  if (isComboMarket(m)) return null // drop parlay/combo bundles
+
+  // Prices: current API returns decimal-DOLLAR strings (0..1); legacy was cents.
+  const yesBid = pnum(m.yes_bid_dollars, m.yes_bid, 0.01)
+  const yesAsk = pnum(m.yes_ask_dollars, m.yes_ask, 0.01)
+  const last = pnum(m.last_price_dollars, m.last_price, 0.01)
+  const volume = pnum(m.volume_fp, m.volume) ?? 0
+  const openInterest = pnum(m.open_interest_fp, m.open_interest)
+  const liquidity = pnum(m.liquidity_dollars, m.liquidity)
+
+  const hasBook = yesBid != null && yesAsk != null && (yesBid > 0 || yesAsk > 0)
   let yes: number | null = null
-  const bid = m.yes_bid, ask = m.yes_ask
-  const hasBook = bid != null && ask != null && (bid > 0 || ask > 0)
-  if (hasBook) yes = (bid! + ask!) / 200
-  else if (m.last_price != null && m.last_price > 0) yes = m.last_price / 100
-  else if (ask != null && ask > 0) yes = ask / 100
-  else if (bid != null && bid > 0) yes = bid / 100
-  // An open market with an empty book still belongs on the board — anchor it at a
-  // 50/50 prior rather than dropping it, so a run of illiquid markets can never
-  // collapse the whole board to the offline seed.
+  if (hasBook) yes = (yesBid! + yesAsk!) / 2
+  else if (last != null && last > 0) yes = last
+  else if (yesAsk != null && yesAsk > 0) yes = yesAsk
+  else if (yesBid != null && yesBid > 0) yes = yesBid
+  // Empty-book market → anchor at 0.5 so the board never collapses to seed, but
+  // hasBook=false marks it so the board can exclude fabricated prices.
   if (yes == null || !Number.isFinite(yes)) yes = 0.5
   const yesPrice = clamp01(yes)
   const title = cleanTitle(m)
@@ -336,12 +392,12 @@ function normalize(m: RawMarket): KalshiMarket | null {
     category: categorize(title, m.category, `${m.ticker} ${m.event_ticker || ''}`),
     yesPrice,
     noPrice: +(1 - yesPrice).toFixed(4),
-    volume: m.volume ?? 0,
-    openInterest: m.open_interest,
+    volume,
+    openInterest,
     closeTime: m.close_time,
     status: (m.status as KalshiMarket['status']) || 'active',
-    liquidity: m.liquidity,
-    hasBook: hasBook || (m.last_price ?? 0) > 0,
+    liquidity,
+    hasBook: hasBook || (last ?? 0) > 0,
     source: 'kalshi',
   }
 }
@@ -391,8 +447,9 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
     // small pages back-to-back. Throttle between pages and retry a 429 with
     // backoff rather than bailing. Time-bounded to stay under the function limit.
     let retries = 0
+    const windowParams = closeWindowParams()
     for (let page = 0; page < 30; page++) {
-      const q = new URLSearchParams({ status: 'open', limit: '1000' })
+      const q = new URLSearchParams({ status: 'open', limit: '1000', ...windowParams })
       if (cursor) q.set('cursor', cursor)
       let data: { markets: RawMarket[]; cursor?: string }
       try {
