@@ -106,16 +106,17 @@ export async function kalshiBoardSelfTest() {
     live: boolean
     reason?: string
     categories: Record<string, number>
+    bookCategories: Record<string, number>
     withVolume: number
-    topByVolume: string[]
-    otherTickers: string[]
-    sampleTitles: string[]
+    withBook: number
+    topBookByVolume: string[]
+    sportsSample: string[]
     elapsedMs: number
     error?: string
   } = {
     credsParsed: !!creds,
     rawCount: 0, normalizedCount: 0, droppedNoTickerOrClose: 0, droppedNoPrice: 0,
-    pagesFetched: 0, live: false, categories: {}, withVolume: 0, topByVolume: [], otherTickers: [], sampleTitles: [], elapsedMs: 0,
+    pagesFetched: 0, live: false, categories: {}, bookCategories: {}, withVolume: 0, withBook: 0, topBookByVolume: [], sportsSample: [], elapsedMs: 0,
   }
   const started = Date.now()
   if (!creds) {
@@ -126,7 +127,7 @@ export async function kalshiBoardSelfTest() {
   try {
     const collected: { m: KalshiMarket; ticker: string }[] = []
     let cursor = ''
-    for (let page = 0; page < 20 && Date.now() - started < 12_000; page++) {
+    for (let page = 0; page < 150 && Date.now() - started < 11_000; page++) {
       const q = new URLSearchParams({ status: 'open', limit: '100' })
       if (cursor) q.set('cursor', cursor)
       const data = await kalshiGet<{ markets: RawMarket[]; cursor?: string }>(creds, `/markets?${q.toString()}`)
@@ -145,10 +146,14 @@ export async function kalshiBoardSelfTest() {
     out.normalizedCount = collected.length
     out.live = collected.length > 0
     out.withVolume = collected.filter((c) => c.m.volume > 0).length
+    // The board only shows markets with a REAL book — these counts are what
+    // actually reaches the board, per category.
+    const book = collected.filter((c) => c.m.hasBook)
+    out.withBook = book.length
     for (const c of collected) out.categories[c.m.category] = (out.categories[c.m.category] || 0) + 1
-    out.topByVolume = collected.slice(0, 12).map((c) => `[${c.m.category}] ${c.ticker} · ${c.m.title.slice(0, 60)} — ${(c.m.yesPrice * 100).toFixed(0)}% · vol ${c.m.volume}`)
-    out.otherTickers = collected.filter((c) => c.m.category === 'Other').slice(0, 20).map((c) => c.ticker)
-    out.sampleTitles = collected.slice(0, 12).map((c) => `[${c.m.category}] ${c.m.title}`)
+    for (const c of book) out.bookCategories[c.m.category] = (out.bookCategories[c.m.category] || 0) + 1
+    out.topBookByVolume = book.slice(0, 12).map((c) => `[${c.m.category}] ${c.m.title.slice(0, 56)} — ${(c.m.yesPrice * 100).toFixed(0)}% · vol ${c.m.volume}`)
+    out.sportsSample = book.filter((c) => c.m.category === 'Sports').slice(0, 10).map((c) => `${c.m.title.slice(0, 56)} — ${(c.m.yesPrice * 100).toFixed(0)}% · vol ${c.m.volume}`)
     if (!collected.length) out.reason = `API returned ${out.rawCount} raw markets but normalize dropped all of them (noTickerOrClose=${out.droppedNoTickerOrClose}, noPrice=${out.droppedNoPrice})`
   } catch (e) {
     out.error = e instanceof Error ? e.message : 'request failed'
@@ -364,10 +369,11 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
     // limit, so cap pages + elapsed time. Sorted by volume after — the most active
     // markets surface first. A failed page mid-stream keeps what we already have.
     const started = Date.now()
-    // Kalshi paginates fast (~40ms/page), so pull a wide universe to make sure the
-    // liquid + tradable markets (which carry the real edge) are in the set, then
-    // sort by volume below. Still time-bounded well under the function limit.
-    for (let page = 0; page < 25 && collected.length < 2500; page++) {
+    // Pull the FULL open universe. Kalshi paginates fast (~40ms/page), and the
+    // liquid, actually-traded markets (the ones with a real book and a real price)
+    // are scattered through it — a small slice of the default order is mostly
+    // illiquid combo legs. Time-bounded so the build stays under the function limit.
+    for (let page = 0; page < 150; page++) {
       const q = new URLSearchParams({ status: 'open', limit: '100' })
       if (cursor) q.set('cursor', cursor)
       let data: { markets: RawMarket[]; cursor?: string }
@@ -382,7 +388,7 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
         if (n) collected.push(n)
       }
       cursor = data.cursor || ''
-      if (!cursor || Date.now() - started > 9_000) break
+      if (!cursor || Date.now() - started > 11_000) break
     }
     if (!collected.length) throw new Error('no markets returned')
     collected.sort((a, b) => b.volume - a.volume)

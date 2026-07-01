@@ -71,9 +71,13 @@ export async function buildBoard(opts: BuildOptions = {}): Promise<EdgeBoard> {
   // interest). Anchored 0.5 no-book markets have no meaningful edge, so they'd
   // just clutter the board at "50% · +0.0pt".
   const displayLimit = opts.limit ?? 150
-  const { markets: universe, live, reason } = await fetchActiveMarkets({ ...opts, limit: Math.max(displayLimit, 1500) })
-  let quality = universe.filter((m) => m.hasBook || m.volume > 0 || (m.openInterest ?? 0) > 0)
-  if (quality.length < 24) quality = universe // relax if the gate is too aggressive right now
+  const { markets: universe, live, reason } = await fetchActiveMarkets({ ...opts, limit: 100_000 })
+  // STRICT: only markets with a REAL price to beat (a live book or actual
+  // trading). We never display a fabricated 0.5 as "the market" — that's
+  // meaningless and misleading. Sorted by volume upstream, so the liquid,
+  // actually-traded markets come first.
+  let quality = universe.filter((m) => m.hasBook)
+  if (quality.length < 20) quality = universe.filter((m) => m.volume > 0 || (m.openInterest ?? 0) > 0)
   const markets = pickBalanced(quality, displayLimit)
   const model = opts.model ?? (await loadModelFor(opts.admin ?? null))
 
