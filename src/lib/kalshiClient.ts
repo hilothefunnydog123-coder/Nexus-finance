@@ -144,16 +144,20 @@ export async function placeOrder(conn: KalshiConn, ticker: string, side: 'yes' |
   const bookSide = wantBid ? 'bid' : 'ask'
   const yp = typeof yesPrice === 'number' && Number.isFinite(yesPrice) ? Math.max(0.02, Math.min(0.98, yesPrice)) : 0.5
   const px = wantBid ? Math.min(0.99, yp + 0.05) : Math.max(0.01, yp - 0.05) // generous cross → IOC fills at the real market price, not the limit
-  return kalshi(conn, 'POST', '/trade-api/v2/portfolio/events/orders', {
-    payload: {
-      ticker,
-      client_order_id: 'mx-' + Date.now() + '-' + Math.round(Math.random() * 1e6),
-      side: bookSide,
-      count: String(count),
-      price: px.toFixed(4),
-      time_in_force: 'immediate_or_cancel',
-    },
-  })
+  // V2 wants FIXED-POINT strings: count "1.00", price "0.5500" — and
+  // self_trade_prevention_type is required. reduce_only on closes stops an
+  // over-sized exit from flipping into a fresh position on the other side.
+  const payload: Record<string, unknown> = {
+    ticker,
+    client_order_id: (crypto as { randomUUID?: () => string }).randomUUID?.() ?? 'mx-' + Date.now() + '-' + Math.round(Math.random() * 1e6),
+    side: bookSide,
+    count: count.toFixed(2),
+    price: px.toFixed(4),
+    time_in_force: 'immediate_or_cancel',
+    self_trade_prevention_type: 'taker_at_cross',
+  }
+  if (action === 'sell') payload.reduce_only = true
+  return kalshi(conn, 'POST', '/trade-api/v2/portfolio/events/orders', { payload })
 }
 export function errMsg(r: KResp): string {
   if (r.error) return r.error
