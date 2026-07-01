@@ -335,6 +335,8 @@ const PIPELINE: { icon: LucideIcon; t: string; d: string; ms: string }[] = [
 // ════════════════════════════════════════════════════════════════════════════
 export default function TerminalClient() {
   const reduced = useReducedMotion()
+  const [modalOS, setModalOS] = useState<string | null>(null)
+  const openModal = (os: string) => setModalOS(os)
   return (
     <main style={{ background: C.bg, color: C.ink, minHeight: '100vh', fontFamily: C.sans, overflowX: 'hidden' }}>
       <style>{`
@@ -355,9 +357,9 @@ export default function TerminalClient() {
             <CircuitBoard size={16} style={{ color: C.green }} /> YnKalshi<span style={{ color: C.green }}>Terminal</span>
           </span>
           <div style={{ marginLeft: 'auto', display: 'inline-flex', gap: 10 }}>
-            <a href="#download" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: C.mono, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.bg, background: C.green, padding: '8px 14px', borderRadius: 8, textDecoration: 'none', boxShadow: `0 0 22px ${C.green}44` }}>
+            <button type="button" onClick={() => openModal(detectOS())} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: C.mono, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.bg, background: C.green, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', boxShadow: `0 0 22px ${C.green}44` }}>
               <Download size={14} /> Download
-            </a>
+            </button>
           </div>
         </div>
       </div>
@@ -376,8 +378,8 @@ export default function TerminalClient() {
               through Kalshi&apos;s official API — reacting to the news before slower, browser-bound traders can even refresh.
             </p>
             <div id="download" style={{ marginTop: 'clamp(22px,3vw,30px)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <DownloadBtn os="macOS" sub="Apple Silicon · Universal" />
-              <DownloadBtn os="Windows" sub="x64 · 10/11" />
+              <DownloadBtn os="macOS" sub="Apple Silicon · Universal" onOpen={openModal} />
+              <DownloadBtn os="Windows" sub="x64 · 10/11" onOpen={openModal} />
             </div>
             <div style={{ marginTop: 16, display: 'flex', gap: 18, flexWrap: 'wrap', fontFamily: C.mono, fontSize: 10.5, letterSpacing: '0.08em', color: C.faint }}>
               <span><ShieldCheck size={12} style={{ color: C.emerald, verticalAlign: '-2px' }} /> Notarized &amp; code-signed</span>
@@ -555,8 +557,8 @@ export default function TerminalClient() {
             Free to download. Connect your own Kalshi account, set your risk, and let the cortex work the tape.
           </p>
           <div style={{ marginTop: 28, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <DownloadBtn os="macOS" sub="Apple Silicon · Universal" />
-            <DownloadBtn os="Windows" sub="x64 · 10/11" />
+            <DownloadBtn os="macOS" sub="Apple Silicon · Universal" onOpen={openModal} />
+            <DownloadBtn os="Windows" sub="x64 · 10/11" onOpen={openModal} />
           </div>
           <p style={{ margin: '22px auto 0', maxWidth: 640, fontFamily: C.mono, fontSize: 10.5, lineHeight: 1.7, color: C.faint, letterSpacing: '0.03em' }}>
             Trades only public data through Kalshi&apos;s official API on your own account. Not financial advice; event contracts carry risk of
@@ -565,20 +567,86 @@ export default function TerminalClient() {
           </p>
         </div>
       </section>
+      {modalOS && <BetaModal os={modalOS} onClose={() => setModalOS(null)} />}
     </main>
   )
 }
 
 // ── download button ────────────────────────────────────────────────────────────
-function DownloadBtn({ os, sub }: { os: string; sub: string }) {
+function detectOS(): string {
+  if (typeof navigator === 'undefined') return 'macOS'
+  const s = `${navigator.platform} ${navigator.userAgent}`.toLowerCase()
+  if (s.includes('win')) return 'Windows'
+  return 'macOS'
+}
+function DownloadBtn({ os, sub, onOpen }: { os: string; sub: string; onOpen: (os: string) => void }) {
+  const primary = os === 'macOS'
   return (
-    <a href="#" style={{ display: 'inline-flex', alignItems: 'center', gap: 12, textDecoration: 'none', background: os === 'macOS' ? C.green : C.panel, color: os === 'macOS' ? C.bg : C.ink, border: `1px solid ${os === 'macOS' ? C.green : C.line}`, borderRadius: 12, padding: '13px 20px', boxShadow: os === 'macOS' ? `0 0 26px ${C.green}44` : 'none' }}>
+    <button type="button" onClick={() => onOpen(os)} style={{ display: 'inline-flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left', background: primary ? C.green : C.panel, color: primary ? C.bg : C.ink, border: `1px solid ${primary ? C.green : C.line}`, borderRadius: 12, padding: '13px 20px', boxShadow: primary ? `0 0 26px ${C.green}44` : 'none' }}>
       <Download size={20} style={{ flexShrink: 0 }} />
-      <span style={{ textAlign: 'left' }}>
+      <span>
         <span style={{ display: 'block', fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em' }}>Download for {os}</span>
         <span style={{ display: 'block', fontFamily: C.mono, fontSize: 10, letterSpacing: '0.06em', opacity: 0.8 }}>{sub}</span>
       </span>
-    </a>
+    </button>
+  )
+}
+
+// ── beta-access modal (real waitlist capture) ──────────────────────────────────
+function BetaModal({ os, onClose }: { os: string; onClose: () => void }) {
+  const [email, setEmail] = useState('')
+  const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
+  const [err, setErr] = useState('')
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  async function submit() {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setErr('Enter a valid email.'); return }
+    setState('sending'); setErr('')
+    try {
+      const res = await fetch('/api/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), tickers: ['TERMINAL'] }) })
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || 'Something went wrong.') }
+      setState('done')
+    } catch (e) { setState('error'); setErr(e instanceof Error ? e.message : 'Something went wrong.') }
+  }
+  return (
+    <div role="dialog" aria-modal onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'grid', placeItems: 'center', background: 'rgba(4,6,8,.72)', backdropFilter: 'blur(6px)', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', width: 'min(440px, 94vw)', background: C.bg, border: `1px solid ${C.green}33`, borderRadius: 16, padding: 'clamp(22px,4vw,30px)', boxShadow: `0 0 80px ${C.green}18`, overflow: 'hidden' }}>
+        <span aria-hidden style={{ position: 'absolute', top: 0, left: 20, right: 20, height: 1, background: `linear-gradient(90deg, transparent, ${C.green}, transparent)` }} />
+        <button type="button" onClick={onClose} aria-label="Close" style={{ position: 'absolute', top: 12, right: 14, background: 'transparent', border: 'none', color: C.faint, fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>×</button>
+        {state === 'done' ? (
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <div style={{ display: 'inline-grid', placeItems: 'center', width: 52, height: 52, borderRadius: 14, background: `${C.green}16`, border: `1px solid ${C.green}44`, color: C.green, marginBottom: 14 }}><ShieldCheck size={26} /></div>
+            <h3 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 800, color: C.ink }}>You&apos;re on the list.</h3>
+            <p style={{ margin: 0, color: C.dim, fontSize: 14, lineHeight: 1.6 }}>We&apos;ll email your <b style={{ color: C.ink }}>{os}</b> build link the moment the private beta opens. Keep an eye on <b style={{ color: C.green }}>{email}</b>.</p>
+            <button type="button" onClick={onClose} style={{ marginTop: 20, fontFamily: C.mono, fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.bg, background: C.green, border: 'none', borderRadius: 9, padding: '11px 20px', cursor: 'pointer' }}>Done</button>
+          </div>
+        ) : (
+          <>
+            <Kicker><LockKeyhole size={13} /> Private beta · {os}</Kicker>
+            <h3 style={{ margin: '12px 0 6px', fontSize: 'clamp(1.3rem,3vw,1.6rem)', fontWeight: 800, letterSpacing: '-0.02em', color: C.ink }}>Request early access</h3>
+            <p style={{ margin: '0 0 18px', color: C.dim, fontSize: 14, lineHeight: 1.55 }}>
+              The Terminal is rolling out in a controlled private beta. Drop your email and we&apos;ll send your signed
+              <b style={{ color: C.ink }}> {os}</b> build + activation key as soon as your slot opens.
+            </p>
+            <input
+              type="email" value={email} autoFocus
+              onChange={(e) => { setEmail(e.target.value); if (err) setErr('') }}
+              onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
+              placeholder="you@email.com"
+              style={{ width: '100%', boxSizing: 'border-box', background: C.deep, border: `1px solid ${err ? C.red : C.line}`, borderRadius: 10, color: C.ink, fontSize: 15, padding: '13px 15px', outline: 'none', fontFamily: C.sans }}
+            />
+            {err && <div style={{ color: C.red, fontSize: 12.5, marginTop: 8, fontFamily: C.mono }}>{err}</div>}
+            <button type="button" onClick={submit} disabled={state === 'sending'} style={{ width: '100%', marginTop: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9, fontWeight: 800, fontSize: 15, color: C.bg, background: C.green, border: 'none', borderRadius: 10, padding: '14px', cursor: state === 'sending' ? 'default' : 'pointer', opacity: state === 'sending' ? 0.7 : 1, boxShadow: `0 0 26px ${C.green}44` }}>
+              <Download size={18} /> {state === 'sending' ? 'Requesting…' : 'Get my beta build'}
+            </button>
+            <p style={{ margin: '12px 0 0', fontFamily: C.mono, fontSize: 10, color: C.faint, letterSpacing: '0.04em', textAlign: 'center' }}>No spam · unsubscribe anytime · keys stay on your device</p>
+          </>
+        )}
+      </div>
+    </div>
   )
 }
 
