@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 
 const KAL_GREEN = '#00d29f' // Kalshi brand mint
+const APP_FILE = '/YnKalshi-Terminal.html' // the real, downloadable standalone build
 
 // ── palette ───────────────────────────────────────────────────────────────────
 const C = {
@@ -357,9 +358,9 @@ export default function TerminalClient() {
             <CircuitBoard size={16} style={{ color: C.green }} /> YnKalshi<span style={{ color: C.green }}>Terminal</span>
           </span>
           <div style={{ marginLeft: 'auto', display: 'inline-flex', gap: 10 }}>
-            <button type="button" onClick={() => openModal(detectOS())} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: C.mono, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.bg, background: C.green, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', boxShadow: `0 0 22px ${C.green}44` }}>
+            <a href={APP_FILE} download="YnKalshi-Terminal.html" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: C.mono, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.bg, background: C.green, padding: '8px 14px', borderRadius: 8, textDecoration: 'none', boxShadow: `0 0 22px ${C.green}44` }}>
               <Download size={14} /> Download
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -378,8 +379,8 @@ export default function TerminalClient() {
               through Kalshi&apos;s official API — reacting to the news before slower, browser-bound traders can even refresh.
             </p>
             <div id="download" style={{ marginTop: 'clamp(22px,3vw,30px)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <DownloadBtn os="macOS" sub="Apple Silicon · Universal" onOpen={openModal} />
-              <DownloadBtn os="Windows" sub="x64 · 10/11" onOpen={openModal} />
+              <DownloadApp />
+              <NativeBtn onOpen={openModal} />
             </div>
             <div style={{ marginTop: 16, display: 'flex', gap: 18, flexWrap: 'wrap', fontFamily: C.mono, fontSize: 10.5, letterSpacing: '0.08em', color: C.faint }}>
               <span><ShieldCheck size={12} style={{ color: C.emerald, verticalAlign: '-2px' }} /> Notarized &amp; code-signed</span>
@@ -557,8 +558,8 @@ export default function TerminalClient() {
             Free to download. Connect your own Kalshi account, set your risk, and let the cortex work the tape.
           </p>
           <div style={{ marginTop: 28, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <DownloadBtn os="macOS" sub="Apple Silicon · Universal" onOpen={openModal} />
-            <DownloadBtn os="Windows" sub="x64 · 10/11" onOpen={openModal} />
+            <DownloadApp />
+            <NativeBtn onOpen={openModal} />
           </div>
           <p style={{ margin: '22px auto 0', maxWidth: 640, fontFamily: C.mono, fontSize: 10.5, lineHeight: 1.7, color: C.faint, letterSpacing: '0.03em' }}>
             Trades only public data through Kalshi&apos;s official API on your own account. Not financial advice; event contracts carry risk of
@@ -572,21 +573,34 @@ export default function TerminalClient() {
   )
 }
 
-// ── download button ────────────────────────────────────────────────────────────
+// ── download buttons ────────────────────────────────────────────────────────────
 function detectOS(): string {
   if (typeof navigator === 'undefined') return 'macOS'
   const s = `${navigator.platform} ${navigator.userAgent}`.toLowerCase()
   if (s.includes('win')) return 'Windows'
   return 'macOS'
 }
-function DownloadBtn({ os, sub, onOpen }: { os: string; sub: string; onOpen: (os: string) => void }) {
-  const primary = os === 'macOS'
+/** The REAL download — the standalone Terminal app. Downloads instantly, opens in
+ *  its own window, runs offline, and pulls the live board when online. */
+function DownloadApp() {
   return (
-    <button type="button" onClick={() => onOpen(os)} style={{ display: 'inline-flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left', background: primary ? C.green : C.panel, color: primary ? C.bg : C.ink, border: `1px solid ${primary ? C.green : C.line}`, borderRadius: 12, padding: '13px 20px', boxShadow: primary ? `0 0 26px ${C.green}44` : 'none' }}>
+    <a href={APP_FILE} download="YnKalshi-Terminal.html" style={{ display: 'inline-flex', alignItems: 'center', gap: 12, textDecoration: 'none', background: C.green, color: C.bg, border: `1px solid ${C.green}`, borderRadius: 12, padding: '13px 20px', boxShadow: `0 0 26px ${C.green}44` }}>
       <Download size={20} style={{ flexShrink: 0 }} />
+      <span style={{ textAlign: 'left' }}>
+        <span style={{ display: 'block', fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em' }}>Download the Terminal</span>
+        <span style={{ display: 'block', fontFamily: C.mono, fontSize: 10, letterSpacing: '0.06em', opacity: 0.85 }}>Standalone · runs on macOS · Windows · Linux</span>
+      </span>
+    </a>
+  )
+}
+/** Secondary: the signed native installer (still in private beta → waitlist). */
+function NativeBtn({ onOpen }: { onOpen: (os: string) => void }) {
+  return (
+    <button type="button" onClick={() => onOpen(detectOS())} style={{ display: 'inline-flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left', background: C.panel, color: C.ink, border: `1px solid ${C.line}`, borderRadius: 12, padding: '13px 20px' }}>
+      <Boxes size={20} style={{ flexShrink: 0, color: C.green }} />
       <span>
-        <span style={{ display: 'block', fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em' }}>Download for {os}</span>
-        <span style={{ display: 'block', fontFamily: C.mono, fontSize: 10, letterSpacing: '0.06em', opacity: 0.8 }}>{sub}</span>
+        <span style={{ display: 'block', fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em' }}>Native installer</span>
+        <span style={{ display: 'block', fontFamily: C.mono, fontSize: 10, letterSpacing: '0.06em', opacity: 0.8 }}>signed .dmg / .exe · private beta</span>
       </span>
     </button>
   )

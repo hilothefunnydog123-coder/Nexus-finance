@@ -43,10 +43,22 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(
       { ...board, rows: rows.map(slimRow) },
-      { headers: { 'Cache-Control': 'no-store' } }
+      { headers: { 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' } }
     )
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
-    return NextResponse.json({ error: `Could not build edge board: ${msg}`, rows: [], meta: null }, { status: 502 })
+    return NextResponse.json({ error: `Could not build edge board: ${msg}`, rows: [], meta: null }, { status: 502, headers: { 'Access-Control-Allow-Origin': '*' } })
   }
+}
+
+// Allow the downloadable standalone Terminal (opened from file://) to read the board.
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  })
 }

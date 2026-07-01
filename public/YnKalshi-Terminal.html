@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>YnKalshi Terminal</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230D0F12'/><g fill='%232be86a'><rect x='8' y='18' width='4' height='7' rx='1.5'/><rect x='14' y='12' width='4' height='13' rx='1.5'/><rect x='20' y='7' width='4' height='18' rx='1.5'/></g></svg>" />
+<style>
+  :root{
+    --bg:#0D0F12; --deep:#08090b; --panel:rgba(255,255,255,.022);
+    --line:rgba(120,255,170,.10); --ink:#e9f5ee; --dim:#7f8c84; --faint:#4a564e;
+    --green:#2be86a; --lime:#b6ff3a; --emerald:#10d98a; --red:#ff5a6a; --amber:#ffd23a;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
+  #app{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
+  /* header */
+  header{display:flex;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid var(--line);background:rgba(13,15,18,.7);backdrop-filter:blur(8px)}
+  .brand{display:inline-flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.02em}
+  .brand svg{display:block}
+  .brand .k{color:var(--green)}
+  .pill{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);display:inline-flex;align-items:center;gap:7px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 1.6s infinite}
+  .dot.off{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  header .spacer{margin-left:auto}
+  .clock{font-family:var(--mono);font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+  /* main */
+  main{display:grid;grid-template-columns:340px 1fr;min-height:0}
+  @media(max-width:820px){main{grid-template-columns:1fr}#hub-col{display:none}}
+  #hub-col{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  #hub-wrap{position:relative;height:300px;flex:0 0 auto}
+  #hub{width:100%;height:100%;display:block}
+  .hublabel{position:absolute;left:14px;top:12px;font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--green);text-transform:uppercase}
+  .hubstat{position:absolute;right:14px;top:12px;font-family:var(--mono);font-size:10px;color:var(--faint)}
+  #feed{flex:1 1 auto;overflow:auto;padding:6px 0}
+  .feedrow{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);animation:fade .5s ease both}
+  .feedrow .ic{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-size:13px}
+  .feedrow .t{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .feedrow .c{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase}
+  .feedrow .p{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--green);text-align:right}
+  @keyframes fade{from{opacity:0;transform:translateY(-6px)}to{opacity:1}}
+  /* board */
+  #board{overflow:auto;padding:16px clamp(12px,2vw,22px) 22px;min-height:0}
+  .boardhead{display:flex;align-items:baseline;gap:12px;margin:2px 4px 14px;flex-wrap:wrap}
+  .boardhead h1{margin:0;font-size:15px;font-weight:800;letter-spacing:-.01em}
+  .boardhead .sub{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:13px}
+  .card{position:relative;background:linear-gradient(168deg,rgba(43,232,106,.05),var(--panel) 46%);border:1px solid var(--line);border-radius:14px;padding:15px;overflow:hidden}
+  .card.good{border-color:rgba(43,232,106,.4);box-shadow:0 0 22px rgba(43,232,106,.10)}
+  .card .top{display:flex;align-items:center;gap:8px;margin-bottom:9px;flex-wrap:wrap}
+  .tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:5px}
+  .eng{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border:1px solid var(--line);padding:3px 7px;border-radius:5px}
+  .title{font-size:14.5px;font-weight:700;line-height:1.26;min-height:38px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:11px}
+  .slip{display:flex;align-items:center;gap:8px;background:var(--deep);border-radius:9px;padding:9px 11px;margin-bottom:11px}
+  .bet{font-family:var(--mono);font-size:12px;font-weight:800;letter-spacing:.05em;color:var(--bg);padding:4px 9px;border-radius:6px;text-transform:uppercase}
+  .odds{font-family:var(--mono);font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+  .pay{margin-left:auto;text-align:right;font-family:var(--mono)}
+  .pay b{display:block;font-size:12.5px;color:var(--green)}
+  .pay span{display:block;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .bars{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+  .barrow{display:flex;align-items:center;gap:9px}
+  .barrow .lab{width:46px;text-align:right;font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--faint)}
+  .bar{position:relative;flex:1;height:18px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .bar>i{position:absolute;inset:0;border-radius:3px}
+  .bar>b{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:11px;font-weight:700}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .stat{background:var(--deep);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+  .stat b{font-family:var(--mono);font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums}
+  .stat span{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-top:3px}
+  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .worth{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.08em;padding:3px 9px;border-radius:5px}
+  /* footer */
+  footer{padding:8px 18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--faint);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  footer .spacer{margin-left:auto}
+  a{color:var(--green);text-decoration:none}
+  .empty{color:var(--dim);padding:40px;text-align:center;font-size:14px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="brand">
+      <svg width="20" height="20" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#111"/><g fill="#2be86a"><rect x="8" y="18" width="4" height="7" rx="1.5"/><rect x="14" y="12" width="4" height="13" rx="1.5"/><rect x="20" y="7" width="4" height="18" rx="1.5"/></g></svg>
+      YnKalshi<span class="k">Terminal</span>
+    </span>
+    <span class="pill"><span class="dot" id="statdot"></span><span id="statlabel">connecting…</span></span>
+    <span class="spacer"></span>
+    <span class="clock" id="clock">--:--:--</span>
+  </header>
+  <main>
+    <div id="hub-col">
+      <div id="hub-wrap">
+        <canvas id="hub"></canvas>
+        <div class="hublabel">◉ CORTEX ONLINE</div>
+        <div class="hubstat" id="hubstat">idle</div>
+      </div>
+      <div id="feed"></div>
+    </div>
+    <div id="board">
+      <div class="boardhead">
+        <h1>Live edge board · AI vs the Kalshi market</h1>
+        <span class="sub" id="boardmeta">loading…</span>
+      </div>
+      <div class="grid" id="grid"><div class="empty">Warming up the cortex…</div></div>
+    </div>
+  </main>
+  <footer>
+    <span>YnKalshi Terminal · standalone build</span>
+    <span id="src">data: —</span>
+    <span class="spacer"></span>
+    <span>Public data · not financial advice · <a href="https://ynfinance.org/edge" target="_blank" rel="noopener">ynfinance.org</a></span>
+  </footer>
+</div>
+
+<script>
+const API_BASE = 'https://ynfinance.org';
+const $ = (s)=>document.querySelector(s);
+
+// ── clock ───────────────────────────────────────────────────────────────
+setInterval(()=>{ $('#clock').textContent = new Date().toLocaleTimeString('en-US',{hour12:false}); }, 1000);
+
+// ── gambler math ────────────────────────────────────────────────────────
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+function american(price){ const q=clamp(price,.01,.99); const a=q>=.5?-Math.round(100*q/(1-q)):Math.round(100*(1-q)/q); return a>=0?'+'+a:''+a; }
+function profit100(price){ return 100*(1/clamp(price,.01,.99)-1); }
+function money(n){ return '$'+(Math.abs(n)>=1000?(n/1000).toFixed(1)+'k':Math.round(n)); }
+
+// ── category glyphs ─────────────────────────────────────────────────────
+const CAT={
+  Sports:['🏆','#2be86a'],Financials:['📈','#7dffb0'],Crypto:['₿','#ffd23a'],
+  Economics:['🏛','#10d98a'],Politics:['⚖','#8bffd0'],Weather:['⚡','#5cf2ff'],
+  Tech:['🧠','#b6ff3a'],World:['🌐','#8bffd0'],Culture:['🎬','#ff9ad2'],Other:['◆','#7f8c84']
+};
+function catOf(c){ return CAT[c]||CAT.Other; }
+
+// ── demo fallback (works fully offline) ─────────────────────────────────
+const DEMO={ meta:{marketCount:6,worthItCount:3,liveData:false}, rows:[
+  mk('Will BTC close above $70,000 today?','Crypto','YES',.63,.55,.74,'brainstock-nn',14300,true),
+  mk('Fed cuts rates before the September FOMC?','Economics','YES',.66,.58,.71,'gemini-grounded',9800,true),
+  mk('Lakers vs Celtics — Lakers win?','Sports','NO',.44,.47,.42,'baseline',2400,false),
+  mk('WTI crude settles above $82 Friday?','Financials','YES',.71,.62,.77,'brainstock-nn',6100,true),
+  mk('NYC daily high ≥ 92°F?','Weather','NO',.58,.63,.55,'baseline',1200,false),
+  mk('S&P 500 closes green today?','Financials','YES',.57,.52,.60,'brainstock-nn',34400,false),
+]};
+function mk(title,category,side,marketProb,yesPrice,ynProb,engine,volume,worthIt){
+  const edge=Math.abs(ynProb-yesPrice);
+  return {market:{title,category,yesPrice,volume,closeTime:new Date(Date.now()+864e5*7).toISOString()},
+    pricing:{ynProb,engine},
+    verdict:{side,marketProb,ynProb:side==='YES'?ynProb:1-ynProb,edge,evPerDollar:ynProb/marketProb-1,halfKelly:clamp(edge/(1-marketProb)*.5,0,.25),confidence:.5,worthIt}};
+}
+
+// ── neural hub (canvas) ─────────────────────────────────────────────────
+(function(){
+  const cv=$('#hub'), ctx=cv.getContext('2d'); let W,H,dpr,nodes=[],edges=[],pings=[],flares=[],frame=0,acc=0,last=0;
+  let seed=1337; const rng=()=>{seed|=0;seed=(seed+0x6d2b79f5)|0;let t=Math.imul(seed^seed>>>15,1|seed);t=(t+Math.imul(t^t>>>7,61|t))^t;return((t^t>>>14)>>>0)/4294967296;};
+  function inBrain(nx,ny){const yy=ny*1.15;const L=((nx+.42)/.62)**2+(yy/.92)**2;const R=((nx-.42)/.62)**2+(yy/.92)**2;if(L<1)return 0;if(R<1)return 1;return -1;}
+  function build(){const r=cv.getBoundingClientRect();dpr=Math.min(2,devicePixelRatio||1);W=r.width;H=r.height;cv.width=W*dpr|0;cv.height=H*dpr|0;ctx.setTransform(dpr,0,0,dpr,0,0);
+    const cx=W/2,cy=H/2,sc=Math.min(W,H)*.46;nodes=[];seed=1337;let g=0;
+    while(nodes.length<46&&g++<4000){const nx=rng()*2-1,ny=rng()*2-1,lb=inBrain(nx,ny);if(lb<0)continue;nodes.push({x:cx+nx*sc,y:cy+ny*sc*.92,r:1.4+rng()*2.6,base:.35+rng()*.4,lobe:lb,ph:rng()*6.28});}
+    edges=[];for(let i=0;i<nodes.length;i++){const d=nodes.map((n,j)=>({j,d:(n.x-nodes[i].x)**2+(n.y-nodes[i].y)**2})).filter(o=>o.j!==i).sort((a,b)=>a.d-b.d).slice(0,3);for(const o of d)if(o.j>i)edges.push([i,o.j]);}}
+  function ping(){if(edges.length)pings.push({e:rng()*edges.length|0,t:0,sp:.012+rng()*.03,h:rng()});}
+  function flare(){flares.push({lobe:rng()>.5?0:1,t:0});}
+  window.hubFlare=()=>{flare();for(let i=0;i<6;i++)ping();};
+  function draw(now){frame++;if(!last)last=now;const dt=Math.min(48,now-last);last=now;acc+=dt;ctx.clearRect(0,0,W,H);
+    const gr=ctx.createRadialGradient(W/2,H/2,10,W/2,H/2,Math.max(W,H)*.6);gr.addColorStop(0,'rgba(43,232,106,.05)');gr.addColorStop(1,'rgba(13,15,18,0)');ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
+    if(acc>240){acc=0;if(rng()>.35)ping();if(rng()>.93)flare();}
+    flares=flares.filter(f=>{f.t+=dt/900;return f.t<1;});
+    for(const[a,b]of edges){ctx.strokeStyle='rgba(120,255,170,'+(.05+.03*Math.sin(frame/40+a))+')';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(nodes[a].x,nodes[a].y);ctx.lineTo(nodes[b].x,nodes[b].y);ctx.stroke();}
+    pings=pings.filter(p=>{p.t+=p.sp*(dt/16);if(p.t>=1)return false;const[a,b]=edges[p.e],na=nodes[a],nb=nodes[b],x=na.x+(nb.x-na.x)*p.t,y=na.y+(nb.y-na.y)*p.t,col=p.h>.6?'182,255,58':'43,232,106';ctx.fillStyle='rgba('+col+',.95)';ctx.shadowColor='rgba('+col+',.9)';ctx.shadowBlur=12;ctx.beginPath();ctx.arc(x,y,2.4,0,6.28);ctx.fill();ctx.shadowBlur=0;return true;});
+    for(const n of nodes){const lf=flares.reduce((m,f)=>f.lobe===n.lobe?Math.max(m,Math.sin(f.t*Math.PI)):m,0);const pu=n.base+.35*(.5+.5*Math.sin(frame/22+n.ph));const a=Math.min(1,pu+lf*.7);ctx.fillStyle='rgba(200,255,220,'+a+')';ctx.shadowColor='rgba(43,232,106,'+a+')';ctx.shadowBlur=8+lf*22;ctx.beginPath();ctx.arc(n.x,n.y,n.r*(1+lf*.9),0,6.28);ctx.fill();ctx.shadowBlur=0;}
+    requestAnimationFrame(draw);}
+  build();requestAnimationFrame(draw);addEventListener('resize',build);
+})();
+
+// ── render board ────────────────────────────────────────────────────────
+function engLabel(e){return e==='brainstock-nn'?['NEURAL NET','#2be86a']:e==='gemini-grounded'?['GROUNDED AI','#b6ff3a']:['STAT MODEL','#10d98a'];}
+function timeToClose(iso){const ms=new Date(iso)-Date.now();if(ms<=0)return'closed';const d=ms/864e5|0;if(d>=1)return d+'d';const h=ms/36e5|0;return h>=1?h+'h':(ms/6e4|0)+'m';}
+function card(r){
+  const m=r.market,p=r.pricing,v=r.verdict,[glyph,ccol]=catOf(m.category),[el,ecol]=engLabel(p.engine);
+  const sideCol=v.side==='YES'?'#2be86a':'#ff5a6a';
+  const price=v.marketProb, odds=american(price), pf=profit100(price), stake=(v.halfKelly||0)*1000;
+  const aiYes=Math.round((p.ynProb)*100), mkYes=Math.round(m.yesPrice*100);
+  const edgePct=(v.edge*100).toFixed(1);
+  return `<div class="card ${v.worthIt?'good':''}">
+    <div class="top">
+      <span class="tag" style="color:${ccol};background:${ccol}14;border:1px solid ${ccol}40">${glyph} ${m.category}</span>
+      <span class="eng" style="color:${ecol};border-color:${ecol}40">${el}</span>
+    </div>
+    <div class="title">${esc(m.title)}</div>
+    <div class="slip">
+      <span class="bet" style="background:${sideCol}">BET ${v.side}</span>
+      <span class="odds">${odds}</span>
+      <span class="pay"><b>$100 → $${Math.round(100+pf)}</b><span>if it hits</span></span>
+    </div>
+    <div class="bars">
+      <div class="barrow"><span class="lab">OUR AI</span><span class="bar"><i style="width:${clamp(aiYes,2,100)}%;background:linear-gradient(90deg,#22d3eecc,#22d3ee)"></i><b>${aiYes}%</b></span></div>
+      <div class="barrow"><span class="lab">MARKET</span><span class="bar"><i style="width:${clamp(mkYes,2,100)}%;background:#8a93a855"></i><b>${mkYes}%</b></span></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b style="color:${v.edge>=0?'#2be86a':'#ff5a6a'}">${v.edge>=0?'+':''}${edgePct}pt</b><span>Edge</span></div>
+      <div class="stat"><b style="color:${v.evPerDollar>=0?'#2be86a':'#ff5a6a'}">${v.evPerDollar>=0?'+':''}${money(v.evPerDollar*100)}</b><span>EV /$100</span></div>
+      <div class="stat"><b style="color:#22d3ee">${money(stake)}</b><span>Stake /$1k</span></div>
+    </div>
+    <div class="foot">
+      <span>⏱ ${timeToClose(m.closeTime)} · ${fmtVol(m.volume)} vol</span>
+      <span class="worth" style="color:${v.worthIt?'#04140c':'#7f8c84'};background:${v.worthIt?'#2be86a':'transparent'};border:1px solid ${v.worthIt?'#2be86a':'#4a564e'}">${v.worthIt?'WORTH IT':'PASS'}</span>
+    </div>
+  </div>`;
+}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function fmtVol(n){n=n||0;return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3|0)+'k':''+Math.round(n);}
+
+function renderFeed(rows){
+  const el=$('#feed'); el.innerHTML='';
+  rows.slice(0,10).forEach(r=>{const[g,c]=catOf(r.market.category);const d=document.createElement('div');d.className='feedrow';
+    d.innerHTML=`<span class="ic" style="color:${c};background:${c}14">${g}</span>
+      <span><span class="t">${esc(r.market.title)}</span><span class="c" style="color:${c}">${r.market.category} · BET ${r.verdict.side}</span></span>
+      <span class="p">${Math.round(r.pricing.ynProb*100)}%</span>`;
+    el.appendChild(d);});
+}
+
+// ── data loop ───────────────────────────────────────────────────────────
+async function load(){
+  try{
+    const res=await fetch(API_BASE+'/api/edge/markets?limit=24',{cache:'no-store'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(!data||!Array.isArray(data.rows)||!data.rows.length)throw new Error('empty');
+    paint(data,true);
+  }catch(e){
+    paint(DEMO,false);
+  }
+}
+function paint(data,live){
+  const rows=(data.rows||[]).slice().sort((a,b)=>(b.verdict.worthIt-a.verdict.worthIt)||(b.verdict.edge-a.verdict.edge));
+  $('#grid').innerHTML = rows.length?rows.map(card).join(''):'<div class="empty">No markets right now.</div>';
+  renderFeed(rows);
+  const m=data.meta||{};
+  $('#boardmeta').textContent=`${rows.length} markets · ${rows.filter(r=>r.verdict.worthIt).length} worth it`;
+  $('#statdot').className='dot'+(live?'':' off');
+  $('#statlabel').textContent=live?'live · kalshi':'offline demo';
+  $('#src').textContent='data: '+(live?'ynfinance.org (live)':'built-in demo');
+  $('#hubstat').textContent=live?'ingesting · live':'demo mode';
+  if(window.hubFlare)window.hubFlare();
+}
+load();
+setInterval(load,30000);
+</script>
+</body>
+</html>
