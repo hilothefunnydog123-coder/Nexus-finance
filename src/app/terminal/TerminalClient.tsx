@@ -34,7 +34,16 @@ const KAL_GREEN = '#00d29f'
 const START_BANK = 1000
 const REAL_COUNT = 1 // contracts per real order (kept tiny; you confirm each one)
 const TICKET = 40          // $ per auto ticket
-const TP = 0.07, SL = 0.05, MAX_AGE = 150000, MAX_OPEN = 6  // scalp rules (real prices move slower → longer hold)
+// Patient value rules (churning every few seconds just feeds fees). Hold for the
+// edge to realize; only take positions that clear real transaction costs.
+const TP = 0.14, SL = 0.09, MAX_AGE = 360000, MAX_OPEN = 5
+const KFEE = 0.07          // Kalshi trading-fee coefficient
+const HALF_SPREAD = 0.01   // assumed cost of crossing half the spread, per side ($/contract)
+const NET_MIN = 0.02       // require ≥ 2pt of edge AFTER costs before firing
+/** Round-trip transaction cost in price points: Kalshi fee (both sides) + spread. */
+function roundTripCost(p: number) { const q = Math.max(0.02, Math.min(0.98, p)); return 2 * KFEE * q * (1 - q) + 2 * HALF_SPREAD }
+/** Our raw edge minus what it costs to get in and out. This is the honest number. */
+function netEdgeOf(v: { edge: number; marketProb: number }) { return v.edge - roundTripCost(v.marketProb) }
 
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x))
 const clamp01 = (x: number) => clamp(x, 0.02, 0.98)
@@ -267,8 +276,8 @@ export default function TerminalClient() {
         const ls = liveRef.current, cfg = liveCfg.current
         if (ls.trades >= cfg.maxTrades) { addLog('SYS', `trade cap ${cfg.maxTrades} hit — disarming`); setAuto(false); return }
         const open = new Set(ls.positions.map((x) => x.ticker))
-        const cand = rs.filter((r) => (r.verdict.worthIt || r.verdict.edge >= 0.03) && !open.has(r.market.ticker)).sort((a, b) => b.verdict.edge - a.verdict.edge)[0]
-        if (!cand) { addLog('SCAN', 'no fresh edge — standing down'); return }
+        const cand = rs.filter((r) => netEdgeOf(r.verdict) >= NET_MIN && !open.has(r.market.ticker)).sort((a, b) => netEdgeOf(b.verdict) - netEdgeOf(a.verdict))[0]
+        if (!cand) { addLog('SCAN', 'nothing clears fees + spread — standing down (this is the point)'); return }
         const side = cand.verdict.side.toLowerCase() as 'yes' | 'no'
         const price = clamp01(priceOf(cand.market.ticker, cand.verdict.side) ?? cand.verdict.marketProb)
         const cost = price * REAL_COUNT
@@ -285,9 +294,9 @@ export default function TerminalClient() {
         addLog('SCAN', `scanning ${rs.length} markets · consensus tick`)
         const open = new Set(p.positions.map((x) => x.ticker))
         if (p.positions.length >= MAX_OPEN) { addLog('SYS', `holding ${p.positions.length}/${MAX_OPEN} — waiting for exits`); return }
-        if (p.cash < TICKET) { addLog('SYS', 'bankroll exhausted — reset to keep scalping'); return }
-        const cand = rs.filter((r) => (r.verdict.worthIt || r.verdict.edge >= 0.03) && !open.has(r.market.ticker)).sort((a, b) => b.verdict.edge - a.verdict.edge)[0]
-        if (!cand) { addLog('SYS', 'no fresh edge ≥ 3pt — standing down'); return }
+        if (p.cash < TICKET) { addLog('SYS', 'bankroll exhausted — reset to keep trading'); return }
+        const cand = rs.filter((r) => netEdgeOf(r.verdict) >= NET_MIN && !open.has(r.market.ticker)).sort((a, b) => netEdgeOf(b.verdict) - netEdgeOf(a.verdict))[0]
+        if (!cand) { addLog('SCAN', `nothing clears costs (need ${(NET_MIN * 100).toFixed(0)}pt net) — standing down`); return }
         setFiring(true); setTimeout(() => setFiring(false), 600)
         addLog('FIRE', `FIRE ${cand.verdict.side} ${cand.market.title.slice(0, 30)} @ ${american(cand.verdict.marketProb)} · +${(cand.verdict.edge * 100).toFixed(1)}pt`)
         const entry = buy(cand, cand.verdict.side, TICKET, true)
@@ -357,7 +366,7 @@ export default function TerminalClient() {
   const selRow = rows.find((r) => r.market.ticker === sel) || rows[0]
   const sorted = useMemo(() => {
     let rs = rows; if (worthOnly) rs = rs.filter((r) => r.verdict.worthIt)
-    return [...rs].sort((a, b) => sortKey === 'vol' ? b.market.volume - a.market.volume : sortKey === 'conf' ? b.verdict.confidence - a.verdict.confidence : b.verdict.edge - a.verdict.edge)
+    return [...rs].sort((a, b) => sortKey === 'vol' ? b.market.volume - a.market.volume : sortKey === 'conf' ? b.verdict.confidence - a.verdict.confidence : netEdgeOf(b.verdict) - netEdgeOf(a.verdict))
   }, [rows, sortKey, worthOnly])
   const worthCount = rows.filter((r) => r.verdict.worthIt).length
 
@@ -528,6 +537,7 @@ function BoardRow({ row, live, held, active, onClick }: { row: Row; live: number
   const v = row.verdict, [g, c] = catOf(row.market.category)
   const sideCol = v.side === 'YES' ? C.green : C.red
   const liveP = Math.round(live * 100), mkt = Math.round(row.market.yesPrice * 100), moved = liveP - mkt
+  const net = netEdgeOf(v)
   return (
     <div className="mx-row" onClick={onClick} style={{ cursor: 'pointer', display: 'grid', gridTemplateColumns: '1fr 78px 60px 52px', gap: 10, alignItems: 'center', padding: '9px 14px', borderBottom: `1px solid ${C.line}`, background: active ? `${C.green}0c` : held ? `${C.cyan}08` : 'transparent', borderLeft: `2px solid ${active ? C.green : held ? C.cyan : 'transparent'}` }}>
       <span style={{ minWidth: 0 }}>
@@ -538,13 +548,13 @@ function BoardRow({ row, live, held, active, onClick }: { row: Row; live: number
         <span style={{ display: 'block', fontSize: 13, fontWeight: 800, color: C.cyan }}>{liveP}¢</span>
         <span style={{ fontSize: 8.5, color: moved > 0 ? C.green : moved < 0 ? C.red : C.faint }}>{moved > 0 ? '▲' : moved < 0 ? '▼' : '·'}{Math.abs(moved)} live</span>
       </span>
-      <span style={{ textAlign: 'right', fontFamily: C.mono }}>
-        <span style={{ display: 'block', fontSize: 12.5, fontWeight: 800, color: v.edge >= 0.03 ? C.green : C.dim }}>+{(v.edge * 100).toFixed(1)}</span>
-        <span style={{ fontSize: 8, color: C.faint }}>EDGE</span>
+      <span style={{ textAlign: 'right', fontFamily: C.mono }} title={`raw edge +${(v.edge * 100).toFixed(1)}pt · costs ${(roundTripCost(v.marketProb) * 100).toFixed(1)}pt`}>
+        <span style={{ display: 'block', fontSize: 12.5, fontWeight: 800, color: net >= NET_MIN ? C.green : net > 0 ? C.amber : C.dim }}>{net >= 0 ? '+' : ''}{(net * 100).toFixed(1)}</span>
+        <span style={{ fontSize: 8, color: C.faint }}>NET EDGE</span>
       </span>
       <span style={{ textAlign: 'center' }}>
         <span style={{ fontFamily: C.mono, fontSize: 11, fontWeight: 800, color: sideCol }}>{v.side}</span>
-        <span style={{ display: 'block', fontFamily: C.mono, fontSize: 8, color: v.worthIt ? C.green : C.faint }}>{v.worthIt ? '● BET' : 'pass'}</span>
+        <span style={{ display: 'block', fontFamily: C.mono, fontSize: 8, color: net >= NET_MIN ? C.green : C.faint }}>{net >= NET_MIN ? '● TAKE' : 'pass'}</span>
       </span>
     </div>
   )
@@ -563,8 +573,14 @@ function Detail({ row, live, onBuy, connected, onReal }: { row: Row; live: numbe
       <div style={{ padding: '11px 15px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: C.line, borderBottom: `1px solid ${C.line}` }}>
         <Cell v={`${Math.round(row.pricing.ynProb * 100)}%`} k="Consensus" c={C.cyan} />
         <Cell v={`${Math.round(row.market.yesPrice * 100)}%`} k="Market" c={C.dim} />
-        <Cell v={`${v.edge >= 0 ? '+' : ''}${(v.edge * 100).toFixed(1)}pt`} k="Edge" c={v.edge >= 0.03 ? C.green : C.dim} />
+        <Cell v={`${v.edge >= 0 ? '+' : ''}${(v.edge * 100).toFixed(1)}pt`} k="Raw edge" c={v.edge >= 0.03 ? C.green : C.dim} />
       </div>
+      {(() => { const net = netEdgeOf(v); const take = net >= NET_MIN; return (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 15px', borderBottom: `1px solid ${C.line}`, background: take ? `${C.green}0c` : 'transparent' }}>
+          <span style={{ fontFamily: C.mono, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.faint }}>Net edge · after fees + spread ({(roundTripCost(v.marketProb) * 100).toFixed(1)}pt cost)</span>
+          <span style={{ fontFamily: C.mono, fontSize: 15, fontWeight: 800, color: take ? C.green : net > 0 ? C.amber : C.red }}>{net >= 0 ? '+' : ''}{(net * 100).toFixed(1)}pt · {take ? 'TAKE' : 'SKIP'}</span>
+        </div>
+      ) })()}
       <div style={{ padding: '11px 15px', borderBottom: `1px solid ${C.line}` }}>
         <div style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.faint, marginBottom: 8 }}>Agent votes · {cons.yesN}Y / {cons.noN}N · spread {(cons.spread * 100).toFixed(0)}pt</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
