@@ -20,15 +20,6 @@ const BASE = 'https://api.elections.kalshi.com/trade-api/v2'
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
-// Focus the board on near-term markets. This also skips Kalshi's bulk of
-// far-dated multivariate "MVE" combo markets (they close weeks out), so we reach
-// the real, liquid single-game / daily markets within the time + rate-limit budget.
-const CLOSE_WINDOW_DAYS = 10
-function closeWindowParams(): Record<string, string> {
-  const nowSec = Math.floor(Date.now() / 1000)
-  return { min_close_ts: String(nowSec), max_close_ts: String(nowSec + CLOSE_WINDOW_DAYS * 86_400) }
-}
-
 export interface KalshiCreds {
   keyId: string
   privateKeyPem: string
@@ -125,14 +116,13 @@ export async function kalshiBoardSelfTest() {
     sportsSample: string[]
     otherSample: string[]
     rawSample: RawMarket[]
-    eventSample?: Record<string, unknown>[]
-    eventError?: string
+    comboEvents: number
     elapsedMs: number
     error?: string
   } = {
     credsParsed: !!creds,
     rawCount: 0, normalizedCount: 0, droppedNoTickerOrClose: 0, droppedCombo: 0, droppedNoPrice: 0,
-    pagesFetched: 0, live: false, categories: {}, bookCategories: {}, withVolume: 0, withBook: 0, topBookByVolume: [], sportsSample: [], otherSample: [], rawSample: [], elapsedMs: 0,
+    pagesFetched: 0, live: false, categories: {}, bookCategories: {}, withVolume: 0, withBook: 0, topBookByVolume: [], sportsSample: [], otherSample: [], rawSample: [], comboEvents: 0, elapsedMs: 0,
   }
   const started = Date.now()
   if (!creds) {
@@ -144,60 +134,49 @@ export async function kalshiBoardSelfTest() {
     const collected: { m: KalshiMarket; ticker: string }[] = []
     let cursor = ''
     let retries = 0
-    const windowParams = closeWindowParams()
-    for (let page = 0; page < 30 && Date.now() - started < 11_000; page++) {
-      const q = new URLSearchParams({ status: 'open', limit: '1000', ...windowParams })
+    let comboEvents = 0
+    // Mirror the board: pull /events WITH nested markets (the real source).
+    for (let page = 0; page < 40 && Date.now() - started < 12_000; page++) {
+      const q = new URLSearchParams({ status: 'open', limit: '200', with_nested_markets: 'true' })
       if (cursor) q.set('cursor', cursor)
-      let data: { markets: RawMarket[]; cursor?: string }
+      let data: { events?: RawEvent[]; cursor?: string }
       try {
-        data = await kalshiGet<{ markets: RawMarket[]; cursor?: string }>(creds, `/markets?${q.toString()}`)
+        data = await kalshiGet<{ events?: RawEvent[]; cursor?: string }>(creds, `/events?${q.toString()}`)
       } catch (e) {
         const msg = e instanceof Error ? e.message : ''
         if (msg.includes('429') && retries < 4) { retries++; await sleep(500 * retries); page--; continue }
         throw e
       }
       out.pagesFetched++
-      for (const r of data.markets || []) {
-        out.rawCount++
-        if (!r.ticker || !r.close_time) { out.droppedNoTickerOrClose++; continue }
-        if (r.ticker.startsWith('KXMVE') || r.strike_type === 'custom' || r.is_provisional) { out.droppedCombo++; continue }
-        // Capture the first few REAL (non-combo) raw markets verbatim — this is the
-        // field structure the board actually works with (title/subtitle/event/book).
-        if (out.rawSample.length < 5) out.rawSample.push(r)
-        const n = normalize(r)
-        if (!n) { out.droppedNoPrice++; continue }
-        collected.push({ m: n, ticker: r.ticker })
+      for (const ev of data.events || []) {
+        if (ev.event_ticker?.startsWith('KXMVE') || (ev.series_ticker || '').startsWith('KXMVE')) { comboEvents++; continue }
+        for (const r of ev.markets || []) {
+          out.rawCount++
+          if (!r.ticker || !r.close_time) { out.droppedNoTickerOrClose++; continue }
+          if (isComboMarket(r)) { out.droppedCombo++; continue }
+          if (out.rawSample.length < 4) out.rawSample.push(r)
+          const n = normalizeEventMarket(r, ev)
+          if (!n) { out.droppedNoPrice++; continue }
+          collected.push({ m: n, ticker: r.ticker })
+        }
       }
       cursor = data.cursor || ''
       if (!cursor) break
       await sleep(220)
     }
+    out.comboEvents = comboEvents
     collected.sort((a, b) => b.m.volume - a.m.volume)
     out.normalizedCount = collected.length
     out.live = collected.length > 0
     out.withVolume = collected.filter((c) => c.m.volume > 0).length
-    // The board only shows markets with a REAL book — these counts are what
-    // actually reaches the board, per category.
     const book = collected.filter((c) => c.m.hasBook)
     out.withBook = book.length
     for (const c of collected) out.categories[c.m.category] = (out.categories[c.m.category] || 0) + 1
     for (const c of book) out.bookCategories[c.m.category] = (out.bookCategories[c.m.category] || 0) + 1
-    out.topBookByVolume = book.slice(0, 12).map((c) => `[${c.m.category}] ${c.m.title.slice(0, 56)} — ${(c.m.yesPrice * 100).toFixed(0)}% · vol ${c.m.volume}`)
-    out.sportsSample = book.filter((c) => c.m.category === 'Sports').slice(0, 10).map((c) => `${c.m.title.slice(0, 56)} — ${(c.m.yesPrice * 100).toFixed(0)}% · vol ${c.m.volume}`)
-    // Top "Other" markets with tickers — so miscategorizations can be mapped by prefix.
-    out.otherSample = book.filter((c) => c.m.category === 'Other').slice(0, 20).map((c) => `${c.ticker} | ev:${c.m.eventTicker || '?'} | ${c.m.title.slice(0, 50)}`)
-    // Probe the /events endpoint — it carries category + a clean event title,
-    // which would fix titles + categorization. Capture a couple non-MVE events
-    // (with nested markets) so we can see the schema before switching to it.
-    try {
-      const evq = new URLSearchParams({ status: 'open', limit: '40', with_nested_markets: 'true', ...windowParams })
-      const ev = await kalshiGet<{ events?: Record<string, unknown>[] }>(creds, `/events?${evq.toString()}`)
-      const real = (ev.events || []).filter((e) => !String(e.event_ticker || '').startsWith('KXMVE'))
-      out.eventSample = real.slice(0, 3)
-    } catch (e) {
-      out.eventError = e instanceof Error ? e.message : 'events probe failed'
-    }
-    if (!collected.length) out.reason = `API returned ${out.rawCount} raw markets but normalize dropped all of them (noTickerOrClose=${out.droppedNoTickerOrClose}, noPrice=${out.droppedNoPrice})`
+    out.topBookByVolume = book.slice(0, 12).map((c) => `[${c.m.category}] ${c.m.title.slice(0, 60)} — ${(c.m.yesPrice * 100).toFixed(0)}% · vol ${c.m.volume}`)
+    out.sportsSample = book.filter((c) => c.m.category === 'Sports').slice(0, 10).map((c) => `${c.m.title.slice(0, 60)} — ${(c.m.yesPrice * 100).toFixed(0)}% · vol ${c.m.volume}`)
+    out.otherSample = book.filter((c) => c.m.category === 'Other').slice(0, 20).map((c) => `${c.ticker} | ${c.m.title.slice(0, 60)}`)
+    if (!collected.length) out.reason = `Events fetched but produced 0 boardworthy markets (comboEvents=${comboEvents}, droppedCombo=${out.droppedCombo}, droppedNoPrice=${out.droppedNoPrice})`
   } catch (e) {
     out.error = e instanceof Error ? e.message : 'request failed'
     out.reason = `Kalshi pagination threw: ${out.error}`
@@ -366,10 +345,11 @@ function pnum(dollarStr?: string, legacy?: number, scale = 1): number | undefine
 }
 
 /** A multivariate/parlay ("MVE") combo market — a bundle of legs, not a single
- *  binary question. Kalshi bulk-creates tens of thousands; they're not boardworthy. */
+ *  binary question. Kalshi bulk-creates tens of thousands; they're not boardworthy.
+ *  NOTE: strike_type "custom" is NOT a combo signal — legit multi-candidate markets
+ *  (next Pope, next NATO chief) use custom strikes too. Only the MVE markers count. */
 function isComboMarket(m: RawMarket): boolean {
   return (
-    m.strike_type === 'custom' ||
     m.is_provisional === true ||
     m.ticker.startsWith('KXMVE') ||
     (m.event_ticker || '').startsWith('KXMVE') ||
@@ -377,11 +357,9 @@ function isComboMarket(m: RawMarket): boolean {
   )
 }
 
-function normalize(m: RawMarket): KalshiMarket | null {
-  if (!m.ticker || !m.close_time) return null
-  if (isComboMarket(m)) return null // drop parlay/combo bundles
-
-  // Prices: current API returns decimal-DOLLAR strings (0..1); legacy was cents.
+/** Extract a YES probability + liquidity signals from a raw market, handling both
+ *  the current decimal-dollar-string schema and the legacy integer-cent schema. */
+function parsePrices(m: RawMarket) {
   const yesBid = pnum(m.yes_bid_dollars, m.yes_bid, 0.01)
   const yesAsk = pnum(m.yes_ask_dollars, m.yes_ask, 0.01)
   const last = pnum(m.last_price_dollars, m.last_price, 0.01)
@@ -395,10 +373,86 @@ function normalize(m: RawMarket): KalshiMarket | null {
   else if (last != null && last > 0) yes = last
   else if (yesAsk != null && yesAsk > 0) yes = yesAsk
   else if (yesBid != null && yesBid > 0) yes = yesBid
-  // Empty-book market → anchor at 0.5 so the board never collapses to seed, but
-  // hasBook=false marks it so the board can exclude fabricated prices.
   if (yes == null || !Number.isFinite(yes)) yes = 0.5
-  const yesPrice = clamp01(yes)
+  return { yesPrice: clamp01(yes), volume, openInterest, liquidity, hasBook: hasBook || (last ?? 0) > 0 }
+}
+
+// Kalshi's own event category → our EdgeCategory. Far more reliable than guessing.
+const KALSHI_CAT: Record<string, EdgeCategory> = {
+  politics: 'Politics', elections: 'Politics', election: 'Politics',
+  sports: 'Sports',
+  economics: 'Economics', economy: 'Economics',
+  financials: 'Financials', financial: 'Financials', companies: 'Financials', commodities: 'Financials',
+  crypto: 'Crypto', cryptocurrency: 'Crypto', cryptocurrencies: 'Crypto',
+  'climate and weather': 'Weather', weather: 'Weather', climate: 'Weather',
+  'science and technology': 'Tech', technology: 'Tech', science: 'Tech', tech: 'Tech',
+  entertainment: 'Culture', culture: 'Culture', 'pop culture': 'Culture',
+  world: 'World',
+}
+function mapKalshiCategory(cat: string | undefined, title: string, ticker: string): EdgeCategory {
+  if (cat) {
+    const hit = KALSHI_CAT[cat.toLowerCase().trim()]
+    if (hit) return hit
+  }
+  return categorize(title, cat, ticker) // fall back to ticker/keyword heuristics
+}
+
+/** Build a clean, human title from the parent event + the market's outcome.
+ *  Event title is the full question ("Who will the next Pope be?"); the market's
+ *  yes_sub_title is the specific outcome ("Pietro Parolin"). For multi-outcome
+ *  events (game winners, candidate races) we always show the outcome so each row
+ *  says which side it prices. */
+function buildEventTitle(ev: RawEvent, m: RawMarket): string {
+  let base = (ev.title || m.title || '').trim() || m.ticker
+  const out = (m.yes_sub_title || m.subtitle || '').trim()
+  const lowOut = out.toLowerCase()
+  const multiOutcome = (ev.markets?.length ?? 1) > 1
+  if (out && lowOut !== 'yes' && lowOut !== 'no') {
+    if (multiOutcome || !base.toLowerCase().includes(lowOut)) base = `${base} — ${out}`
+  }
+  return base.length > 140 ? `${base.slice(0, 137)}…` : base
+}
+
+interface RawEvent {
+  event_ticker: string
+  series_ticker?: string
+  title?: string
+  sub_title?: string
+  category?: string
+  markets?: RawMarket[]
+}
+
+/** Normalize a market nested under an event (the /events path) — uses the event's
+ *  real category + full-question title. This is the primary board source. */
+function normalizeEventMarket(m: RawMarket, ev: RawEvent): KalshiMarket | null {
+  if (!m.ticker || !m.close_time) return null
+  if (isComboMarket(m)) return null
+  const p = parsePrices(m)
+  const title = buildEventTitle(ev, m)
+  const category = mapKalshiCategory(ev.category, title, `${m.ticker} ${ev.event_ticker} ${ev.series_ticker || ''}`)
+  return {
+    ticker: m.ticker,
+    eventTicker: ev.event_ticker,
+    title,
+    subtitle: m.yes_sub_title || m.subtitle,
+    category,
+    yesPrice: p.yesPrice,
+    noPrice: +(1 - p.yesPrice).toFixed(4),
+    volume: p.volume,
+    openInterest: p.openInterest,
+    closeTime: m.close_time,
+    status: (m.status as KalshiMarket['status']) || 'active',
+    liquidity: p.liquidity,
+    hasBook: p.hasBook,
+    source: 'kalshi',
+  }
+}
+
+/** Legacy per-market normalizer (kept for the flat /markets fallback path). */
+function normalize(m: RawMarket): KalshiMarket | null {
+  if (!m.ticker || !m.close_time) return null
+  if (isComboMarket(m)) return null
+  const p = parsePrices(m)
   const title = cleanTitle(m)
   return {
     ticker: m.ticker,
@@ -406,14 +460,14 @@ function normalize(m: RawMarket): KalshiMarket | null {
     title,
     subtitle: m.yes_sub_title || m.subtitle,
     category: categorize(title, m.category, `${m.ticker} ${m.event_ticker || ''}`),
-    yesPrice,
-    noPrice: +(1 - yesPrice).toFixed(4),
-    volume,
-    openInterest,
+    yesPrice: p.yesPrice,
+    noPrice: +(1 - p.yesPrice).toFixed(4),
+    volume: p.volume,
+    openInterest: p.openInterest,
     closeTime: m.close_time,
     status: (m.status as KalshiMarket['status']) || 'active',
-    liquidity,
-    hasBook: hasBook || (last ?? 0) > 0,
+    liquidity: p.liquidity,
+    hasBook: p.hasBook,
     source: 'kalshi',
   }
 }
@@ -453,26 +507,22 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
   try {
     const collected: KalshiMarket[] = []
     let cursor = ''
-    // Pull active markets across ALL categories (incl. Sports), API-safe page size
-    // 100, but TIME-BOUNDED: each board build must finish well under the function
-    // limit, so cap pages + elapsed time. Sorted by volume after — the most active
-    // markets surface first. A failed page mid-stream keeps what we already have.
+    // Source of truth: the /events endpoint WITH nested markets. Unlike /markets
+    // (whose first tens of thousands of rows are bulk MVE parlay combos), /events
+    // surfaces real events immediately AND carries the real category + full-question
+    // title — so we get clean titles and correct categories in one pass. Big pages
+    // (limit=200), throttled + 429-retry to respect Kalshi's read rate limit.
     const started = Date.now()
-    // Pull the open universe with BIG pages (limit=1000, Kalshi's max) so we cover
-    // it in far fewer requests — Kalshi rate-limits (HTTP 429) if we fire many
-    // small pages back-to-back. Throttle between pages and retry a 429 with
-    // backoff rather than bailing. Time-bounded to stay under the function limit.
     let retries = 0
-    const windowParams = closeWindowParams()
-    for (let page = 0; page < 30; page++) {
-      const q = new URLSearchParams({ status: 'open', limit: '1000', ...windowParams })
+    for (let page = 0; page < 40; page++) {
+      const q = new URLSearchParams({ status: 'open', limit: '200', with_nested_markets: 'true' })
       if (cursor) q.set('cursor', cursor)
-      let data: { markets: RawMarket[]; cursor?: string }
+      let data: { events?: RawEvent[]; cursor?: string }
       try {
-        data = await kalshiGet<{ markets: RawMarket[]; cursor?: string }>(creds, `/markets?${q.toString()}`, opts.signal)
+        data = await kalshiGet<{ events?: RawEvent[]; cursor?: string }>(creds, `/events?${q.toString()}`, opts.signal)
       } catch (e) {
         const msg = e instanceof Error ? e.message : ''
-        if (msg.includes('429') && retries < 4 && Date.now() - started < 10_000) {
+        if (msg.includes('429') && retries < 4 && Date.now() - started < 12_000) {
           retries++
           await sleep(500 * retries) // back off, then retry the SAME page
           page--
@@ -481,12 +531,15 @@ export async function fetchActiveMarkets(opts: FetchOptions = {}): Promise<{ mar
         if (page === 0 && !collected.length) throw e // first page truly failed → seed
         break // keep what we have
       }
-      for (const r of data.markets || []) {
-        const n = normalize(r)
-        if (n) collected.push(n)
+      for (const ev of data.events || []) {
+        if (ev.event_ticker?.startsWith('KXMVE') || (ev.series_ticker || '').startsWith('KXMVE')) continue
+        for (const r of ev.markets || []) {
+          const n = normalizeEventMarket(r, ev)
+          if (n) collected.push(n)
+        }
       }
       cursor = data.cursor || ''
-      if (!cursor || Date.now() - started > 11_000) break
+      if (!cursor || Date.now() - started > 9_000) break
       await sleep(220) // stay under Kalshi's read rate limit
     }
     if (!collected.length) throw new Error('no markets returned')
