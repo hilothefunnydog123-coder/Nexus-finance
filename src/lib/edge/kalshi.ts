@@ -566,6 +566,32 @@ export async function getMarket(ticker: string, opts: FetchOptions = {}): Promis
 }
 
 /**
+ * Lightweight real-time price fetch for specific tickers — the LIVE mark-to-market
+ * feed for the terminal. One (or a few chunked) signed GET /markets?tickers=…
+ * requests, returning the current YES mid per ticker. Cheap enough to poll every
+ * few seconds; returns {} with no creds so callers degrade gracefully.
+ */
+export async function fetchMarketPrices(tickers: string[]): Promise<Record<string, { yes: number; volume: number }>> {
+  const creds = getKalshiCreds()
+  const out: Record<string, { yes: number; volume: number }> = {}
+  if (!creds || !tickers.length) return out
+  const uniq = [...new Set(tickers.filter(Boolean))].slice(0, 200)
+  for (let i = 0; i < uniq.length; i += 40) {
+    const chunk = uniq.slice(i, i + 40)
+    const q = new URLSearchParams({ tickers: chunk.join(','), limit: '1000' })
+    try {
+      const data = await kalshiGet<{ markets: RawMarket[] }>(creds, `/markets?${q.toString()}`)
+      for (const m of data.markets || []) {
+        if (!m.ticker) continue
+        const p = parsePrices(m)
+        out[m.ticker] = { yes: p.yesPrice, volume: p.volume }
+      }
+    } catch { /* skip this chunk on error */ }
+  }
+  return out
+}
+
+/**
  * Fetch a single market's settlement result for grading. Returns 'yes' | 'no'
  * once Kalshi has settled it, otherwise null (still open / unknown / no creds).
  */

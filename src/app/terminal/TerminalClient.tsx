@@ -27,7 +27,7 @@ const C = {
 const APP_FILE = '/Project-Matrix.html'
 const START_BANK = 1000
 const TICKET = 40          // $ per auto ticket
-const TP = 0.07, SL = 0.05, MAX_AGE = 42000, MAX_OPEN = 6  // scalp rules
+const TP = 0.07, SL = 0.05, MAX_AGE = 150000, MAX_OPEN = 6  // scalp rules (real prices move slower → longer hold)
 
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x))
 const clamp01 = (x: number) => clamp(x, 0.02, 0.98)
@@ -109,6 +109,7 @@ export default function TerminalClient() {
   const [pxv, setPxv] = useState(0) // bump to re-render on sim price move
   const [firing, setFiring] = useState(false)
   const [sess, setSess] = useState({ trades: 0, wins: 0, pnl: 0 })
+  const [lastPx, setLastPx] = useState(0)
 
   const px = useRef<Record<string, number>>({})     // simulated live prices (YES)
   const rowsRef = useRef<Row[]>([]); rowsRef.current = rows
@@ -144,22 +145,46 @@ export default function TerminalClient() {
     return side === 'YES' ? base : +(1 - base).toFixed(4)
   }, [])
 
-  // ── simulated intra-refresh tick (1s) — random-walk each market's price so the
-  //    scalper has live movement; anchored back toward the real API price. ────
+  // ── LIVE real-time price feed (status === 'live') — poll the ACTUAL current
+  //    Kalshi YES mid for the on-screen markets every ~3.5s and mark to it. This
+  //    is real market movement, not a random walk. Real markets move slowly, so
+  //    the tape is calmer + more honest than the old sim. ──────────────────────
   useEffect(() => {
+    if (status !== 'live') return
+    let stop = false
+    const poll = async () => {
+      const rs = rowsRef.current; if (!rs.length) return
+      const tickers = rs.map((r) => r.market.ticker)
+      try {
+        const res = await fetch('/api/edge/prices?tickers=' + encodeURIComponent(tickers.join(',')), { cache: 'no-store' })
+        if (!res.ok) return
+        const d = await res.json()
+        const pr = d.prices || {}
+        let n = 0
+        for (const t of Object.keys(pr)) { const y = pr[t]?.yes; if (typeof y === 'number') { px.current[t] = clamp01(y); n++ } }
+        setPxv((v) => v + 1)
+        if (n) setLastPx(Date.now())
+      } catch { /* keep last known prices */ }
+    }
+    poll()
+    const id = setInterval(() => { if (!stop) poll() }, 3500)
+    return () => { stop = true; clearInterval(id) }
+  }, [status])
+
+  // ── OFFLINE demo only: a gentle random walk so the demo still animates. ──────
+  useEffect(() => {
+    if (status !== 'demo') return
     const id = setInterval(() => {
       const rs = rowsRef.current; if (!rs.length) return
       for (const r of rs) {
-        const anchor = r.market.yesPrice
-        const cur = px.current[r.market.ticker] ?? anchor
-        const vol = 0.004 + Math.min(0.01, r.verdict.confidence * 0.004)
-        const step = (Math.random() - 0.5) * vol * 2 + (anchor - cur) * 0.05 // walk + mean-revert
+        const anchor = r.market.yesPrice, cur = px.current[r.market.ticker] ?? anchor
+        const step = (Math.random() - 0.5) * 0.012 + (anchor - cur) * 0.05
         px.current[r.market.ticker] = clamp01(cur + step)
       }
       setPxv((v) => v + 1)
     }, 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [status])
 
   // portfolio mark-to-market (recomputes on every sim tick)
   const pfStats = useMemo(() => {
@@ -257,7 +282,7 @@ export default function TerminalClient() {
         <span style={{ fontFamily: C.mono, fontSize: 10.5, letterSpacing: '0.1em', color: C.bg, background: C.amber, padding: '3px 9px', borderRadius: 6, fontWeight: 800 }}>PAPER</span>
         <Metric label="feed" value={status === 'live' ? 'LIVE·KALSHI' : status === 'demo' ? 'DEMO' : 'BOOT'} color={status === 'live' ? C.green : C.amber} dot />
         <Metric label="agents" value={`${AGENTS.length * 26}`} color={C.emerald} />
-        <Metric label="px" value="SIM TICK 1s" color={C.cyan} />
+        <Metric label="px" value={status === 'live' ? `REAL${lastPx ? ` ·${Math.max(0, Math.round((Date.now() - lastPx) / 1000))}s` : ' ·live'}` : status === 'demo' ? 'SIM·demo' : '—'} color={status === 'live' ? C.green : C.cyan} dot={status === 'live'} />
         {/* AUTO toggle */}
         <button onClick={() => setAuto((a) => !a)} className="mx-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11.5, fontWeight: 800, letterSpacing: '0.06em', padding: '7px 14px', color: auto ? C.bg : C.green, background: auto ? C.green : 'transparent', border: `1px solid ${C.green}`, animation: auto && !reduced ? 'mx-armed 1.6s infinite' : 'none' }}>
           {auto ? <Pause size={14} /> : <Play size={14} />} {auto ? 'AUTO · ARMED' : 'ARM AUTO-SCALP'}
