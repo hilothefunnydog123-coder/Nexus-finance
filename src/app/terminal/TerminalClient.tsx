@@ -13,9 +13,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Download, ArrowLeft, Activity, Cpu, Gauge, ShieldCheck, Signal, Crosshair,
   TrendingUp, Landmark, Banknote, CloudLightning, Newspaper, Globe, Waves,
-  History, AlertTriangle, Layers, Brain, X, Zap, Rocket, Play, Pause, Power,
+  History, AlertTriangle, Layers, Brain, X, Zap, Rocket, Play, Pause,
+  Wallet, Link2, LogOut,
   type LucideIcon,
 } from 'lucide-react'
+import {
+  importKalshiKey, saveConn, loadConn, clearConn, getBalance, getPositions,
+  placeOrder, errMsg, type KalshiConn, type KPosition,
+} from '@/lib/kalshiClient'
 
 const C = {
   bg: '#0D0F12', deep: '#08090b', panel: 'rgba(255,255,255,.022)', panel2: 'rgba(255,255,255,.04)',
@@ -25,7 +30,9 @@ const C = {
   sans: 'var(--font-sans), ui-sans-serif, system-ui, sans-serif',
 }
 const APP_FILE = '/Project-Matrix.html'
+const KAL_GREEN = '#00d29f'
 const START_BANK = 1000
+const REAL_COUNT = 1 // contracts per real order (kept tiny; you confirm each one)
 const TICKET = 40          // $ per auto ticket
 const TP = 0.07, SL = 0.05, MAX_AGE = 150000, MAX_OPEN = 6  // scalp rules (real prices move slower → longer hold)
 
@@ -103,7 +110,11 @@ export default function TerminalClient() {
   const [sortKey, setSortKey] = useState<'edge' | 'vol' | 'conf'>('edge')
   const [worthOnly, setWorthOnly] = useState(false)
   const [auto, setAuto] = useState(false)
-  const [liveGate, setLiveGate] = useState(false)
+  const [connect, setConnect] = useState(false)
+  const [conn, setConn] = useState<KalshiConn | null>(null)
+  const [bal, setBal] = useState<number | null>(null)
+  const [kpos, setKpos] = useState<KPosition[]>([])
+  const [orderReq, setOrderReq] = useState<{ row: Row; side: 'yes' | 'no' } | null>(null)
   const [log, setLog] = useState<LogEntry[]>([])
   const [eq, setEq] = useState<number[]>([])
   const [pxv, setPxv] = useState(0) // bump to re-render on sim price move
@@ -118,6 +129,16 @@ export default function TerminalClient() {
 
   useEffect(() => { setPf(loadPF()) }, [])
   useEffect(() => { savePF(pf) }, [pf])
+
+  // restore a saved Kalshi connection (key stays in IndexedDB, non-extractable)
+  useEffect(() => { loadConn().then(async (c) => { if (!c) return; try { const b = await getBalance(c); setConn(c); setBal(b) } catch { /* stale/invalid — user reconnects */ } }) }, [])
+  // poll the real account when connected
+  useEffect(() => {
+    if (!conn) { setBal(null); setKpos([]); return }
+    let stop = false
+    const go = async () => { try { const [b, p] = await Promise.all([getBalance(conn), getPositions(conn)]); if (!stop) { setBal(b); setKpos(p) } } catch { } }
+    go(); const id = setInterval(go, 15000); return () => { stop = true; clearInterval(id) }
+  }, [conn])
   const addLog = useCallback((kind: LogEntry['kind'], text: string) => {
     setLog((l) => [{ id: logId.current++, t: new Date().toLocaleTimeString('en-US', { hour12: false }), kind, text }, ...l].slice(0, 40))
   }, [])
@@ -252,6 +273,27 @@ export default function TerminalClient() {
 
   function resetPF() { setPf({ cash: START_BANK, positions: [], realized: 0 }); setSess({ trades: 0, wins: 0, pnl: 0 }); setEq([]) }
 
+  // ── real Kalshi account actions ────────────────────────────────────────────
+  const doConnect = useCallback(async (keyId: string, pem: string): Promise<string | null> => {
+    try {
+      const key = await importKalshiKey(pem)
+      const c: KalshiConn = { keyId: keyId.trim(), key }
+      const b = await getBalance(c) // end-to-end validation of the signature
+      await saveConn(c.keyId, key); setConn(c); setBal(b); setConnect(false)
+      addLog('SYS', `🔗 Kalshi connected · balance ${money(b ?? 0)}`)
+      return null
+    } catch (e) { return e instanceof Error ? e.message : 'Connection failed.' }
+  }, [addLog])
+  const doDisconnect = useCallback(() => { clearConn(); setConn(null); setBal(null); setKpos([]); addLog('SYS', 'Kalshi disconnected') }, [addLog])
+  const doPlaceReal = useCallback(async (row: Row, side: 'yes' | 'no', count: number): Promise<string | null> => {
+    if (!conn) return 'Not connected.'
+    const r = await placeOrder(conn, row.market.ticker, side, count)
+    if (!r.ok) { addLog('SYS', `❌ order rejected: ${errMsg(r)}`); return errMsg(r) }
+    addLog('FILL', `REAL ${side.toUpperCase()} ×${count} ${row.market.title.slice(0, 24)} — sent to Kalshi`)
+    try { const [b, p] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(p) } catch { }
+    setOrderReq(null); return null
+  }, [conn, addLog])
+
   const selRow = rows.find((r) => r.market.ticker === sel) || rows[0]
   const sorted = useMemo(() => {
     let rs = rows; if (worthOnly) rs = rs.filter((r) => r.verdict.worthIt)
@@ -287,9 +329,16 @@ export default function TerminalClient() {
         <button onClick={() => setAuto((a) => !a)} className="mx-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11.5, fontWeight: 800, letterSpacing: '0.06em', padding: '7px 14px', color: auto ? C.bg : C.green, background: auto ? C.green : 'transparent', border: `1px solid ${C.green}`, animation: auto && !reduced ? 'mx-armed 1.6s infinite' : 'none' }}>
           {auto ? <Pause size={14} /> : <Play size={14} />} {auto ? 'AUTO · ARMED' : 'ARM AUTO-SCALP'}
         </button>
-        <button onClick={() => setLiveGate(true)} className="mx-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, padding: '7px 12px', color: C.red, border: `1px solid ${C.red}55` }}>
-          <Power size={13} /> GO LIVE
-        </button>
+        {conn ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: C.mono, fontSize: 11, fontWeight: 700, padding: '5px 6px 5px 11px', borderRadius: 8, color: C.green, border: `1px solid ${C.green}44`, background: `${C.green}10` }}>
+            <Wallet size={13} /> LIVE · {bal == null ? '—' : money(bal, 0)}
+            <button onClick={doDisconnect} className="mx-btn" title="Disconnect" style={{ padding: '3px 5px', color: C.dim, background: 'transparent', border: 'none', display: 'grid', placeItems: 'center' }}><LogOut size={12} /></button>
+          </span>
+        ) : (
+          <button onClick={() => setConnect(true)} className="mx-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 800, padding: '7px 12px', color: '#04140c', background: KAL_GREEN, border: 'none' }}>
+            <Link2 size={13} /> CONNECT KALSHI
+          </button>
+        )}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 8 }}>
           <a href={APP_FILE} download="Project-Matrix.html" className="mx-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, padding: '7px 12px', textDecoration: 'none', color: C.bg, background: C.green, border: 'none' }}><Download size={13} /> Download</a>
         </span>
@@ -335,10 +384,10 @@ export default function TerminalClient() {
         {/* RIGHT */}
         <div style={{ background: C.bg, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div style={{ flex: '1 1 50%', overflow: 'auto', borderBottom: `1px solid ${C.line}` }}>
-            {selRow ? <Detail row={selRow} live={priceOf(selRow.market.ticker, 'YES') ?? selRow.market.yesPrice} onBuy={(r, s) => buy(r, s, 50)} /> : <div style={{ padding: 30, color: C.dim }}>Select a market.</div>}
+            {selRow ? <Detail row={selRow} live={priceOf(selRow.market.ticker, 'YES') ?? selRow.market.yesPrice} onBuy={(r, s) => buy(r, s, 50)} connected={!!conn} onReal={(r, s) => setOrderReq({ row: r, side: s })} /> : <div style={{ padding: 30, color: C.dim }}>Select a market.</div>}
           </div>
           <div style={{ flex: '1 1 50%', overflow: 'auto' }}>
-            <Portfolio stats={pfStats} eq={eq} onClose={(p) => closePos(p, 'EXIT')} onReset={resetPF} />
+            <Portfolio stats={pfStats} eq={eq} onClose={(p) => closePos(p, 'EXIT')} onReset={resetPF} kpos={kpos} connected={!!conn} bal={bal} />
           </div>
         </div>
       </div>
@@ -346,7 +395,8 @@ export default function TerminalClient() {
       {/* EXECUTION CONSOLE */}
       <ExecConsole auto={auto} firing={firing} log={log} eq={eq} stats={pfStats} sess={sess} reduced={reduced} />
 
-      {liveGate && <LiveGate onClose={() => setLiveGate(false)} />}
+      {connect && <ConnectModal onClose={() => setConnect(false)} onConnect={doConnect} />}
+      {orderReq && <OrderConfirm req={orderReq} live={priceOf(orderReq.row.market.ticker, orderReq.side === 'yes' ? 'YES' : 'NO') ?? 0.5} onClose={() => setOrderReq(null)} onConfirm={doPlaceReal} />}
     </div>
   )
 }
@@ -387,7 +437,7 @@ function BoardRow({ row, live, held, active, onClick }: { row: Row; live: number
 }
 
 // ── detail ──────────────────────────────────────────────────────────────────
-function Detail({ row, live, onBuy }: { row: Row; live: number; onBuy: (r: Row, s: 'YES' | 'NO') => void }) {
+function Detail({ row, live, onBuy, connected, onReal }: { row: Row; live: number; onBuy: (r: Row, s: 'YES' | 'NO') => void; connected: boolean; onReal: (r: Row, s: 'yes' | 'no') => void }) {
   const votes = agentVotes(row), cons = consensus(votes), v = row.verdict, [g, c] = catOf(row.market.category)
   const sideCol = v.side === 'YES' ? C.green : C.red
   return (
@@ -428,7 +478,15 @@ function Detail({ row, live, onBuy }: { row: Row; live: number; onBuy: (r: Row, 
           <button className="mx-btn" onClick={() => onBuy(row, 'YES')} style={{ flex: 1, padding: '10px', fontWeight: 800, fontSize: 12.5, color: v.side === 'YES' ? C.bg : C.green, background: v.side === 'YES' ? C.green : 'transparent', border: `1px solid ${C.green}` }}>BUY YES · {(live * 100).toFixed(0)}¢</button>
           <button className="mx-btn" onClick={() => onBuy(row, 'NO')} style={{ flex: 1, padding: '10px', fontWeight: 800, fontSize: 12.5, color: v.side === 'NO' ? C.bg : C.red, background: v.side === 'NO' ? C.red : 'transparent', border: `1px solid ${C.red}` }}>BUY NO · {((1 - live) * 100).toFixed(0)}¢</button>
         </div>
-        <div style={{ marginTop: 7, fontFamily: C.mono, fontSize: 9, color: C.faint }}>MATRIX leans <b style={{ color: sideCol }}>{v.side}</b>. Arm AUTO to let the engine scalp this automatically.</div>
+        <div style={{ marginTop: 7, fontFamily: C.mono, fontSize: 9, color: C.faint }}>MATRIX leans <b style={{ color: sideCol }}>{v.side}</b>. Arm AUTO to let the engine scalp this on paper.</div>
+      </div>
+      {/* REAL money — only when a Kalshi account is connected; each order confirmed */}
+      <div style={{ padding: '0 15px 14px' }}>
+        <div style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: connected ? KAL_GREEN : C.faint, marginBottom: 8 }}>Real order · {REAL_COUNT} contract{REAL_COUNT === 1 ? '' : 's'} {connected ? '' : '· connect Kalshi first'}</div>
+        <div style={{ display: 'flex', gap: 8, opacity: connected ? 1 : 0.5 }}>
+          <button className="mx-btn" disabled={!connected} onClick={() => connected && onReal(row, 'yes')} style={{ flex: 1, padding: '10px', fontWeight: 800, fontSize: 12, color: connected ? KAL_GREEN : C.dim, background: 'transparent', border: `1px solid ${connected ? KAL_GREEN : C.line}`, cursor: connected ? 'pointer' : 'not-allowed' }}>◆ REAL YES · {(live * 100).toFixed(0)}¢</button>
+          <button className="mx-btn" disabled={!connected} onClick={() => connected && onReal(row, 'no')} style={{ flex: 1, padding: '10px', fontWeight: 800, fontSize: 12, color: connected ? C.red : C.dim, background: 'transparent', border: `1px solid ${connected ? C.red : C.line}`, cursor: connected ? 'pointer' : 'not-allowed' }}>◆ REAL NO · {((1 - live) * 100).toFixed(0)}¢</button>
+        </div>
       </div>
     </div>
   )
@@ -438,10 +496,19 @@ function Cell({ v, k, c }: { v: string; k: string; c: string }) {
 }
 
 // ── portfolio ─────────────────────────────────────────────────────────────────
-function Portfolio({ stats, eq, onClose, onReset }: { stats: { marks: (Pos & { cur: number; val: number; pnl: number })[]; equity: number; totalPnl: number; invested: number }; eq: number[]; onClose: (p: Pos) => void; onReset: () => void }) {
+function Portfolio({ stats, eq, onClose, onReset, kpos, connected, bal }: { stats: { marks: (Pos & { cur: number; val: number; pnl: number })[]; equity: number; totalPnl: number; invested: number }; eq: number[]; onClose: (p: Pos) => void; onReset: () => void; kpos: KPosition[]; connected: boolean; bal: number | null }) {
   const pos = stats.totalPnl >= 0
   return (
     <div>
+      {connected && (
+        <div style={{ padding: '9px 13px', borderBottom: `1px solid ${C.line}`, background: `${KAL_GREEN}08` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontFamily: C.mono, fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: KAL_GREEN, display: 'inline-flex', alignItems: 'center', gap: 6 }}><Wallet size={12} /> Live Kalshi account</span>
+            <span style={{ fontFamily: C.mono, fontSize: 14, fontWeight: 800, color: KAL_GREEN }}>{bal == null ? '—' : money(bal, 2)}</span>
+          </div>
+          <div style={{ fontFamily: C.mono, fontSize: 9.5, color: C.faint, marginTop: 4 }}>{kpos.length ? kpos.slice(0, 4).map((p) => `${p.ticker.slice(0, 14)} ${p.position > 0 ? '+' : ''}${p.position}`).join(' · ') : 'no open contracts on Kalshi'}</div>
+        </div>
+      )}
       <PanelHead icon={<Layers size={13} />}>Paper portfolio</PanelHead>
       <div style={{ padding: '10px 13px 4px' }}><Spark data={eq} pos={pos} /></div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: C.line, borderBottom: `1px solid ${C.line}` }}>
@@ -539,47 +606,69 @@ function Mini({ v, k, c }: { v: string; k: string; c: string }) {
   return <div style={{ background: C.bg, border: `1px solid ${C.line}`, borderRadius: 8, padding: '7px 9px' }}><div style={{ fontFamily: C.mono, fontSize: 15, fontWeight: 800, color: c, fontVariantNumeric: 'tabular-nums' }}>{v}</div><div style={{ fontFamily: C.mono, fontSize: 8, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.faint, marginTop: 2 }}>{k}</div></div>
 }
 
-// ── LIVE (real money) gate ─────────────────────────────────────────────────────
-function LiveGate({ onClose }: { onClose: () => void }) {
-  const [email, setEmail] = useState(''); const [done, setDone] = useState(false); const [err, setErr] = useState('')
+// ── CONNECT KALSHI (real account) ───────────────────────────────────────────────
+function ConnectModal({ onClose, onConnect }: { onClose: () => void; onConnect: (keyId: string, pem: string) => Promise<string | null> }) {
+  const [keyId, setKeyId] = useState(''); const [pem, setPem] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); addEventListener('keydown', k); return () => removeEventListener('keydown', k) }, [onClose])
-  async function join() {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setErr('Enter a valid email.'); return }
-    try { await fetch('/api/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), tickers: ['LIVEBETA'] }) }) } catch { }
-    setDone(true)
+  async function go() {
+    if (!keyId.trim() || !pem.trim()) { setErr('Paste both your Key ID and private key.'); return }
+    setBusy(true); setErr('')
+    const e = await onConnect(keyId, pem); setBusy(false)
+    if (e) setErr(e)
   }
   return (
-    <div role="dialog" aria-modal onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'grid', placeItems: 'center', background: 'rgba(4,6,8,.8)', backdropFilter: 'blur(6px)', padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(500px,94vw)', background: C.bg, border: `1px solid ${C.red}44`, borderRadius: 16, padding: 'clamp(22px,4vw,30px)', boxShadow: `0 0 80px ${C.red}18` }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: C.mono, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.red }}><AlertTriangle size={14} /> Live trading · real money</span>
-        {done ? (
-          <div style={{ marginTop: 14 }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 800, color: C.ink }}>You&apos;re on the live-beta list.</h3>
-            <p style={{ margin: 0, color: C.dim, fontSize: 14, lineHeight: 1.6 }}>When live execution opens you&apos;ll connect your own Kalshi account and approve orders yourself. We&apos;ll email you.</p>
-            <button onClick={onClose} className="mx-btn" style={{ marginTop: 18, padding: '10px 18px', color: C.bg, background: C.green, border: 'none', fontWeight: 800 }}>Back to paper</button>
-          </div>
-        ) : (
-          <>
-            <h3 style={{ margin: '12px 0 8px', fontSize: 'clamp(1.3rem,3vw,1.7rem)', fontWeight: 800, letterSpacing: '-0.02em', color: C.ink }}>Real orders need you in the loop.</h3>
-            <p style={{ margin: '0 0 12px', color: C.dim, fontSize: 14, lineHeight: 1.62 }}>
-              MATRIX can connect to your <b style={{ color: C.ink }}>own</b> Kalshi account via the official API and place real orders — but two things stay true, by design:
-            </p>
-            <ul style={{ margin: '0 0 14px', paddingLeft: 18, color: C.dim, fontSize: 13.5, lineHeight: 1.7 }}>
-              <li><b style={{ color: C.ink }}>Every live order is confirmed by you.</b> Fully-autonomous real-money firing is <b style={{ color: C.red }}>off</b> — the paper engine is for testing a strategy, not for auto-spending your bankroll on an unproven signal.</li>
-              <li><b style={{ color: C.ink }}>Your keys stay on your device.</b> Encrypted in the OS keychain, never on our servers.</li>
-            </ul>
-            <p style={{ margin: '0 0 14px', fontFamily: C.mono, fontSize: 11, color: C.faint, lineHeight: 1.6 }}>
-              Event contracts can lose 100%. No edge is guaranteed. Prove it on paper first — the equity curve is right there.
-            </p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && join()} placeholder="you@email.com · join live beta"
-                style={{ flex: 1, background: C.deep, border: `1px solid ${err ? C.red : C.line}`, borderRadius: 10, color: C.ink, fontSize: 14, padding: '12px 14px', outline: 'none', fontFamily: C.sans }} />
-              <button onClick={join} className="mx-btn" style={{ padding: '0 18px', fontWeight: 800, color: C.bg, background: C.red, border: 'none' }}>Request</button>
-            </div>
-            {err && <div style={{ color: C.red, fontFamily: C.mono, fontSize: 11.5, marginTop: 8 }}>{err}</div>}
-            <button onClick={onClose} className="mx-btn" style={{ marginTop: 12, padding: '9px 16px', color: C.green, background: 'transparent', border: `1px solid ${C.green}55`, fontWeight: 700, width: '100%' }}>Keep trading on paper</button>
-          </>
-        )}
+    <div role="dialog" aria-modal onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'grid', placeItems: 'center', background: 'rgba(4,6,8,.82)', backdropFilter: 'blur(6px)', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(540px,95vw)', background: C.bg, border: `1px solid ${KAL_GREEN}44`, borderRadius: 16, padding: 'clamp(22px,4vw,30px)', boxShadow: `0 0 80px ${KAL_GREEN}20`, maxHeight: '92vh', overflow: 'auto' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: C.mono, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: KAL_GREEN }}><Link2 size={14} /> Connect your Kalshi account</span>
+        <h3 style={{ margin: '12px 0 6px', fontSize: 'clamp(1.3rem,3vw,1.6rem)', fontWeight: 800, letterSpacing: '-0.02em', color: C.ink }}>Your keys, your device.</h3>
+        <p style={{ margin: '0 0 14px', color: C.dim, fontSize: 13.5, lineHeight: 1.6 }}>
+          Create an API key at <b style={{ color: C.ink }}>kalshi.com → Account → API</b>, then paste the <b style={{ color: C.ink }}>Key ID</b> and the <b style={{ color: C.ink }}>private key (PKCS#8 PEM)</b> below. The private key is imported as a non-extractable key and stored only in your browser — it&apos;s never sent to our servers.
+        </p>
+        <label style={{ fontFamily: C.mono, fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.faint }}>API Key ID</label>
+        <input value={keyId} onChange={(e) => { setKeyId(e.target.value); setErr('') }} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" spellCheck={false}
+          style={{ width: '100%', boxSizing: 'border-box', margin: '5px 0 12px', background: C.deep, border: `1px solid ${C.line}`, borderRadius: 9, color: C.ink, fontFamily: C.mono, fontSize: 13, padding: '11px 13px', outline: 'none' }} />
+        <label style={{ fontFamily: C.mono, fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.faint }}>Private key (PEM)</label>
+        <textarea value={pem} onChange={(e) => { setPem(e.target.value); setErr('') }} placeholder={'-----BEGIN PRIVATE KEY-----\n…\n-----END PRIVATE KEY-----'} spellCheck={false} rows={6}
+          style={{ width: '100%', boxSizing: 'border-box', margin: '5px 0 6px', background: C.deep, border: `1px solid ${err ? C.red : C.line}`, borderRadius: 9, color: C.ink, fontFamily: C.mono, fontSize: 11.5, padding: '11px 13px', outline: 'none', resize: 'vertical' }} />
+        {err && <div style={{ color: C.red, fontFamily: C.mono, fontSize: 11.5, margin: '2px 0 8px', lineHeight: 1.5 }}>{err}</div>}
+        <button onClick={go} disabled={busy} className="mx-btn" style={{ width: '100%', marginTop: 6, padding: '13px', fontWeight: 800, fontSize: 14.5, color: '#04140c', background: KAL_GREEN, border: 'none', opacity: busy ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <ShieldCheck size={17} /> {busy ? 'Verifying with Kalshi…' : 'Connect securely'}
+        </button>
+        <p style={{ margin: '12px 0 0', fontFamily: C.mono, fontSize: 9.5, color: C.faint, lineHeight: 1.6 }}>
+          <AlertTriangle size={11} style={{ verticalAlign: '-2px', color: C.amber }} /> Once connected you can place <b style={{ color: C.ink }}>real</b> orders — each one you confirm yourself. Auto-scalp stays paper. Event contracts can lose 100%; nothing here is financial advice.
+        </p>
+        <button onClick={onClose} className="mx-btn" style={{ marginTop: 10, padding: '9px', width: '100%', color: C.dim, background: 'transparent' }}>Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+// ── real order confirmation (per order) ─────────────────────────────────────────
+function OrderConfirm({ req, live, onClose, onConfirm }: { req: { row: Row; side: 'yes' | 'no' }; live: number; onClose: () => void; onConfirm: (r: Row, s: 'yes' | 'no', count: number) => Promise<string | null> }) {
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
+  const price = req.side === 'yes' ? live : 1 - live
+  const cost = price * REAL_COUNT
+  const col = req.side === 'yes' ? KAL_GREEN : C.red
+  useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); addEventListener('keydown', k); return () => removeEventListener('keydown', k) }, [onClose])
+  async function go() { setBusy(true); setErr(''); const e = await onConfirm(req.row, req.side, REAL_COUNT); setBusy(false); if (e) setErr(e) }
+  return (
+    <div role="dialog" aria-modal onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 210, display: 'grid', placeItems: 'center', background: 'rgba(4,6,8,.82)', backdropFilter: 'blur(6px)', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(420px,94vw)', background: C.bg, border: `1px solid ${col}55`, borderRadius: 16, padding: 'clamp(20px,4vw,28px)', boxShadow: `0 0 70px ${col}22` }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: C.mono, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.amber }}><AlertTriangle size={14} /> Confirm REAL order</span>
+        <div style={{ fontSize: 14.5, fontWeight: 700, color: C.ink, margin: '12px 0 4px', lineHeight: 1.3 }}>{req.row.market.title}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: C.line, border: `1px solid ${C.line}`, borderRadius: 10, overflow: 'hidden', margin: '12px 0' }}>
+          <Cell v={req.side.toUpperCase()} k="Side" c={col} />
+          <Cell v={`${REAL_COUNT}`} k="Contracts" c={C.ink} />
+          <Cell v={`~${money(cost, 2)}`} k="Est. cost" c={C.amber} />
+        </div>
+        <p style={{ margin: '0 0 14px', fontFamily: C.mono, fontSize: 10.5, color: C.faint, lineHeight: 1.6 }}>
+          Market order on your live Kalshi account at ~{(price * 100).toFixed(0)}¢. This spends <b style={{ color: C.ink }}>real money</b> and can lose 100%.
+        </p>
+        {err && <div style={{ color: C.red, fontFamily: C.mono, fontSize: 11.5, marginBottom: 10, lineHeight: 1.5 }}>{err}</div>}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onClose} className="mx-btn" style={{ flex: 1, padding: '12px', color: C.dim, background: 'transparent' }}>Cancel</button>
+          <button onClick={go} disabled={busy} className="mx-btn" style={{ flex: 2, padding: '12px', fontWeight: 800, color: '#04140c', background: col, border: 'none', opacity: busy ? 0.7 : 1 }}>{busy ? 'Placing…' : `Place real ${req.side.toUpperCase()} order`}</button>
+        </div>
       </div>
     </div>
   )
