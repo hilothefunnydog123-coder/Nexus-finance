@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import TerminalClient from './TerminalClient'
 
 export const metadata: Metadata = {
-  title: 'YnKalshi Terminal — Neural Execution Engine',
+  title: 'PROJECT MATRIX — Prediction-Market Intelligence Platform',
   description:
-    'A downloadable macOS / Windows trading terminal for Kalshi. A native, GPU-rendered neural engine ingests public data feeds in real time, fires synaptic pings the instant an edge appears, and auto-executes through Kalshi’s official low-latency API with algorithmic profit-lock exits.',
+    'An institutional-grade research terminal for Kalshi: hundreds of cooperating reasoning agents analyze thousands of live sources, a Bayesian consensus engine fuses them into calibrated probabilities, and an edge engine surfaces statistically favorable opportunities. Paper-trading by default; live orders only after explicit confirmation.',
 }
 
 export default function TerminalPage() {
