@@ -90,6 +90,36 @@ export async function fetchBars(ticker: string, signal?: AbortSignal): Promise<B
   return bars
 }
 
+// ── realistic-move guard ────────────────────────────────────────────────────
+/** Daily log-return volatility from a close series (last ~40 bars). */
+export function dailyLogVol(closes: number[]): number {
+  const rets: number[] = []
+  const start = Math.max(1, closes.length - 40)
+  for (let i = start; i < closes.length; i++) {
+    const r = Math.log(closes[i] / closes[i - 1])
+    if (Number.isFinite(r)) rets.push(r)
+  }
+  if (rets.length < 5) return 0.015
+  const m = rets.reduce((s, x) => s + x, 0) / rets.length
+  const v = rets.reduce((s, x) => s + (x - m) ** 2, 0) / rets.length
+  return Math.sqrt(v) || 0.015
+}
+
+/**
+ * The neural net emits an UNBOUNDED horizon log-return. Early in training (or on
+ * noisy inputs) that output is dominated by the up-scaled features, not real
+ * signal, so it can imply absurd 20–30% multi-day moves on calm stocks. A genuine
+ * H-day move is bounded by realized volatility: cap the net's return at ~2.5·σ√H.
+ * This preserves the net's DIRECTION and relative conviction while keeping the
+ * forecast physically realistic. Returns the bounded log-return.
+ */
+export function boundHorizonReturn(rHat: number, dailyVol: number, horizon: number): number {
+  const sigmaH = Math.max(dailyVol, 0.004) * Math.sqrt(Math.max(1, horizon))
+  const cap = 2.5 * sigmaH
+  if (!Number.isFinite(rHat)) return 0
+  return Math.max(-cap, Math.min(cap, rHat))
+}
+
 // ── baseline drift (fallback when no trained net is supplied) ───────────────
 export function predictNext(prices: number[]): number {
   const n = prices.length
@@ -130,7 +160,7 @@ function nnBacktest(bars: Bar[], model: NNModel, horizon: number): Metrics {
   for (let t = start; t < c.length - horizon; t++) {
     const f = featurize(bars.slice(0, t + 1).map((b) => ({ c: b.c, h: b.h, l: b.l, v: b.v })))
     if (!f) continue
-    const rHat = predict(model, f)
+    const rHat = boundHorizonReturn(predict(model, f), dailyLogVol(c.slice(0, t + 1)), horizon)
     const last = c[t]
     const predPrice = last * Math.exp(rHat)
     const actual = c[t + horizon]
@@ -178,7 +208,8 @@ export async function forecastTicker(ticker: string, horizon = 5, signal?: Abort
   let engine: 'neural-net' | 'baseline'
 
   if (model && feats) {
-    const rHat = predict(model, feats) // predicted horizon log-return
+    const rawRHat = predict(model, feats) // predicted horizon log-return (unbounded)
+    const rHat = boundHorizonReturn(rawRHat, dailyLogVol(prices), horizon) // keep it realistic
     fcPrices = []
     for (let i = 1; i <= horizon; i++) fcPrices.push(+(last * Math.exp((rHat * i) / horizon)).toFixed(4))
     metrics = nnBacktest(bars, model, horizon)

@@ -110,7 +110,10 @@ export async function priceWithNet(
   let engine: EdgePricing['engine']
   let skillScore: number | undefined
   if (model && feats) {
-    const rHat = predict(model, feats) // total log-return over ~NN_HORIZON days
+    // Bound the net's (unbounded) output to realized vol so an undertrained net
+    // can't imply absurd drift — a real ~NN_HORIZON-day move stays within ~2.5σ.
+    const capH = 2.5 * sigmaD * Math.sqrt(NN_HORIZON)
+    const rHat = clamp(predict(model, feats), -capH, capH) // total log-return over ~NN_HORIZON days
     perDayDrift = rHat / NN_HORIZON
     engine = 'brainstock-nn'
   } else {
