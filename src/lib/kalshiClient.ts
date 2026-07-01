@@ -103,10 +103,10 @@ export async function getPositions(conn: KalshiConn): Promise<KPosition[]> {
   const d = r.data as { market_positions?: KPosition[] } | null
   return (d?.market_positions || []).filter((p) => p.position !== 0)
 }
-/** Place a REAL order. side = 'yes' | 'no', count = # contracts, market order. */
-export async function placeOrder(conn: KalshiConn, ticker: string, side: 'yes' | 'no', count: number): Promise<KResp> {
+/** Place a REAL market order. side = 'yes'|'no', action = 'buy'|'sell' (sell closes). */
+export async function placeOrder(conn: KalshiConn, ticker: string, side: 'yes' | 'no', count: number, action: 'buy' | 'sell' = 'buy'): Promise<KResp> {
   return kalshi(conn, 'POST', '/trade-api/v2/portfolio/orders', {
-    payload: { ticker, action: 'buy', side, count, type: 'market', client_order_id: 'mx-' + Date.now() + '-' + Math.round(Math.random() * 1e6) },
+    payload: { ticker, action, side, count, type: 'market', client_order_id: 'mx-' + Date.now() + '-' + Math.round(Math.random() * 1e6) },
   })
 }
 export function errMsg(r: KResp): string {

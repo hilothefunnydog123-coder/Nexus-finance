@@ -110,6 +110,11 @@ export default function TerminalClient() {
   const [sortKey, setSortKey] = useState<'edge' | 'vol' | 'conf'>('edge')
   const [worthOnly, setWorthOnly] = useState(false)
   const [auto, setAuto] = useState(false)
+  const [autoMode, setAutoMode] = useState<'paper' | 'live'>('paper')
+  const [liveArm, setLiveArm] = useState(false)
+  const [liveState, setLiveState] = useState<{ spent: number; trades: number; positions: { id: string; ticker: string; title: string; side: 'yes' | 'no'; count: number; entry: number; ts: number }[] }>({ spent: 0, trades: 0, positions: [] })
+  const liveCfg = useRef({ budget: 20, maxTrades: 12 })
+  const liveRef = useRef(liveState); liveRef.current = liveState
   const [connect, setConnect] = useState(false)
   const [conn, setConn] = useState<KalshiConn | null>(null)
   const [bal, setBal] = useState<number | null>(null)
@@ -250,26 +255,81 @@ export default function TerminalClient() {
     return () => clearInterval(id)
   }, [priceOf, closePos])
 
-  // ── AUTO scalp engine (fires on the chosen cadence) ───────────────────────
+  // ── AUTO scalp engine — paper OR live (real money), fires every 5s ─────────
   useEffect(() => {
     if (!auto) return
-    addLog('SYS', '⚡ AUTO ENGINE ARMED · paper · 5s cadence')
-    const id = setInterval(() => {
-      const rs = rowsRef.current, p = pfRef.current
-      addLog('SCAN', `scanning ${rs.length} markets · consensus tick`)
-      const open = new Set(p.positions.map((x) => x.ticker))
-      if (p.positions.length >= MAX_OPEN) { addLog('SYS', `holding ${p.positions.length}/${MAX_OPEN} — waiting for exits`); return }
-      if (p.cash < TICKET) { addLog('SYS', 'bankroll exhausted — reset to keep scalping'); return }
-      const cand = rs.filter((r) => (r.verdict.worthIt || r.verdict.edge >= 0.03) && !open.has(r.market.ticker))
-        .sort((a, b) => b.verdict.edge - a.verdict.edge)[0]
-      if (!cand) { addLog('SYS', 'no fresh edge ≥ 3pt — standing down'); return }
-      setFiring(true); setTimeout(() => setFiring(false), 600)
-      addLog('FIRE', `FIRE ${cand.verdict.side} ${cand.market.title.slice(0, 30)} @ ${american(cand.verdict.marketProb)} · +${(cand.verdict.edge * 100).toFixed(1)}pt`)
-      const entry = buy(cand, cand.verdict.side, TICKET, true)
-      setTimeout(() => addLog('FILL', `FILLED ${cand.verdict.side} ${money(TICKET)} @ ${(entry * 100).toFixed(0)}¢ · TP +${(TP * 100).toFixed(0)}% / SL −${(SL * 100).toFixed(0)}%`), 320)
+    const live = autoMode === 'live'
+    addLog('SYS', live ? '🔴 LIVE AUTO ARMED · REAL MONEY · 5s' : '⚡ AUTO ARMED · paper · 5s')
+    const id = setInterval(async () => {
+      const rs = rowsRef.current
+      if (live) {
+        if (!conn) { addLog('SYS', 'not connected — disarming'); setAuto(false); return }
+        const ls = liveRef.current, cfg = liveCfg.current
+        if (ls.trades >= cfg.maxTrades) { addLog('SYS', `trade cap ${cfg.maxTrades} hit — disarming`); setAuto(false); return }
+        const open = new Set(ls.positions.map((x) => x.ticker))
+        const cand = rs.filter((r) => (r.verdict.worthIt || r.verdict.edge >= 0.03) && !open.has(r.market.ticker)).sort((a, b) => b.verdict.edge - a.verdict.edge)[0]
+        if (!cand) { addLog('SCAN', 'no fresh edge — standing down'); return }
+        const side = cand.verdict.side.toLowerCase() as 'yes' | 'no'
+        const price = clamp01(priceOf(cand.market.ticker, cand.verdict.side) ?? cand.verdict.marketProb)
+        const cost = price * REAL_COUNT
+        if (ls.spent + cost > cfg.budget) { addLog('SYS', `budget ${money(cfg.budget)} reached — disarming`); setAuto(false); return }
+        setFiring(true); setTimeout(() => setFiring(false), 600)
+        addLog('FIRE', `LIVE FIRE ${side.toUpperCase()} ${cand.market.title.slice(0, 24)} @ ${(price * 100).toFixed(0)}¢`)
+        const r = await placeOrder(conn, cand.market.ticker, side, REAL_COUNT)
+        if (!r.ok) { addLog('SYS', `❌ rejected: ${errMsg(r)} — disarming`); setAuto(false); return }
+        addLog('FILL', `LIVE FILLED ${side.toUpperCase()} ×${REAL_COUNT} — real order sent`)
+        setLiveState((s) => ({ spent: +(s.spent + cost).toFixed(2), trades: s.trades + 1, positions: [{ id: cand.market.ticker + '-' + Date.now(), ticker: cand.market.ticker, title: cand.market.title, side, count: REAL_COUNT, entry: price, ts: Date.now() }, ...s.positions] }))
+        try { const [b, p] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(p) } catch { }
+      } else {
+        const p = pfRef.current
+        addLog('SCAN', `scanning ${rs.length} markets · consensus tick`)
+        const open = new Set(p.positions.map((x) => x.ticker))
+        if (p.positions.length >= MAX_OPEN) { addLog('SYS', `holding ${p.positions.length}/${MAX_OPEN} — waiting for exits`); return }
+        if (p.cash < TICKET) { addLog('SYS', 'bankroll exhausted — reset to keep scalping'); return }
+        const cand = rs.filter((r) => (r.verdict.worthIt || r.verdict.edge >= 0.03) && !open.has(r.market.ticker)).sort((a, b) => b.verdict.edge - a.verdict.edge)[0]
+        if (!cand) { addLog('SYS', 'no fresh edge ≥ 3pt — standing down'); return }
+        setFiring(true); setTimeout(() => setFiring(false), 600)
+        addLog('FIRE', `FIRE ${cand.verdict.side} ${cand.market.title.slice(0, 30)} @ ${american(cand.verdict.marketProb)} · +${(cand.verdict.edge * 100).toFixed(1)}pt`)
+        const entry = buy(cand, cand.verdict.side, TICKET, true)
+        setTimeout(() => addLog('FILL', `FILLED ${cand.verdict.side} ${money(TICKET)} @ ${(entry * 100).toFixed(0)}¢ · TP +${(TP * 100).toFixed(0)}% / SL −${(SL * 100).toFixed(0)}%`), 320)
+      }
     }, 5000)
     return () => { clearInterval(id); addLog('SYS', '⏸ auto engine disarmed') }
-  }, [auto, buy, addLog])
+  }, [auto, autoMode, conn, buy, addLog, priceOf])
+
+  // ── LIVE auto exit manager: close real positions on TP/SL/time via sell ────
+  useEffect(() => {
+    if (autoMode !== 'live' || !conn) return
+    const id = setInterval(async () => {
+      for (const p of liveRef.current.positions) {
+        const cur = clamp01(priceOf(p.ticker, p.side === 'yes' ? 'YES' : 'NO') ?? p.entry)
+        const pnl = cur / clamp01(p.entry) - 1
+        if (pnl >= TP || pnl <= -SL || Date.now() - p.ts > MAX_AGE) {
+          setLiveState((s) => ({ ...s, positions: s.positions.filter((x) => x.id !== p.id) })) // optimistic — avoid double-close
+          const r = await placeOrder(conn, p.ticker, p.side, p.count, 'sell')
+          addLog(pnl >= 0 ? 'TP' : 'SL', `LIVE CLOSE ${p.side.toUpperCase()} ${p.title.slice(0, 20)} · ${r.ok ? 'sold' : 'sell FAILED: ' + errMsg(r)}`)
+          try { const [b, pp] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(pp) } catch { }
+        }
+      }
+    }, 2000)
+    return () => clearInterval(id)
+  }, [autoMode, conn, priceOf, addLog])
+
+  // arm / disarm / kill
+  function toggleAuto() {
+    if (auto) { setAuto(false); return }
+    if (autoMode === 'live') { if (!conn) { addLog('SYS', 'connect Kalshi to arm live'); setConnect(true); return } setLiveArm(true); return }
+    setAuto(true)
+  }
+  function confirmLiveArm(budget: number, maxTrades: number) { liveCfg.current = { budget, maxTrades }; setLiveState((s) => ({ spent: 0, trades: 0, positions: s.positions })); setLiveArm(false); setAuto(true) }
+  const killLive = useCallback(async () => {
+    setAuto(false)
+    const ps = liveRef.current.positions
+    if (conn && ps.length) { for (const p of ps) { try { await placeOrder(conn, p.ticker, p.side, p.count, 'sell') } catch { } } }
+    setLiveState((s) => ({ ...s, positions: [] }))
+    addLog('SYS', '🛑 KILL — live auto disarmed' + (ps.length ? ' & flattened' : ''))
+    try { if (conn) { const [b, p] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(p) } } catch { }
+  }, [conn, addLog])
 
   function resetPF() { setPf({ cash: START_BANK, positions: [], realized: 0 }); setSess({ trades: 0, wins: 0, pnl: 0 }); setEq([]) }
 
@@ -325,9 +385,14 @@ export default function TerminalClient() {
         <Metric label="feed" value={status === 'live' ? 'LIVE·KALSHI' : status === 'demo' ? 'DEMO' : 'BOOT'} color={status === 'live' ? C.green : C.amber} dot />
         <Metric label="agents" value={`${AGENTS.length * 26}`} color={C.emerald} />
         <Metric label="px" value={status === 'live' ? `REAL${lastPx ? ` ·${Math.max(0, Math.round((Date.now() - lastPx) / 1000))}s` : ' ·live'}` : status === 'demo' ? 'SIM·demo' : '—'} color={status === 'live' ? C.green : C.cyan} dot={status === 'live'} />
-        {/* AUTO toggle */}
-        <button onClick={() => setAuto((a) => !a)} className="mx-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11.5, fontWeight: 800, letterSpacing: '0.06em', padding: '7px 14px', color: auto ? C.bg : C.green, background: auto ? C.green : 'transparent', border: `1px solid ${C.green}`, animation: auto && !reduced ? 'mx-armed 1.6s infinite' : 'none' }}>
-          {auto ? <Pause size={14} /> : <Play size={14} />} {auto ? 'AUTO · ARMED' : 'ARM AUTO-SCALP'}
+        {/* AUTO mode + toggle */}
+        <span style={{ display: 'inline-flex', border: `1px solid ${C.line}`, borderRadius: 8, overflow: 'hidden' }}>
+          {(['paper', 'live'] as const).map((m) => (
+            <button key={m} disabled={auto} onClick={() => setAutoMode(m)} style={{ fontFamily: C.mono, fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', padding: '7px 11px', border: 'none', cursor: auto ? 'not-allowed' : 'pointer', color: autoMode === m ? C.bg : C.dim, background: autoMode === m ? (m === 'live' ? C.red : C.green) : 'transparent' }}>{m.toUpperCase()}</button>
+          ))}
+        </span>
+        <button onClick={toggleAuto} className="mx-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11.5, fontWeight: 800, letterSpacing: '0.06em', padding: '7px 14px', color: auto ? C.bg : (autoMode === 'live' ? C.red : C.green), background: auto ? (autoMode === 'live' ? C.red : C.green) : 'transparent', border: `1px solid ${autoMode === 'live' ? C.red : C.green}`, animation: auto && !reduced ? 'mx-armed 1.6s infinite' : 'none' }}>
+          {auto ? <Pause size={14} /> : <Play size={14} />} {auto ? (autoMode === 'live' ? 'LIVE · ARMED' : 'AUTO · ARMED') : 'ARM'}
         </button>
         {conn ? (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: C.mono, fontSize: 11, fontWeight: 700, padding: '5px 6px 5px 11px', borderRadius: 8, color: C.green, border: `1px solid ${C.green}44`, background: `${C.green}10` }}>
@@ -343,6 +408,19 @@ export default function TerminalClient() {
           <a href={APP_FILE} download="Project-Matrix.html" className="mx-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, padding: '7px 12px', textDecoration: 'none', color: C.bg, background: C.green, border: 'none' }}><Download size={13} /> Download</a>
         </span>
       </div>
+
+      {/* LIVE-ARMED banner — real money, always visible with KILL */}
+      {auto && autoMode === 'live' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 16px', background: `${C.red}18`, borderBottom: `1px solid ${C.red}55`, flexWrap: 'wrap' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: C.mono, fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', color: C.red }}>
+            <span style={{ width: 9, height: 9, borderRadius: 9, background: C.red, boxShadow: `0 0 10px ${C.red}`, animation: reduced ? 'none' : 'mx-armed 1.2s infinite' }} /> LIVE AUTO · REAL MONEY
+          </span>
+          <Metric label="spent" value={`${money(liveState.spent, 2)} / ${money(liveCfg.current.budget)}`} color={C.amber} />
+          <Metric label="orders" value={`${liveState.trades} / ${liveCfg.current.maxTrades}`} color={C.dim} />
+          <Metric label="open" value={`${liveState.positions.length}`} color={C.cyan} />
+          <button onClick={killLive} className="mx-btn" style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', padding: '8px 18px', color: '#fff', background: C.red, border: 'none' }}>🛑 KILL &amp; FLATTEN</button>
+        </div>
+      )}
 
       {/* MAIN GRID */}
       <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '260px 1fr 350px', gap: 1, background: C.line }}>
@@ -397,6 +475,42 @@ export default function TerminalClient() {
 
       {connect && <ConnectModal onClose={() => setConnect(false)} onConnect={doConnect} />}
       {orderReq && <OrderConfirm req={orderReq} live={priceOf(orderReq.row.market.ticker, orderReq.side === 'yes' ? 'YES' : 'NO') ?? 0.5} onClose={() => setOrderReq(null)} onConfirm={doPlaceReal} />}
+      {liveArm && <LiveArmModal bal={bal} onClose={() => setLiveArm(false)} onArm={confirmLiveArm} />}
+    </div>
+  )
+}
+
+// ── arm LIVE auto (real money) — budget + typed confirmation ────────────────────
+function LiveArmModal({ bal, onClose, onArm }: { bal: number | null; onClose: () => void; onArm: (budget: number, maxTrades: number) => void }) {
+  const [budget, setBudget] = useState(20)
+  const [maxTrades, setMaxTrades] = useState(12)
+  const [ack, setAck] = useState('')
+  useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); addEventListener('keydown', k); return () => removeEventListener('keydown', k) }, [onClose])
+  const ok = ack.trim().toUpperCase() === 'ARM LIVE'
+  return (
+    <div role="dialog" aria-modal onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 220, display: 'grid', placeItems: 'center', background: 'rgba(4,6,8,.85)', backdropFilter: 'blur(6px)', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(480px,95vw)', background: C.bg, border: `1px solid ${C.red}66`, borderRadius: 16, padding: 'clamp(22px,4vw,30px)', boxShadow: `0 0 80px ${C.red}25` }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: C.mono, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.red }}><AlertTriangle size={14} /> Arm LIVE auto · real money</span>
+        <h3 style={{ margin: '12px 0 6px', fontSize: 'clamp(1.3rem,3vw,1.6rem)', fontWeight: 800, letterSpacing: '-0.02em', color: C.ink }}>The bot will spend real money by itself.</h3>
+        <p style={{ margin: '0 0 8px', color: C.dim, fontSize: 13.5, lineHeight: 1.6 }}>
+          Once armed, MATRIX places real 1-contract market orders on your Kalshi account every ~5s (best available edge), and closes them on TP/SL/time — no per-order confirmation. It stops the instant a cap or an error is hit.
+        </p>
+        <p style={{ margin: '0 0 14px', fontFamily: C.mono, fontSize: 11, color: C.amber, lineHeight: 1.6, border: `1px solid ${C.amber}33`, background: `${C.amber}0c`, borderRadius: 8, padding: '9px 11px' }}>
+          Reality check: the signal is a transparent demo ensemble, not a proven, backtested edge. On a fast loop it will most likely bleed to fees + spread. Keep the budget tiny. Balance: <b style={{ color: C.ink }}>{bal == null ? '—' : money(bal, 2)}</b>.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+          <label style={{ fontFamily: C.mono, fontSize: 10, color: C.faint }}>Session budget ($)
+            <input type="number" min={1} max={200} value={budget} onChange={(e) => setBudget(clamp(Number(e.target.value) || 0, 1, 200))} style={{ width: '100%', boxSizing: 'border-box', marginTop: 5, background: C.deep, border: `1px solid ${C.line}`, borderRadius: 8, color: C.ink, fontFamily: C.mono, fontSize: 15, padding: '10px 12px', outline: 'none' }} /></label>
+          <label style={{ fontFamily: C.mono, fontSize: 10, color: C.faint }}>Max orders
+            <input type="number" min={1} max={100} value={maxTrades} onChange={(e) => setMaxTrades(clamp(Number(e.target.value) || 0, 1, 100))} style={{ width: '100%', boxSizing: 'border-box', marginTop: 5, background: C.deep, border: `1px solid ${C.line}`, borderRadius: 8, color: C.ink, fontFamily: C.mono, fontSize: 15, padding: '10px 12px', outline: 'none' }} /></label>
+        </div>
+        <label style={{ fontFamily: C.mono, fontSize: 10, color: C.faint }}>Type <b style={{ color: C.red }}>ARM LIVE</b> to confirm
+          <input value={ack} onChange={(e) => setAck(e.target.value)} placeholder="ARM LIVE" style={{ width: '100%', boxSizing: 'border-box', marginTop: 5, background: C.deep, border: `1px solid ${ok ? C.red : C.line}`, borderRadius: 8, color: C.ink, fontFamily: C.mono, fontSize: 14, padding: '11px 13px', outline: 'none', letterSpacing: '0.1em' }} /></label>
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <button onClick={onClose} className="mx-btn" style={{ flex: 1, padding: '12px', color: C.dim, background: 'transparent' }}>Cancel</button>
+          <button onClick={() => ok && onArm(budget, maxTrades)} disabled={!ok} className="mx-btn" style={{ flex: 2, padding: '12px', fontWeight: 800, color: ok ? '#fff' : C.faint, background: ok ? C.red : C.panel2, border: 'none', cursor: ok ? 'pointer' : 'not-allowed' }}>Arm live auto · {money(budget)} cap</button>
+        </div>
+      </div>
     </div>
   )
 }
