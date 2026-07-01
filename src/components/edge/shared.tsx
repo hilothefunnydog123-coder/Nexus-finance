@@ -54,6 +54,33 @@ export function timeToClose(closeISO: string): string {
   return `${Math.max(1, Math.floor(ms / 60_000))}m`
 }
 
+// ── gambler math ─────────────────────────────────────────────────────────────
+// A Kalshi contract costs `price` (0..1) and pays $1 on win. `price` IS the
+// implied probability. These translate that into the language a bettor reads.
+
+/** American (moneyline) odds for a bet whose implied win prob is `price`. */
+export function americanOdds(price: number): string {
+  const q = Math.max(0.01, Math.min(0.99, price))
+  const a = q >= 0.5 ? -Math.round((100 * q) / (1 - q)) : Math.round((100 * (1 - q)) / q)
+  return a >= 0 ? `+${a}` : `${a}`
+}
+/** Decimal odds (total return multiple per $1 staked). */
+export function decimalOdds(price: number): string {
+  return (1 / Math.max(0.01, Math.min(0.99, price))).toFixed(2)
+}
+/** Profit (not total) on a $stake bet at this price. */
+export function profitOn(stake: number, price: number): number {
+  return stake * (1 / Math.max(0.01, Math.min(0.99, price)) - 1)
+}
+/** Suggested stake in dollars for a bankroll, from a Kelly fraction. */
+export function stakeDollars(kellyFraction: number, bankroll = 1000): number {
+  return Math.max(0, kellyFraction) * bankroll
+}
+export function money(n: number, d = 0): string {
+  const s = Math.abs(n) >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toFixed(d)
+  return `$${s}`
+}
+
 export function engineLabel(e: EdgeEngine): { label: string; color: string } {
   if (e === 'brainstock-nn') return { label: 'NEURAL NET', color: CYAN }
   if (e === 'gemini-grounded') return { label: 'GROUNDED AI', color: VIOLET }

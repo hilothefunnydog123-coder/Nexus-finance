@@ -17,6 +17,7 @@ import {
   VOID, PANEL, BORDER, CYAN, VIOLET, GREEN, RED, AMBER, TXT, MUTE, FAINT, MONO,
   HeadToHead, WorthBadge, EngineBadge, Tag, Stat, PathRail, TextureBg, KalshiLogo, KALSHI_GREEN,
   pct, signedPct, fmtNum, timeToClose, catColor, edgeAccent, useReducedMotion,
+  americanOdds, profitOn, stakeDollars, money,
 } from '@/components/edge/shared'
 import { Filters, DEFAULT_FILTERS, applyFilters, type EdgeFilterState } from '@/components/edge/Filters'
 import type { EdgeBoard, EdgeRow } from '@/lib/edge/types'
@@ -321,6 +322,10 @@ function Spotlight({ row, reduced }: { row: EdgeRow; reduced: boolean }) {
   const { market, pricing, verdict } = row
   const accent = edgeAccent(verdict.edge)
   const glow = verdict.worthIt ? GREEN : accent
+  const sideColor = verdict.side === 'YES' ? GREEN : RED
+  const odds = americanOdds(verdict.marketProb)
+  const profit100 = profitOn(100, verdict.marketProb)
+  const stake = stakeDollars(verdict.halfKelly, 1000)
   return (
     <section
       style={{
@@ -355,9 +360,30 @@ function Spotlight({ row, reduced }: { row: EdgeRow; reduced: boolean }) {
         {market.title}
       </h2>
 
+      {/* THE BET SLIP — the call, the moneyline, the payout */}
+      <div style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 'clamp(12px,2.5vw,22px)', flexWrap: 'wrap', background: VOID, border: `1px solid ${sideColor}44`, borderRadius: 12, padding: 'clamp(11px,2vw,15px) clamp(14px,2.5vw,20px)' }}>
+        <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: FAINT }}>our call</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontFamily: MONO, fontSize: 15, fontWeight: 800, letterSpacing: '0.05em', color: VOID, background: sideColor, padding: '4px 11px', borderRadius: 7, textTransform: 'uppercase', boxShadow: !reduced ? `0 0 20px ${sideColor}55` : 'none' }}>BET {verdict.side}</span>
+            <span style={{ fontFamily: MONO, fontSize: 20, fontWeight: 800, color: TXT, fontVariantNumeric: 'tabular-nums' }}>{odds}</span>
+          </span>
+        </span>
+        <span aria-hidden style={{ width: 1, alignSelf: 'stretch', background: BORDER }} />
+        <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: FAINT }}>$100 wins</span>
+          <span style={{ fontFamily: MONO, fontSize: 20, fontWeight: 800, color: GREEN, fontVariantNumeric: 'tabular-nums' }}>+${profit100.toFixed(0)}</span>
+        </span>
+        <span aria-hidden style={{ width: 1, alignSelf: 'stretch', background: BORDER }} />
+        <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: FAINT }}>we&apos;d stake</span>
+          <span style={{ fontFamily: MONO, fontSize: 20, fontWeight: 800, color: CYAN, fontVariantNumeric: 'tabular-nums' }}>{money(stake)}<span style={{ fontSize: 11, color: FAINT }}>/$1k</span></span>
+        </span>
+      </div>
+
       <div
         style={{
-          marginTop: 'clamp(16px,3vw,26px)',
+          marginTop: 'clamp(16px,3vw,24px)',
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)',
           gap: 'clamp(18px,3vw,34px)',
@@ -390,9 +416,9 @@ function Spotlight({ row, reduced }: { row: EdgeRow; reduced: boolean }) {
             overflow: 'hidden',
           }}
         >
-          <TrophyStat label="Edge" value={`${signedPct(verdict.edge)}pt`} color={accent} glow={!reduced && verdict.worthIt} icon={<Target size={13} />} />
-          <TrophyStat label="EV / $1" value={`${signedPct(verdict.evPerDollar)}¢`} color={verdict.evPerDollar >= 0 ? GREEN : RED} glow={!reduced && verdict.worthIt} icon={<DollarSign size={13} />} />
-          <TrophyStat label="Half-Kelly" value={pct(verdict.halfKelly, 1)} color={CYAN} icon={<Scale size={13} />} />
+          <TrophyStat label="Our Edge" value={`${signedPct(verdict.edge)}pt`} color={accent} glow={!reduced && verdict.worthIt} icon={<Target size={13} />} />
+          <TrophyStat label="EV / $100" value={`${verdict.evPerDollar >= 0 ? '+' : ''}${money(verdict.evPerDollar * 100)}`} color={verdict.evPerDollar >= 0 ? GREEN : RED} glow={!reduced && verdict.worthIt} icon={<DollarSign size={13} />} />
+          <TrophyStat label="½-Kelly stake" value={`${money(stake)}/$1k`} color={CYAN} icon={<Scale size={13} />} />
           <TrophyStat label="Confidence" value={pct(verdict.confidence, 0)} color={VIOLET} icon={<BrainCircuit size={13} />} />
         </div>
       </div>
@@ -452,6 +478,10 @@ function Card({ row, reduced, index, rank }: { row: EdgeRow; reduced: boolean; i
   const accent = edgeAccent(verdict.edge)
   const good = verdict.worthIt || verdict.evPerDollar > 0
   const dim = !good
+  const sideColor = verdict.side === 'YES' ? GREEN : RED
+  const odds = americanOdds(verdict.marketProb)         // odds for OUR side's price
+  const profit100 = profitOn(100, verdict.marketProb)   // $ profit on a $100 win
+  const stake = stakeDollars(verdict.halfKelly, 1000)   // ½-Kelly $ on a $1k bankroll
   return (
     <Link
       href={`/edge/${encodeURIComponent(market.ticker)}`}
@@ -459,26 +489,26 @@ function Card({ row, reduced, index, rank }: { row: EdgeRow; reduced: boolean; i
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
-        background: PANEL,
+        gap: 11,
+        background: `linear-gradient(168deg, ${good ? accent + '10' : 'rgba(255,255,255,.03)'} 0%, ${PANEL} 46%)`,
         border: `1px solid ${good ? accent + '55' : BORDER}`,
-        borderRadius: 12,
-        padding: 'clamp(14px,2vw,18px)',
+        borderRadius: 14,
+        padding: 'clamp(14px,2vw,17px)',
         textDecoration: 'none',
         color: TXT,
-        opacity: dim ? 0.62 : 1,
-        boxShadow: verdict.worthIt && !reduced ? `0 0 26px ${GREEN}22` : good && !reduced ? `0 0 18px ${accent}14` : 'none',
+        opacity: dim ? 0.66 : 1,
+        boxShadow: verdict.worthIt && !reduced ? `0 0 30px ${GREEN}22, inset 0 1px 0 ${accent}20` : good && !reduced ? `0 0 18px ${accent}12` : 'none',
         transition: reduced ? 'none' : 'transform .25s cubic-bezier(.16,1,.3,1), border-color .25s, box-shadow .25s, opacity .25s',
         animation: reduced ? 'none' : `yn-edge-rise .5s cubic-bezier(.16,1,.3,1) ${Math.min(index, 12) * 40}ms both`,
       }}
       onMouseEnter={(e) => { if (!reduced) e.currentTarget.style.transform = 'translateY(-3px)' }}
       onMouseLeave={(e) => { if (!reduced) e.currentTarget.style.transform = 'none' }}
     >
-      <span aria-hidden style={{ position: 'absolute', top: 0, left: 14, right: 14, height: 1, background: `linear-gradient(90deg, transparent, ${accent}66, transparent)` }} />
+      <span aria-hidden style={{ position: 'absolute', top: 0, left: 14, right: 14, height: 1, background: `linear-gradient(90deg, transparent, ${accent}77, transparent)` }} />
 
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: MONO, fontSize: 12, fontWeight: 800, letterSpacing: '0.02em', color: good ? VOID : MUTE, background: good ? accent : 'transparent', border: `1px solid ${good ? accent : BORDER}`, borderRadius: 5, fontVariantNumeric: 'tabular-nums', minWidth: 28, height: 22, padding: '0 5px' }}>{rank}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: MONO, fontSize: 12, fontWeight: 800, letterSpacing: '0.02em', color: good ? VOID : MUTE, background: good ? accent : 'transparent', border: `1px solid ${good ? accent : BORDER}`, borderRadius: 5, fontVariantNumeric: 'tabular-nums', minWidth: 26, height: 21, padding: '0 5px' }}>{rank}</span>
         <Tag color={catColor(market.category)}>{market.category}</Tag>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: MONO, fontSize: 10.5, color: FAINT, letterSpacing: '0.06em' }}>
           <Clock size={11} style={{ flexShrink: 0 }} />{timeToClose(market.closeTime)}
@@ -486,21 +516,35 @@ function Card({ row, reduced, index, rank }: { row: EdgeRow; reduced: boolean; i
         <span style={{ marginLeft: 'auto' }}><EngineBadge engine={pricing.engine} /></span>
       </div>
 
-      <div style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.28, letterSpacing: '-0.01em', minHeight: 38, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+      <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.26, letterSpacing: '-0.01em', minHeight: 39, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
         {market.title}
       </div>
 
-      <HeadToHead aiYes={pricing.ynProb} marketYes={market.yesPrice} side={verdict.side} edge={verdict.edge} animate={!reduced} height={22} />
-
-      {/* mini stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 2 }}>
-        <MiniStat label="Edge" value={`${signedPct(verdict.edge)}pt`} color={accent} icon={<Target size={11} />} />
-        <MiniStat label="EV/$1" value={`${signedPct(verdict.evPerDollar)}¢`} color={verdict.evPerDollar >= 0 ? GREEN : RED} icon={<DollarSign size={11} />} />
-        <MiniStat label="½ Kelly" value={pct(verdict.halfKelly, 1)} color={CYAN} icon={<Scale size={11} />} />
+      {/* THE PICK — the bet slip line a gambler reads first */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: VOID, border: `1px solid ${sideColor}44`, borderRadius: 9, padding: '9px 11px' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', color: VOID, background: sideColor, padding: '4px 9px', borderRadius: 6, textTransform: 'uppercase' }}>
+          BET {verdict.side}
+        </span>
+        <span style={{ fontFamily: MONO, fontSize: 15, fontWeight: 800, color: TXT, fontVariantNumeric: 'tabular-nums' }}>{odds}</span>
+        <span style={{ marginLeft: 'auto', textAlign: 'right' }}>
+          <span style={{ display: 'block', fontFamily: MONO, fontSize: 12.5, fontWeight: 700, color: GREEN, fontVariantNumeric: 'tabular-nums' }}>$100 → ${(100 + profit100).toFixed(0)}</span>
+          <span style={{ display: 'block', fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: FAINT, marginTop: 1 }}>if it hits</span>
+        </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 2 }}>
-        <span style={{ fontFamily: MONO, fontSize: 10.5, color: FAINT, letterSpacing: '0.06em' }}>{fmtNum(market.volume)} vol</span>
+      <HeadToHead aiYes={pricing.ynProb} marketYes={market.yesPrice} side={verdict.side} edge={verdict.edge} animate={!reduced} height={20} />
+
+      {/* the gambler's numbers */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 1 }}>
+        <MiniStat label="Edge" value={`${signedPct(verdict.edge)}pt`} color={accent} icon={<Target size={11} />} />
+        <MiniStat label="EV /$100" value={`${verdict.evPerDollar >= 0 ? '+' : ''}${money(verdict.evPerDollar * 100)}`} color={verdict.evPerDollar >= 0 ? GREEN : RED} icon={<DollarSign size={11} />} />
+        <MiniStat label="Stake /$1k" value={money(stake)} color={CYAN} icon={<Scale size={11} />} />
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 1 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: MONO, fontSize: 10.5, color: FAINT, letterSpacing: '0.06em' }}>
+          <Activity size={11} style={{ flexShrink: 0 }} /> {fmtNum(market.volume)} traded
+        </span>
         <WorthBadge worthIt={verdict.worthIt} />
       </div>
     </Link>
@@ -509,9 +553,9 @@ function Card({ row, reduced, index, rank }: { row: EdgeRow; reduced: boolean; i
 
 function MiniStat({ label, value, color, icon }: { label: string; value: string; color: string; icon?: React.ReactNode }) {
   return (
-    <div style={{ background: VOID, border: `1px solid ${BORDER}`, borderRadius: 7, padding: '8px 9px' }}>
-      <div style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: FAINT, marginTop: 3 }}>
+    <div style={{ background: VOID, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 9px' }}>
+      <div style={{ fontFamily: MONO, fontSize: 13, fontWeight: 800, color, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.11em', textTransform: 'uppercase', color: FAINT, marginTop: 3 }}>
         {icon && <span style={{ display: 'inline-flex', color: `${color}aa` }}>{icon}</span>}
         {label}
       </div>

@@ -20,6 +20,7 @@ import {
   VOID, PANEL, BORDER, CYAN, VIOLET, GREEN, RED, AMBER, TXT, MUTE, FAINT, MONO,
   HeadToHead, WorthBadge, EngineBadge, Tag, Stat, PathRail, TextureBg,
   pct, signedPct, fmtNum, timeToClose, catColor, edgeAccent, useReducedMotion,
+  americanOdds, decimalOdds, profitOn, stakeDollars, money,
   type EdgeRow,
 } from '@/components/edge/shared'
 
@@ -144,6 +145,47 @@ function MathRow({ label, value, formula, color = TXT, strong, icon }: { label: 
   )
 }
 
+// ── the gambler's bet slip ────────────────────────────────────────────────────
+function BetSlip({ verdict }: { verdict: EdgeRow['verdict'] }) {
+  const sideColor = verdict.side === 'YES' ? GREEN : RED
+  const price = verdict.marketProb                 // what you pay per $1 on our side
+  const breakeven = price                          // need P(win) ≥ price to profit
+  const stake = stakeDollars(verdict.halfKelly, 1000)
+  const profit100 = profitOn(100, price)
+  const cells: { k: string; v: string; c: string }[] = [
+    { k: 'Our call', v: verdict.side, c: sideColor },
+    { k: 'Moneyline', v: americanOdds(price), c: TXT },
+    { k: 'Decimal odds', v: decimalOdds(price), c: TXT },
+    { k: '$100 ticket wins', v: `+$${profit100.toFixed(0)}`, c: GREEN },
+    { k: 'Break-even win %', v: pct(breakeven, 0), c: MUTE },
+    { k: 'Our win %', v: pct(verdict.ynProb, 0), c: CYAN },
+    { k: 'Edge vs break-even', v: `${signedPct(verdict.edge, 1)}pt`, c: verdict.edge >= 0 ? GREEN : RED },
+    { k: '½-Kelly stake', v: `${money(stake)}/$1k`, c: AMBER },
+  ]
+  return (
+    <Panel glow={sideColor} style={{ marginTop: 18, borderColor: `${sideColor}40` }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+        <SectionLabel color={sideColor} icon={<DollarSign size={14} />}>THE BET · how a ticket pays</SectionLabel>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: MONO, fontSize: 12, fontWeight: 800, color: VOID, background: sideColor, padding: '5px 12px', borderRadius: 7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          BET {verdict.side} · {americanOdds(price)}
+        </span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 1, background: BORDER, border: `1px solid ${BORDER}`, borderRadius: 10, overflow: 'hidden' }}>
+        {cells.map((c) => (
+          <div key={c.k} style={{ background: VOID, padding: '13px 14px' }}>
+            <div style={{ fontFamily: MONO, fontSize: 'clamp(1.05rem,2.4vw,1.4rem)', fontWeight: 800, color: c.c, fontVariantNumeric: 'tabular-nums' }}>{c.v}</div>
+            <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: FAINT, marginTop: 5 }}>{c.k}</div>
+          </div>
+        ))}
+      </div>
+      <p style={{ margin: '12px 2px 0', fontSize: 12, color: FAINT, lineHeight: 1.5 }}>
+        Stake shown is ½-Kelly on a $1,000 bankroll — scale it to yours. Never bet more than you can lose;
+        the edge only plays out across many disciplined bets.
+      </p>
+    </Panel>
+  )
+}
+
 // ── main ─────────────────────────────────────────────────────────────────────
 export default function MarketDetailClient({ ticker }: { ticker: string }) {
   const reduced = useReducedMotion()
@@ -233,6 +275,9 @@ export default function MarketDetailClient({ ticker }: { ticker: string }) {
         <SectionLabel icon={<Scale size={14} />}>AI vs MARKET · P(YES)</SectionLabel>
         <HeadToHead aiYes={pricing.ynProb} marketYes={market.yesPrice} side={verdict.side} edge={verdict.edge} animate={!reduced} height={34} />
       </Panel>
+
+      {/* ── THE BET SLIP (gambler view) ──────────────────────────────────── */}
+      <BetSlip verdict={verdict} />
 
       {/* ── VERDICT + MATH ───────────────────────────────────────────────── */}
       <Panel glow={accent} style={{ marginTop: 18, borderColor: `${accent}40` }}>
