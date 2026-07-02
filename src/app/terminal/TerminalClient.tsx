@@ -43,7 +43,7 @@ const C = {
 }
 const APP_FILE = '/Project-Matrix.html'
 const KAL_GREEN = '#00d29f'
-const START_BANK = 5000
+const START_BANK = 10000
 
 // ── SNIPER: patient value (churning every few seconds just feeds fees) ────────
 const TICKET = 40
@@ -51,10 +51,12 @@ const TP = 0.14, SL = 0.09, MAX_AGE = 360000, MAX_OPEN = 5
 const KFEE = 0.07          // Kalshi trading-fee coefficient
 const HALF_SPREAD = 0.01   // assumed cost of crossing half the spread, per side
 const NET_MIN = 0.02       // require ≥ 2pt of edge AFTER costs before firing
-// ── DEGEN: swarm-driven vol hunter — big tickets, wide bands, 8 barrels ────────
-const D_TICKET = 300       // base ticket; scales up to 2× with swarm conviction
-const D_TP = 0.50, D_SL = 0.25, D_AGE = 240000, D_MAX_OPEN = 8
-const D_CONV_MIN = 0.10    // swarm must actually lean before we pull the trigger
+// ── DEGEN: swarm-driven vol hunter — max size, max cadence, 15 barrels ─────────
+const D_TICKET = 600       // base ticket; scales up to 2× with swarm conviction
+const D_TP = 0.50, D_SL = 0.25, D_AGE = 240000, D_MAX_OPEN = 15
+const D_CONV_MIN = 0.06    // swarm lean required to fire (loose — volume over patience)
+const D_FIRES = 3          // positions opened per engine tick
+const D_PERIOD = 2500      // degen engine tick (ms); sniper stays 5000
 const SWARM_TARGETS = 16   // markets per generation (full population pass each)
 function roundTripCost(p: number) { const q = Math.max(0.02, Math.min(0.98, p)); return 2 * KFEE * q * (1 - q) + 2 * HALF_SPREAD }
 function netEdgeOf(v: { edge: number; marketProb: number }) { return v.edge - roundTripCost(v.marketProb) }
@@ -119,7 +121,7 @@ const CAT_X: Record<string, number> = { Crypto: 1.5, Sports: 1.4, Financials: 1.
 
 type Pos = { id: string; ticker: string; title: string; side: 'YES' | 'NO'; stake: number; entry: number; ts: number; auto?: boolean; degen?: boolean }
 type PF = { cash: number; positions: Pos[]; realized: number }
-const PF_KEY = 'matrix_pf_v4' // v4: $5k degen bank
+const PF_KEY = 'matrix_pf_v5' // v5: $10k degen bank
 function loadPF(): PF { if (typeof window === 'undefined') return { cash: START_BANK, positions: [], realized: 0 }; try { const r = JSON.parse(localStorage.getItem(PF_KEY) || ''); if (r && typeof r.cash === 'number') return r } catch { } return { cash: START_BANK, positions: [], realized: 0 } }
 function savePF(pf: PF) { try { localStorage.setItem(PF_KEY, JSON.stringify(pf)) } catch { } }
 
@@ -425,31 +427,30 @@ export default function TerminalClient() {
     return () => clearInterval(id)
   }, [priceOf, closePos, swarmConvOf])
 
-  /** Pick the next candidate for the active strategy. */
-  const pickCandidate = useCallback((rs: Row[], open: Set<string>): { row: Row; side: 'YES' | 'NO'; conv: number; why: string } | null => {
+  /** Pick the next candidates for the active strategy (top-k for degen). */
+  type Cand = { row: Row; side: 'YES' | 'NO'; conv: number; why: string }
+  const pickCandidates = useCallback((rs: Row[], open: Set<string>, k: number): Cand[] => {
     if (stratRef.current === 'degen') {
       const sw = swarm.current
-      // the swarm picks: conviction × volatility, and it only fires when the
-      // hedge-weighted population actually leans (D_CONV_MIN)
-      if (sw && sw.gen >= 3) {
-        const ranked = rs.filter((r) => !open.has(r.market.ticker))
+      // the swarm picks: conviction × volatility, gated only by a loose lean
+      if (sw && sw.gen >= 2) {
+        return rs.filter((r) => !open.has(r.market.ticker))
           .map((r) => { const c = sw.conv[r.market.ticker]?.c ?? 0; return { r, c, s: degenScore(r) * (0.35 + Math.abs(c) * 1.3) } })
-          .filter((x) => x.s > 0.1 && Math.abs(x.c) >= D_CONV_MIN)
-          .sort((a, b) => b.s - a.s)
-        const top = ranked[0]; if (!top) return null
-        const side: 'YES' | 'NO' = top.c > 0 ? 'YES' : 'NO'
-        return { row: top.r, side, conv: top.c, why: `swarm ${(Math.abs(top.c) * 100).toFixed(0)}% ${side} · volx ${degenScore(top.r).toFixed(2)}` }
+          .filter((x) => x.s > 0.05 && Math.abs(x.c) >= D_CONV_MIN)
+          .sort((a, b) => b.s - a.s).slice(0, k)
+          .map(({ r, c }) => ({ row: r, side: (c > 0 ? 'YES' : 'NO') as 'YES' | 'NO', conv: c, why: `swarm ${(Math.abs(c) * 100).toFixed(0)}% ${c > 0 ? 'YES' : 'NO'} · volx ${degenScore(r).toFixed(2)}` }))
       }
-      // swarm still warming up — fall back to raw momentum
-      const ranked = rs.filter((r) => !open.has(r.market.ticker) && degenScore(r) > 0.15)
-        .sort((a, b) => degenScore(b) - degenScore(a))
-      const r = ranked[0]; if (!r) return null
-      const { mom } = volStats(r.market.ticker)
-      const side: 'YES' | 'NO' = Math.abs(mom) >= 0.015 ? (mom > 0 ? 'YES' : 'NO') : r.verdict.side
-      return { row: r, side, conv: 0, why: `warming up · volx ${degenScore(r).toFixed(2)} · mom ${mom >= 0 ? '+' : ''}${(mom * 100).toFixed(1)}¢` }
+      // swarm still warming up — fall back to raw momentum, still top-k
+      return rs.filter((r) => !open.has(r.market.ticker) && degenScore(r) > 0.12)
+        .sort((a, b) => degenScore(b) - degenScore(a)).slice(0, k)
+        .map((r) => {
+          const { mom } = volStats(r.market.ticker)
+          const side: 'YES' | 'NO' = Math.abs(mom) >= 0.015 ? (mom > 0 ? 'YES' : 'NO') : r.verdict.side
+          return { row: r, side, conv: 0, why: `warming up · volx ${degenScore(r).toFixed(2)} · mom ${mom >= 0 ? '+' : ''}${(mom * 100).toFixed(1)}¢` }
+        })
     }
     const r = rs.filter((x) => netEdgeOf(x.verdict) >= NET_MIN && !open.has(x.market.ticker)).sort((a, b) => netEdgeOf(b.verdict) - netEdgeOf(a.verdict))[0]
-    return r ? { row: r, side: r.verdict.side, conv: 0, why: `net +${(netEdgeOf(r.verdict) * 100).toFixed(1)}pt` } : null
+    return r ? [{ row: r, side: r.verdict.side, conv: 0, why: `net +${(netEdgeOf(r.verdict) * 100).toFixed(1)}pt` }] : []
   }, [degenScore, volStats])
 
   // ── AUTO engine — paper OR live (real money), fires every 5s ────────────────
@@ -457,7 +458,7 @@ export default function TerminalClient() {
     if (!auto) return
     const live = autoMode === 'live'
     const dg = stratRef.current === 'degen'
-    addLog('SYS', live ? `🔴 LIVE AUTO ARMED · REAL MONEY · ${dg ? 'DEGEN' : 'SNIPER'} · 5s` : `⚡ AUTO ARMED · paper · ${dg ? '🔥 DEGEN' : 'SNIPER'} · 5s`)
+    addLog('SYS', live ? `🔴 LIVE AUTO ARMED · REAL MONEY · ${dg ? 'DEGEN' : 'SNIPER'} · ${dg ? '2.5s' : '5s'}` : `⚡ AUTO ARMED · paper · ${dg ? `🔥 DEGEN ×${D_FIRES}/tick` : 'SNIPER'} · ${dg ? '2.5s' : '5s'}`)
     const id = setInterval(async () => {
       const rs = rowsRef.current
       const degen = stratRef.current === 'degen'
@@ -466,45 +467,54 @@ export default function TerminalClient() {
         const ls = liveRef.current, cfg = liveCfg.current
         if (ls.trades >= cfg.maxTrades) { addLog('SYS', `trade cap ${cfg.maxTrades} hit — disarming`); setAuto(false); return }
         const open = new Set(ls.positions.map((x) => x.ticker))
-        const cand = pickCandidate(rs, open)
-        if (!cand) { addLog('SCAN', degen ? 'tape is dead — no vol worth chasing' : 'nothing clears fees + spread — standing down (this is the point)'); return }
-        const side = cand.side.toLowerCase() as 'yes' | 'no'
-        const price = clamp01(priceOf(cand.row.market.ticker, cand.side) ?? cand.row.verdict.marketProb)
-        const yesPx = clamp01(priceOf(cand.row.market.ticker, 'YES') ?? (side === 'yes' ? price : 1 - price))
-        const cost = price * cfg.contracts
-        if (ls.spent + cost > cfg.budget) { addLog('SYS', `budget ${money(cfg.budget)} reached — disarming`); setAuto(false); return }
-        setFiring(true); setTimeout(() => setFiring(false), 600)
-        pushFx({ type: 'fire', cat: cand.row.market.category })
-        addLog('FIRE', `LIVE FIRE ${side.toUpperCase()} ×${cfg.contracts} ${cand.row.market.title.slice(0, 22)} @ ${(price * 100).toFixed(0)}¢`, { cat: cand.row.market.category, delta: cand.why, chip: 'FIRE' })
-        const t0 = performance.now()
-        const r = await placeOrder(conn, cand.row.market.ticker, side, cfg.contracts, 'buy', yesPx)
-        const lat = Math.round(performance.now() - t0); setWire(lat)
-        if (!r.ok) { addLog('SYS', `❌ rejected: ${errMsg(r)} — disarming`); setAuto(false); return }
-        pushFx({ type: 'fill', cat: cand.row.market.category })
-        addLog('FILL', `LIVE FILLED ${side.toUpperCase()} ×${cfg.contracts}`, { cat: cand.row.market.category, delta: `wire→ack ${lat}ms · real order`, chip: 'FILLED' })
-        setLiveState((s) => ({ spent: +(s.spent + cost).toFixed(2), trades: s.trades + 1, positions: [{ id: cand.row.market.ticker + '-' + Date.now(), ticker: cand.row.market.ticker, title: cand.row.market.title, side, count: cfg.contracts, entry: price, ts: Date.now(), degen }, ...s.positions] }))
+        const cands = pickCandidates(rs, open, degen ? 2 : 1)
+        if (!cands.length) { addLog('SCAN', degen ? 'tape is dead — no vol worth chasing' : 'nothing clears fees + spread — standing down (this is the point)'); return }
+        for (const cand of cands) {
+          const ls2 = liveRef.current
+          if (ls2.trades >= cfg.maxTrades) { addLog('SYS', `trade cap ${cfg.maxTrades} hit — disarming`); setAuto(false); return }
+          const side = cand.side.toLowerCase() as 'yes' | 'no'
+          const price = clamp01(priceOf(cand.row.market.ticker, cand.side) ?? cand.row.verdict.marketProb)
+          const yesPx = clamp01(priceOf(cand.row.market.ticker, 'YES') ?? (side === 'yes' ? price : 1 - price))
+          const cost = price * cfg.contracts
+          if (ls2.spent + cost > cfg.budget) { addLog('SYS', `budget ${money(cfg.budget)} reached — disarming`); setAuto(false); return }
+          setFiring(true); setTimeout(() => setFiring(false), 600)
+          pushFx({ type: 'fire', cat: cand.row.market.category })
+          addLog('FIRE', `LIVE FIRE ${side.toUpperCase()} ×${cfg.contracts} ${cand.row.market.title.slice(0, 22)} @ ${(price * 100).toFixed(0)}¢`, { cat: cand.row.market.category, delta: cand.why, chip: 'FIRE' })
+          const t0 = performance.now()
+          const r = await placeOrder(conn, cand.row.market.ticker, side, cfg.contracts, 'buy', yesPx)
+          const lat = Math.round(performance.now() - t0); setWire(lat)
+          if (!r.ok) { addLog('SYS', `❌ rejected: ${errMsg(r)} — disarming`); setAuto(false); return }
+          pushFx({ type: 'fill', cat: cand.row.market.category })
+          addLog('FILL', `LIVE FILLED ${side.toUpperCase()} ×${cfg.contracts}`, { cat: cand.row.market.category, delta: `wire→ack ${lat}ms · real order`, chip: 'FILLED' })
+          setLiveState((s) => ({ spent: +(s.spent + cost).toFixed(2), trades: s.trades + 1, positions: [{ id: cand.row.market.ticker + '-' + Date.now(), ticker: cand.row.market.ticker, title: cand.row.market.title, side, count: cfg.contracts, entry: price, ts: Date.now(), degen }, ...s.positions] }))
+        }
         try { const [b, p] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(p) } catch { }
       } else {
         const p = pfRef.current
         addLog('SCAN', degen ? `🧠 swarm gen ${swarm.current?.gen ?? 0} · hunting across ${rs.length} markets` : `scanning ${rs.length} markets · consensus tick`)
         const open = new Set(p.positions.map((x) => x.ticker))
         const maxOpen = degen ? D_MAX_OPEN : MAX_OPEN
-        if (p.positions.length >= maxOpen) { addLog('SYS', `holding ${p.positions.length}/${maxOpen} — waiting for exits`); return }
-        const cand = pickCandidate(rs, open)
-        if (!cand) { addLog('SCAN', degen ? 'swarm is split — no conviction, standing down' : `nothing clears costs (need ${(NET_MIN * 100).toFixed(0)}pt net) — standing down`); return }
-        // conviction-scaled sizing: the harder the swarm leans, the bigger the ticket
-        const ticket = degen ? Math.min(Math.round(D_TICKET * (1 + Math.abs(cand.conv))), Math.floor(p.cash * 0.4)) : TICKET
-        if (p.cash < ticket || ticket < 10) { addLog('SYS', 'bankroll exhausted — reset to keep trading'); return }
-        setFiring(true); setTimeout(() => setFiring(false), 600)
-        pushFx({ type: 'fire', cat: cand.row.market.category })
-        addLog('FIRE', `FIRE ${cand.side} ${money(ticket)} ${cand.row.market.title.slice(0, 24)} @ ${american(clamp01(priceOf(cand.row.market.ticker, cand.side) ?? 0.5))}`, { cat: cand.row.market.category, delta: cand.why, chip: 'FIRE' })
-        const entry = buy(cand.row, cand.side, ticket, true, degen)
-        const [tp, sl] = degen ? [D_TP, D_SL] : [TP, SL]
-        setTimeout(() => { pushFx({ type: 'fill', cat: cand.row.market.category }); addLog('FILL', `FILLED ${cand.side} ${money(ticket)} @ ${(entry * 100).toFixed(0)}¢`, { cat: cand.row.market.category, delta: `TP +${(tp * 100).toFixed(0)}% / SL −${(sl * 100).toFixed(0)}% / apex lock armed`, chip: 'FILLED' }) }, 320)
+        const slots = maxOpen - p.positions.length
+        if (slots <= 0) { addLog('SYS', `holding ${p.positions.length}/${maxOpen} — waiting for exits`); return }
+        const cands = pickCandidates(rs, open, degen ? Math.min(D_FIRES, slots) : 1)
+        if (!cands.length) { addLog('SCAN', degen ? 'swarm is split — no conviction, standing down' : `nothing clears costs (need ${(NET_MIN * 100).toFixed(0)}pt net) — standing down`); return }
+        let cash = p.cash
+        for (const cand of cands) {
+          // conviction-scaled sizing: the harder the swarm leans, the bigger the ticket
+          const ticket = degen ? Math.min(Math.round(D_TICKET * (1 + Math.abs(cand.conv))), Math.floor(cash * 0.5)) : TICKET
+          if (cash < ticket || ticket < 10) { addLog('SYS', 'bankroll exhausted — reset to keep trading'); break }
+          cash -= ticket
+          setFiring(true); setTimeout(() => setFiring(false), 600)
+          pushFx({ type: 'fire', cat: cand.row.market.category })
+          addLog('FIRE', `FIRE ${cand.side} ${money(ticket)} ${cand.row.market.title.slice(0, 24)} @ ${american(clamp01(priceOf(cand.row.market.ticker, cand.side) ?? 0.5))}`, { cat: cand.row.market.category, delta: cand.why, chip: 'FIRE' })
+          const entry = buy(cand.row, cand.side, ticket, true, degen)
+          const [tp, sl] = degen ? [D_TP, D_SL] : [TP, SL]
+          setTimeout(() => { pushFx({ type: 'fill', cat: cand.row.market.category }); addLog('FILL', `FILLED ${cand.side} ${money(ticket)} @ ${(entry * 100).toFixed(0)}¢`, { cat: cand.row.market.category, delta: `TP +${(tp * 100).toFixed(0)}% / SL −${(sl * 100).toFixed(0)}% / apex lock armed`, chip: 'FILLED' }) }, 320)
+        }
       }
-    }, 5000)
+    }, stratRef.current === 'degen' ? D_PERIOD : 5000)
     return () => { clearInterval(id); addLog('SYS', '⏸ auto engine disarmed') }
-  }, [auto, autoMode, conn, buy, addLog, priceOf, pickCandidate, pushFx])
+  }, [auto, autoMode, conn, buy, addLog, priceOf, pickCandidates, pushFx])
 
   // ── LIVE auto exit manager: APEX lock / thesis break / TP / SL / time ───────
   useEffect(() => {
@@ -1048,7 +1058,7 @@ function Portfolio({ stats, eq, onClose, onReset, kpos, connected, bal }: { stat
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 13px', borderBottom: `1px solid ${C.line}` }}>
         <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.faint }}>{stats.marks.length} open</span>
-        <button className="mx-btn" onClick={onReset} style={{ fontSize: 9, padding: '4px 8px', color: C.dim }}>RESET $1k</button>
+        <button className="mx-btn" onClick={onReset} style={{ fontSize: 9, padding: '4px 8px', color: C.dim }}>RESET {money(START_BANK)}</button>
       </div>
       {stats.marks.length === 0
         ? <div style={{ padding: 20, textAlign: 'center', color: C.faint, fontFamily: C.mono, fontSize: 11 }}>Flat. Arm AUTO or buy manually.</div>
