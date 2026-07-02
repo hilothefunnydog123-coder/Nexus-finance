@@ -9,9 +9,11 @@
  *
  * Two strategies:
  *   SNIPER — patient value: only fires when edge clears fees + spread (NET_MIN).
- *   DEGEN  — volatility hunter: ranks the tape by realized vol × momentum ×
- *            proximity-to-50¢ × urgency and trades the fastest markets with
- *            bigger tickets and wider TP/SL. High variance BY DESIGN.
+ *   DEGEN  — swarm-driven volatility hunter: a 262,144-agent online-learning
+ *            swarm (see lib/swarm.ts) votes every generation and is re-scored
+ *            against the realized tape; DEGEN trades the highest
+ *            conviction × volatility markets with conviction-scaled tickets
+ *            and wide TP/SL. High variance BY DESIGN.
  *
  * LIVE (real-money) is gated behind an explicit connect + typed arm + budget,
  * with a kill-and-flatten switch. Motion-safe throughout.
@@ -29,6 +31,7 @@ import {
   importKalshiKey, saveConn, loadConn, clearConn, getBalance, getPositions,
   placeOrder, errMsg, type KalshiConn, type KPosition,
 } from '@/lib/kalshiClient'
+import { createSwarm, swarmStep, swarmNormalize, SWARM_N, type Swarm } from '@/lib/swarm'
 
 const C = {
   bg: '#0D0F12', deep: '#08090b', panel: 'rgba(255,255,255,.022)', panel2: 'rgba(255,255,255,.04)',
@@ -40,7 +43,7 @@ const C = {
 }
 const APP_FILE = '/Project-Matrix.html'
 const KAL_GREEN = '#00d29f'
-const START_BANK = 1000
+const START_BANK = 5000
 
 // ── SNIPER: patient value (churning every few seconds just feeds fees) ────────
 const TICKET = 40
@@ -48,9 +51,11 @@ const TP = 0.14, SL = 0.09, MAX_AGE = 360000, MAX_OPEN = 5
 const KFEE = 0.07          // Kalshi trading-fee coefficient
 const HALF_SPREAD = 0.01   // assumed cost of crossing half the spread, per side
 const NET_MIN = 0.02       // require ≥ 2pt of edge AFTER costs before firing
-// ── DEGEN: volatility hunter — big swings, big tickets, wide bands ────────────
-const D_TICKET = 120
-const D_TP = 0.35, D_SL = 0.20, D_AGE = 150000
+// ── DEGEN: swarm-driven vol hunter — big tickets, wide bands, 8 barrels ────────
+const D_TICKET = 300       // base ticket; scales up to 2× with swarm conviction
+const D_TP = 0.50, D_SL = 0.25, D_AGE = 240000, D_MAX_OPEN = 8
+const D_CONV_MIN = 0.10    // swarm must actually lean before we pull the trigger
+const SWARM_TARGETS = 16   // markets per generation (full population pass each)
 function roundTripCost(p: number) { const q = Math.max(0.02, Math.min(0.98, p)); return 2 * KFEE * q * (1 - q) + 2 * HALF_SPREAD }
 function netEdgeOf(v: { edge: number; marketProb: number }) { return v.edge - roundTripCost(v.marketProb) }
 
@@ -114,7 +119,7 @@ const CAT_X: Record<string, number> = { Crypto: 1.5, Sports: 1.4, Financials: 1.
 
 type Pos = { id: string; ticker: string; title: string; side: 'YES' | 'NO'; stake: number; entry: number; ts: number; auto?: boolean; degen?: boolean }
 type PF = { cash: number; positions: Pos[]; realized: number }
-const PF_KEY = 'matrix_pf_v3'
+const PF_KEY = 'matrix_pf_v4' // v4: $5k degen bank
 function loadPF(): PF { if (typeof window === 'undefined') return { cash: START_BANK, positions: [], realized: 0 }; try { const r = JSON.parse(localStorage.getItem(PF_KEY) || ''); if (r && typeof r.cash === 'number') return r } catch { } return { cash: START_BANK, positions: [], realized: 0 } }
 function savePF(pf: PF) { try { localStorage.setItem(PF_KEY, JSON.stringify(pf)) } catch { } }
 
@@ -155,6 +160,9 @@ export default function TerminalClient() {
   const rowsRef = useRef<Row[]>([]); rowsRef.current = rows
   const pfRef = useRef<PF>(pf); pfRef.current = pf
   const stratRef = useRef<Strat>(strat); stratRef.current = strat
+  const selRef = useRef<string | null>(sel); selRef.current = sel
+  const swarm = useRef<Swarm | null>(null)
+  const [swv, setSwv] = useState(0) // bump per swarm generation
   const logId = useRef(0)
   const accent = strat === 'degen' ? C.hot : C.green
 
@@ -228,6 +236,50 @@ export default function TerminalClient() {
     const liq = Math.min(1, r.market.volume / 3000)
     return (vol * 900 + Math.abs(mom) * 450 + nearMoney * 0.9 + 0.08) * urgency * catX * (0.35 + 0.65 * liq)
   }, [volStats])
+
+  // ── SWARM CORTEX: 262,144 online-learning agents ───────────────────────────
+  /** The 9 live tape features every agent reads. Each ≈ [-1, 1]. */
+  const swarmFeatures = useCallback((r: Row): number[] => {
+    const t = r.market.ticker
+    const h = hist.current[t] || []
+    const p = px.current[t] ?? r.market.yesPrice
+    const at = (k: number) => h.length > k ? h[h.length - 1 - k] : (h[0] ?? p)
+    const cl = (x: number) => clamp(x, -1, 1)
+    const ms = +new Date(r.market.closeTime) - Date.now()
+    return [
+      cl((p - at(5)) * 30),                    // short momentum
+      cl((p - at(20)) * 18),                   // long momentum
+      cl((p - 2 * at(5) + at(10)) * 30),       // acceleration
+      cl((r.market.yesPrice - p) * 12),        // reversion pull toward the board anchor
+      cl((0.5 - Math.abs(p - 0.5)) * 4 - 1),   // near-the-money
+      cl(r.verdict.edge * 8),                  // model edge
+      cl(volStats(t).vol * 500),               // realized vol
+      ms < 36e5 ? 1 : ms < 864e5 ? 0.2 : -0.6, // urgency
+      1,                                       // bias
+    ]
+  }, [volStats])
+  const swarmConvOf = useCallback((t: string) => swarm.current?.conv[t]?.c ?? 0, [])
+  // one generation every 5s: settle last votes vs the realized tape, vote again.
+  // Runs whether armed or not — the brain trains on live data the whole session.
+  useEffect(() => {
+    if (!swarm.current) swarm.current = createSwarm()
+    const id = setInterval(() => {
+      const sw = swarm.current!; const rs = rowsRef.current
+      if (!rs.length) return
+      const targets = [...rs].sort((a, b) => degenScore(b) - degenScore(a)).slice(0, SWARM_TARGETS)
+      const s = rs.find((r) => r.market.ticker === selRef.current)
+      if (s && !targets.includes(s)) targets.push(s)
+      for (const r of targets) swarmStep(sw, r.market.ticker, swarmFeatures(r), px.current[r.market.ticker] ?? r.market.yesPrice)
+      sw.gen++
+      if (sw.gen % 40 === 0) swarmNormalize(sw)
+      if (sw.gen % 24 === 0) {
+        const best = targets.map((r) => ({ r, c: sw.conv[r.market.ticker]?.c ?? 0 })).sort((a, b) => Math.abs(b.c) - Math.abs(a.c))[0]
+        if (best && Math.abs(best.c) > 0.05) addLog('SYS', `🧠 swarm gen ${sw.gen} · sharpest read: ${best.c > 0 ? 'YES' : 'NO'} ${(Math.abs(best.c) * 100).toFixed(0)}% on ${best.r.market.title.slice(0, 26)}`)
+      }
+      setSwv((v) => v + 1)
+    }, 5000)
+    return () => clearInterval(id)
+  }, [degenScore, swarmFeatures, addLog])
 
   // ── LIVE real-time price feed — poll the ACTUAL Kalshi YES mid every ~3.5s ──
   useEffect(() => {
@@ -314,18 +366,30 @@ export default function TerminalClient() {
   }, [priceOf, closePos])
 
   /** Pick the next candidate for the active strategy. */
-  const pickCandidate = useCallback((rs: Row[], open: Set<string>): { row: Row; side: 'YES' | 'NO'; why: string } | null => {
+  const pickCandidate = useCallback((rs: Row[], open: Set<string>): { row: Row; side: 'YES' | 'NO'; conv: number; why: string } | null => {
     if (stratRef.current === 'degen') {
+      const sw = swarm.current
+      // the swarm picks: conviction × volatility, and it only fires when the
+      // hedge-weighted population actually leans (D_CONV_MIN)
+      if (sw && sw.gen >= 3) {
+        const ranked = rs.filter((r) => !open.has(r.market.ticker))
+          .map((r) => { const c = sw.conv[r.market.ticker]?.c ?? 0; return { r, c, s: degenScore(r) * (0.35 + Math.abs(c) * 1.3) } })
+          .filter((x) => x.s > 0.1 && Math.abs(x.c) >= D_CONV_MIN)
+          .sort((a, b) => b.s - a.s)
+        const top = ranked[0]; if (!top) return null
+        const side: 'YES' | 'NO' = top.c > 0 ? 'YES' : 'NO'
+        return { row: top.r, side, conv: top.c, why: `swarm ${(Math.abs(top.c) * 100).toFixed(0)}% ${side} · volx ${degenScore(top.r).toFixed(2)}` }
+      }
+      // swarm still warming up — fall back to raw momentum
       const ranked = rs.filter((r) => !open.has(r.market.ticker) && degenScore(r) > 0.15)
         .sort((a, b) => degenScore(b) - degenScore(a))
       const r = ranked[0]; if (!r) return null
       const { mom } = volStats(r.market.ticker)
-      // ride the move if the tape is actually running; otherwise take the model's side
       const side: 'YES' | 'NO' = Math.abs(mom) >= 0.015 ? (mom > 0 ? 'YES' : 'NO') : r.verdict.side
-      return { row: r, side, why: `volx ${degenScore(r).toFixed(2)} · mom ${mom >= 0 ? '+' : ''}${(mom * 100).toFixed(1)}¢` }
+      return { row: r, side, conv: 0, why: `warming up · volx ${degenScore(r).toFixed(2)} · mom ${mom >= 0 ? '+' : ''}${(mom * 100).toFixed(1)}¢` }
     }
     const r = rs.filter((x) => netEdgeOf(x.verdict) >= NET_MIN && !open.has(x.market.ticker)).sort((a, b) => netEdgeOf(b.verdict) - netEdgeOf(a.verdict))[0]
-    return r ? { row: r, side: r.verdict.side, why: `net +${(netEdgeOf(r.verdict) * 100).toFixed(1)}pt` } : null
+    return r ? { row: r, side: r.verdict.side, conv: 0, why: `net +${(netEdgeOf(r.verdict) * 100).toFixed(1)}pt` } : null
   }, [degenScore, volStats])
 
   // ── AUTO engine — paper OR live (real money), fires every 5s ────────────────
@@ -358,15 +422,17 @@ export default function TerminalClient() {
         try { const [b, p] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(p) } catch { }
       } else {
         const p = pfRef.current
-        addLog('SCAN', degen ? `🔥 hunting vol across ${rs.length} markets` : `scanning ${rs.length} markets · consensus tick`)
+        addLog('SCAN', degen ? `🧠 swarm gen ${swarm.current?.gen ?? 0} · hunting across ${rs.length} markets` : `scanning ${rs.length} markets · consensus tick`)
         const open = new Set(p.positions.map((x) => x.ticker))
-        const ticket = degen ? D_TICKET : TICKET
-        if (p.positions.length >= MAX_OPEN) { addLog('SYS', `holding ${p.positions.length}/${MAX_OPEN} — waiting for exits`); return }
-        if (p.cash < ticket) { addLog('SYS', 'bankroll exhausted — reset to keep trading'); return }
+        const maxOpen = degen ? D_MAX_OPEN : MAX_OPEN
+        if (p.positions.length >= maxOpen) { addLog('SYS', `holding ${p.positions.length}/${maxOpen} — waiting for exits`); return }
         const cand = pickCandidate(rs, open)
-        if (!cand) { addLog('SCAN', degen ? 'tape is dead — waiting for a market to rip' : `nothing clears costs (need ${(NET_MIN * 100).toFixed(0)}pt net) — standing down`); return }
+        if (!cand) { addLog('SCAN', degen ? 'swarm is split — no conviction, standing down' : `nothing clears costs (need ${(NET_MIN * 100).toFixed(0)}pt net) — standing down`); return }
+        // conviction-scaled sizing: the harder the swarm leans, the bigger the ticket
+        const ticket = degen ? Math.min(Math.round(D_TICKET * (1 + Math.abs(cand.conv))), Math.floor(p.cash * 0.4)) : TICKET
+        if (p.cash < ticket || ticket < 10) { addLog('SYS', 'bankroll exhausted — reset to keep trading'); return }
         setFiring(true); setTimeout(() => setFiring(false), 600)
-        addLog('FIRE', `FIRE ${cand.side} ${cand.row.market.title.slice(0, 26)} @ ${american(clamp01(priceOf(cand.row.market.ticker, cand.side) ?? 0.5))} · ${cand.why}`)
+        addLog('FIRE', `FIRE ${cand.side} ${money(ticket)} ${cand.row.market.title.slice(0, 24)} @ ${american(clamp01(priceOf(cand.row.market.ticker, cand.side) ?? 0.5))} · ${cand.why}`)
         const entry = buy(cand.row, cand.side, ticket, true, degen)
         const [tp, sl] = degen ? [D_TP, D_SL] : [TP, SL]
         setTimeout(() => addLog('FILL', `FILLED ${cand.side} ${money(ticket)} @ ${(entry * 100).toFixed(0)}¢ · TP +${(tp * 100).toFixed(0)}% / SL −${(sl * 100).toFixed(0)}%`), 320)
@@ -480,11 +546,12 @@ export default function TerminalClient() {
         <span style={{ fontFamily: C.mono, fontWeight: 800, letterSpacing: '0.12em', display: 'inline-flex', alignItems: 'center', gap: 7, textShadow: `0 0 18px ${accent}66` }}><Cpu size={15} style={{ color: accent }} />PROJECT <span style={{ color: accent }}>MATRIX</span></span>
         <Metric label="feed" value={status === 'live' ? 'LIVE·KALSHI' : status === 'demo' ? 'DEMO' : 'BOOT'} color={status === 'live' ? C.green : C.amber} dot />
         <Metric label="px" value={status === 'live' ? `REAL${lastPx ? ` ·${Math.max(0, Math.round((Date.now() - lastPx) / 1000))}s` : ' ·live'}` : status === 'demo' ? 'SIM·demo' : '—'} color={status === 'live' ? C.green : C.cyan} dot={status === 'live'} />
+        <Metric label="swarm" value={`${SWARM_N.toLocaleString()} · gen ${swarm.current?.gen ?? 0}`} color={accent} dot />
         <Metric label="P&L" value={`${pfStats.totalPnl >= 0 ? '+' : ''}${money(pfStats.totalPnl, 0)}`} color={pfStats.totalPnl >= 0 ? C.green : C.red} />
         {/* STRATEGY toggle */}
         <span style={{ display: 'inline-flex', border: `1px solid ${strat === 'degen' ? C.hot + '77' : C.line}`, borderRadius: 8, overflow: 'hidden' }}>
           {(['sniper', 'degen'] as const).map((m) => (
-            <button key={m} disabled={auto} onClick={() => { setStrat(m); setSortKey(m === 'degen' ? 'volx' : 'edge') }} title={m === 'degen' ? 'Volatility hunter — big swings, big tickets, wide TP/SL' : 'Patient value — only fires past fees + spread'}
+            <button key={m} disabled={auto} onClick={() => { setStrat(m); setSortKey(m === 'degen' ? 'volx' : 'edge') }} title={m === 'degen' ? `${SWARM_N.toLocaleString()}-agent learning swarm hunts vol — big tickets, wide TP/SL` : 'Patient value — only fires past fees + spread'}
               style={{ fontFamily: C.mono, fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', padding: '7px 11px', border: 'none', cursor: auto ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, color: strat === m ? C.bg : C.dim, background: strat === m ? (m === 'degen' ? C.hot : C.emerald) : 'transparent' }}>
               {m === 'degen' ? <Flame size={11} /> : <Crosshair size={11} />}{m.toUpperCase()}
             </button>
@@ -536,8 +603,33 @@ export default function TerminalClient() {
       <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '260px 1fr 350px', gap: 1, background: C.line, position: 'relative', zIndex: 30 }}>
         {/* LEFT */}
         <div style={{ background: 'rgba(13,15,18,.9)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <PanelHead icon={<Brain size={13} />}>Consensus cortex</PanelHead>
-          <div style={{ height: 138, flexShrink: 0 }}><AgentHub reduced={reduced} activity={selRow ? consensus(agentVotes(selRow)).spread : 0.1} firing={firing} hot={strat === 'degen'} /></div>
+          <PanelHead icon={<Brain size={13} />}>Swarm cortex · {SWARM_N.toLocaleString()}</PanelHead>
+          <div style={{ height: 128, flexShrink: 0 }}><AgentHub reduced={reduced} activity={selRow ? consensus(agentVotes(selRow)).spread : 0.1} firing={firing} hot={strat === 'degen'} /></div>
+          {/* hedge-weighted swarm read on the selected market */}
+          {(() => {
+            void swv
+            const sw = swarm.current
+            const cv = selRow ? sw?.conv[selRow.market.ticker] : undefined
+            const c = cv?.c ?? 0
+            const active = cv ? cv.bulls + cv.bears : 0
+            return (
+              <div style={{ padding: '8px 12px 10px', borderBottom: `1px solid ${C.line}`, flexShrink: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontFamily: C.mono, fontSize: 8.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.faint }}>swarm read · gen {sw?.gen ?? 0}</span>
+                  <span style={{ fontFamily: C.mono, fontSize: 15, fontWeight: 800, color: !cv || Math.abs(c) < 0.03 ? C.dim : c > 0 ? C.green : C.red }}>{!cv ? '—' : `${c > 0 ? 'YES' : 'NO'} ${(Math.abs(c) * 100).toFixed(0)}%`}</span>
+                </div>
+                <div style={{ position: 'relative', height: 7, background: 'rgba(255,255,255,.05)', borderRadius: 4, marginTop: 6, overflow: 'hidden' }}>
+                  <i style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: `${Math.abs(c) * 50}%`, transform: c < 0 ? 'translateX(-100%)' : 'none', background: c > 0 ? C.green : C.red, borderRadius: 4, transition: 'all .5s' }} />
+                  <i style={{ position: 'absolute', top: -1, bottom: -1, left: '50%', width: 1, background: 'rgba(255,255,255,.25)' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: C.mono, fontSize: 8.5, color: C.faint, marginTop: 5 }}>
+                  <span><b style={{ color: C.green }}>{(cv?.bulls ?? 0).toLocaleString()}</b> bull</span>
+                  <span>{active ? `${((active / SWARM_N) * 100).toFixed(1)}% voting` : 'warming up…'}</span>
+                  <span><b style={{ color: C.red }}>{(cv?.bears ?? 0).toLocaleString()}</b> bear</span>
+                </div>
+              </div>
+            )
+          })()}
           <PanelHead icon={<Flame size={13} />}>Movers · last 40s</PanelHead>
           <div style={{ flexShrink: 0 }}>
             {movers.length === 0 ? <div style={{ padding: '9px 12px', fontFamily: C.mono, fontSize: 9.5, color: C.faint }}>tape warming up…</div> :
@@ -576,7 +668,7 @@ export default function TerminalClient() {
           </div>
           <div style={{ flex: 1, overflow: 'auto' }}>
             {status === 'boot' ? <div style={{ padding: 40, textAlign: 'center', color: C.dim, fontFamily: C.mono }}>Booting the cortex…</div> :
-              sorted.map((r) => <BoardRow key={r.market.ticker} row={r} live={priceOf(r.market.ticker, 'YES') ?? r.market.yesPrice} spark={hist.current[r.market.ticker] || []} vol={volStats(r.market.ticker).vol} score={degenScore(r)} strat={strat} reduced={reduced} held={pf.positions.some((p) => p.ticker === r.market.ticker)} active={r.market.ticker === sel} onClick={() => setSel(r.market.ticker)} />)}
+              sorted.map((r) => <BoardRow key={r.market.ticker} row={r} live={priceOf(r.market.ticker, 'YES') ?? r.market.yesPrice} spark={hist.current[r.market.ticker] || []} vol={volStats(r.market.ticker).vol} score={degenScore(r)} conv={swarmConvOf(r.market.ticker)} strat={strat} reduced={reduced} held={pf.positions.some((p) => p.ticker === r.market.ticker)} active={r.market.ticker === sel} onClick={() => setSel(r.market.ticker)} />)}
           </div>
         </div>
 
@@ -655,11 +747,11 @@ function LiveArmModal({ bal, degen, onClose, onArm }: { bal: number | null; dege
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
           <label style={{ fontFamily: C.mono, fontSize: 10, color: C.faint }}>Budget ($)
-            <input type="number" min={1} max={500} value={budget} onChange={(e) => setBudget(clamp(Number(e.target.value) || 0, 1, 500))} style={{ width: '100%', boxSizing: 'border-box', marginTop: 5, background: C.deep, border: `1px solid ${C.line}`, borderRadius: 8, color: C.ink, fontFamily: C.mono, fontSize: 15, padding: '10px 12px', outline: 'none' }} /></label>
+            <input type="number" min={1} max={2000} value={budget} onChange={(e) => setBudget(clamp(Number(e.target.value) || 0, 1, 2000))} style={{ width: '100%', boxSizing: 'border-box', marginTop: 5, background: C.deep, border: `1px solid ${C.line}`, borderRadius: 8, color: C.ink, fontFamily: C.mono, fontSize: 15, padding: '10px 12px', outline: 'none' }} /></label>
           <label style={{ fontFamily: C.mono, fontSize: 10, color: C.faint }}>Max orders
-            <input type="number" min={1} max={100} value={maxTrades} onChange={(e) => setMaxTrades(clamp(Number(e.target.value) || 0, 1, 100))} style={{ width: '100%', boxSizing: 'border-box', marginTop: 5, background: C.deep, border: `1px solid ${C.line}`, borderRadius: 8, color: C.ink, fontFamily: C.mono, fontSize: 15, padding: '10px 12px', outline: 'none' }} /></label>
+            <input type="number" min={1} max={200} value={maxTrades} onChange={(e) => setMaxTrades(clamp(Number(e.target.value) || 0, 1, 200))} style={{ width: '100%', boxSizing: 'border-box', marginTop: 5, background: C.deep, border: `1px solid ${C.line}`, borderRadius: 8, color: C.ink, fontFamily: C.mono, fontSize: 15, padding: '10px 12px', outline: 'none' }} /></label>
           <label style={{ fontFamily: C.mono, fontSize: 10, color: C.faint }}>Contracts/order
-            <input type="number" min={1} max={25} value={contracts} onChange={(e) => setContracts(clamp(Number(e.target.value) || 0, 1, 25))} style={{ width: '100%', boxSizing: 'border-box', marginTop: 5, background: C.deep, border: `1px solid ${C.line}`, borderRadius: 8, color: C.ink, fontFamily: C.mono, fontSize: 15, padding: '10px 12px', outline: 'none' }} /></label>
+            <input type="number" min={1} max={100} value={contracts} onChange={(e) => setContracts(clamp(Number(e.target.value) || 0, 1, 100))} style={{ width: '100%', boxSizing: 'border-box', marginTop: 5, background: C.deep, border: `1px solid ${C.line}`, borderRadius: 8, color: C.ink, fontFamily: C.mono, fontSize: 15, padding: '10px 12px', outline: 'none' }} /></label>
         </div>
         <label style={{ fontFamily: C.mono, fontSize: 10, color: C.faint }}>Type <b style={{ color: C.red }}>ARM LIVE</b> to confirm
           <input value={ack} onChange={(e) => setAck(e.target.value)} placeholder="ARM LIVE" style={{ width: '100%', boxSizing: 'border-box', marginTop: 5, background: C.deep, border: `1px solid ${ok ? C.red : C.line}`, borderRadius: 8, color: C.ink, fontFamily: C.mono, fontSize: 14, padding: '11px 13px', outline: 'none', letterSpacing: '0.1em' }} /></label>
@@ -708,7 +800,7 @@ function VolMeter({ vol }: { vol: number }) {
 }
 
 // ── board row ─────────────────────────────────────────────────────────────────
-function BoardRow({ row, live, spark, vol, score, strat, reduced, held, active, onClick }: { row: Row; live: number; spark: number[]; vol: number; score: number; strat: Strat; reduced: boolean; held: boolean; active: boolean; onClick: () => void }) {
+function BoardRow({ row, live, spark, vol, score, conv, strat, reduced, held, active, onClick }: { row: Row; live: number; spark: number[]; vol: number; score: number; conv: number; strat: Strat; reduced: boolean; held: boolean; active: boolean; onClick: () => void }) {
   const v = row.verdict, [g, c] = catOf(row.market.category)
   const sideCol = v.side === 'YES' ? C.green : C.red
   const liveP = Math.round(live * 100), mkt = Math.round(row.market.yesPrice * 100), moved = liveP - mkt
@@ -732,8 +824,11 @@ function BoardRow({ row, live, spark, vol, score, strat, reduced, held, active, 
           : <><span style={{ display: 'block', fontSize: 12.5, fontWeight: 800, color: net >= NET_MIN ? C.green : net > 0 ? C.amber : C.dim }}>{net >= 0 ? '+' : ''}{(net * 100).toFixed(1)}</span><span style={{ fontSize: 8, color: C.faint }}>NET EDGE</span></>}
       </span>
       <span style={{ textAlign: 'center' }}>
-        <span style={{ fontFamily: C.mono, fontSize: 11, fontWeight: 800, color: sideCol }}>{v.side}</span>
-        <span style={{ display: 'block', fontFamily: C.mono, fontSize: 8, color: strat === 'degen' ? (score > 0.6 ? C.hot : C.faint) : (net >= NET_MIN ? C.green : C.faint) }}>{strat === 'degen' ? (score > 0.6 ? '● HOT' : 'cool') : (net >= NET_MIN ? '● TAKE' : 'pass')}</span>
+        {strat === 'degen'
+          ? <><span style={{ fontFamily: C.mono, fontSize: 11, fontWeight: 800, color: Math.abs(conv) < 0.03 ? C.faint : conv > 0 ? C.green : C.red }}>{Math.abs(conv) < 0.03 ? '—' : conv > 0 ? 'YES' : 'NO'}</span>
+            <span style={{ display: 'block', fontFamily: C.mono, fontSize: 8, color: Math.abs(conv) >= 0.1 ? C.hot : C.faint }}>{Math.abs(conv) < 0.03 ? 'swarm flat' : `🧠 ${(Math.abs(conv) * 100).toFixed(0)}%`}</span></>
+          : <><span style={{ fontFamily: C.mono, fontSize: 11, fontWeight: 800, color: sideCol }}>{v.side}</span>
+            <span style={{ display: 'block', fontFamily: C.mono, fontSize: 8, color: net >= NET_MIN ? C.green : C.faint }}>{net >= NET_MIN ? '● TAKE' : 'pass'}</span></>}
       </span>
     </div>
   )
@@ -925,7 +1020,7 @@ function ExecConsole({ auto, firing, log, eq, stats, sess, reduced, strat }: { a
           })}
         </div>
         <div style={{ fontFamily: C.mono, fontSize: 9.5, color: C.faint, lineHeight: 1.7 }}>
-          rules · TP <span style={{ color: C.green }}>+{(tp * 100).toFixed(0)}%</span> · SL <span style={{ color: C.red }}>−{(sl * 100).toFixed(0)}%</span> · ${ticket} ticket · max {MAX_OPEN} open{strat === 'degen' && <> · <span style={{ color: C.hot }}>vol-ranked</span></>}
+          rules · TP <span style={{ color: C.green }}>+{(tp * 100).toFixed(0)}%</span> · SL <span style={{ color: C.red }}>−{(sl * 100).toFixed(0)}%</span> · ${ticket}{strat === 'degen' ? '–' + D_TICKET * 2 : ''} ticket · max {strat === 'degen' ? D_MAX_OPEN : MAX_OPEN} open{strat === 'degen' && <> · <span style={{ color: C.hot }}>swarm-gated</span></>}
         </div>
       </div>
       {/* log */}
