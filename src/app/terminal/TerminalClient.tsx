@@ -24,7 +24,7 @@ import {
   Download, ArrowLeft, Activity, Cpu, Gauge, ShieldCheck, Signal, Crosshair,
   TrendingUp, Landmark, Banknote, CloudLightning, Newspaper, Globe, Waves,
   History, AlertTriangle, Layers, Brain, X, Zap, Rocket, Play, Pause,
-  Wallet, Link2, LogOut, Flame,
+  Wallet, Link2, LogOut, Flame, Trophy, Coins, Scale, Clapperboard, Diamond,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -123,8 +123,25 @@ const PF_KEY = 'matrix_pf_v4' // v4: $5k degen bank
 function loadPF(): PF { if (typeof window === 'undefined') return { cash: START_BANK, positions: [], realized: 0 }; try { const r = JSON.parse(localStorage.getItem(PF_KEY) || ''); if (r && typeof r.cash === 'number') return r } catch { } return { cash: START_BANK, positions: [], realized: 0 } }
 function savePF(pf: PF) { try { localStorage.setItem(PF_KEY, JSON.stringify(pf)) } catch { } }
 
-type LogEntry = { id: number; t: string; kind: 'SCAN' | 'FIRE' | 'FILL' | 'TP' | 'SL' | 'EXIT' | 'SYS'; text: string }
+type LogKind = 'SCAN' | 'FIRE' | 'FILL' | 'TP' | 'SL' | 'EXIT' | 'SYS' | 'INGEST' | 'APEX' | 'THESIS'
+type LogEntry = { id: number; t: string; kind: LogKind; text: string; cat?: string; delta?: string; chip?: string }
 type LivePos = { id: string; ticker: string; title: string; side: 'yes' | 'no'; count: number; entry: number; ts: number; degen?: boolean }
+
+// ── Hyper-Stream icon matrix: every ledger row stamped by category ────────────
+const CAT_ICON: Record<string, LucideIcon> = {
+  Sports: Trophy, Financials: TrendingUp, Crypto: Coins, Economics: Landmark,
+  Politics: Scale, Weather: CloudLightning, Tech: Brain, World: Globe, Culture: Clapperboard, Other: Diamond,
+}
+const KIND_ICON: Record<LogKind, LucideIcon> = {
+  SCAN: Signal, FIRE: Zap, FILL: ShieldCheck, TP: TrendingUp, SL: AlertTriangle,
+  EXIT: X, SYS: Cpu, INGEST: Waves, APEX: Crosshair, THESIS: Brain,
+}
+const CHIP_COL: Record<string, string> = { WATCH: C.faint, ARM: C.amber, FIRE: C.lime, FILLED: C.green, KILL: C.red }
+
+// ── Neural Core event bus: the brain renders what the machine actually does ───
+type CoreEvent = { type: 'ingest' | 'fire' | 'fill' | 'exit' | 'kill'; cat?: string; mag?: number; win?: boolean }
+// category → lobe index (0 frontal, 1 occipital, 2 temporal-R, 3 temporal-L, 4 parietal-top, 5 mid, 6 brainstem)
+const CAT2LOBE: Record<string, number> = { Politics: 0, Economics: 0, Sports: 1, Crypto: 2, Financials: 3, Tech: 4, World: 4, Culture: 4, Weather: 5, Other: 5 }
 
 // ════════════════════════════════════════════════════════════════════════════
 export default function TerminalClient() {
@@ -163,6 +180,11 @@ export default function TerminalClient() {
   const selRef = useRef<string | null>(sel); selRef.current = sel
   const swarm = useRef<Swarm | null>(null)
   const [swv, setSwv] = useState(0) // bump per swarm generation
+  const coreFx = useRef<CoreEvent[]>([])         // brain event bus
+  const [wire, setWire] = useState<number | null>(null) // last order round-trip ms
+  const prevPx = useRef<Record<string, number>>({})     // ingest detector snapshot
+  const lastIngest = useRef<Record<string, number>>({})
+  const hwRef = useRef<Record<string, number>>({})      // per-position high-water pnl (apex lock)
   const logId = useRef(0)
   const accent = strat === 'degen' ? C.hot : C.green
 
@@ -178,9 +200,12 @@ export default function TerminalClient() {
     const go = async () => { try { const [b, p] = await Promise.all([getBalance(conn), getPositions(conn)]); if (!stop) { setBal(b); setKpos(p) } } catch { } }
     go(); const id = setInterval(go, 15000); return () => { stop = true; clearInterval(id) }
   }, [conn])
-  const addLog = useCallback((kind: LogEntry['kind'], text: string) => {
-    setLog((l) => [{ id: logId.current++, t: new Date().toLocaleTimeString('en-US', { hour12: false }), kind, text }, ...l].slice(0, 40))
+  const addLog = useCallback((kind: LogKind, text: string, x?: { cat?: string; delta?: string; chip?: string }) => {
+    const d = new Date()
+    const t = d.toLocaleTimeString('en-US', { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0')
+    setLog((l) => [{ id: logId.current++, t, kind, text, ...x }, ...l].slice(0, 48))
   }, [])
+  const pushFx = useCallback((e: CoreEvent) => { const q = coreFx.current; q.push(e); if (q.length > 32) q.shift() }, [])
 
   const pushHist = useCallback((t: string, p: number) => {
     const h = hist.current[t] || (hist.current[t] = [])
@@ -321,6 +346,28 @@ export default function TerminalClient() {
     return () => clearInterval(id)
   }, [status, pushHist])
 
+  // ── INGEST DETECTOR: a real price dislocation on the tape = a world event.
+  //    Stamps the Hyper-Stream ledger + detonates the matching brain lobe. ─────
+  useEffect(() => {
+    const rs = rowsRef.current; if (!rs.length) return
+    let fired = 0
+    for (const r of rs) {
+      const t = r.market.ticker
+      const p = px.current[t], q = prevPx.current[t]
+      if (p != null && q != null) {
+        const d = p - q
+        if (Math.abs(d) >= 0.012 && fired < 3 && Date.now() - (lastIngest.current[t] || 0) > 25000) {
+          fired++; lastIngest.current[t] = Date.now()
+          const conv = swarm.current?.conv[t]?.c ?? 0
+          const chip = Math.abs(d) >= 0.03 || Math.abs(conv) >= D_CONV_MIN ? 'ARM' : 'WATCH'
+          addLog('INGEST', r.market.title.slice(0, 36), { cat: r.market.category, delta: `Δ ${d > 0 ? '+' : ''}${(d * 100).toFixed(1)}¢ → ${Math.round(p * 100)}¢ · ${r.market.category.toLowerCase()} lobe`, chip })
+          pushFx({ type: 'ingest', cat: r.market.category, mag: Math.abs(d) })
+        }
+      }
+      if (p != null) prevPx.current[t] = p
+    }
+  }, [pxv, addLog, pushFx]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // portfolio mark-to-market
   const pfStats = useMemo(() => {
     let value = 0, invested = 0
@@ -342,28 +389,41 @@ export default function TerminalClient() {
     setPf((p) => p.cash < stake ? p : ({ ...p, cash: +(p.cash - stake).toFixed(2), positions: [{ id: row.market.ticker + '-' + side + '-' + Date.now() + '-' + Math.round(Math.random() * 1e4), ticker: row.market.ticker, title: row.market.title, side, stake, entry, ts: Date.now(), auto: isAuto, degen }, ...p.positions].slice(0, 30) }))
     return entry
   }, [priceOf])
-  const closePos = useCallback((pos: Pos, reason: LogEntry['kind']) => {
+  const closePos = useCallback((pos: Pos, reason: LogKind) => {
     const cur = clamp01(priceOf(pos.ticker, pos.side) ?? pos.entry)
     const val = pos.stake * (cur / clamp01(pos.entry)); const pnl = val - pos.stake
     setPf((p) => p.positions.some((x) => x.id === pos.id) ? ({ ...p, cash: +(p.cash + val).toFixed(2), realized: +(p.realized + pnl).toFixed(2), positions: p.positions.filter((x) => x.id !== pos.id) }) : p)
+    delete hwRef.current[pos.id]
     if (pos.auto) setSess((s) => ({ trades: s.trades + 1, wins: s.wins + (pnl >= 0 ? 1 : 0), pnl: +(s.pnl + pnl).toFixed(2) }))
-    if (reason !== 'EXIT') addLog(reason, `${reason === 'TP' ? 'TAKE-PROFIT' : reason === 'SL' ? 'STOP-LOSS' : 'EXIT'} ${pos.side} ${pos.title.slice(0, 28)} · ${pnl >= 0 ? '+' : ''}${money(pnl, 2)}`)
-  }, [priceOf, addLog])
+    const rowCat = rowsRef.current.find((r) => r.market.ticker === pos.ticker)?.market.category
+    pushFx({ type: 'exit', win: pnl >= 0, cat: rowCat })
+    if (reason !== 'EXIT') {
+      const label = reason === 'TP' ? 'TAKE-PROFIT' : reason === 'SL' ? 'STOP-LOSS' : reason === 'APEX' ? '🔒 APEX LOCK' : reason === 'THESIS' ? '⚡ THESIS BREAK' : 'EXIT'
+      addLog(reason, `${label} ${pos.side} ${pos.title.slice(0, 26)}`, { cat: rowCat, delta: `${pnl >= 0 ? '+' : ''}${money(pnl, 2)} · in ${Math.round((Date.now() - pos.ts) / 1000)}s` })
+    }
+  }, [priceOf, addLog, pushFx])
 
-  // ── position manager (1s): TP / SL / time exits — per-strategy bands ────────
+  // ── position manager (1s): APEX momentum lock / thesis break / TP / SL / time.
+  //    APEX = the spec's inflection lock: ride the crowd's reprice, bank the bag
+  //    when the favorable move gives back 40% of its own peak. ─────────────────
   useEffect(() => {
     const id = setInterval(() => {
       for (const p of pfRef.current.positions) {
         const [tp, sl, age] = p.degen ? [D_TP, D_SL, D_AGE] : [TP, SL, MAX_AGE]
         const cur = clamp01(priceOf(p.ticker, p.side) ?? p.entry)
         const pnlPct = cur / clamp01(p.entry) - 1
+        const hw = Math.max(hwRef.current[p.id] ?? 0, pnlPct); hwRef.current[p.id] = hw
+        const conv = swarmConvOf(p.ticker)
+        const against = p.side === 'YES' ? conv <= -0.15 : conv >= 0.15
         if (pnlPct >= tp) closePos(p, 'TP')
         else if (pnlPct <= -sl) closePos(p, 'SL')
+        else if (hw >= 0.08 && pnlPct <= hw * 0.6) closePos(p, 'APEX')
+        else if (against && Date.now() - p.ts > 20000) closePos(p, 'THESIS')
         else if (Date.now() - p.ts > age) closePos(p, pnlPct >= 0 ? 'TP' : 'SL')
       }
     }, 1000)
     return () => clearInterval(id)
-  }, [priceOf, closePos])
+  }, [priceOf, closePos, swarmConvOf])
 
   /** Pick the next candidate for the active strategy. */
   const pickCandidate = useCallback((rs: Row[], open: Set<string>): { row: Row; side: 'YES' | 'NO'; conv: number; why: string } | null => {
@@ -414,10 +474,14 @@ export default function TerminalClient() {
         const cost = price * cfg.contracts
         if (ls.spent + cost > cfg.budget) { addLog('SYS', `budget ${money(cfg.budget)} reached — disarming`); setAuto(false); return }
         setFiring(true); setTimeout(() => setFiring(false), 600)
-        addLog('FIRE', `LIVE FIRE ${side.toUpperCase()} ×${cfg.contracts} ${cand.row.market.title.slice(0, 22)} @ ${(price * 100).toFixed(0)}¢ · ${cand.why}`)
+        pushFx({ type: 'fire', cat: cand.row.market.category })
+        addLog('FIRE', `LIVE FIRE ${side.toUpperCase()} ×${cfg.contracts} ${cand.row.market.title.slice(0, 22)} @ ${(price * 100).toFixed(0)}¢`, { cat: cand.row.market.category, delta: cand.why, chip: 'FIRE' })
+        const t0 = performance.now()
         const r = await placeOrder(conn, cand.row.market.ticker, side, cfg.contracts, 'buy', yesPx)
+        const lat = Math.round(performance.now() - t0); setWire(lat)
         if (!r.ok) { addLog('SYS', `❌ rejected: ${errMsg(r)} — disarming`); setAuto(false); return }
-        addLog('FILL', `LIVE FILLED ${side.toUpperCase()} ×${cfg.contracts} — real order sent`)
+        pushFx({ type: 'fill', cat: cand.row.market.category })
+        addLog('FILL', `LIVE FILLED ${side.toUpperCase()} ×${cfg.contracts}`, { cat: cand.row.market.category, delta: `wire→ack ${lat}ms · real order`, chip: 'FILLED' })
         setLiveState((s) => ({ spent: +(s.spent + cost).toFixed(2), trades: s.trades + 1, positions: [{ id: cand.row.market.ticker + '-' + Date.now(), ticker: cand.row.market.ticker, title: cand.row.market.title, side, count: cfg.contracts, entry: price, ts: Date.now(), degen }, ...s.positions] }))
         try { const [b, p] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(p) } catch { }
       } else {
@@ -432,16 +496,17 @@ export default function TerminalClient() {
         const ticket = degen ? Math.min(Math.round(D_TICKET * (1 + Math.abs(cand.conv))), Math.floor(p.cash * 0.4)) : TICKET
         if (p.cash < ticket || ticket < 10) { addLog('SYS', 'bankroll exhausted — reset to keep trading'); return }
         setFiring(true); setTimeout(() => setFiring(false), 600)
-        addLog('FIRE', `FIRE ${cand.side} ${money(ticket)} ${cand.row.market.title.slice(0, 24)} @ ${american(clamp01(priceOf(cand.row.market.ticker, cand.side) ?? 0.5))} · ${cand.why}`)
+        pushFx({ type: 'fire', cat: cand.row.market.category })
+        addLog('FIRE', `FIRE ${cand.side} ${money(ticket)} ${cand.row.market.title.slice(0, 24)} @ ${american(clamp01(priceOf(cand.row.market.ticker, cand.side) ?? 0.5))}`, { cat: cand.row.market.category, delta: cand.why, chip: 'FIRE' })
         const entry = buy(cand.row, cand.side, ticket, true, degen)
         const [tp, sl] = degen ? [D_TP, D_SL] : [TP, SL]
-        setTimeout(() => addLog('FILL', `FILLED ${cand.side} ${money(ticket)} @ ${(entry * 100).toFixed(0)}¢ · TP +${(tp * 100).toFixed(0)}% / SL −${(sl * 100).toFixed(0)}%`), 320)
+        setTimeout(() => { pushFx({ type: 'fill', cat: cand.row.market.category }); addLog('FILL', `FILLED ${cand.side} ${money(ticket)} @ ${(entry * 100).toFixed(0)}¢`, { cat: cand.row.market.category, delta: `TP +${(tp * 100).toFixed(0)}% / SL −${(sl * 100).toFixed(0)}% / apex lock armed`, chip: 'FILLED' }) }, 320)
       }
     }, 5000)
     return () => { clearInterval(id); addLog('SYS', '⏸ auto engine disarmed') }
-  }, [auto, autoMode, conn, buy, addLog, priceOf, pickCandidate])
+  }, [auto, autoMode, conn, buy, addLog, priceOf, pickCandidate, pushFx])
 
-  // ── LIVE auto exit manager: close real positions on TP/SL/time via sell ────
+  // ── LIVE auto exit manager: APEX lock / thesis break / TP / SL / time ───────
   useEffect(() => {
     if (autoMode !== 'live' || !conn) return
     const id = setInterval(async () => {
@@ -449,16 +514,26 @@ export default function TerminalClient() {
         const [tp, sl, age] = p.degen ? [D_TP, D_SL, D_AGE] : [TP, SL, MAX_AGE]
         const cur = clamp01(priceOf(p.ticker, p.side === 'yes' ? 'YES' : 'NO') ?? p.entry)
         const pnl = cur / clamp01(p.entry) - 1
-        if (pnl >= tp || pnl <= -sl || Date.now() - p.ts > age) {
+        const hw = Math.max(hwRef.current[p.id] ?? 0, pnl); hwRef.current[p.id] = hw
+        const conv = swarmConvOf(p.ticker)
+        const against = p.side === 'yes' ? conv <= -0.15 : conv >= 0.15
+        const apex = hw >= 0.08 && pnl <= hw * 0.6
+        const thesis = against && Date.now() - p.ts > 20000
+        if (pnl >= tp || pnl <= -sl || apex || thesis || Date.now() - p.ts > age) {
           setLiveState((s) => ({ ...s, positions: s.positions.filter((x) => x.id !== p.id) })) // optimistic — avoid double-close
+          delete hwRef.current[p.id]
+          const t0 = performance.now()
           const r = await placeOrder(conn, p.ticker, p.side, p.count, 'sell', clamp01(priceOf(p.ticker, 'YES') ?? (p.side === 'yes' ? cur : 1 - cur)))
-          addLog(pnl >= 0 ? 'TP' : 'SL', `LIVE CLOSE ${p.side.toUpperCase()} ${p.title.slice(0, 20)} · ${r.ok ? 'sold' : 'sell FAILED: ' + errMsg(r)}`)
+          setWire(Math.round(performance.now() - t0))
+          const kind: LogKind = apex ? 'APEX' : thesis ? 'THESIS' : pnl >= 0 ? 'TP' : 'SL'
+          pushFx({ type: 'exit', win: pnl >= 0 })
+          addLog(kind, `LIVE ${kind === 'APEX' ? '🔒 APEX LOCK' : kind === 'THESIS' ? '⚡ THESIS BREAK' : 'CLOSE'} ${p.side.toUpperCase()} ${p.title.slice(0, 20)}`, { delta: r.ok ? `sold · peak ${(hw * 100).toFixed(0)}% → exit ${(pnl * 100).toFixed(0)}%` : 'sell FAILED: ' + errMsg(r) })
           try { const [b, pp] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(pp) } catch { }
         }
       }
     }, 2000)
     return () => clearInterval(id)
-  }, [autoMode, conn, priceOf, addLog])
+  }, [autoMode, conn, priceOf, addLog, swarmConvOf, pushFx])
 
   // arm / disarm / kill
   function toggleAuto() {
@@ -469,12 +544,13 @@ export default function TerminalClient() {
   function confirmLiveArm(budget: number, maxTrades: number, contracts: number) { liveCfg.current = { budget, maxTrades, contracts }; setLiveState((s) => ({ spent: 0, trades: 0, positions: s.positions })); setLiveArm(false); setAuto(true) }
   const killLive = useCallback(async () => {
     setAuto(false)
+    pushFx({ type: 'kill' })
     const ps = liveRef.current.positions
     if (conn && ps.length) { for (const p of ps) { try { await placeOrder(conn, p.ticker, p.side, p.count, 'sell', priceOf(p.ticker, 'YES') ?? undefined) } catch { } } }
     setLiveState((s) => ({ ...s, positions: [] }))
-    addLog('SYS', '🛑 KILL — live auto disarmed' + (ps.length ? ' & flattened' : ''))
+    addLog('SYS', '🛑 KILL — live auto disarmed' + (ps.length ? ' & flattened' : ''), { chip: 'KILL' })
     try { if (conn) { const [b, p] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(p) } } catch { }
-  }, [conn, addLog, priceOf])
+  }, [conn, addLog, priceOf, pushFx])
 
   function resetPF() { setPf({ cash: START_BANK, positions: [], realized: 0 }); setSess({ trades: 0, wins: 0, pnl: 0 }); setEq([]) }
 
@@ -493,12 +569,16 @@ export default function TerminalClient() {
   const doPlaceReal = useCallback(async (row: Row, side: 'yes' | 'no', count: number): Promise<string | null> => {
     if (!conn) return 'Not connected.'
     const price = priceOf(row.market.ticker, 'YES') ?? undefined
+    pushFx({ type: 'fire', cat: row.market.category })
+    const t0 = performance.now()
     const r = await placeOrder(conn, row.market.ticker, side, count, 'buy', price)
+    const lat = Math.round(performance.now() - t0); setWire(lat)
     if (!r.ok) { addLog('SYS', `❌ order rejected: ${errMsg(r)}`); return errMsg(r) }
-    addLog('FILL', `REAL ${side.toUpperCase()} ×${count} ${row.market.title.slice(0, 24)} — sent to Kalshi`)
+    pushFx({ type: 'fill', cat: row.market.category })
+    addLog('FILL', `REAL ${side.toUpperCase()} ×${count} ${row.market.title.slice(0, 24)}`, { cat: row.market.category, delta: `wire→ack ${lat}ms · sent to Kalshi`, chip: 'FILLED' })
     try { const [b, p] = await Promise.all([getBalance(conn), getPositions(conn)]); setBal(b); setKpos(p) } catch { }
     setOrderReq(null); return null
-  }, [conn, addLog, priceOf])
+  }, [conn, addLog, priceOf, pushFx])
 
   const selRow = rows.find((r) => r.market.ticker === sel) || rows[0]
   const sorted = useMemo(() => {
@@ -547,6 +627,7 @@ export default function TerminalClient() {
         <Metric label="feed" value={status === 'live' ? 'LIVE·KALSHI' : status === 'demo' ? 'DEMO' : 'BOOT'} color={status === 'live' ? C.green : C.amber} dot />
         <Metric label="px" value={status === 'live' ? `REAL${lastPx ? ` ·${Math.max(0, Math.round((Date.now() - lastPx) / 1000))}s` : ' ·live'}` : status === 'demo' ? 'SIM·demo' : '—'} color={status === 'live' ? C.green : C.cyan} dot={status === 'live'} />
         <Metric label="swarm" value={`${SWARM_N.toLocaleString()} · gen ${swarm.current?.gen ?? 0}`} color={accent} dot />
+        <Metric label="wire" value={wire == null ? '—' : `${wire}ms`} color={wire == null ? C.faint : wire < 400 ? C.green : C.amber} />
         <Metric label="P&L" value={`${pfStats.totalPnl >= 0 ? '+' : ''}${money(pfStats.totalPnl, 0)}`} color={pfStats.totalPnl >= 0 ? C.green : C.red} />
         {/* STRATEGY toggle */}
         <span style={{ display: 'inline-flex', border: `1px solid ${strat === 'degen' ? C.hot + '77' : C.line}`, borderRadius: 8, overflow: 'hidden' }}>
@@ -567,8 +648,9 @@ export default function TerminalClient() {
           {auto ? <Pause size={14} /> : <Play size={14} />} {auto ? (autoMode === 'live' ? 'LIVE · ARMED' : 'AUTO · ARMED') : 'ARM'}
         </button>
         {conn ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: C.mono, fontSize: 11, fontWeight: 700, padding: '5px 6px 5px 11px', borderRadius: 8, color: C.green, border: `1px solid ${C.green}44`, background: `${C.green}10` }}>
-            <Wallet size={13} /> LIVE · {bal == null ? '—' : money(bal, 0)}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: C.mono, fontSize: 11, fontWeight: 700, padding: '5px 6px 5px 11px', borderRadius: 8, color: KAL_GREEN, border: `1px solid ${KAL_GREEN}44`, background: `${KAL_GREEN}0d` }}>
+            <span style={{ width: 7, height: 7, borderRadius: 9, background: KAL_GREEN, boxShadow: `0 0 8px ${KAL_GREEN}`, animation: reduced ? 'none' : 'mx-blink 2.4s infinite' }} />
+            COLD RUNNING · {bal == null ? '—' : money(bal, 0)}
             <button onClick={doDisconnect} className="mx-btn" title="Disconnect" style={{ padding: '3px 5px', color: C.dim, background: 'transparent', border: 'none', display: 'grid', placeItems: 'center' }}><LogOut size={12} /></button>
           </span>
         ) : (
@@ -605,7 +687,6 @@ export default function TerminalClient() {
         {/* LEFT */}
         <div style={{ background: 'rgba(13,15,18,.9)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <PanelHead icon={<Brain size={13} />}>Swarm cortex · {SWARM_N.toLocaleString()}</PanelHead>
-          <div style={{ height: 128, flexShrink: 0 }}><AgentHub reduced={reduced} activity={selRow ? consensus(agentVotes(selRow)).spread : 0.1} firing={firing} hot={strat === 'degen'} /></div>
           {/* hedge-weighted swarm read on the selected market */}
           {(() => {
             void swv
@@ -658,6 +739,16 @@ export default function TerminalClient() {
 
         {/* CENTER */}
         <div style={{ background: 'rgba(13,15,18,.9)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          {/* THE NEURAL CORE — a live projection of machine state, not decoration */}
+          <div style={{ position: 'relative', height: 208, flexShrink: 0, borderBottom: `1px solid ${C.line}`, background: 'radial-gradient(ellipse 70% 90% at 50% 55%, rgba(16,217,138,.05), transparent)' }}>
+            <NeuralCore reduced={reduced} fx={coreFx} armed={auto} degen={strat === 'degen'} />
+            <span style={{ position: 'absolute', top: 8, left: 12, fontFamily: C.mono, fontSize: 8.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.faint, pointerEvents: 'none' }}>
+              NEURAL CORE · lobes = market cortex · <span style={{ color: accent }}>{auto ? (strat === 'degen' ? 'S2 · HUNTING' : 'S2 · ARMED') : 'S1 · BREATHING'}</span>
+            </span>
+            <span style={{ position: 'absolute', top: 8, right: 12, fontFamily: C.mono, fontSize: 8.5, color: C.faint, pointerEvents: 'none' }}>
+              <span style={{ color: C.emerald }}>◈ frontal</span> politics · <span style={{ color: C.emerald }}>◈ occipital</span> sports · <span style={{ color: C.emerald }}>◈ temporal</span> crypto/fin · <span style={{ color: C.emerald }}>◈ stem</span> execution
+            </span>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderBottom: `1px solid ${C.line}`, flexWrap: 'wrap' }}>
             <span style={{ fontFamily: C.mono, fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.dim, display: 'inline-flex', alignItems: 'center', gap: 7 }}><Activity size={13} style={{ color: accent }} /> Board · {sorted.length}</span>
             <span style={{ fontFamily: C.mono, fontSize: 10, color: C.emerald, border: `1px solid ${C.emerald}33`, background: `${C.emerald}10`, padding: '3px 8px', borderRadius: 6 }}>{worthCount} worth it</span>
@@ -998,7 +1089,7 @@ function Spark({ data, pos }: { data: number[]; pos: boolean }) {
 // ── execution console ─────────────────────────────────────────────────────────
 const STAGES: [string, LucideIcon][] = [['SCAN', Signal], ['SIGNAL', Brain], ['SIZE', Crosshair], ['FIRE', Zap], ['FILL', ShieldCheck]]
 function ExecConsole({ auto, firing, log, eq, stats, sess, reduced, strat }: { auto: boolean; firing: boolean; log: LogEntry[]; eq: number[]; stats: { totalPnl: number }; sess: { trades: number; wins: number; pnl: number }; reduced: boolean; strat: Strat }) {
-  const kindCol: Record<LogEntry['kind'], string> = { SCAN: C.dim, FIRE: C.lime, FILL: C.green, TP: C.green, SL: C.red, EXIT: C.dim, SYS: C.cyan }
+  const kindCol: Record<LogKind, string> = { SCAN: C.dim, FIRE: C.lime, FILL: C.green, TP: C.green, SL: C.red, EXIT: C.dim, SYS: C.cyan, INGEST: C.cyan, APEX: C.lime, THESIS: C.amber }
   const winRate = sess.trades ? Math.round((sess.wins / sess.trades) * 100) : 0
   const accent = strat === 'degen' ? C.hot : C.green
   const [tp, sl, ticket] = strat === 'degen' ? [D_TP, D_SL, D_TICKET] : [TP, SL, TICKET]
@@ -1024,17 +1115,25 @@ function ExecConsole({ auto, firing, log, eq, stats, sess, reduced, strat }: { a
           rules · TP <span style={{ color: C.green }}>+{(tp * 100).toFixed(0)}%</span> · SL <span style={{ color: C.red }}>−{(sl * 100).toFixed(0)}%</span> · ${ticket}{strat === 'degen' ? '–' + D_TICKET * 2 : ''} ticket · max {strat === 'degen' ? D_MAX_OPEN : MAX_OPEN} open{strat === 'degen' && <> · <span style={{ color: C.hot }}>swarm-gated</span></>}
         </div>
       </div>
-      {/* log */}
+      {/* HYPER-STREAM ledger */}
       <div style={{ padding: '10px 0', overflow: 'auto', borderLeft: `1px solid ${C.line}`, borderRight: `1px solid ${C.line}` }}>
-        <div style={{ padding: '0 14px 6px', fontFamily: C.mono, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.faint }}>Execution console</div>
+        <div style={{ padding: '0 14px 6px', fontFamily: C.mono, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.faint }}>Hyper-stream · execution ledger</div>
         {log.length === 0 && <div style={{ padding: '10px 14px', fontFamily: C.mono, fontSize: 11, color: C.faint }}>Idle. Press <b style={{ color: accent }}>ARM</b> to start firing.</div>}
-        {log.map((e) => (
-          <div key={e.id} style={{ display: 'flex', gap: 8, padding: '3px 14px', fontFamily: C.mono, fontSize: 11, animation: reduced ? 'none' : 'mx-log .3s ease both' }}>
-            <span style={{ color: C.faint, flexShrink: 0 }}>{e.t}</span>
-            <span style={{ color: kindCol[e.kind], fontWeight: 700, width: 40, flexShrink: 0 }}>{e.kind}</span>
-            <span style={{ color: C.dim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.text}</span>
-          </div>
-        ))}
+        {log.map((e) => {
+          const catCol = e.cat ? catOf(e.cat)[1] : kindCol[e.kind]
+          const Ic = (e.cat && CAT_ICON[e.cat]) || KIND_ICON[e.kind] || Cpu
+          return (
+            <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '22px 52px 1fr auto', gap: 8, alignItems: 'center', padding: '3px 14px', fontFamily: C.mono, fontSize: 11, borderLeft: `2px solid ${e.kind === 'INGEST' || e.kind === 'FIRE' ? catCol : 'transparent'}`, animation: reduced ? 'none' : 'mx-log .3s ease both' }}>
+              <span style={{ display: 'grid', placeItems: 'center', width: 18, height: 18, borderRadius: 5, border: `1px solid ${catCol}44`, background: `${catCol}12`, color: catCol }}><Ic size={10} /></span>
+              <span style={{ color: kindCol[e.kind], fontWeight: 700, flexShrink: 0, fontSize: 10 }}>{e.kind}</span>
+              <span style={{ minWidth: 0 }}>
+                <span style={{ display: 'block', color: C.dim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}><span style={{ color: C.faint, fontSize: 9.5 }}>{e.t}</span> {e.text}</span>
+                {e.delta && <span style={{ display: 'block', fontSize: 9, color: C.faint, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.delta}</span>}
+              </span>
+              {e.chip && <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.08em', color: CHIP_COL[e.chip] || C.dim, border: `1px solid ${(CHIP_COL[e.chip] || C.dim)}44`, background: `${(CHIP_COL[e.chip] || C.dim)}10`, borderRadius: 5, padding: '2px 7px' }}>{e.chip}</span>}
+            </div>
+          )
+        })}
       </div>
       {/* session stats */}
       <div style={{ padding: '12px 14px' }}>
@@ -1138,23 +1237,137 @@ function OrderConfirm({ req, live, onClose, onConfirm }: { req: { row: Row; side
   )
 }
 
-// ── agent network canvas ─────────────────────────────────────────────────────
-function AgentHub({ reduced, activity, firing, hot }: { reduced: boolean; activity: number; firing: boolean; hot: boolean }) {
+// ── THE NEURAL CORE ───────────────────────────────────────────────────────────
+// A 3D brain point-cloud (2,400 nodes, ~5.3k synapse edges) with anatomical
+// lobes mapped to market categories. It renders the machine's real state:
+// ingest events detonate the matching lobe (BFS wavefront through the synapse
+// graph), decisions ignite the brainstem, fills hold the lobe lit, exits flash
+// green/red, and the kill switch slams the whole cortex red then cold.
+function NeuralCore({ reduced, fx, armed, degen }: { reduced: boolean; fx: React.MutableRefObject<CoreEvent[]>; armed: boolean; degen: boolean }) {
   const ref = useRef<HTMLCanvasElement | null>(null)
-  const act = useRef(activity); act.current = activity
-  const fire = useRef(firing); fire.current = firing
-  const hotRef = useRef(hot); hotRef.current = hot
+  const armedR = useRef(armed); armedR.current = armed
+  const degenR = useRef(degen); degenR.current = degen
   useEffect(() => {
-    const cv = ref.current; if (!cv) return; const ctx = cv.getContext('2d'); if (!ctx) return
-    let seed = 99; const rng = () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 }
-    let W = 0, H = 0, dpr = 1, nodes: { x: number; y: number; r: number; ph: number }[] = [], edges: [number, number][] = [], pings: { e: number; t: number; sp: number }[] = [], raf = 0, last = 0, acc = 0, frame = 0
-    function build() { const r = cv!.getBoundingClientRect(); dpr = Math.min(2, devicePixelRatio || 1); W = r.width; H = r.height; cv!.width = W * dpr | 0; cv!.height = H * dpr | 0; ctx!.setTransform(dpr, 0, 0, dpr, 0, 0); seed = 99; nodes = []; const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.42; for (let i = 0; i < 24; i++) { const a = (i / 24) * 6.28, rr = R * (0.5 + rng() * 0.5); nodes.push({ x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr * 0.85, r: 1.4 + rng() * 2.2, ph: rng() * 6.28 }) } edges = []; for (let i = 0; i < nodes.length; i++) { const d = nodes.map((n, j) => ({ j, d: (n.x - nodes[i].x) ** 2 + (n.y - nodes[i].y) ** 2 })).filter((o) => o.j !== i).sort((a, b) => a.d - b.d).slice(0, 2); for (const o of d) if (o.j > i) edges.push([i, o.j]) } }
-    build()
-    function draw(now: number) { frame++; if (!last) last = now; const dt = Math.min(48, now - last); last = now; acc += dt; ctx!.clearRect(0, 0, W, H); const rate = fire.current ? 60 : 300 - clamp(act.current, 0, 0.5) * 460; if (!reduced && acc > rate) { acc = 0; if (edges.length) pings.push({ e: rng() * edges.length | 0, t: 0, sp: 0.02 + rng() * 0.03 }) } const lineCol = hotRef.current ? 'rgba(255,160,80,.09)' : 'rgba(120,255,170,.08)'; for (const [a, b] of edges) { ctx!.strokeStyle = lineCol; ctx!.lineWidth = 1; ctx!.beginPath(); ctx!.moveTo(nodes[a].x, nodes[a].y); ctx!.lineTo(nodes[b].x, nodes[b].y); ctx!.stroke() } pings = pings.filter((p) => { p.t += p.sp * (dt / 16); if (p.t >= 1) return false; const [a, b] = edges[p.e], x = nodes[a].x + (nodes[b].x - nodes[a].x) * p.t, y = nodes[a].y + (nodes[b].y - nodes[a].y) * p.t; const col = fire.current ? '182,255,58' : hotRef.current ? '255,122,24' : '43,232,106'; ctx!.fillStyle = `rgba(${col},.95)`; ctx!.shadowColor = `rgba(${col},.9)`; ctx!.shadowBlur = 10; ctx!.beginPath(); ctx!.arc(x, y, 2, 0, 6.28); ctx!.fill(); ctx!.shadowBlur = 0; return true }); for (const n of nodes) { const a = reduced ? 0.5 : 0.4 + 0.4 * (0.5 + 0.5 * Math.sin(frame / 20 + n.ph)); const glow = hotRef.current ? `rgba(255,122,24,${a})` : `rgba(43,232,106,${a})`; ctx!.fillStyle = `rgba(200,255,220,${a})`; ctx!.shadowColor = glow; ctx!.shadowBlur = fire.current ? 14 : 7; ctx!.beginPath(); ctx!.arc(n.x, n.y, n.r, 0, 6.28); ctx!.fill(); ctx!.shadowBlur = 0 } if (!reduced) raf = requestAnimationFrame(draw) }
-    if (reduced) draw(0); else raf = requestAnimationFrame(draw)
-    const onR = () => build(); addEventListener('resize', onR)
+    const cv = ref.current; if (!cv) return
+    const ctx = cv.getContext('2d'); if (!ctx) return
+    const mul = (s0: number) => { let s = s0 >>> 0; return () => { s |= 0; s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 } }
+    const rng = mul(4242), rng2 = mul(777)
+    // ── build the cortex: ellipsoid cloud + hemisphere gap + brainstem ─────────
+    const N = 2400, STEM = 150
+    const xs = new Float32Array(N), ys = new Float32Array(N), zs = new Float32Array(N)
+    const lobe = new Uint8Array(N), ph = new Float32Array(N)
+    let i = 0
+    while (i < N - STEM) {
+      const x = rng() * 2 - 1, y = rng() * 2 - 1, z = rng() * 2 - 1
+      if (x * x / 1.0 + (y * y) / (0.78 * 0.78) + (z * z) / (1.32 * 1.32) > 1) continue
+      if (y < -0.5) continue                       // flat underside
+      if (Math.abs(x) < 0.045 && y > -0.1) continue // longitudinal fissure
+      xs[i] = x; ys[i] = y; zs[i] = z; ph[i] = rng() * 6.28
+      lobe[i] = z > 0.55 ? 0 : z < -0.62 ? 1 : x > 0.5 ? 2 : x < -0.5 ? 3 : y > 0.38 ? 4 : 5
+      i++
+    }
+    for (; i < N; i++) { xs[i] = (rng() * 2 - 1) * 0.1; ys[i] = -0.5 - rng() * 0.44; zs[i] = -0.12 + (rng() * 2 - 1) * 0.12; lobe[i] = 6; ph[i] = rng() * 6.28 }
+    // synapses: 2 nearest neighbors each + long-range association fibers
+    const ea: number[] = [], eb: number[] = []
+    const adj: number[][] = Array.from({ length: N }, () => [])
+    for (let a = 0; a < N; a++) {
+      let b1 = -1, b2 = -1, d1 = 1e9, d2 = 1e9
+      for (let b = 0; b < N; b++) {
+        if (a === b) continue
+        const dx = xs[a] - xs[b], dy = ys[a] - ys[b], dz = zs[a] - zs[b], d = dx * dx + dy * dy + dz * dz
+        if (d < d1) { d2 = d1; b2 = b1; d1 = d; b1 = b } else if (d < d2) { d2 = d; b2 = b }
+      }
+      for (const b of [b1, b2]) if (b >= 0) { ea.push(a); eb.push(b); adj[a].push(b); adj[b].push(a) }
+    }
+    for (let r = 0; r < 400; r++) { const a = (rng() * N) | 0, b = (rng() * N) | 0; if (a !== b) { ea.push(a); eb.push(b); adj[a].push(b); adj[b].push(a) } }
+    const E = ea.length
+    // ── runtime state ──────────────────────────────────────────────────────────
+    const bright = new Float32Array(N)
+    const sx = new Float32Array(N), sy = new Float32Array(N), dp = new Float32Array(N)
+    const litLobe = new Float32Array(7)
+    let fronts: { ring: number[]; seen: Uint8Array; hop: number }[] = []
+    let flash = 0, flashCol = '43,232,106', killUntil = 0
+    let W = 0, H = 0, ang = 0, raf = 0, frame = 0
+    const TILT = 0.42, ct = Math.cos(TILT), stl = Math.sin(TILT)
+    const lobeSeed = (l: number) => { for (let t = 0; t < 60; t++) { const j = (rng2() * N) | 0; if (lobe[j] === l) return j } return 0 }
+    const spawnFront = (seedNode: number) => { if (fronts.length >= 8) fronts.shift(); const seen = new Uint8Array(N); seen[seedNode] = 1; bright[seedNode] = 1.5; fronts.push({ ring: [seedNode], seen, hop: 0 }) }
+    function resize() { const r = cv!.getBoundingClientRect(); const dpr = Math.min(1.5, devicePixelRatio || 1); W = r.width; H = r.height; cv!.width = W * dpr | 0; cv!.height = H * dpr | 0; ctx!.setTransform(dpr, 0, 0, dpr, 0, 0) }
+    resize()
+    function draw() {
+      frame++
+      // drain the event bus — the brain shows what the machine just did
+      const q = fx.current
+      while (q.length) {
+        const e = q.shift()!
+        if (e.type === 'kill') { killUntil = performance.now() + 2200; fronts = []; flash = 0.6; flashCol = '255,60,80' }
+        else if (e.type === 'ingest') spawnFront(lobeSeed(CAT2LOBE[e.cat || 'Other'] ?? 5))
+        else if (e.type === 'fire') { spawnFront(lobeSeed(6)); flash = Math.max(flash, 0.22); flashCol = '182,255,58' }
+        else if (e.type === 'fill') litLobe[CAT2LOBE[e.cat || 'Other'] ?? 5] = 1
+        else if (e.type === 'exit') { flash = Math.max(flash, 0.3); flashCol = e.win ? '43,232,106' : '255,90,106'; if (e.cat) litLobe[CAT2LOBE[e.cat] ?? 5] = 0.2 }
+      }
+      const killing = performance.now() < killUntil
+      // wavefront propagation: one synapse hop every 2 frames
+      if (!reduced && frame % 2 === 0 && !killing) {
+        fronts = fronts.filter((f) => {
+          const next: number[] = []
+          for (const n of f.ring) for (const m of adj[n]) if (!f.seen[m]) { f.seen[m] = 1; next.push(m); bright[m] = Math.max(bright[m], 1.1) }
+          f.ring = next; f.hop++
+          return next.length > 0 && f.hop < 24
+        })
+      }
+      // idle breathing pulses
+      if (!reduced && !killing) { const k = armedR.current ? 5 : 2; for (let j = 0; j < k; j++) { const n = (rng2() * N) | 0; bright[n] = Math.max(bright[n], 0.5) } }
+      // decay
+      for (let n = 0; n < N; n++) { let b = bright[n] * 0.93; const ll = litLobe[lobe[n]]; if (ll > 0.05 && b < ll * 0.35) b = ll * 0.35; bright[n] = b }
+      for (let l = 0; l < 7; l++) litLobe[l] *= 0.9992
+      // project
+      ang += reduced ? 0 : 0.0035 + (armedR.current ? 0.0022 : 0)
+      const ca = Math.cos(ang), sa = Math.sin(ang)
+      const cx = W / 2, cy = H * 0.52, R = Math.min(W * 0.34, H * 0.62)
+      for (let n = 0; n < N; n++) {
+        const X = xs[n] * ca - zs[n] * sa, Z = xs[n] * sa + zs[n] * ca
+        const Y2 = ys[n] * ct - Z * stl, Z2 = ys[n] * stl + Z * ct
+        const persp = 1.55 / (1.55 + Z2 * 0.85)
+        sx[n] = cx + X * R * persp * 1.12; sy[n] = cy - Y2 * R * persp * 0.92; dp[n] = persp
+      }
+      ctx!.clearRect(0, 0, W, H)
+      // dim synapse pass (one path, one style)
+      ctx!.strokeStyle = killing ? 'rgba(255,80,95,.06)' : degenR.current ? 'rgba(255,150,60,.05)' : 'rgba(16,217,138,.055)'
+      ctx!.lineWidth = 1
+      ctx!.beginPath()
+      for (let e = 0; e < E; e++) { ctx!.moveTo(sx[ea[e]], sy[ea[e]]); ctx!.lineTo(sx[eb[e]], sy[eb[e]]) }
+      ctx!.stroke()
+      // hot synapses (wavefront trails)
+      const hotCol = killing ? '255,70,85' : degenR.current ? '255,140,40' : '150,255,120'
+      for (let e = 0; e < E; e++) {
+        const b = Math.max(bright[ea[e]], bright[eb[e]])
+        if (b > 0.14) { ctx!.strokeStyle = `rgba(${hotCol},${Math.min(0.85, b * 0.6)})`; ctx!.beginPath(); ctx!.moveTo(sx[ea[e]], sy[ea[e]]); ctx!.lineTo(sx[eb[e]], sy[eb[e]]); ctx!.stroke() }
+      }
+      // neuron base dust
+      ctx!.fillStyle = killing ? 'rgba(255,140,150,.16)' : 'rgba(185,255,215,.15)'
+      for (let n = 0; n < N; n++) ctx!.fillRect(sx[n], sy[n], 1, 1)
+      // glowing neurons
+      ctx!.globalCompositeOperation = 'lighter'
+      for (let n = 0; n < N; n++) {
+        const b = bright[n]
+        if (b > 0.1) {
+          const r2 = (1.2 + 2.6 * b) * dp[n]
+          ctx!.fillStyle = `rgba(${hotCol},${Math.min(0.55, b * 0.42)})`
+          ctx!.beginPath(); ctx!.arc(sx[n], sy[n], r2, 0, 6.283); ctx!.fill()
+          ctx!.fillStyle = `rgba(235,255,240,${Math.min(0.9, b * 0.8)})`
+          ctx!.fillRect(sx[n] - 0.5, sy[n] - 0.5, 1.2, 1.2)
+        }
+      }
+      ctx!.globalCompositeOperation = 'source-over'
+      // global flash + kill overlay
+      if (flash > 0.01) { ctx!.fillStyle = `rgba(${flashCol},${flash * 0.15})`; ctx!.fillRect(0, 0, W, H); flash *= 0.86 }
+      if (killing) { ctx!.fillStyle = 'rgba(255,30,50,.07)'; ctx!.fillRect(0, 0, W, H) }
+      if (!reduced) raf = requestAnimationFrame(draw)
+    }
+    if (reduced) draw(); else raf = requestAnimationFrame(draw)
+    const onR = () => resize(); addEventListener('resize', onR)
     return () => { cancelAnimationFrame(raf); removeEventListener('resize', onR) }
-  }, [reduced])
+  }, [reduced, fx])
   return <canvas ref={ref} style={{ width: '100%', height: '100%', display: 'block' }} />
 }
 
